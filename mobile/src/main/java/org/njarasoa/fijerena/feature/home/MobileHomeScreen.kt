@@ -271,10 +271,33 @@ fun MobileHomeScreen(
         val done = { reloads++ }
         when (menu) {
             is HomeMenu.Recent -> {
+                // The safe action first (UX-D1): Add to Favourites; Remove from Recent stays a plain
+                // action, never the main button.
                 ItemActionsDialog(
                     title = parseDisplayTitle(menu.name).title.ifBlank { menu.name },
-                    isFavorite = false,
-                    onToggleFavorite = null,
+                    isFavorite = menu.isFavorite,
+                    onToggleFavorite = {
+                        if (lists != null) {
+                            val repo = lists.repoFor(menu.providerId)
+                            if (!menu.isFavorite) {
+                                wantedScope.launchGuarded("Home.addRecentToFavorites") {
+                                    repo.addFavoriteSuspend(menu.itemId, menu.name, menu.categoryId, menu.contentType)
+                                    done()
+                                }
+                            } else {
+                                wantedScope.launchGuarded("Home.removeRecentFromFavorites") {
+                                    repo.removeFavoriteSuspend(menu.itemId, menu.contentType)
+                                    done()
+                                    undo.show(menu.name) {
+                                        wantedScope.launchGuarded("Home.undoRemoveRecentFromFavorites") {
+                                            repo.addFavoriteSuspend(menu.itemId, menu.name, menu.categoryId, menu.contentType)
+                                            done()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     onDismiss = { homeMenu = null },
                     actions =
                         listOf(
@@ -398,7 +421,25 @@ fun MobileHomeScreen(
                         onWanted(card.route)
                     },
                 onBannerSeen = { wantedTitles.markNotifiedLater(announced.map { it.wantedKey }) },
-                onMenu = { menu -> if (!child) homeMenu = menu },
+                onMenu = { menu ->
+                    when {
+                        child -> {}
+
+                        // A Recent card's menu once its favourite state is known.
+                        menu is HomeMenu.Recent -> {
+                            merged?.let { lists ->
+                                wantedScope.launchGuarded("Home.openRecentMenu") {
+                                    val isFavorite = lists.repoFor(menu.providerId).isFavoriteSuspend(menu.itemId, menu.contentType)
+                                    homeMenu = menu.copy(isFavorite = isFavorite)
+                                }
+                            }
+                        }
+
+                        else -> {
+                            homeMenu = menu
+                        }
+                    }
+                },
             )
         }
     }
@@ -436,7 +477,7 @@ private fun HomeRowsColumn(
                     if (entry.fromFavorites) {
                         HomeMenu.Favorite(entry.item, ContentType.LIVE_TV)
                     } else {
-                        HomeMenu.Recent(entry.item.providerId, entry.item.id, ContentType.LIVE_TV, entry.item.name)
+                        HomeMenu.Recent(entry.item.providerId, entry.item.id, ContentType.LIVE_TV, entry.item.name, entry.item.categoryId)
                     },
                 )
             },
@@ -567,7 +608,7 @@ private fun HomeRowsColumn(
                 progress = item.progress.takeUnless { item.upNext },
                 sourceName = rows.sourceNames[item.providerId],
                 providerId = item.providerId,
-                onLongClick = { onMenu(HomeMenu.Recent(item.providerId, item.id, item.contentType, item.name)) },
+                onLongClick = { onMenu(HomeMenu.Recent(item.providerId, item.id, item.contentType, item.name, item.categoryId)) },
             ) { onContinueWatching(item) }
         }
         // Recent channels second, alone like Continue Watching (user, 2026-10-30).
@@ -605,14 +646,17 @@ private fun HomeSection(
 
 /**
  * A Home card's long-press menu: Remove from Recent, from Favourites, or from the Wishlist. A chart
- * card has the Favourite menu, with [Favorite.isFavorite] false when it is not a favourite yet.
+ * card has the Favourite menu, with [Favorite.isFavorite] false when it is not a favourite yet. A
+ * Recent card's menu also has Add to / Remove from Favourites ([Recent.isFavorite]).
  */
 private sealed interface HomeMenu {
-    class Recent(
+    data class Recent(
         val providerId: Long,
         val itemId: String,
         val contentType: String,
         val name: String,
+        val categoryId: String,
+        val isFavorite: Boolean = false,
     ) : HomeMenu
 
     class Favorite(

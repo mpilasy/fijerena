@@ -24,8 +24,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowDialog
 
 /**
- * A row's menu (long-press OK or Menu): focus opens on what the list is about, Back closes it
- * without acting, and an action commits and closes it.
+ * A row's menu (long-press OK or Menu): focus opens on the first safe action, removals come last
+ * (UX-D1), Back closes it without acting, and an action commits and closes it.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -37,7 +37,10 @@ class FavoriteMenuDialogTest {
     private var removedFromRecent = 0
     private var favouriteToggled = 0
 
-    private fun setMenu(list: RowMenuList) {
+    private fun setMenu(
+        isFavorite: Boolean = false,
+        onToggleWatched: (() -> Unit)? = null,
+    ) {
         composeTestRule.setContent {
             var open by remember { mutableStateOf(true) }
             if (open) {
@@ -48,8 +51,9 @@ class FavoriteMenuDialogTest {
                             itemName = "RTP 1 HD",
                             categoryId = "pt",
                             contentType = ContentType.LIVE_TV,
-                            isFavorite = false,
+                            isFavorite = isFavorite,
                             isInRecent = true,
+                            isWatched = if (onToggleWatched != null) false else null,
                         ),
                     onConfirm = { favouriteToggled++ },
                     onDismiss = {
@@ -57,7 +61,7 @@ class FavoriteMenuDialogTest {
                         open = false
                     },
                     onRemoveFromRecent = { removedFromRecent++ },
-                    list = list,
+                    onToggleWatched = onToggleWatched,
                 )
             }
         }
@@ -65,20 +69,34 @@ class FavoriteMenuDialogTest {
     }
 
     @Test
-    fun `on Recent the menu opens on Remove from Recent`() {
-        setMenu(RowMenuList.RECENT)
-        composeTestRule.onNodeWithText("Remove from Recent").assertIsFocused()
-    }
-
-    @Test
-    fun `elsewhere the menu opens on the favourite toggle`() {
-        setMenu(RowMenuList.OTHER)
+    fun `the menu opens on Add to Favourites, not on Remove from Recent`() {
+        setMenu()
         composeTestRule.onNodeWithText("Add to Favourites").assertIsFocused()
     }
 
     @Test
+    fun `a favourite opens on the watched toggle, the removals last above Cancel`() {
+        setMenu(isFavorite = true, onToggleWatched = {})
+        composeTestRule.onNodeWithText("Mark as watched").assertIsFocused()
+        val tops =
+            listOf("Mark as watched", "Remove from Favourites", "Remove from Recent", "Cancel").map { text ->
+                composeTestRule
+                    .onNodeWithText(text)
+                    .fetchSemanticsNode()
+                    .boundsInRoot.top
+            }
+        assertEquals(tops.sorted(), tops)
+    }
+
+    @Test
+    fun `with only removals the menu opens on Cancel`() {
+        setMenu(isFavorite = true)
+        composeTestRule.onNodeWithText("Cancel").assertIsFocused()
+    }
+
+    @Test
     fun `Back closes the menu without acting`() {
-        setMenu(RowMenuList.RECENT)
+        setMenu()
         // The remote's Back goes to the dialog's window, not through Compose's key input.
         val dialog = ShadowDialog.getLatestDialog()
         composeTestRule.runOnUiThread {
@@ -95,11 +113,12 @@ class FavoriteMenuDialogTest {
 
     @Test
     fun `OK on an action commits it and closes the menu`() {
-        setMenu(RowMenuList.RECENT)
+        setMenu()
         composeTestRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
         composeTestRule.waitForIdle()
 
-        assertEquals(1, removedFromRecent)
+        assertEquals(1, favouriteToggled)
+        assertEquals(0, removedFromRecent)
         assertEquals(1, dismissed)
         composeTestRule.onNode(hasText("RTP 1 HD")).assertDoesNotExist()
     }

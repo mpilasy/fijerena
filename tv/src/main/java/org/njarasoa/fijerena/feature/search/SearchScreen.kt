@@ -238,6 +238,7 @@ fun SearchScreen(
             title = title.title,
             refreshLabel = stringResource(if (on) R.string.wanted_remove else R.string.wanted_add),
             icon = if (on) CinemaIcons.Delete else CinemaIcons.BookmarkBorder,
+            removes = on,
             onRefresh = { viewModel.toggleWishlist(title) },
             onDismiss = { tmdbMenu = null },
         )

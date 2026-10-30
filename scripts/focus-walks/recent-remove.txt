@@ -2,18 +2,22 @@
 # source iptv, profile main, with at least three channels in Live TV Recent.
 # Start: Live TV browse with Recent selected, focus on the header's TV Guide button (Up from the
 # list until it stays there).
-# Covers: the menu opens on Remove from Recent; a removal moves focus to the next row and Menu
+# Covers: the menu opens on Add to Favourites, Remove from Recent under it (none of the channels is a
+# favourite); a removal moves focus to the next row and Menu
 # undoes it (row back, focused); Back closes the menu on the row; edit mode (pencil): OK removes the
 # focused row (REMOVE), Menu undoes, Back from Clear Recent ends the mode with focus on the pencil.
 # Updated 2026-10-27 (the tv browse tabs plan): Recent is a tab over the list; Down from the header
 # and Up from the first row stop on it.
+# Updated 2026-10-30 (UX-D1): the menu opens on its first safe action, the removals come last; written
+# by hand, re-record with -r on the emulator.
 @start TV Guide
 DOWN	Recent
 DOWN	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
-MENU	Remove from Recent
+MENU	Add to Favourites
+DOWN	Remove from Recent
 REMOVE	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
 MENU	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
-MENU	Remove from Recent
+MENU	Add to Favourites
 BACK	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
 UP	Recent
 UP	TV Guide

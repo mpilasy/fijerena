@@ -275,6 +275,7 @@ internal fun StreamList(
             title = item.name,
             refreshLabel = stringResource(R.string.wanted_remove),
             icon = CinemaIcons.Delete,
+            removes = true,
             onRefresh = { removeWanted(item) },
             onDismiss = { wantedMenuItem = null },
         )
@@ -337,12 +338,6 @@ internal fun StreamList(
                         }
                     },
                 onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
-                list =
-                    when {
-                        isRecentList -> RowMenuList.RECENT
-                        isFavoritesList -> RowMenuList.FAVORITES
-                        else -> RowMenuList.OTHER
-                    },
             )
         }
     }

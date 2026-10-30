@@ -148,7 +148,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
-import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -1302,8 +1301,6 @@ private fun GuideBody(
             onConfirm = { onToggleFavorite(channel, isFavorite) },
             onDismiss = { actions = null },
             onRemoveFromRecent = onRemoveFromRecent?.let { remove -> { remove(channel) } },
-            // Offered on the Recent guide only, where it comes first (plan → A).
-            list = if (onRemoveFromRecent != null) RowMenuList.RECENT else RowMenuList.OTHER,
         )
     }
     val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel) } }

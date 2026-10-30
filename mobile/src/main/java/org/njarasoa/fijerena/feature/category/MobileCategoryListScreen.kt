@@ -2366,8 +2366,8 @@ internal enum class RowMenuAction { MARK_WATCHED, MARK_SHOW_WATCHED, REMOVE_FROM
 /**
  * The long-press menu's actions, the same as the row's swipe offers: a show row's "Mark show
  * watched", a film's or an episode's "Mark watched" (neither where the source keeps watched state
- * on its server), and "Remove from Recent" on the Recent list. A Favourites row's "Remove from
- * Favourites" is the menu's favourite button.
+ * on its server), and "Remove from Recent" on the Recent list, last (UX-D1). A favourite row's
+ * "Remove from Favourites" comes after these (`ItemActionsDialog`).
  */
 internal fun rowMenuActions(
     isShowRow: Boolean,

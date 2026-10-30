@@ -9,14 +9,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -25,6 +29,7 @@ import androidx.compose.ui.input.key.type
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -45,6 +50,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * [leading]: one more item before the cards (a Trending chart row's switch), the row's first. It
  * takes the rail's Left, and Left on the first card goes to it; focus coming into the row still
  * lands on the first card. With it, the row shows even with no card, and it takes the row's focus.
+ *
+ * Focus coming into the row brings the whole row into view, its title too: the card's own request
+ * scrolled Home only as far as the card, and the title stayed under the header.
  */
 @Composable
 fun <T> HomeRow(
@@ -78,7 +86,15 @@ fun <T> HomeRow(
                 if (index == lastIndex) right = FocusRequester.Cancel
             }
     }
-    Column(modifier = modifier) {
+    val rowInView = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    Column(
+        modifier =
+            Modifier
+                .bringIntoViewRequester(rowInView)
+                .then(modifier)
+                .onFocusChanged { if (it.hasFocus) scope.launch { rowInView.bringIntoView() } },
+    ) {
         CinemaText(
             text = title,
             // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.

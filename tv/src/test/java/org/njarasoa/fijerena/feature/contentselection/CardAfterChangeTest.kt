@@ -73,3 +73,20 @@ class WithCardPutBackTest {
         assertEquals(before, before.withCardPutBack(before, "b") { it })
     }
 }
+
+class BackToRowEndTest {
+    @Test
+    fun aCardAtTheRowStartMovesToTheRowEnd() {
+        assertEquals(700, backToRowEnd(rowEnd = 1000, itemOffset = 0, itemSize = 300))
+    }
+
+    @Test
+    fun aCardThatAlreadyEndsTheRowStays() {
+        assertEquals(0, backToRowEnd(rowEnd = 1000, itemOffset = 700, itemSize = 300))
+    }
+
+    @Test
+    fun aCardLongerThanTheRowStays() {
+        assertEquals(0, backToRowEnd(rowEnd = 1000, itemOffset = 0, itemSize = 1200))
+    }
+}

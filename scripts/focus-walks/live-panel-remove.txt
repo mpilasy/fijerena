@@ -2,8 +2,11 @@
 # Recent. Start: Home → the first Channels card → OK: the preview, focus on the playing channel's
 # row in the panel's Recent tab.
 # Covers: removing a row in the panel moves focus to the next row, not to the tabs; Menu undoes.
+# Updated 2026-10-30 (UX-D1): the menu opens on its first safe action, the removals come last; written
+# by hand, re-record with -r on the emulator.
 @start 2 / 22Scope News (1080p) / Hold OK or press Menu for actions
 DOWN	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
-MENU	Remove from Recent
+MENU	Add to Favourites
+DOWN	Remove from Recent
 REMOVE	2 / 24 Horas (Chile) (1080p) / Hold OK or press Menu for actions
 MENU	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions

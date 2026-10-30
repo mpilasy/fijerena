@@ -1,5 +1,10 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
@@ -98,3 +103,33 @@ internal fun <T> List<T>.withCardPutBack(
     val card = before.getOrNull(index)
     return if (card == null || any { keyOf(it) == key }) this else toMutableList().apply { add(index.coerceAtMost(size), card) }
 }
+
+/**
+ * Shows the item at [index] of a Home row when Back returns to it. A card already on screen stays
+ * where it is: scrolled to the row's start, the cards before it (and the row's first-card
+ * requester) left the screen, and focus went with them. A card off screen comes in at the row's
+ * end, so the cards before it stay in view.
+ */
+internal suspend fun LazyListState.showReturnCard(index: Int) {
+    // The row lays out its cards a frame after they arrive: until then nothing reads as on screen.
+    withTimeoutOrNull(ROW_LAYOUT_WAIT_MS) { snapshotFlow { layoutInfo.totalItemsCount > index }.first { it } }
+    if (layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        scrollToItem(index)
+        layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.let { item ->
+            val back = backToRowEnd(layoutInfo.viewportEndOffset - layoutInfo.afterContentPadding, item.offset, item.size)
+            if (back > 0) scrollBy(-back.toFloat())
+        }
+    }
+}
+
+/**
+ * How far to scroll a row back so that a card at [itemOffset], [itemSize] long, ends at [rowEnd]:
+ * zero when it already ends there or is longer than the row.
+ */
+internal fun backToRowEnd(
+    rowEnd: Int,
+    itemOffset: Int,
+    itemSize: Int,
+): Int = (rowEnd - itemOffset - itemSize).coerceAtLeast(0)
+
+private const val ROW_LAYOUT_WAIT_MS = 1_000L

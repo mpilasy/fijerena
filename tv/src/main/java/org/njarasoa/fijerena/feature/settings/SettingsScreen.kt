@@ -291,7 +291,7 @@ fun SettingsScreen(
         picker = null
         coroutineScope.launch {
             returnFocus.restoreScroll(listState)
-            returnFocus.requester.requestFocusWithRetry()
+            returnFocus.key?.let(returnFocus::requesterOf)?.requestFocusWithRetry()
             returnFocus.clear()
         }
     }
@@ -315,7 +315,7 @@ fun SettingsScreen(
         editingProfileId = null
         coroutineScope.launch {
             returnFocus.restoreScroll(listState)
-            if (deleted || !returnFocus.requester.requestFocusWithRetry()) contentPane.focusEntry()
+            if (deleted || returnFocus.key?.let(returnFocus::requesterOf)?.requestFocusWithRetry() != true) contentPane.focusEntry()
             returnFocus.clear()
         }
     }

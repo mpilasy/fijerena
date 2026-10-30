@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
@@ -29,9 +30,13 @@ data class ItemMenuAction(
 
 /**
  * The phone's long-press menu on a title or channel (Search results, list rows): the item's name,
- * its other actions (mark watched, remove from Recent…) as text buttons, Add to / Remove from
- * Favourites as the confirm button, and Cancel. Every action closes the menu. A null
- * [onToggleFavorite] leaves the favourite button out (a Wanted row, which is no source item).
+ * its other actions (mark watched, remove from Recent…) as text buttons, and Cancel. Every action
+ * closes the menu. A null [onToggleFavorite] leaves the favourite action out (a Wanted row, which
+ * is no source item).
+ *
+ * Removals are never the main button (UX audit fixes plan → UX-D1): Add to Favourites is the
+ * confirm button, but Remove from Favourites is a plain action after the others, the last one above
+ * Cancel. Callers put their own removals (Remove from Recent) at the end of [actions].
  */
 @Composable
 fun ItemActionsDialog(
@@ -41,16 +46,23 @@ fun ItemActionsDialog(
     onDismiss: () -> Unit,
     actions: List<ItemMenuAction> = emptyList(),
 ) {
+    val removeFavorite =
+        if (isFavorite && onToggleFavorite != null) {
+            ItemMenuAction(CinemaIcons.StarBorder, stringResource(R.string.favorite_remove), onToggleFavorite)
+        } else {
+            null
+        }
+    val listed = actions + listOfNotNull(removeFavorite)
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             CinemaText(text = title, role = TextRole.Heading, maxLines = 2)
         },
         text =
-            actions.takeIf { it.isNotEmpty() }?.let {
+            listed.takeIf { it.isNotEmpty() }?.let {
                 {
                     Column {
-                        actions.forEach { action ->
+                        listed.forEach { action ->
                             CinemaDialogActionButton(
                                 onClick = {
                                     action.onClick()
@@ -67,7 +79,7 @@ fun ItemActionsDialog(
                 }
             },
         confirmButton = {
-            if (onToggleFavorite != null) {
+            if (onToggleFavorite != null && !isFavorite) {
                 CinemaDialogActionButton(
                     onClick = {
                         onToggleFavorite()
@@ -75,7 +87,7 @@ fun ItemActionsDialog(
                     },
                     kind = ButtonKind.Main,
                 ) {
-                    CinemaText(stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add))
+                    CinemaText(stringResource(R.string.favorite_add))
                 }
             }
         },

@@ -27,9 +27,9 @@ DOWN
 CENTER	Watch channel
 # Back closes the panel; focus is back on the programme cell.
 BACK
-# The Menu key opens the channel's row actions, focus on Add to / Remove from Favorites. Never
-# press OK here: it changes the favourites.
-MENU	Favourites
+# The Menu key opens the channel's row actions, focus on Add to Favourites, or on Cancel when the
+# channel is a favourite (UX-D1: Remove from Favourites is last). Never press OK here.
+MENU
 # Back closes the menu; focus is back on the programme cell.
 BACK
 # Back leaves the guide (back to the category screen, focus on its TV Guide button).

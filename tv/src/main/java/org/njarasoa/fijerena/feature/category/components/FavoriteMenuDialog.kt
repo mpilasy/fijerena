@@ -33,27 +33,17 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * The list a row's menu was opened in, which decides the menu's first action
- * (the tv recents favorites plan → A): on Recent, Remove from Recent; on
- * Favourites, the favourite toggle (there always Remove from Favorites); elsewhere the favourite
- * toggle as before.
- */
-enum class RowMenuList {
-    OTHER,
-    RECENT,
-    FAVORITES,
-}
-
-/**
  * Themed context menu dialog for a category/stream row (long-press OK or the Menu key — UX
  * overhaul plan Part II P3): favorite toggle always, watched toggle too when [onToggleWatched] is
  * given — `target.isWatched == null` (Live TV, categories) is what keeps callers from passing one.
  * A show row gets "Mark show watched / unwatched" ([onToggleShowWatched]) in place of that toggle.
  * See the watch state durable storage plan Phase 6. Independent actions rather
  * than an AlertDialog's usual confirm/cancel pair: each row commits immediately, `onDismiss` alone
- * closes the menu. Focus opens on the first row: what the list is about ([list]) — so in Recent
- * the removal is first and focused, the user's choice over the "destructive never first" rule
- * (plan → A). Removals are not confirmed: the caller shows an Undo bar instead (`TvUndoBar`).
+ * closes the menu. Safe actions come first and focus opens on the first of them; the removals
+ * (Remove from Favourites, Remove from Recent) come last, just above Cancel, in every list (user,
+ * 2026-10-30, UX audit fixes plan → UX-D1; it replaces "Remove from Recent first" on Recent). With
+ * no safe action, focus opens on Cancel. Removals are not confirmed: the caller shows an Undo bar
+ * instead (`TvUndoBar`).
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -63,7 +53,6 @@ fun FavoriteContextMenuDialog(
     onDismiss: () -> Unit,
     onToggleWatched: (() -> Unit)? = null,
     onRemoveFromRecent: (() -> Unit)? = null,
-    list: RowMenuList = RowMenuList.OTHER,
     // A show row's "Mark show watched / unwatched", worded from `target.isShowWatched`
     // (the season show watched plan Phase 3). Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
@@ -79,7 +68,18 @@ fun FavoriteContextMenuDialog(
     val recentActionText = stringResource(R.string.recent_remove)
 
     val firstActionFocusRequester = remember { FocusRequester() }
-    val recentFirst = list == RowMenuList.RECENT && onRemoveFromRecent != null && isInRecent
+    val showsWatched = onToggleWatched != null && isWatched != null
+    // The first safe action takes focus; with none (only removals), Cancel.
+    val firstSafe =
+        when {
+            !isFavorite -> MenuAction.FAVORITE
+            showsWatched -> MenuAction.WATCHED
+            onToggleShowWatched != null -> MenuAction.SHOW_WATCHED
+            else -> MenuAction.CANCEL
+        }
+    val focusIf: (MenuAction) -> Modifier = { action ->
+        if (action == firstSafe) Modifier.focusRequester(firstActionFocusRequester) else Modifier
+    }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -113,30 +113,30 @@ fun FavoriteContextMenuDialog(
                     )
                 }
 
-                if (recentFirst) removeFromRecentItem(Modifier.focusRequester(firstActionFocusRequester))
+                // Add to Favourites is safe: first. Remove from Favourites is a removal: last.
+                val favoriteItem: @Composable (Modifier) -> Unit = { itemModifier ->
+                    TvInputListItem(
+                        selected = false,
+                        onClick = {
+                            onConfirm()
+                            onDismiss()
+                        },
+                        modifier = itemModifier.fillMaxWidth(),
+                        leadingContent = {
+                            Icon(
+                                imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                                tint = if (isFavorite) CinemaTheme.colors.danger else CinemaTheme.colors.accent,
+                            )
+                        },
+                        headlineContent = {
+                            CinemaText(text = favoriteActionText, tone = if (isFavorite) TextTone.Danger else TextTone.Primary)
+                        },
+                    )
+                }
 
-                TvInputListItem(
-                    selected = false,
-                    onClick = {
-                        onConfirm()
-                        onDismiss()
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth().then(
-                            if (recentFirst) Modifier else Modifier.focusRequester(firstActionFocusRequester),
-                        ),
-                    leadingContent = {
-                        Icon(
-                            imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = if (isFavorite) CinemaTheme.colors.danger else CinemaTheme.colors.accent,
-                        )
-                    },
-                    headlineContent = {
-                        CinemaText(text = favoriteActionText, tone = if (isFavorite) TextTone.Danger else TextTone.Primary)
-                    },
-                )
+                if (!isFavorite) favoriteItem(focusIf(MenuAction.FAVORITE))
 
                 if (onToggleWatched != null && isWatched != null) {
                     TvInputListItem(
@@ -145,7 +145,7 @@ fun FavoriteContextMenuDialog(
                             onToggleWatched()
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = focusIf(MenuAction.WATCHED).fillMaxWidth(),
                         leadingContent = {
                             Icon(
                                 imageVector = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
@@ -168,7 +168,7 @@ fun FavoriteContextMenuDialog(
                             onToggleShowWatched()
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = focusIf(MenuAction.SHOW_WATCHED).fillMaxWidth(),
                         leadingContent = {
                             Icon(
                                 imageVector = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
@@ -183,13 +183,14 @@ fun FavoriteContextMenuDialog(
                     )
                 }
 
-                // Elsewhere the removal sits last, just above Cancel.
-                if (!recentFirst && onRemoveFromRecent != null && isInRecent) removeFromRecentItem(Modifier)
+                // The removals last, just above Cancel.
+                if (isFavorite) favoriteItem(Modifier)
+                if (onRemoveFromRecent != null && isInRecent) removeFromRecentItem(Modifier)
 
                 TvInputListItem(
                     selected = false,
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = focusIf(MenuAction.CANCEL).fillMaxWidth(),
                     leadingContent = {
                         Icon(
                             imageVector = CinemaIcons.Close,
@@ -210,4 +211,12 @@ fun FavoriteContextMenuDialog(
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
     )
+}
+
+/** The menu's actions that can take its first focus. */
+private enum class MenuAction {
+    FAVORITE,
+    WATCHED,
+    SHOW_WATCHED,
+    CANCEL,
 }

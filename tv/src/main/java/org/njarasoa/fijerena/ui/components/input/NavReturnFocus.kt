@@ -38,6 +38,10 @@ import androidx.lifecycle.repeatOnLifecycle
  *
  * One-shot: the key is cleared after the hand-back, whether or not it landed, so later
  * recompositions and resumes leave the user's focus alone.
+ *
+ * Each key has its own requester, attached to its control for good: a requester attached only
+ * while the hand-back was pending came off the focused control when the key was cleared, and that
+ * change of modifiers dropped focus from it (Home's cards, 2026-10-30).
  */
 @Stable
 class NavReturnFocus internal constructor(
@@ -54,9 +58,13 @@ class NavReturnFocus internal constructor(
      * whose first-open focus or scroll can fire again later (data arriving after the hand-back)
      * reads this rather than [key], which is already cleared by then.
      */
-    val isReturn: Boolean = initialKey != null
+    var isReturn: Boolean = initialKey != null
+        private set
 
-    internal val requester = FocusRequester()
+    private val requesters = mutableMapOf<String, FocusRequester>()
+
+    /** The requester of the control that navigates away as [key], the same for the life of the screen. */
+    internal fun requesterOf(key: String): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
 
     private var scrollIndex = initialScrollIndex
     private var scrollOffset = initialScrollOffset
@@ -80,13 +88,13 @@ class NavReturnFocus internal constructor(
      * returning to it — for a control inside a child composable, which takes it as a nullable
      * FocusRequester parameter.
      */
-    fun requesterFor(key: String): FocusRequester? = if (this.key == key) requester else null
+    fun requesterFor(key: String): FocusRequester? = if (this.key == key) requesterOf(key) else null
 
     /**
      * The requester while Back is returning to a control whose key [matches], else null: for a
      * row's focus restorer, whose own fallback would otherwise take the hand-back.
      */
-    fun requesterWhere(matches: (String) -> Boolean): FocusRequester? = key?.takeIf(matches)?.let { requester }
+    fun requesterWhere(matches: (String) -> Boolean): FocusRequester? = key?.takeIf(matches)?.let(::requesterOf)
 
     internal suspend fun restoreScroll(listState: LazyListState) {
         if (scrollIndex >= 0) listState.scrollToItem(scrollIndex, scrollOffset)
@@ -95,6 +103,16 @@ class NavReturnFocus internal constructor(
     internal fun clear() {
         key = null
         scrollIndex = -1
+    }
+
+    /**
+     * Drops a pending hand-back before the screen's first focus runs: the screen opens as new
+     * (Home opened from the navigation rail, on the first card, not on the card last opened). Call
+     * during the first composition.
+     */
+    fun discard() {
+        clear()
+        isReturn = false
     }
 
     companion object {
@@ -110,11 +128,14 @@ class NavReturnFocus internal constructor(
 @Composable
 fun rememberNavReturnFocus(): NavReturnFocus = rememberSaveable(saver = NavReturnFocus.Saver) { NavReturnFocus(null, -1, 0) }
 
-/** Marks this control as the one Back hands focus to when it is the one that navigated away as [key]. */
+/**
+ * Marks this control as the one Back hands focus to when it is the one that navigated away as [key].
+ * Its requester stays attached after the hand-back (see [NavReturnFocus]).
+ */
 fun Modifier.navReturnFocusTarget(
     returnFocus: NavReturnFocus,
     key: String,
-): Modifier = returnFocus.requesterFor(key)?.let { focusRequester(it) } ?: this
+): Modifier = focusRequester(returnFocus.requesterOf(key))
 
 /**
  * Gives focus back to the [navReturnFocusTarget] whose key [NavReturnFocus.leaveFrom] recorded,
@@ -142,7 +163,7 @@ fun NavReturnFocusEffect(
             if (key != null) {
                 currentListState?.let { returnFocus.restoreScroll(it) }
                 currentPrepare(key)
-                returnFocus.requester.requestFocusWithRetry(fallback = currentFallback)
+                returnFocus.requesterOf(key).requestFocusWithRetry(fallback = currentFallback)
                 returnFocus.clear()
             }
         }

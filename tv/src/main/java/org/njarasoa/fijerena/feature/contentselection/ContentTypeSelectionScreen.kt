@@ -175,7 +175,6 @@ import org.njarasoa.fijerena.core.ui.wanted.gone
 import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
-import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
@@ -225,6 +224,9 @@ fun ContentTypeSelectionScreen(
     onAddSource: (() -> Unit)? = null,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWantedSelected: (Screen) -> Unit = {},
+    // Opened from the navigation rail: on the first card of the first row, never on the card that
+    // was opened last (a pending Back hand-back is dropped).
+    openOnFirstCard: Boolean = false,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -441,6 +443,7 @@ fun ContentTypeSelectionScreen(
     // reload and is scrolled into view first; a card that left the shelf (finished) falls back to
     // the first hero card.
     val returnFocus = rememberNavReturnFocus()
+    remember { if (openOnFirstCard) returnFocus.discard() }
     val shelfListState = rememberLazyListState()
 
     // The first card of each row: where focus enters a row it has not been in yet (HomeRow).
@@ -556,7 +559,7 @@ fun ContentTypeSelectionScreen(
                     snapshotFlow { continueWatchingItems }.first { items -> items.any { it.sourceKey == itemId } }
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
-            if (index >= 0) shelfListState.scrollToItem(index)
+            if (index >= 0) shelfListState.showReturnCard(index)
         }
         for ((prefix, row) in listOf(
             RETURN_LIVE_ROW_PREFIX to liveRowListState,
@@ -570,7 +573,7 @@ fun ContentTypeSelectionScreen(
                         .first { entries -> entries.any { it.item.sourceKey == itemId } }
                 }
             val index = entries?.indexOfFirst { it.item.sourceKey == itemId } ?: -1
-            if (index >= 0) row.scrollToItem(index)
+            if (index >= 0) row.showReturnCard(index)
         }
         for ((prefix, row) in listOf(
             RETURN_FAVORITE_MOVIES_PREFIX to favoriteMoviesListState,
@@ -584,7 +587,7 @@ fun ContentTypeSelectionScreen(
                         .first { items -> items.any { it.sourceKey == itemId } }
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
-            if (index >= 0) row.scrollToItem(index)
+            if (index >= 0) row.showReturnCard(index)
         }
         for (shelf in chartShelves) {
             val prefix = chartReturnPrefix(shelf)
@@ -595,7 +598,7 @@ fun ContentTypeSelectionScreen(
                     snapshotFlow { chartOf(shelf) }.first { items -> items.any { it.sourceKey == itemId } }
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
-            if (index >= 0) chartListState.getValue(shelf).scrollToItem(index + itemsBeforeCards(shelf))
+            if (index >= 0) chartListState.getValue(shelf).showReturnCard(index + itemsBeforeCards(shelf))
         }
         if (key.startsWith(RETURN_WANTED_PREFIX)) {
             val cardKey = key.removePrefix(RETURN_WANTED_PREFIX)
@@ -605,7 +608,7 @@ fun ContentTypeSelectionScreen(
                     snapshotFlow { wantedOf(shelf) }.first { cards -> cards.any { it.key == cardKey } }
                 }
             val index = cards?.indexOfFirst { it.key == cardKey } ?: -1
-            if (index >= 0) wantedListState.getValue(shelf).scrollToItem(index)
+            if (index >= 0) wantedListState.getValue(shelf).showReturnCard(index)
         }
     }
     val leaveTo: (String, () -> Unit) -> Unit = { key, navigate ->
@@ -913,6 +916,7 @@ fun ContentTypeSelectionScreen(
             title = card.entity.title,
             refreshLabel = stringResource(R.string.wanted_remove),
             icon = CinemaIcons.Delete,
+            removes = true,
             onRefresh = {
                 removeCard(wantedShelves.first { it.wantedContentType == card.entity.contentType }, card.key, card.entity.title) {
                     wantedTitles.remove(card.wantedKey)
@@ -997,12 +1001,6 @@ fun ContentTypeSelectionScreen(
                     }
                 } else {
                     null
-                },
-            list =
-                when {
-                    menu.shelf.isFavorites -> RowMenuList.FAVORITES
-                    menu.shelf.chart != null -> RowMenuList.OTHER
-                    else -> RowMenuList.RECENT
                 },
             onToggleShowWatched =
                 menu.target.isShowWatched?.let { isShowWatched ->

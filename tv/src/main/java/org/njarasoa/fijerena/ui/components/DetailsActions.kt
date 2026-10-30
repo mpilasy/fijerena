@@ -41,7 +41,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * What a details screen's "More" opens (movie and series heroes): Refresh info, then Cancel.
- * Focus opens on Refresh; Back or Cancel closes.
+ * Focus opens on Refresh; Back or Cancel closes. With [removes] (the one action is a removal, such
+ * as Remove from Wishlist), focus opens on Cancel: a removal is never the first focus (UX-D1).
  */
 @Composable
 internal fun DetailsMoreMenu(
@@ -51,8 +52,10 @@ internal fun DetailsMoreMenu(
     onDismiss: () -> Unit,
     // The one action's icon: Refresh info on a details screen; Remove from Wanted on Home's Wanted row.
     icon: ImageVector = CinemaIcons.Refresh,
+    removes: Boolean = false,
 ) {
     val firstItemFocusRequester = remember { FocusRequester() }
+    val firstFocus: (Boolean) -> Modifier = { takes -> if (takes) Modifier.focusRequester(firstItemFocusRequester) else Modifier }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -69,7 +72,7 @@ internal fun DetailsMoreMenu(
                         onRefresh()
                         onDismiss()
                     },
-                    modifier = Modifier.fillMaxWidth().focusRequester(firstItemFocusRequester),
+                    modifier = firstFocus(!removes).fillMaxWidth(),
                     leadingContent = {
                         Icon(
                             imageVector = icon,
@@ -85,7 +88,7 @@ internal fun DetailsMoreMenu(
                 TvInputListItem(
                     selected = false,
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = firstFocus(removes).fillMaxWidth(),
                     leadingContent = {
                         Icon(
                             imageVector = CinemaIcons.Close,

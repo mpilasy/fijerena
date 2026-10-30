@@ -223,6 +223,16 @@ fun TvNavHost(
         if (entry.destination.hasRoute(section.route::class)) entry.savedStateHandle[OPEN_ON_RECENT] = true
     }
 
+    // Home opened from the rail opens on its first card, not on the card the user last opened from
+    // it (Back from that card's screen still returns to the card).
+    fun openHomeOnFirstCard() {
+        if (navController.currentDestination?.hasRoute<Screen.ContentTypeSelection>() == true) return
+        runCatching { navController.getBackStackEntry(Screen.ContentTypeSelection) }
+            .getOrNull()
+            ?.savedStateHandle
+            ?.set(OPEN_HOME_ON_FIRST_CARD, true)
+    }
+
     // Each section keeps its place: the section's stack above Home is saved under its root, and the
     // section picked comes back where it was left, or opens fresh. Home stays the start and is never
     // popped. What Home opened outside the sections (Search, a title) isn't a place: not saved.
@@ -266,6 +276,7 @@ fun TvNavHost(
             item == RailItem.HOME -> {
                 popSettingsTree()
                 closeSavedLivePreview()
+                openHomeOnFirstCard()
                 navController.popBackStack(
                     Screen.ContentTypeSelection,
                     inclusive = false,
@@ -578,6 +589,7 @@ fun TvNavHost(
         val openOnRecent = remember { entry.savedStateHandle.remove<Boolean>(OPEN_ON_RECENT) == true }
         BackHandler(enabled = rail.visible) {
             if (rail.expanded || !rail.focusRail()) {
+                openHomeOnFirstCard()
                 navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
             }
         }
@@ -617,14 +629,16 @@ fun TvNavHost(
                         popEnterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                         popExitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                     ) {
-                        composable<Screen.ContentTypeSelection> {
+                        composable<Screen.ContentTypeSelection> { homeEntry ->
                             // Prevent back button from exiting the app on the root screen
                             BackHandler {}
+                            val openOnFirstCard = remember { homeEntry.savedStateHandle.remove<Boolean>(OPEN_HOME_ON_FIRST_CARD) == true }
                             // A tile opens its section where it was left — the rail's place for it too.
                             val navigateToContentType: (org.njarasoa.fijerena.core.navigation.ContentType) -> Unit = { contentType ->
                                 TvSection.of(contentType.name)?.let(::openSection)
                             }
                             ContentTypeSelectionScreen(
+                                openOnFirstCard = openOnFirstCard,
                                 onWantedSelected = { navController.navigateOnce(it) },
                                 onCapabilitiesResolved = { mergedTypes ->
                                     // Skip the picker tap entirely when the profile has one section,
@@ -1367,3 +1381,6 @@ private const val CLOSE_SAVED_LIVE_PREVIEW = "closeSavedLivePreview"
 
 /** Set on a section's root entry when it is entered again on its browse: see openBrowseOnRecent in [TvNavHost]. */
 private const val OPEN_ON_RECENT = "openOnRecent"
+
+/** Set on Home's entry when the rail opens it: see openHomeOnFirstCard in [TvNavHost]. */
+private const val OPEN_HOME_ON_FIRST_CARD = "openHomeOnFirstCard"
