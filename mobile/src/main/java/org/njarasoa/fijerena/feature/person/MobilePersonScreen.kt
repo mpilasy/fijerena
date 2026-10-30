@@ -48,10 +48,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.home.HomeRow
 import org.njarasoa.fijerena.feature.home.MissingTitlesSwitch
-import org.njarasoa.fijerena.feature.home.TitleCard
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.PosterCard
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -160,7 +160,7 @@ private fun PersonContent(
                 showEmpty = hasSwitch,
                 emptyText = noneInSources.takeUnless { on },
             ) { item ->
-                TitleCard(
+                PosterCard(
                     title = item.listTitle ?: item.name,
                     // CT-D5: the release year on each card, then the person's role. Some sources send
                     // no date, only the year in the name ("Lupin (2021)"), which the card's one line cuts off.
@@ -174,7 +174,6 @@ private fun PersonContent(
                         ).joinToString(" • ").ifEmpty { null },
                     thumbnailUrl = item.thumbnailUrl,
                     thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
-                    progress = null,
                     sourceName = null,
                     providerId = item.providerId,
                     onLongClick = null,

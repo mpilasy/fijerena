@@ -2,8 +2,6 @@ package org.njarasoa.fijerena.feature.home
 
 import android.text.format.DateUtils
 import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,8 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -70,11 +66,9 @@ import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SectionPanel
-import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
@@ -85,7 +79,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.cards
 import org.njarasoa.fijerena.core.ui.wanted.gone
@@ -94,11 +87,14 @@ import org.njarasoa.fijerena.core.ui.wanted.statusLabel
 import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.CardLines
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.PosterCard
 import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.homeCardClicks
 import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -486,12 +482,11 @@ private fun HomeRowsColumn(
     }
     val favoritesRow: @Composable (List<MediaItem>, String, Int) -> Unit = { items, contentType, title ->
         HomeRow(stringResource(title), items, { it.sourceKey }) { item ->
-            TitleCard(
+            PosterCard(
                 title = item.name,
                 subtitle = goneStatus(item, contentType),
                 thumbnailUrl = item.thumbnailUrl,
                 thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
-                progress = null,
                 sourceName = rows.sourceNames[item.providerId],
                 providerId = item.providerId,
                 onLongClick = { onMenu(HomeMenu.Favorite(item, contentType)) },
@@ -520,12 +515,11 @@ private fun HomeRowsColumn(
                 showEmpty = chart.chart.canShowMissing,
             ) { item ->
                 val tmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
-                TitleCard(
+                PosterCard(
                     title = item.listTitle ?: item.name,
                     subtitle = null,
                     thumbnailUrl = item.thumbnailUrl,
                     thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
-                    progress = null,
                     sourceName = rows.sourceNames[item.providerId],
                     providerId = item.providerId,
                     onLongClick =
@@ -676,25 +670,20 @@ private fun WantedTitleCard(
     onLongClick: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val width = MobileDimensions.homeCardWidth
-    CinemaCard(
-        modifier =
-            Modifier
-                .width(width)
-                .homeCardClicks(onClick, onLongClick)
-                .alpha(if (card.isAvailable) 1f else CinemaAlpha.textDisabled),
-    ) {
-        CinemaThumbnail(
-            url = card.posterUrl,
-            fallbackLetter = card.listTitle.firstOrNull(),
-            contentType = ThumbnailContentType.MOVIE,
-            overlayGradient = true,
-            modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
-        )
-        // "Available · panel-a · FR" (wishlist UX plan, Phase 5).
-        val status = card.statusLabel(LocalResources.current)
-        CardLines(card.listTitle, listOfNotNull(status, card.entity.year?.toString()).joinToString(" • "), null, 0L, width, tags = false)
-    }
+    // "Available · panel-a · FR" (wishlist UX plan, Phase 5).
+    val status = card.statusLabel(LocalResources.current)
+    PosterCard(
+        title = card.listTitle,
+        subtitle = listOfNotNull(status, card.entity.year?.toString()).joinToString(" • "),
+        thumbnailUrl = card.posterUrl,
+        thumbnailType = ThumbnailContentType.MOVIE,
+        sourceName = null,
+        providerId = 0L,
+        onLongClick = onLongClick,
+        modifier = Modifier.alpha(if (card.isAvailable) 1f else CinemaAlpha.textDisabled),
+        tags = false,
+        onClick = onClick,
+    )
 }
 
 /** "2 titles you wanted are now available", once; tapping it goes to the Wanted row. */
@@ -764,11 +753,12 @@ internal fun <T> HomeRow(
 }
 
 /**
- * A film or show: its art in the same 16:9 card as a channel (as on TV Home), resume progress under
- * it when given, its name and [subtitle].
+ * A film or show in Continue Watching: its art in the same 16:9 card as a channel (as on TV Home),
+ * resume progress under it when given, its name and [subtitle]. The other film and show rows use
+ * [PosterCard].
  */
 @Composable
-internal fun TitleCard(
+private fun TitleCard(
     title: String,
     subtitle: String?,
     thumbnailUrl: String?,
@@ -778,29 +768,17 @@ internal fun TitleCard(
     providerId: Long,
     // Null: no long-press menu (a TMDB-only card).
     onLongClick: (() -> Unit)?,
-    // A TMDB title no source has: the Not available mark on its art.
-    notAvailable: Boolean = false,
-    // False: [title] is a TMDB list's title (MediaItem.listTitle), shown as it is, without tags.
-    tags: Boolean = true,
     onClick: () -> Unit,
 ) {
     val width = MobileDimensions.homeCardWidth
     CinemaCard(modifier = Modifier.width(width).homeCardClicks(onClick, onLongClick)) {
-        Box {
-            CinemaThumbnail(
-                url = thumbnailUrl,
-                fallbackLetter = title.firstOrNull(),
-                contentType = thumbnailType,
-                overlayGradient = true,
-                modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
-            )
-            if (notAvailable) {
-                NotAvailableMark(
-                    iconSize = MobileDimensions.iconSmall,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs),
-                )
-            }
-        }
+        CinemaThumbnail(
+            url = thumbnailUrl,
+            fallbackLetter = title.firstOrNull(),
+            contentType = thumbnailType,
+            overlayGradient = true,
+            modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
+        )
         if (progress != null) {
             CinemaProgressBar(
                 progress = { progress.coerceIn(0f, 1f) },
@@ -810,7 +788,7 @@ internal fun TitleCard(
             // No bar, but its height, so the cards in a row line up.
             Spacer(modifier = Modifier.height(MobileDimensions.resumeBarHeight))
         }
-        CardLines(title, subtitle, sourceName, providerId, width, tags)
+        CardLines(title, subtitle, sourceName, providerId, width)
     }
 }
 
@@ -840,42 +818,6 @@ private fun ChannelCard(
             modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
         )
         CardLines(entry.item.name, subtitle, sourceName, entry.item.providerId, width)
-    }
-}
-
-/**
- * A card's clean name ("From (2022)", not "ES - From (2022)"), then its source (Expert mode), the
- * name's tags as badges and [subtitle] on one line — as TV Home's cards and the lists show it.
- * Without [tags], [title] shows as it is and has no badges: a TMDB list's title.
- */
-@Composable
-private fun CardLines(
-    title: String,
-    subtitle: String?,
-    sourceName: String?,
-    providerId: Long,
-    width: Dp,
-    tags: Boolean = true,
-) {
-    val parsed = remember(title) { parseDisplayTitle(title) }
-    Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
-        CinemaText(
-            text = if (tags) parsed.title.ifBlank { title } else title,
-            role = TextRole.Heading,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-            sourceName?.let { SourceBadge(it, providerId = providerId) }
-            if (tags) TitleBadges(parsed)
-            CinemaText(
-                text = subtitle.orEmpty(),
-                role = TextRole.Caption,
-                tone = TextTone.Secondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 
@@ -927,16 +869,3 @@ private suspend fun loadRows(
 
 private const val CARD_ASPECT = 16f / 9f
 private val EPISODE_NUMBER = Regex("""S\d{1,3}\s?E\d{1,4}""", RegexOption.IGNORE_CASE)
-
-/** A Home card's tap and long-press (its menu, none when null), with the long-press named for accessibility. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun Modifier.homeCardClicks(
-    onClick: () -> Unit,
-    onLongClick: (() -> Unit)?,
-): Modifier =
-    combinedClickable(
-        onClick = onClick,
-        onLongClick = onLongClick,
-        onLongClickLabel = onLongClick?.let { stringResource(R.string.row_more_actions) },
-    )

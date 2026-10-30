@@ -55,8 +55,11 @@ object MobileDimensions {
     /** A tab root's top bar: the section's name over the source line's 48 dp touch row. */
     val homeTopBarHeight: Dp = 84.dp
 
-    /** Every card on Home's rows: 16:9 art this wide, as on TV Home. */
+    /** Home's Continue Watching and channel cards: 16:9 art this wide, as on TV Home. */
     val homeCardWidth: Dp = 160.dp
+
+    /** A film or show in a row of titles (PosterCard): 2:3 poster art this wide, about three a screen. */
+    val posterCardWidth: Dp = 112.dp
 
     val streamThumbnailWidth: Dp = 96.dp
     val streamThumbnailHeight: Dp = 54.dp
