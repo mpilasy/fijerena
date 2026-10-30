@@ -1,6 +1,6 @@
 # UX audit fixes
 
-**Status:** In progress 2026-10-30.
+**Status:** Done 2026-10-30, walked on both emulators.
 
 ## Goal
 
@@ -79,12 +79,12 @@ commit.
 
 | Phase | Work | Status |
 |-------|------|--------|
-| A | TV Home focus (1) and card menus (2), TV and phone | In progress |
-| B | Live TV loading, shared and TV: 3 (loader, M3U, TV message), 4, 7 | In progress |
-| C | Phone Live TV dock: 3 (dock error and message), 5, 6 | In progress |
-| D | Details text and child gate (8), TV and phone | In progress |
-| E | Toggle (9) and long lists (10), after A–D | Not started |
-| F | Full checks, emulator walks of every fix, docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
+| A | TV Home focus (1) and card menus (2), TV and phone | Done (f64f85aea) |
+| B | Live TV loading, shared and TV: 3 (loader, M3U, TV message), 4, 7 | Done (d49798523, 0627494e9) |
+| C | Phone Live TV dock: 3 (dock error and message), 5, 6 | Done (0ce213679, 2021a78b2) |
+| D | Details text and child gate (8), TV and phone | Done (dcd606e1c) |
+| E | Toggle (9) and long lists (10), after A–D | Done (430421e41) |
+| F | Full checks, emulator walks of every fix, docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Done |
 
 ## Later (minor and polish items from the audit, not in this plan)
 
@@ -93,4 +93,23 @@ wording, plurals and raw source types; English left in the Malagasy UI (Wishlist
 screen-reader labels); details action order and icons; the phone channel panel; Recent order moving
 under the cursor; the Charts tab scroll; Wishlist placeholder posters; player safe area and scrim;
 the TV rail panel; the Kid profile's status line, gear badge and double avatar; M3U: Live TV depth
-and the Guide button with no guide.
+and the Guide button with no guide. Found in the walks: a child's Search shows the adults' recent
+searches; a child's Home cards still show language tags; the phone bar lights Movies on iptv Live
+TV; "Sokajy ankafizina" cut off in the phone Live TV tabs; a "Collection" title matched to a TMDB
+collection (its id, 0.0/10); iptv names keep "(240p) [Not 24/7]" after cleaning.
+
+## Done notes (2026-10-30)
+
+- **Walks:** TV 15 of 18 checks passed, phone 7 of 10, with no regression; the rest were blocked by
+  test data (the Kid profile has only bears and xstream4k, which the walks may not use; no title has
+  two copies). Unit tests cover the child gate.
+- **Walk fix (0627494e9):** a channel that played a moment and then failed in a loop never got the
+  message; the 10 s check now starts again whenever the picture is lost (buffering or error, not a
+  pause or a stop).
+- **Walk fixes (97c7acb30):** a fast burst of TV page keys lost focus (a key reached the list's own
+  scrolling while the last page was landing); a person page's empty-row switch went off screen
+  after it was turned on.
+- **Lead change:** the phone dock's category tab is third (UX-D8), not first as built (2021a78b2).
+- **Decisions taken while building:** Malagasy asks TMDB for English text (only French has its own);
+  episode plots stay the source's; a rail Back from a section browse also opens Home on its first
+  card; the full-screen player has no CH key handling (Up/Down zaps).

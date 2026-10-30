@@ -3,6 +3,15 @@
 ## Unreleased
 
 - **Recent Channels second on Home:** the channels you watched last now come right after Continue Watching, by themselves, under the name Recent Channels. Favourite Channels stay on the Channels panel. TV and phone.
+- **TV Home keeps your place:** after Back from a card, focus is on that card, its row's title shows and the cards before it stay in view. Home from the side menu opens on the first card. TV.
+- **Safer card menus:** a menu opens on a safe action, and Remove from Recent or Remove from Favourites comes last, just before Cancel. On the phone, Remove from Favourites is no longer the main button. TV and phone.
+- **A channel that does not start says so:** after 10 s with no picture, or at once when it cannot load, the screen says "<channel> is not available right now". OK (TV) or a tap (phone) goes to the next channel. A new pick stops the old picture at once, so the old channel never plays under the new name. A channel that stops showing a picture gets the same 10 s again. TV and phone.
+- **Recent only gets channels you saw:** the "add after" time now counts only time with a picture, so a channel that never plays never goes into Recent. A Recent channel that left its M3U list is marked Gone from Source. TV and phone.
+- **TV tuning keys:** Back while a channel tunes goes back at once. A second OK on a tuning channel waits for the picture before it goes full screen. TV.
+- **Phone Live TV dock:** the Playing mark follows the channel that plays, also after a zap in full screen. A channel picked from a category keeps that category as a third tab, at the same place in the list. Phone.
+- **Plot in your language:** a film's or a show's plot and genres come from TMDB in the app language when TMDB has them, not in the source's language. A child profile sees no technical rows, stream names or language tags on details pages. TV and phone.
+- **Clearer show-missing switch:** the eye is plain when off and filled when on, its name says On or Off, and on a person page the Movies and TV Shows rows each have their own switch. An empty row says "None in your sources". TV and phone.
+- **Page through long lists:** on TV, CH+/CH- and Page Up/Page Down move one screen at a time through channel, film, show and category lists. TV.
 
 ## Version: 0.8.20261030142207
 
