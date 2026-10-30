@@ -93,8 +93,7 @@ wording, plurals and raw source types; English left in the Malagasy UI (Wishlist
 screen-reader labels); details action order and icons; the phone channel panel; Recent order moving
 under the cursor; the Charts tab scroll; Wishlist placeholder posters; player safe area and scrim;
 the TV rail panel; the Kid profile's status line, gear badge and double avatar; M3U: Live TV depth
-and the Guide button with no guide. Found in the walks: a child's Search shows the adults' recent
-searches; a child's Home cards still show language tags; the phone bar lights Movies on iptv Live
+and the Guide button with no guide. Found in the walks: a child's Home cards still show language tags; the phone bar lights Movies on iptv Live
 TV; "Sokajy ankafizina" cut off in the phone Live TV tabs; a "Collection" title matched to a TMDB
 collection (its id, 0.0/10); iptv names keep "(240p) [Not 24/7]" after cleaning.
 
