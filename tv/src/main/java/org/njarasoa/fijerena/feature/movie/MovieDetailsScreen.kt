@@ -356,8 +356,10 @@ private fun MovieDetailsContent(
                 if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
             }
         }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
-    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+    // The tab picked, by name: a tab that comes late (Cast, when the credits arrive) moves the
+    // others, and an index would then show another tab.
+    var selectedTabName by rememberSaveable { mutableStateOf<String?>(null) }
+    val safeTabIndex = tabs.indexOfFirst { it.name == selectedTabName }.takeIf { it >= 0 } ?: 0
     val tabLabels = tabs.map { movieDetailTabLabel(it) }
 
     // Back from what Start Over, the Category button or a related title opened lands on that
@@ -633,7 +635,7 @@ private fun MovieDetailsContent(
                         tabs = tabLabels,
                         selectedIndex = safeTabIndex,
                         onTabSelected = {
-                            selectedTabIndex = it
+                            selectedTabName = tabs.getOrNull(it)?.name
                             // A tab regaining focus — whether from Left/Right, the initial Down from the
                             // action row, or our own Back-triggered tabRowFocusRequester.requestFocus()
                             // below — means focus is on the tab row, not in a section.

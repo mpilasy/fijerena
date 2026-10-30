@@ -148,8 +148,10 @@ fun TmdbTitleScreen(
                 if (hasMoreLikeThis) add(TmdbTitleTab.MORE_LIKE_THIS)
             }
         }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
-    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+    // The tab picked, by name: a tab that comes late (Cast, when the credits arrive) moves the
+    // others, and an index would then show another tab.
+    var selectedTabName by rememberSaveable { mutableStateOf<String?>(null) }
+    val safeTabIndex = tabs.indexOfFirst { it.name == selectedTabName }.takeIf { it >= 0 } ?: 0
 
     // Down from an action to the tab row, Up back to the top, as on the film page.
     val actionKeys =
@@ -248,7 +250,7 @@ fun TmdbTitleScreen(
                         tabs = tabs.map { tmdbTitleTabLabel(it) },
                         selectedIndex = safeTabIndex,
                         onTabSelected = {
-                            selectedTabIndex = it
+                            selectedTabName = tabs.getOrNull(it)?.name
                             focusInSection = false
                         },
                         modifier =

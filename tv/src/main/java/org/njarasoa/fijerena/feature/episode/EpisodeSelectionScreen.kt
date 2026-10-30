@@ -502,12 +502,13 @@ internal fun EpisodeListContent(
                 if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
             }
         }
-    // Episodes, not the first tab: the episode list is this screen's primary content, so it
-    // stays the default view exactly as it was before tabs existed. rememberSaveable's init
-    // lambda runs once — tabs order is stable for a given series, same assumption
-    // MovieDetailsScreen's selectedTabIndex already makes.
-    var selectedTabIndex by rememberSaveable { mutableStateOf(tabs.indexOf(SeriesDetailTab.EPISODES).coerceAtLeast(0)) }
-    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+    // Episodes until a tab is picked: the episode list is this screen's primary content. The tab
+    // picked is kept by name: a tab that comes late (Cast, when the credits arrive) moves the
+    // others, and an index would then show another tab.
+    var selectedTabName by rememberSaveable { mutableStateOf<String?>(null) }
+    val safeTabIndex =
+        tabs.indexOfFirst { it.name == selectedTabName }.takeIf { it >= 0 }
+            ?: tabs.indexOf(SeriesDetailTab.EPISODES).coerceAtLeast(0)
     val tabLabels = tabs.map { seriesDetailTabLabel(it) }
 
     // Episode/season this screen is anchored on, and whether that season was the user's own
@@ -1223,7 +1224,7 @@ internal fun EpisodeListContent(
                             tabs = tabLabels,
                             selectedIndex = safeTabIndex,
                             onTabSelected = {
-                                selectedTabIndex = it
+                                selectedTabName = tabs.getOrNull(it)?.name
                                 // A tab regaining focus — whether from Left/Right, the initial Down
                                 // from the action row, or our own Back-triggered
                                 // tabRowFocusRequester.requestFocus() above — means focus is on the
