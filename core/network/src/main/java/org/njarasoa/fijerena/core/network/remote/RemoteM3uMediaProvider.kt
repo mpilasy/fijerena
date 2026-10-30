@@ -70,9 +70,7 @@ class RemoteM3uMediaProvider(
                 if (its.isEmpty()) {
                     Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
                 } else {
-                    categories = cats
-                    items = its
-                    connected = true
+                    publish(cats, its)
                     Result.success(Unit)
                 }
             } catch (e: CancellationException) {

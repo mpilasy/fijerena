@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.network.smb
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -46,15 +48,33 @@ class SmbMediaProvider(
             "ogv",
         )
 
-    private var categories = emptyList<MediaCategory>()
-    private var items = emptyList<MediaItem>()
+    @Volatile private var categories = emptyList<MediaCategory>()
 
-    override suspend fun connect(): Result<Unit> {
+    @Volatile private var items = emptyList<MediaItem>()
+
+    // Connect and scan run as one step under [connectMutex], and the provider counts as connected
+    // only when the scan is done: a parallel load does not see the empty lists, and two connects do
+    // not supersede each other (thread races plan, 12).
+    private val connectMutex = Mutex()
+
+    @Volatile private var scanned = false
+
+    override suspend fun connect(): Result<Unit> = connectMutex.withLock { connectAndScan() }
+
+    private suspend fun connectAndScan(): Result<Unit> {
+        scanned = false
         val result = smbClient.connect()
         if (result.isSuccess) {
             scanShare()
+            scanned = true
         }
         return result
+    }
+
+    /** Connects only when not connected yet, also after a parallel connect that waited for the lock. */
+    private suspend fun ensureConnected(): Result<Unit> {
+        if (isConnected()) return Result.success(Unit)
+        return connectMutex.withLock { if (isConnected()) Result.success(Unit) else connectAndScan() }
     }
 
     override suspend fun disconnect() =
@@ -62,18 +82,17 @@ class SmbMediaProvider(
             // SmbClient.disconnect() doesn't block on the lock a slow connect() might hold, but it
             // still does real socket-close syscalls — suspend alone doesn't move those off whatever
             // dispatcher the caller happens to be on.
+            scanned = false
             smbClient.disconnect()
             categories = emptyList()
             items = emptyList()
         }
 
-    override fun isConnected(): Boolean = smbClient.isConnected()
+    override fun isConnected(): Boolean = scanned && smbClient.isConnected()
 
     override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
-        }
+        val connectResult = ensureConnected()
+        if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
         return Result.success(categories)
     }
 
@@ -81,10 +100,8 @@ class SmbMediaProvider(
         categoryId: String,
         contentType: String,
     ): Result<List<MediaItem>> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
-        }
+        val connectResult = ensureConnected()
+        if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
         return Result.success(items.filter { it.categoryId == categoryId })
     }
 

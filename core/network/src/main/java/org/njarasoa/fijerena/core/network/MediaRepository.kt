@@ -1059,8 +1059,11 @@ class MediaRepository(
     // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences
     // on every call. ConcurrentHashMap: addToCategoryHistory() writes from Dispatchers.IO while
     // getRecentlyViewedCategories() reads synchronously from the UI thread, and clearCache() can
-    // clear it from either.
+    // clear it from either. The memory copy is the truth: the prefs commit runs later on
+    // [writeDispatcher], so a reader of the prefs can see a list without the last entries.
+    // [recentCategoriesLock] makes each read-and-update of the list one step (thread races plan, 8).
     private val cachedRecentCategories: MutableMap<String, List<RecentCategory>> = ConcurrentHashMap()
+    private val recentCategoriesLock = Any()
 
     fun addToCategoryHistory(
         categoryId: String,
@@ -1068,18 +1071,22 @@ class MediaRepository(
         contentType: String,
     ) {
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
-        val existing = getRecentCategoryList(key)
-        val updated = existing.filter { it.categoryId != categoryId }.toMutableList()
-        updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
-        val trimmed = updated.take(MAX_RECENT_CATEGORIES)
-        profileCache.commitAsync { putString(key, json.encodeToString(trimmed)) }
-        cachedRecentCategories[contentType] = trimmed
+        synchronized(recentCategoriesLock) {
+            val existing = cachedRecentCategories[contentType] ?: getRecentCategoryList(key)
+            val updated = existing.filter { it.categoryId != categoryId }.toMutableList()
+            updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
+            val trimmed = updated.take(MAX_RECENT_CATEGORIES)
+            cachedRecentCategories[contentType] = trimmed
+            profileCache.commitAsync { putString(key, json.encodeToString(trimmed)) }
+        }
     }
 
     fun getRecentlyViewedCategories(contentType: String): List<RecentCategory> {
         cachedRecentCategories[contentType]?.let { return it }
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
-        return getRecentCategoryList(key).also { cachedRecentCategories[contentType] = it }
+        return synchronized(recentCategoriesLock) {
+            cachedRecentCategories.getOrPut(contentType) { getRecentCategoryList(key) }
+        }
     }
 
     private fun getRecentCategoryList(key: String): List<RecentCategory> {
@@ -2486,7 +2493,7 @@ class MediaRepository(
         fetchTimes.clear()
         cachedFavorites = null
         cachedFavoriteCategories = null
-        cachedRecentCategories.clear()
+        synchronized(recentCategoriesLock) { cachedRecentCategories.clear() }
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null
         }

@@ -37,6 +37,6 @@ one commit.
 |-------|------|--------|
 | A | Player: 1, 2, with unit tests | Done |
 | B | Stream loader and details pages: 3, 4, 5, 6 | In progress |
-| C | Data layer: 7, 8, 12, 13, 14 | In progress |
+| C | Data layer: 7, 8, 12, 13, 14 | Done |
 | D | Sync and person page: 9, 10, 11 | In progress |
 | E | Full checks, emulator walks (zap, preview, details copy switch, favourites, sync), release notes | Not started |

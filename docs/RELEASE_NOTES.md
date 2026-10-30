@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Fewer playback errors after a network change, and buffer size limits that work:** a switch between Wi-Fi and mobile data, or from a channel to a film, during playback could stop the stream with a playback error. The player's memory limit for buffered video now applies, so a high-bitrate film no longer fills memory past it. TV and phone.
+- **Lists stay right when the app does several things at once:** a source's settings no longer go back to the old ones after a change, two categories opened quickly both stay in Recent Categories, and a network share or M3U playlist no longer shows an empty list while it loads or after Android frees memory. TV and phone.
 
 ## Version: 0.8.20261030025701
 

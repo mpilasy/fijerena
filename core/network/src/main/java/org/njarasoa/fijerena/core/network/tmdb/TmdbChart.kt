@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import java.io.File
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 
 /** The TMDB charts Home shows, cut down to the catalogue (docs/plans/20261029_tmdb-charts-plan.md). */
 enum class TmdbChart(
@@ -110,7 +111,9 @@ class TmdbChartPages(
             coerceInputValues = true
         }
     private val locks = TmdbChart.entries.associateWith { Mutex() }
-    private val memory = mutableMapOf<TmdbChart, Stored>()
+
+    // One map for all charts, each chart under its own lock: so it must be safe for concurrent writes.
+    private val memory = ConcurrentHashMap<TmdbChart, Stored>()
 
     /**
      * Page [page] (from 1) of [chart]: the stored one, else TMDB's, stored. Null past the chart's

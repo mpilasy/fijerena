@@ -11,46 +11,57 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 abstract class BaseM3uMediaProvider : MediaProvider {
-    protected var categories = emptyList<MediaCategory>()
-
-    // Custom setter keeps itemsByCategory in sync automatically, so subclasses (which just
-    // assign `items = its` after parsing/scanning) don't need to know this index exists.
+    // The lists and the category index as one immutable snapshot, null when not connected.
+    // A reader reads it once: trimMemory() on Main can drop it at any time, and with separate
+    // fields it emptied the lists between a reader's check and its read (thread races plan, 13).
     // Without the index getItems() would linear-scan the full list on every category open — cheap for a
     // typical playlist, but a real per-navigation cost on a 50k-100k entry IPTV catalog.
-    protected var items = emptyList<MediaItem>()
-        set(value) {
-            field = value
-            itemsByCategory = value.groupBy { it.categoryId }
-        }
-    protected var connected = false
-
-    private var itemsByCategory: Map<String, List<MediaItem>> = emptyMap()
-
-    override suspend fun disconnect() {
-        connected = false
-        categories = emptyList()
-        items = emptyList()
+    private class Snapshot(
+        val categories: List<MediaCategory>,
+        val items: List<MediaItem>,
+    ) {
+        val itemsByCategory: Map<String, List<MediaItem>> = items.groupBy { it.categoryId }
     }
 
-    override fun isConnected(): Boolean = connected
+    @Volatile private var snapshot: Snapshot? = null
 
-    // Large IPTV/local playlists (50k-100k entries) hold `items`, `categories`, and the
-    // itemsByCategory index in memory indefinitely otherwise.
-    // Resetting `connected` alongside them (matching disconnect()) is required, not optional:
-    // getCategories()/getItems() only re-scan when `!connected`, so dropping the lists without
-    // it would make a trimmed provider look permanently empty instead of transparently
-    // re-populating on next use.
+    /** Subclasses call this after a successful parse or scan; it also marks the provider connected. */
+    protected fun publish(
+        categories: List<MediaCategory>,
+        items: List<MediaItem>,
+    ) {
+        snapshot = Snapshot(categories, items)
+    }
+
+    private val items: List<MediaItem> get() = snapshot?.items.orEmpty()
+
+    /** The current snapshot; connects first when there is none. */
+    private suspend fun loaded(): kotlin.Result<Snapshot> {
+        snapshot?.let { return kotlin.Result.success(it) }
+        val connectResult = connect()
+        if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
+        // A trimMemory() right after the connect: show nothing now, the next call connects again.
+        return kotlin.Result.success(snapshot ?: Snapshot(emptyList(), emptyList()))
+    }
+
+    override suspend fun disconnect() {
+        snapshot = null
+    }
+
+    override fun isConnected(): Boolean = snapshot != null
+
+    // Large IPTV/local playlists (50k-100k entries) hold the items, the categories, and the
+    // itemsByCategory index in memory indefinitely otherwise. Dropping the snapshot also marks
+    // the provider disconnected, so getCategories()/getItems() connect again on next use instead
+    // of showing a permanently empty provider.
     override fun trimMemory() {
-        connected = false
-        categories = emptyList()
-        items = emptyList()
+        snapshot = null
     }
 
     override suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
-        if (!connected) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
-        }
+        val current = loaded().getOrElse { return kotlin.Result.failure(it) }
+        val items = current.items
+        val categories = current.categories
 
         // Single-pass set construction — avoid intermediate list from filter+map
         val filteredCategories =
@@ -78,11 +89,8 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         categoryId: String,
         contentType: String,
     ): kotlin.Result<List<MediaItem>> {
-        if (!connected) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
-        }
-        return kotlin.Result.success(itemsByCategory[categoryId].orEmpty())
+        val current = loaded().getOrElse { return kotlin.Result.failure(it) }
+        return kotlin.Result.success(current.itemsByCategory[categoryId].orEmpty())
     }
 
     override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =

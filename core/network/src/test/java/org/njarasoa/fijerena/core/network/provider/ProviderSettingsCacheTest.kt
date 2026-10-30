@@ -7,9 +7,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
@@ -58,7 +61,35 @@ class ProviderSettingsCacheTest {
             assertEquals(adult, app.getProviderSettings(PROVIDER_ID).categoryFilters)
         }
 
+    @Test
+    fun `a slow read that started before a write does not put the old settings back`() =
+        runBlocking {
+            var row = provider.copy(id = RACE_PROVIDER_ID)
+            val readStarted = CompletableDeferred<Unit>()
+            val releaseRead = CompletableDeferred<Unit>()
+            var calls = 0
+            coEvery { dao.getProviderById(RACE_PROVIDER_ID) } coAnswers {
+                val seen = row
+                if (calls++ == 0) {
+                    readStarted.complete(Unit)
+                    releaseRead.await()
+                }
+                seen
+            }
+            coEvery { dao.updateProvider(any()) } coAnswers { row = firstArg() }
+            val repository = ProviderRepository(context)
+
+            val slowRead = launch { repository.getProviderSettings(RACE_PROVIDER_ID) }
+            readStarted.await()
+            repository.setProvidesGuide(RACE_PROVIDER_ID, enabled = false, byUser = true)
+            releaseRead.complete(Unit)
+            slowRead.join()
+
+            assertFalse(repository.getProviderSettings(RACE_PROVIDER_ID).providesGuideOn)
+        }
+
     private companion object {
         const val PROVIDER_ID = 4242L
+        const val RACE_PROVIDER_ID = 4243L
     }
 }

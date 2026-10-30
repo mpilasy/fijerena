@@ -109,6 +109,20 @@ class ProviderRepository(
         private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
 
         /**
+         * Bumped on each invalidation of [settingsCache]. A read that misses the cache stores its
+         * result only when no invalidation came while it read the database, so a slow read cannot
+         * put old settings back after a write (thread races plan, 7).
+         */
+        private val settingsGeneration =
+            java.util.concurrent.atomic
+                .AtomicLong()
+
+        private fun invalidateSettings(predicate: (Pair<Long, String>) -> Boolean) {
+            settingsGeneration.incrementAndGet()
+            settingsCache.keys.removeAll(predicate)
+        }
+
+        /**
          * The sources a profile with [keys] (its `providerKey`s, null for none stored) can use, in
          * [providers]' order: those of its keys this device has — a key with no source here is
          * skipped. Nothing else: there is no device or current source (multi-source plan, P3).
@@ -222,7 +236,7 @@ class ProviderRepository(
         if (!SourceShortNames.isFree(shortName, providerId, shortNameSources(all))) return false
         val stored = parseProviderSettings(entity.providerSettings)
         dao.updateProvider(entity.copy(providerSettings = json.encodeToString(stored.copy(shortName = shortName.trim()))))
-        settingsCache.keys.removeAll { it.first == providerId }
+        invalidateSettings { it.first == providerId }
         return true
     }
 
@@ -369,7 +383,7 @@ class ProviderRepository(
             clearProviderCache(id)
             clearProviderWatchState(id)
             clearProviderCatalog(id)
-            settingsCache.keys.removeAll { it.first == id }
+            invalidateSettings { it.first == id }
             filtersStore.removeProvider(id)
             MediaProviderFactory.providerChanged(id)
             AppSettings(context).orphanSweepPending = false
@@ -616,7 +630,7 @@ class ProviderRepository(
         dao.updateProvider(entity.copy(username = logins.main.username, providerSettings = settingsJson))
         writeExtraPasswords(providerId, logins.main.password, logins.extras.associate { it.username to it.password })
         SettingsSyncQueue.provider(context, providerId)
-        settingsCache.keys.removeAll { it.first == providerId }
+        invalidateSettings { it.first == providerId }
         MediaProviderFactory.providerChanged(providerId)
     }
 
@@ -818,7 +832,7 @@ class ProviderRepository(
             val mainPassword = getPassword(id).orEmpty()
             writeExtraPasswords(id, mainPassword, extras.filterKeys { it in parseProviderSettings(remote.providerSettings).extraLogins })
         }
-        settingsCache.keys.removeAll { it.first == id }
+        invalidateSettings { it.first == id }
         MediaProviderFactory.clearCache(id)
         return id
     }
@@ -859,7 +873,7 @@ class ProviderRepository(
         filters: CategoryFilters,
     ) {
         filtersStore.set(providerId, profileId, filters, queueForSync = false)
-        settingsCache.keys.removeAll { it.first == providerId }
+        invalidateSettings { it.first == providerId }
         val entity = dao.getProviderById(providerId) ?: return
         if (profileId == activeProfileId() && entity.type == "XTREAM") {
             withContext(Dispatchers.IO) {
@@ -886,11 +900,17 @@ class ProviderRepository(
      */
     suspend fun getProviderSettings(providerId: Long): ProviderSettings {
         val profileId = activeProfileId()
-        settingsCache[providerId to profileId]?.let { return it }
+        val key = providerId to profileId
+        settingsCache[key]?.let { return it }
+        val generation = settingsGeneration.get()
         val entity = dao.getProviderById(providerId) ?: return ProviderSettings.DEFAULT
         val stored = parseProviderSettings(entity.providerSettings)
         val settings = stored.copy(categoryFilters = filtersStore.get(providerId, profileId, stored.categoryFilters))
-        settingsCache[providerId to profileId] = settings
+        if (settingsGeneration.get() == generation) {
+            settingsCache[key] = settings
+            // An invalidation between the check and the put: take the old settings out again.
+            if (settingsGeneration.get() != generation) settingsCache.remove(key, settings)
+        }
         return settings
     }
 
@@ -917,7 +937,7 @@ class ProviderRepository(
         filtersStore.set(providerId, profileId, settings.categoryFilters)
         // Read back: a child profile's show only what Parental controls let through (CategoryFilters.child).
         val applied = filtersStore.get(providerId, profileId)
-        settingsCache.keys.removeAll { it.first == providerId }
+        invalidateSettings { it.first == providerId }
         settingsCache[providerId to profileId] = settings.copy(categoryFilters = applied)
         MediaProviderFactory.providerChanged(providerId)
 
@@ -961,7 +981,7 @@ class ProviderRepository(
     ) {
         val entity = dao.getProviderById(providerId) ?: return
         filtersStore.set(providerId, profileId, filters)
-        settingsCache.keys.removeAll { it.first == providerId }
+        invalidateSettings { it.first == providerId }
         if (profileId != activeProfileId()) return
         // Drop the cached provider and repository, and recompute the hidden-category flags locally.
         MediaProviderFactory.providerChanged(providerId)
@@ -994,7 +1014,7 @@ class ProviderRepository(
             val stored = parseProviderSettings(entity.providerSettings)
             val updated = stored.copy(providesGuide = enabled, providesGuideSetByUser = stored.providesGuideSetByUser || byUser)
             dao.updateProvider(entity.copy(providerSettings = json.encodeToString(updated)))
-            settingsCache.keys.removeAll { it.first == providerId }
+            invalidateSettings { it.first == providerId }
         }
     }
 
@@ -1048,7 +1068,7 @@ class ProviderRepository(
      * every Xtream source's hidden categories are recomputed — local only, no network.
      */
     suspend fun childProfileChanged(profileId: String) {
-        settingsCache.keys.removeAll { it.second == profileId }
+        invalidateSettings { it.second == profileId }
         if (profileId != activeProfileId()) return
         dao.getAllProvidersList().filter { it.type == "XTREAM" }.forEach { entity ->
             withContext(Dispatchers.IO) {
@@ -1097,7 +1117,7 @@ class ProviderRepository(
         toProviderId: Long,
     ) {
         filtersStore.copyProvider(fromProviderId, toProviderId)
-        settingsCache.keys.removeAll { it.first == toProviderId }
+        invalidateSettings { it.first == toProviderId }
     }
 
     /**
@@ -1116,7 +1136,7 @@ class ProviderRepository(
                 .forEach { filtersStore.set(entity.id, it, stored.categoryFilters) }
             dao.updateProvider(entity.copy(providerSettings = json.encodeToString(stored.copy(categoryFilters = CategoryFilters()))))
         }
-        settingsCache.clear()
+        invalidateSettings { true }
     }
 
     suspend fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {

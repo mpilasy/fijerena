@@ -63,9 +63,7 @@ class LocalMediaProvider(
                     its.addAll(dirItems)
                 }
 
-                categories = cats
-                items = its
-                connected = true
+                publish(cats, its)
                 Result.success(Unit)
             } catch (e: Exception) {
                 // cancellation-ok: no suspension point in the try (blocking I/O)

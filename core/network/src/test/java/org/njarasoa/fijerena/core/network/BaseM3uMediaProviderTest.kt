@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 
 class BaseM3uMediaProviderTest {
     private class TestM3uProvider(
-        testItems: List<MediaItem>,
+        private val testItems: List<MediaItem>,
     ) : BaseM3uMediaProvider() {
         override val providerId: Long = 1L
         override val capabilities: ProviderCapabilities =
@@ -24,11 +24,16 @@ class BaseM3uMediaProviderTest {
             )
 
         init {
-            items = testItems
-            connected = true
+            publish(emptyList(), testItems)
         }
 
-        override suspend fun connect(): kotlin.Result<Unit> = kotlin.Result.success(Unit)
+        var connects = 0
+
+        override suspend fun connect(): kotlin.Result<Unit> {
+            connects++
+            publish(emptyList(), testItems)
+            return kotlin.Result.success(Unit)
+        }
     }
 
     @Test
@@ -67,5 +72,18 @@ class BaseM3uMediaProviderTest {
             // use instead of permanently looking empty.
             assertTrue(!provider.isConnected())
             assertTrue(provider.search("dune", ContentType.MOVIES).getOrNull()!!.isEmpty())
+        }
+
+    @Test
+    fun getItems_afterTrimMemory_connectsAgainAndReturnsTheItems() =
+        runTest {
+            val item = MediaItem(id = "1", name = "Dune", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1")
+            val provider = TestM3uProvider(listOf(item))
+
+            provider.trimMemory()
+
+            assertEquals(listOf(item), provider.getItems("cat1", ContentType.MOVIES).getOrNull())
+            assertEquals(1, provider.connects)
+            assertTrue(provider.isConnected())
         }
 }
