@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261030192729
 
 - **Recent Channels second on Home:** the channels you watched last now come right after Continue Watching, by themselves, under the name Recent Channels. Favourite Channels stay on the Channels panel. TV and phone.
 - **TV Home keeps your place:** after Back from a card, focus is on that card, its row's title shows and the cards before it stay in view. Home from the side menu opens on the first card. TV.
