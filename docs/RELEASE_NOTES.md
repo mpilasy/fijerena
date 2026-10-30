@@ -1,5 +1,11 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Who is in an episode:** an episode's details show its cast: the episode's guest stars first, then the show's regular cast, with photos. A card opens the actor's page. TV and phone.
+- **An actor's episodes:** on an actor's page, a show card says how many episodes they were in ("1 episode · as Merritt Rook"). A one-episode role opens that episode. Otherwise the card opens a list of their episodes by name (a guest or recurring role) or of their seasons (a regular role); each opens the show there. TV and phone.
+- **More titles per screen on the phone:** film and show rows (Home's favourites, Wishlist and charts, an actor's page, More Like This) show 2:3 posters, three and a part of a fourth across. Continue Watching and channels keep their wide cards. Phone.
+
 ## Version: 0.8.20261030215448
 
 - **Very long casts open safely:** the Cast tab's More card now adds 30 actors per press ("+30 more"), instead of the whole cast at once. A long show's cast runs to thousands (Law & Order: over 7,600), which could stall or crash the phone. TV and phone.

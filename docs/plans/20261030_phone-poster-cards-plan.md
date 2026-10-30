@@ -1,6 +1,6 @@
 # Phone poster cards
 
-**Status:** In progress 2026-10-30.
+**Status:** Done 2026-10-30, walked on both emulators.
 
 ## Goal
 
@@ -25,4 +25,4 @@ cards (about 2.3).
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | Poster card on the phone rows of PC-D1; walk on the phone emulator | In progress |
+| 1 | Poster card on the phone rows of PC-D1; walk on the phone emulator | Done |

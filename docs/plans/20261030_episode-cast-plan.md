@@ -1,6 +1,6 @@
 # Episode cast
 
-**Status:** In progress 2026-10-30.
+**Status:** Done 2026-10-30, walked on both emulators.
 
 ## Goal
 
@@ -54,7 +54,7 @@ Victims Unit only as Merritt Rook in S9E17 "Authority"; today the app cannot sho
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | Data: guest stars in the season model; episode list per guest credit on the actor page (credit call, cache). Unit tests. | Not started |
-| 2 | Episode details cast section, TV and phone. | Not started |
-| 3 | Actor page episode cards and targets, missing-episode note, TV and phone. | Not started |
-| 4 | Checks (Android Lint included), emulator walks, docs (FEATURES, NAVIGATION_GUIDE, PRIVACY if needed, RELEASE_NOTES). | Not started |
+| 1 | Data: guest stars in the season model; episode list per guest credit on the actor page (credit call, cache). Unit tests. | Done |
+| 2 | Episode details cast section, TV and phone. | Done |
+| 3 | Actor page episode cards and targets, missing-episode note, TV and phone. | Done |
+| 4 | Checks (Android Lint included), emulator walks, docs (FEATURES, NAVIGATION_GUIDE, PRIVACY if needed, RELEASE_NOTES). | Done |
