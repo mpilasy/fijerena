@@ -673,19 +673,31 @@ fun MobileCategoryListScreen(
         if (target != null && dockLoader != null) {
             LaunchedEffect(target.sourceKey, dockRetry, fullScreen, appStarted) {
                 if (fullScreen || !appStarted || unavailableKey == target.sourceKey) return@LaunchedEffect
-                val reachedPlaying =
-                    withTimeoutOrNull(DOCK_START_TIMEOUT_MS) {
-                        // This channel's picture, not the one before: the loader resolved it and
-                        // the engine plays its URL. The flows directly, not snapshotFlow{}: they
-                        // are plain StateFlows, not Compose snapshot state.
-                        combine(dockLoader.state, dockPlayback.playbackState, dockPlayback.currentMetadata) { loaded, playing, metadata ->
-                            loaded is StreamLoaderViewModel.StreamState.Success &&
-                                loaded.streamId == target.id &&
-                                playing is PlaybackState.Playing &&
-                                metadata.streamUrl == loaded.streamUrl
-                        }.first { it }
+                // A channel that plays a moment and then fails over and over gets the same time
+                // each time its picture is lost (the engine waits or fails again; not a stop).
+                while (true) {
+                    val reachedPlaying =
+                        withTimeoutOrNull(DOCK_START_TIMEOUT_MS) {
+                            // This channel's picture, not the one before: the loader resolved it and
+                            // the engine plays its URL. The flows directly, not snapshotFlow{}: they
+                            // are plain StateFlows, not Compose snapshot state.
+                            combine(
+                                dockLoader.state,
+                                dockPlayback.playbackState,
+                                dockPlayback.currentMetadata,
+                            ) { loaded, playing, metadata ->
+                                loaded is StreamLoaderViewModel.StreamState.Success &&
+                                    loaded.streamId == target.id &&
+                                    playing is PlaybackState.Playing &&
+                                    metadata.streamUrl == loaded.streamUrl
+                            }.first { it }
+                        }
+                    if (reachedPlaying == null) {
+                        unavailableKey = target.sourceKey
+                        break
                     }
-                if (reachedPlaying == null) unavailableKey = target.sourceKey
+                    dockPlayback.playbackState.first { it is PlaybackState.Buffering || it is PlaybackState.Error }
+                }
             }
         }
 

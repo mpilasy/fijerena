@@ -555,11 +555,22 @@ internal fun LiveTvSplitLayout(
     // churn caused main-thread ANRs), and says so over the video instead of "Tuning" for ever. A
     // failed load says so at once.
     val currentTargetPlaying by rememberUpdatedState(targetPlaying)
+    // Picture lost after it came: the engine waits or fails again (not a pause, not a stop).
+    val currentPictureLost by rememberUpdatedState(
+        previewPlaybackState is PlaybackState.Buffering || previewPlaybackState is PlaybackState.Error,
+    )
     LaunchedEffect(target.sourceKey) {
         unavailableId = null
         // targetPlaying reads Compose state (the collected flows), so snapshotFlow sees it change.
-        val played = withTimeoutOrNull(CHANNEL_START_TIMEOUT_MS) { snapshotFlow { currentTargetPlaying }.first { it } }
-        if (played == null) giveUp()
+        // A channel that plays a moment and then fails over and over gets the same 10 s each time.
+        while (true) {
+            val played = withTimeoutOrNull(CHANNEL_START_TIMEOUT_MS) { snapshotFlow { currentTargetPlaying }.first { it } }
+            if (played == null) {
+                giveUp()
+                break
+            }
+            snapshotFlow { currentPictureLost }.first { it }
+        }
     }
     LaunchedEffect(streamState, target.id) {
         val error = streamState as? StreamLoaderViewModel.StreamState.Error ?: return@LaunchedEffect
