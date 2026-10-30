@@ -30,7 +30,17 @@ class StreamCallTracker(
      * closing a socket can block.
      */
     fun cancelAll() {
-        val open = synchronized(calls) { calls.toList().also { calls.clear() } }
+        // Not toList(): it reads the size, then the first element, and the collector can clear a
+        // weak entry in between, so a set of one threw NoSuchElementException on the main thread
+        // (a Chromecast crash, 2026-10-30). hasNext() holds the next call strongly until next().
+        val open =
+            synchronized(calls) {
+                buildList {
+                    val each = calls.iterator()
+                    while (each.hasNext()) each.next()?.let(::add)
+                    calls.clear()
+                }
+            }
         if (open.isNotEmpty()) runInBackground { open.forEach(Call::cancel) }
     }
 }
