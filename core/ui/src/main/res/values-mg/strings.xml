@@ -1510,6 +1510,15 @@
     <string name="person_none_in_library">Tsy misy ao amin\'ny tahirinao ny lohateniny.</string>
     <string name="person_none_in_sources">Tsy misy ao amin\'ny loharanonao</string>
     <string name="person_load_error">Tsy azo nalaina ny pejin\'ity olona ity.</string>
+    <plurals name="person_episode_count" tools:ignore="ImpliedQuantity">
+        <item quantity="one">fizarana %1$d</item>
+        <item quantity="other">fizarana %1$d</item>
+    </plurals>
+    <string name="person_episode_code">S%1$dE%2$d</string>
+    <string name="person_episode_code_title">S%1$dE%2$d · %3$s</string>
+    <string name="person_specials">Fizarana manokana</string>
+    <string name="person_not_in_source">Tsy ao amin\'ny loharanonao ny %1$s</string>
+    <string name="person_missing_mark">Tsy ao amin\'ny loharanonao</string>
     <string name="tmdb_charts_refresh_title">Havaozina ny laharana</string>
     <string name="tmdb_charts_refresh_desc">Vakiana indray avy amin\'ny TMDB izao ny laharana, tsy miandry iray andro.</string>
     <string name="tmdb_charts_refresh_done">Voafafa ny laharana. Hovakian\'ny fandraisana indray.</string>

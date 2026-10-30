@@ -1516,6 +1516,15 @@
     <string name="person_none_in_library">None of their titles are in your library.</string>
     <string name="person_none_in_sources">None in your sources</string>
     <string name="person_load_error">This person\'s page could not be loaded.</string>
+    <plurals name="person_episode_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <string name="person_episode_code">S%1$dE%2$d</string>
+    <string name="person_episode_code_title">S%1$dE%2$d · %3$s</string>
+    <string name="person_specials">Specials</string>
+    <string name="person_not_in_source">%1$s is not in your source</string>
+    <string name="person_missing_mark">Not in your source</string>
     <string name="tmdb_charts_refresh_title">Refresh Charts</string>
     <string name="tmdb_charts_refresh_desc">Reads the charts from TMDB again now, not after a day.</string>
     <string name="tmdb_charts_refresh_done">Charts cleared. Home reads them again.</string>

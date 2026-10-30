@@ -40,9 +40,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
+import org.njarasoa.fijerena.core.network.tmdb.PersonRole
+import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
+import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.showTarget
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.cleanTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
@@ -54,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
 import org.njarasoa.fijerena.core.ui.person.personRoleText
+import org.njarasoa.fijerena.core.ui.person.showMissingNote
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
@@ -76,7 +83,9 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * its own switch for the titles no source has (UX-D7: off on each opening, none for a child), and
  * keeps the switch while it has no card, then saying "None in your sources" beside it. A card opens
  * the title on its own source, or a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES`
- * or `TV_SHOWS`).
+ * or `TV_SHOWS`). A show card of a role opens the episode, or the list of the person's episodes or
+ * seasons in the show ([ShowAppearancesOverlay]), each opening the show there ([onShowSelected];
+ * docs/plans/20261030_episode-cast-plan.md, EC-D2).
  *
  * Focus: on the first card on entry, else on the biography, else on a row's switch; Back from a
  * title returns to the card left.
@@ -87,6 +96,7 @@ fun PersonScreen(
     name: String,
     crew: Boolean,
     onTitleSelected: (item: MediaItem, contentType: String) -> Unit,
+    onShowSelected: (show: MediaItem, target: ShowTarget) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -97,7 +107,19 @@ fun PersonScreen(
         )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val showMissing by viewModel.showMissing.collectAsStateWithLifecycle()
-    BackHandler { onBack() }
+    val showOpening by viewModel.showOpening.collectAsStateWithLifecycle()
+    val openShow: (MediaItem, ShowTarget) -> Unit = { show, target ->
+        showMissingNote(context, target)
+        onShowSelected(show, target)
+    }
+    // A show card whose role is one episode or one season, or whose credit TMDB could not give.
+    LaunchedEffect(showOpening) {
+        (showOpening as? PersonViewModel.ShowOpening.Open)?.let { open ->
+            viewModel.opened()
+            openShow(open.show, open.target)
+        }
+    }
+    BackHandler { if (showOpening is PersonViewModel.ShowOpening.Lines) viewModel.closeShow() else onBack() }
 
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
         when (val current = state) {
@@ -122,6 +144,10 @@ fun PersonScreen(
                     showMissing = showMissing,
                     onShowMissing = viewModel::setShowMissing,
                     onTitleSelected = onTitleSelected,
+                    showOpening = showOpening,
+                    onOpenShow = viewModel::openShow,
+                    onCloseShow = viewModel::closeShow,
+                    onLineSelected = { lines, line -> openShow(lines.show, showTarget(line, lines.sourceSeasons)) },
                     onBack = onBack,
                 )
             }
@@ -137,6 +163,10 @@ private fun PersonContent(
     showMissing: PersonViewModel.ShowMissing,
     onShowMissing: (PersonViewModel.Row, Boolean) -> Unit,
     onTitleSelected: (item: MediaItem, contentType: String) -> Unit,
+    showOpening: PersonViewModel.ShowOpening?,
+    onOpenShow: (MediaItem, PersonRole?) -> Unit,
+    onCloseShow: () -> Unit,
+    onLineSelected: (PersonViewModel.ShowOpening.Lines, ShowAppearance) -> Unit,
     onBack: () -> Unit,
 ) {
     val person = state.person
@@ -195,7 +225,12 @@ private fun PersonContent(
                 thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
                 onItemSelected = { item ->
                     returnFocus.leaveFrom(prefix + item.sourceKey, listState)
-                    onTitleSelected(item, contentType)
+                    // A show from a source: its episodes with the person (EC-D2). A TMDB-only card its TMDB page.
+                    if (contentType == ContentType.TV_SHOWS && !item.id.startsWith(TmdbOnlyItem.PREFIX)) {
+                        onOpenShow(item, rows?.roles?.get(item.sourceKey))
+                    } else {
+                        onTitleSelected(item, contentType)
+                    }
                 },
                 onOpenActions = null,
                 firstItemFocus = focus,
@@ -223,6 +258,13 @@ private fun PersonContent(
             )
         }
 
+    val lines = showOpening as? PersonViewModel.ShowOpening.Lines
+    // Closing the list gives focus back to the show card that opened it.
+    var closedShowKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(closedShowKey) {
+        closedShowKey?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = showFocus) }
+        closedShowKey = null
+    }
     LazyColumn(
         state = listState,
         // Back on the root, before the focused control: see NAVIGATION_GUIDE → TV Back on Detail Screens.
@@ -314,6 +356,21 @@ private fun PersonContent(
                 )
             }
         }
+    }
+    // Over the page, which stays: its show card takes the focus back when the list closes.
+    if (lines != null) {
+        val show = lines.show
+        ShowAppearancesOverlay(
+            title = show.listTitle ?: cleanTitle(show.name),
+            subtitle = listOfNotNull(person.name?.takeIf { it.isNotBlank() } ?: name, roleTexts[show.sourceKey]).joinToString(" · "),
+            lines = lines.lines,
+            returnFocus = returnFocus,
+            onSelect = { line -> onLineSelected(lines, line) },
+            onClose = {
+                closedShowKey = "person:${ContentType.TV_SHOWS}:${show.sourceKey}"
+                onCloseShow()
+            },
+        )
     }
 }
 

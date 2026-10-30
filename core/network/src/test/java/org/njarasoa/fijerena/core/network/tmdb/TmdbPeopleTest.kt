@@ -200,7 +200,8 @@ class TmdbPeopleTest {
                 )
             val rows = personRows(actor, crew = false, sources = listOf(source { it != "Title 3" }), missingMovies = true)
             assertEquals(PersonRole(character = "Paul"), rows.roles[rows.movies[0].sourceKey])
-            assertEquals(PersonRole(character = "Paul"), rows.roles[rows.shows.single().sourceKey])
+            // A show's role carries its episodes (episode cast plan, EC-D2).
+            assertEquals(PersonRole(character = "Paul", episodeCount = 30), rows.roles[rows.shows.single().sourceKey])
             // A TMDB-only card has no role here: TMDB gave none.
             assertTrue(rows.movies[1].id.startsWith(TmdbOnlyItem.PREFIX))
             assertEquals(null, rows.roles[rows.movies[1].sourceKey])

@@ -20,7 +20,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.tmdb.PersonRole
 import org.njarasoa.fijerena.core.network.tmdb.PersonRows
+import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
+import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbCombinedCredits
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPerson
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPersonCredit
@@ -67,6 +70,19 @@ class PersonViewModelTest {
         ): PersonRows {
             calls += RowsCall(crew, missing)
             return PersonRows(movies = listOf(item("m${calls.size}")), shows = emptyList())
+        }
+
+        /** What the credit call gives; a failure when null. */
+        var lines: PersonViewModel.ShowLines? = null
+        val creditCalls: MutableList<String> = Collections.synchronizedList(mutableListOf())
+
+        override suspend fun appearances(
+            personId: Int,
+            creditId: String,
+            show: MediaItem,
+        ): PersonViewModel.ShowLines {
+            creditCalls += creditId
+            return lines ?: error("HTTP 500")
         }
     }
 
@@ -263,8 +279,82 @@ class PersonViewModelTest {
         assertEquals(listOf("test-main", "test-main"), data.updateThreads.map { it.substringBefore(" @") })
     }
 
+    private fun PersonViewModel.opening(predicate: (PersonViewModel.ShowOpening) -> Boolean) =
+        await { showOpening.first { it != null && predicate(it) }!! }
+
+    @Test
+    fun `a one-episode role opens that episode at once, after the credit call`() {
+        val data = FakeData()
+        data.lines = PersonViewModel.ShowLines(listOf(ShowAppearance(9, 17, "Authority", "e917")), setOf(9))
+        val vm = page(data)
+        vm.loaded()
+
+        vm.openShow(SHOW, PersonRole(character = "Merritt Rook", episodeCount = 1, creditId = "c1"))
+
+        assertEquals(
+            PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(episodeId = "e917", season = 9)),
+            vm.opening { it is PersonViewModel.ShowOpening.Open },
+        )
+        assertEquals(listOf("c1"), data.creditCalls)
+        vm.opened()
+        assertNull(vm.showOpening.value)
+    }
+
+    @Test
+    fun `a role of several episodes lists them until the list is closed`() {
+        val data = FakeData()
+        val lines = listOf(ShowAppearance(1, 1, "One", "e11"), ShowAppearance(2, 5, "Five", null, inSource = false))
+        data.lines = PersonViewModel.ShowLines(lines, setOf(1))
+        val vm = page(data)
+        vm.loaded()
+
+        vm.openShow(SHOW, PersonRole(character = "Cop", episodeCount = 2, creditId = "c2"))
+
+        assertEquals(
+            PersonViewModel.ShowOpening.Lines(SHOW, lines, setOf(1)),
+            vm.opening { it is PersonViewModel.ShowOpening.Lines },
+        )
+        vm.closeShow()
+        assertNull(vm.showOpening.value)
+    }
+
+    @Test
+    fun `a show card without a credit, on a crew page or with a failed credit call opens the show`() {
+        val plain = PersonViewModel.ShowOpening.Open(SHOW, ShowTarget())
+        val noCredit = page(FakeData()).also { it.loaded() }
+        noCredit.openShow(SHOW, PersonRole(character = "Cop"))
+        assertEquals(plain, noCredit.showOpening.value)
+
+        val crewData = FakeData()
+        val crewPage = page(crewData, crew = true).also { it.loaded() }
+        crewPage.openShow(SHOW, PersonRole(creditId = "c3"))
+        assertEquals(plain, crewPage.showOpening.value)
+        assertTrue(crewData.creditCalls.isEmpty())
+
+        val failing = page(FakeData()).also { it.loaded() }
+        failing.openShow(SHOW, PersonRole(character = "Cop", creditId = "c4"))
+        assertEquals(plain, failing.opening { it is PersonViewModel.ShowOpening.Open })
+    }
+
+    @Test
+    fun `where a show card goes once its lines are known`() {
+        fun of(vararg lines: ShowAppearance) = PersonViewModel.showOpeningOf(SHOW, PersonViewModel.ShowLines(lines.toList(), setOf(3)))
+
+        // No line: the show as it opens.
+        assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget()), of())
+        // One season of a regular role: that season.
+        assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(season = 3)), of(ShowAppearance(3)))
+        // One episode the source lacks: its season, with the note (EC-D3).
+        val lacking = ShowAppearance(3, 4, "Four", null, inSource = false)
+        assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(season = 3, missing = lacking)), of(lacking))
+        // Several: the list.
+        assertTrue(of(ShowAppearance(3), ShowAppearance(4, inSource = false)) is PersonViewModel.ShowOpening.Lines)
+    }
+
     private companion object {
         const val TIMEOUT_MS = 5_000L
+
+        val SHOW = MediaItem(id = "s1", name = "SVU", mediaType = MediaType.SERIES, categoryId = "", providerId = 3L)
 
         val PERSON =
             TmdbPerson(

@@ -1090,6 +1090,19 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                                 }
                             }
                         },
+                        // A show card of a role: the show on the person's episode or season.
+                        onShowSelected = { show, target ->
+                            navController.navigateOnce(
+                                Screen.EpisodeSelection(
+                                    seriesId = show.id,
+                                    seriesName = show.name,
+                                    categoryId = show.categoryId,
+                                    initialEpisodeId = target.episodeId,
+                                    providerId = show.providerId,
+                                    initialSeason = target.season,
+                                ),
+                            )
+                        },
                         onBack = { navController.navigateUp() },
                     )
                 }
@@ -1153,6 +1166,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         seriesName = episodeSelectionScreen.seriesName,
                         categoryId = episodeSelectionScreen.categoryId,
                         initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
+                        initialSeason = episodeSelectionScreen.initialSeason,
                         providerId = episodeSelectionScreen.providerId,
                         onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning, series ->
                             navController.navigateOnce(

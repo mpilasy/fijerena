@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
+import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -149,6 +150,8 @@ fun MobileEpisodeSelectionScreen(
     providerId: Long = 0L,
     // A cast card or a crew name of the Cast tab: opens the person page.
     onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
+    // The season to open on (an actor's season or episode, or an episode the source lacks).
+    initialSeason: Int? = null,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -179,9 +182,26 @@ fun MobileEpisodeSelectionScreen(
     val displaySeriesDetail = lastSuccess?.seriesDetail
     val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null
 
+    // The episode whose page opened a person page from its cast: Back from that page shows the
+    // episode's page again (the navigation round trip drops every plain remember).
+    var personReturnEpisodeId by rememberSaveable { mutableStateOf<String?>(null) }
+
     // Selected episode for detail panel — only set by an explicit tap (including on the
-    // Continue Watching resume episode below); arriving here never auto-opens it.
-    var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
+    // Continue Watching resume episode below); arriving here never auto-opens it, except on the
+    // way back from a person page opened from the episode's page.
+    var selectedEpisode by remember {
+        mutableStateOf(
+            personReturnEpisodeId?.let { id ->
+                displaySeriesDetail?.episodes?.values?.firstNotNullOfOrNull { list -> list.firstOrNull { it.id == id } }
+            },
+        )
+    }
+    // Used once: a later return (from the player) opens on the list again.
+    LaunchedEffect(Unit) { personReturnEpisodeId = null }
+    val closeEpisode: () -> Unit = {
+        selectedEpisode = null
+        personReturnEpisodeId = null
+    }
 
     // Episode/season this screen is anchored on, and whether that season was the user's own
     // pick — see EpisodeResumeState.kt. Hoisted above both EpisodeListContent and
@@ -198,11 +218,11 @@ fun MobileEpisodeSelectionScreen(
         rememberEpisodeResumeState(
             seriesId = seriesId,
             initialEpisodeId = initialEpisodeId,
-            initialSeason = initialEpisodeId?.let { lastSuccess?.seriesDetail?.seasonNumberContaining(it) },
+            initialSeason = initialEpisodeId?.let { lastSuccess?.seriesDetail?.seasonNumberContaining(it) } ?: initialSeason,
         )
 
     BackHandler(enabled = selectedEpisode != null) {
-        selectedEpisode = null
+        closeEpisode()
     }
 
     // The episode list opens on the backdrop under a clear top bar (TV visual refresh, Phase 5);
@@ -234,7 +254,7 @@ fun MobileEpisodeSelectionScreen(
                         modifier = Modifier.detailBackBacking(solidBar),
                         onClick = {
                             if (selectedEpisode != null) {
-                                selectedEpisode = null
+                                closeEpisode()
                             } else {
                                 onBack()
                             }
@@ -304,6 +324,11 @@ fun MobileEpisodeSelectionScreen(
                         mediaRepository = viewModel.mediaRepository!!,
                         previousEpisode = previousEpisode,
                         nextEpisode = nextEpisode,
+                        showCredits = credits?.takeUnless { it.isEmpty },
+                        onPersonSelected = { personId, name, crew ->
+                            personReturnEpisodeId = selectedEpisode?.id
+                            onPersonSelected(personId, name, crew)
+                        },
                         onNavigate = { next -> selectedEpisode = next },
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             resumeState.setResumeEpisode(episodeId, season = null)
@@ -1178,10 +1203,14 @@ private fun EpisodeDetailContent(
     mediaRepository: MediaRepository,
     previousEpisode: DomainEpisodeItem?,
     nextEpisode: DomainEpisodeItem?,
+    // The show's TMDB cast (the Cast tab's), after the episode's guest stars.
+    showCredits: TitleCredits?,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
     onNavigate: (DomainEpisodeItem) -> Unit,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
 ) {
     val extension = episode.extension ?: "mp4"
+    val episodeCredits = rememberEpisodeCredits(mediaRepository, seriesDetail.metadata.tmdbId, episode, showCredits)
 
     // Load resume position. Keyed on the episode so stepping to another one clears the previous
     // episode's value immediately rather than showing its resume time until the lookup lands —
@@ -1365,16 +1394,25 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
-        cast?.let {
-            CinemaText(
-                text = stringResource(R.string.movie_cast_format, it),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                role = TextRole.BodySmall,
-                tone = TextTone.Secondary,
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        // The episode's cast (the episode cast plan, EC-D1): its guest stars, then the show's cast, as
+        // the Cast tab's cards; without TMDB's, the source's names as the tab's chips.
+        val sourceCast = (episode.metadata.cast ?: seriesDetail.metadata.cast)?.takeIf { it.isNotBlank() }
+        if (episodeCredits != null || sourceCast != null) {
+            CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            // Each episode's own cards: a swipe to the next one starts it at the first actor.
+            key(episode.id) {
+                if (episodeCredits != null) {
+                    MobileCreditsTabContent(
+                        credits = episodeCredits,
+                        section = ThumbnailContentType.TV_SHOW,
+                        onPersonSelected = onPersonSelected,
+                    )
+                } else {
+                    CastChipsTabContent(cast = sourceCast.orEmpty())
+                }
+            }
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
 
         val director = episode.metadata.director ?: seriesDetail.metadata.director

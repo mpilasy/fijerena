@@ -110,6 +110,35 @@ fun titleCredits(
     return TitleCredits(cast, crew.filter { it.people.isNotEmpty() })
 }
 
+/**
+ * The guest stars of TMDB's [episode] as cast cards, in billing order; a person without a TMDB id
+ * or a name is left out. Empty for no episode.
+ */
+fun episodeGuests(episode: TmdbEpisode?): List<CastMember> =
+    episode
+        ?.guestStars
+        .orEmpty()
+        .sortedBy { it.order }
+        .mapNotNull { guest ->
+            val id = guest.id ?: return@mapNotNull null
+            val name = guest.name?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            CastMember(id.toString(), name, guest.character?.takeIf { it.isNotBlank() }, TmdbApiService.profileUrl(guest.profilePath))
+        }.distinctBy { it.personId }
+
+/**
+ * An episode's cast section (docs/plans/20261030_episode-cast-plan.md, EC-D1): the episode's
+ * [guests] first, then the show's cast ([show], the Cast tab's), each person once. No crew lines.
+ * Null when TMDB has nobody for it: the section then is not shown.
+ */
+fun episodeCredits(
+    guests: List<CastMember>,
+    show: TitleCredits?,
+): TitleCredits? =
+    (guests + show?.cast.orEmpty())
+        .distinctBy { it.personId }
+        .takeIf { it.isNotEmpty() }
+        ?.let { TitleCredits(cast = it, crew = emptyList()) }
+
 /** Each person once, in this order; a person without an id or a name is left out. */
 private fun List<TmdbCrewMember>.people(): List<CrewPerson> =
     mapNotNull { member ->

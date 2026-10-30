@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -27,10 +28,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.showTarget
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.cleanTitle
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.ui.R
@@ -44,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
 import org.njarasoa.fijerena.core.ui.person.personRoleText
+import org.njarasoa.fijerena.core.ui.person.showMissingNote
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.home.HomeRow
@@ -63,7 +68,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * title line ends with its own switch for the titles no source has (UX-D7: off on each opening,
  * none for a child); a row keeps its switch while it has no card, and then says "None in your
  * sources" under its title. A tap on a card opens the title on its own source, or a TMDB-only card
- * its TMDB page ([onTitleSelected]).
+ * its TMDB page ([onTitleSelected]). A show card of a role opens the episode, or a sheet of the
+ * person's episodes or seasons in the show ([ShowAppearancesSheet]), each opening the show there
+ * ([onShowSelected]; docs/plans/20261030_episode-cast-plan.md, EC-D2).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +79,7 @@ fun MobilePersonScreen(
     name: String,
     crew: Boolean,
     onTitleSelected: (item: MediaItem, contentType: String) -> Unit,
+    onShowSelected: (show: MediaItem, target: ShowTarget) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -83,6 +91,28 @@ fun MobilePersonScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val showMissing by viewModel.showMissing.collectAsStateWithLifecycle()
     val shownName = (state as? PersonViewModel.State.Loaded)?.person?.name?.takeIf { it.isNotBlank() } ?: name
+    val showOpening by viewModel.showOpening.collectAsStateWithLifecycle()
+    val openShow: (MediaItem, ShowTarget) -> Unit = { show, target ->
+        showMissingNote(context, target)
+        onShowSelected(show, target)
+    }
+    // A show card whose role is one episode or one season, or whose credit TMDB could not give.
+    LaunchedEffect(showOpening) {
+        (showOpening as? PersonViewModel.ShowOpening.Open)?.let { open ->
+            viewModel.opened()
+            openShow(open.show, open.target)
+        }
+    }
+    val roles = (state as? PersonViewModel.State.Loaded)?.rows?.roles.orEmpty()
+    (showOpening as? PersonViewModel.ShowOpening.Lines)?.let { lines ->
+        ShowAppearancesSheet(
+            title = lines.show.listTitle ?: cleanTitle(lines.show.name),
+            subtitle = listOfNotNull(shownName, personRoleText(roles[lines.show.sourceKey])).joinToString(" · "),
+            lines = lines.lines,
+            onSelect = { line -> openShow(lines.show, showTarget(line, lines.sourceSeasons)) },
+            onDismiss = viewModel::closeShow,
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -120,7 +150,14 @@ fun MobilePersonScreen(
                         canShowMissing = viewModel.canShowMissing,
                         showMissing = showMissing,
                         onShowMissing = viewModel::setShowMissing,
-                        onTitleSelected = onTitleSelected,
+                        // A show from a source: its episodes with the person (EC-D2). A TMDB-only card its TMDB page.
+                        onTitleSelected = { item, contentType ->
+                            if (contentType == ContentType.TV_SHOWS && !item.id.startsWith(TmdbOnlyItem.PREFIX)) {
+                                viewModel.openShow(item, roles[item.sourceKey])
+                            } else {
+                                onTitleSelected(item, contentType)
+                            }
+                        },
                     )
                 }
             }

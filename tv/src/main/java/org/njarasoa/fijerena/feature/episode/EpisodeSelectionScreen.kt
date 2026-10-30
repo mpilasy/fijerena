@@ -50,6 +50,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -145,6 +146,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -223,6 +225,8 @@ fun EpisodeSelectionScreen(
     providerId: Long = 0L,
     // A cast card or a crew name of the Cast tab: opens the person page.
     onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
+    // The season to open on when no episode is named (an actor's season, or an episode the source lacks).
+    initialSeason: Int? = null,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -285,6 +289,7 @@ fun EpisodeSelectionScreen(
                 categoryId = shown.categoryId,
                 mediaRepository = viewModel.mediaRepository!!,
                 initialEpisodeId = initialEpisodeId,
+                initialSeason = initialSeason,
                 isFavorite = shown.isFavorite,
                 categoryName = shown.categoryName.takeUnless { child },
                 isRefreshing = isRefreshing,
@@ -343,6 +348,7 @@ internal fun EpisodeListContent(
     sourceNames: Map<Long, String> = emptyMap(),
     credits: TitleCredits? = null,
     onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
+    initialSeason: Int? = null,
 ) {
     val context = LocalContext.current
     val playTrailer = rememberPlayTrailer()
@@ -365,9 +371,22 @@ internal fun EpisodeListContent(
     val episodeCardStyle = TvCardLooks.episode()
     val watchedToggleScope = rememberCoroutineScope()
 
+    // The episode whose panel opened a person page from its cast: Back from that page opens the
+    // panel again (the navigation round trip drops every plain remember).
+    var personReturnEpisodeId by rememberSaveable { mutableStateOf<String?>(null) }
+
     // Selected episode for detail panel — only set by an explicit tap (including on the
-    // Continue Watching resume episode below); arriving here never auto-opens it.
-    var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
+    // Continue Watching resume episode below); arriving here never auto-opens it, except on the
+    // way back from a person page opened from the panel.
+    var selectedEpisode by remember {
+        mutableStateOf(
+            personReturnEpisodeId?.let { id ->
+                seriesDetail.episodes.values.firstNotNullOfOrNull { list -> list.firstOrNull { it.id == id } }
+            },
+        )
+    }
+    // Used once: a later return (from the player) opens on the list again.
+    LaunchedEffect(Unit) { personReturnEpisodeId = null }
 
     // Phase 5 tab shell (the tv detail hero ui plan), same shape as
     // MovieDetailsScreen's Phase 4 one: one FocusRequester, attached by the outer TvSectionTabs
@@ -417,6 +436,7 @@ internal fun EpisodeListContent(
     val closeEpisodePanel: () -> Unit = {
         reopenedEpisodeId = selectedEpisode?.id
         selectedEpisode = null
+        personReturnEpisodeId = null
     }
 
     // Handle back press: dismiss detail panel first, then navigate back. Two handlers, not one
@@ -517,7 +537,10 @@ internal fun EpisodeListContent(
     // left/right moves focus between them, which selects immediately — see SeasonTab below)
     // instead of an accordion; resume season wins on first load, same priority the accordion
     // used to give it.
-    val initialResumeSeason = initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+    // The route's season counts as a resume season: an actor's season (the episode cast plan).
+    val initialResumeSeason =
+        initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+            ?: initialSeason?.takeIf { season -> sortedSeasons.any { it.seasonNumber == season } }
     val resumeState =
         rememberEpisodeResumeState(
             seriesId = seriesDetail.id,
@@ -1028,6 +1051,11 @@ internal fun EpisodeListContent(
                 mediaRepository = mediaRepository,
                 previousEpisode = previousEpisode,
                 nextEpisode = nextEpisode,
+                showCredits = tmdbCredits,
+                onPersonSelected = { personId, name, crew ->
+                    personReturnEpisodeId = current.id
+                    onPersonSelected(personId, name, crew)
+                },
                 onNavigate = { next -> selectedEpisode = next },
                 onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                     resumeState.setResumeEpisode(episodeId, season = null)
@@ -1863,6 +1891,9 @@ private fun EpisodeDetailPanel(
     mediaRepository: MediaRepository,
     previousEpisode: DomainEpisodeItem?,
     nextEpisode: DomainEpisodeItem?,
+    // The show's TMDB cast (the Cast tab's), after the episode's guest stars.
+    showCredits: TitleCredits?,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
     onNavigate: (DomainEpisodeItem) -> Unit,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit,
@@ -1871,6 +1902,13 @@ private fun EpisodeDetailPanel(
     val scale = LocalUiScale.current
 
     val playButtonFocusRequester = remember { FocusRequester() }
+
+    // Back from a person page opened from the cast: focus goes back to that actor's card, and the
+    // panel's own first focus (Play) stands down for the episode it was opened on.
+    val returnFocus = rememberNavReturnFocus()
+    val returnedToEpisode = remember { episode.id.takeIf { returnFocus.isReturn } }
+    NavReturnFocusEffect(returnFocus, fallback = playButtonFocusRequester)
+    val episodeCredits = rememberEpisodeCredits(mediaRepository, seriesDetail.metadata.tmdbId, episode, showCredits)
 
     // Load resume position. Keyed on the episode so stepping to another one clears the previous
     // episode's value immediately rather than showing its resume time until the lookup lands —
@@ -1894,6 +1932,7 @@ private fun EpisodeDetailPanel(
     // Request focus on Play/Resume button when screen loads, resume data arrives, or episode
     // changes — or back onto the step button just used, when there is still an episode that way.
     LaunchedEffect(episode.id, resumePositionMs) {
+        if (episode.id == returnedToEpisode) return@LaunchedEffect
         val target =
             when {
                 arrivedVia == EpisodeStep.PREVIOUS && previousEpisode != null -> previousButtonFocusRequester
@@ -2061,6 +2100,27 @@ private fun EpisodeDetailPanel(
                         .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                         .padding(top = Spacing.xl.scaled(scale), bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
             ) {
+                // The episode's cast (the episode cast plan, EC-D1): its guest stars, then the show's
+                // cast, as the Cast tab's cards; without TMDB's, the source's names as the tab's chips.
+                val sourceCast = (episode.metadata.cast ?: seriesDetail.metadata.cast)?.takeIf { it.isNotBlank() }
+                if (episodeCredits != null || sourceCast != null) {
+                    CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
+                    // Each episode's own cards: Next and Previous start its row at the first actor.
+                    key(episode.id) {
+                        if (episodeCredits != null) {
+                            TvCreditsTabContent(
+                                credits = episodeCredits,
+                                section = ThumbnailContentType.TV_SHOW,
+                                returnFocus = returnFocus,
+                                onPersonSelected = onPersonSelected,
+                            )
+                        } else {
+                            SeriesCastTabContent(cast = sourceCast.orEmpty())
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                }
+
                 // A child's page has no technical rows: TMDB id, container, bitrate (UX-D5).
                 val child = rememberChildProfile()
                 if (!child) {
@@ -2071,17 +2131,6 @@ private fun EpisodeDetailPanel(
                                 episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                             ),
                         tone = TextTone.Secondary,
-                    )
-                }
-
-                val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
-                cast?.let {
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    CinemaText(
-                        text = stringResource(R.string.movie_cast_format, it),
-                        tone = TextTone.Secondary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 

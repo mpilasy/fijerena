@@ -14,16 +14,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.tmdb.PersonRole
 import org.njarasoa.fijerena.core.network.tmdb.PersonRows
 import org.njarasoa.fijerena.core.network.tmdb.PersonTitleSource
+import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
+import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPeople
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPerson
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.personCredits
 import org.njarasoa.fijerena.core.network.tmdb.personRows
+import org.njarasoa.fijerena.core.network.tmdb.showAppearances
+import org.njarasoa.fijerena.core.network.tmdb.showTarget
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
@@ -60,6 +68,46 @@ class PersonViewModel(
             crew: Boolean,
             missing: ShowMissing,
         ): PersonRows
+
+        /**
+         * The person's appearances in [show] (credit [creditId] of person [personId], one TMDB call
+         * kept with the person), matched to the show's episodes on its source. A failure throws.
+         */
+        suspend fun appearances(
+            personId: Int,
+            creditId: String,
+            show: MediaItem,
+        ): ShowLines
+    }
+
+    /** A person's lines in a show ([showAppearances]) and the seasons the show's source has. */
+    data class ShowLines(
+        val lines: List<ShowAppearance>,
+        val sourceSeasons: Set<Int>,
+    )
+
+    /**
+     * What a show card on the page is doing (docs/plans/20261030_episode-cast-plan.md, EC-D2): the
+     * credit call in flight ([Loading]), the list of the person's appearances open ([Lines]), or
+     * the show page to open now ([Open], once: the screen navigates, then calls [opened]).
+     */
+    sealed interface ShowOpening {
+        val show: MediaItem
+
+        data class Loading(
+            override val show: MediaItem,
+        ) : ShowOpening
+
+        data class Lines(
+            override val show: MediaItem,
+            val lines: List<ShowAppearance>,
+            val sourceSeasons: Set<Int>,
+        ) : ShowOpening
+
+        data class Open(
+            override val show: MediaItem,
+            val target: ShowTarget,
+        ) : ShowOpening
     }
 
     /** The page's two rows, each with its own switch (UX-D7). */
@@ -117,6 +165,11 @@ class PersonViewModel(
     /** Each row's switch: also the titles no source has. Both off each time the page opens (CT-D8). */
     val showMissing: StateFlow<ShowMissing> = _showMissing.asStateFlow()
 
+    private val _showOpening = MutableStateFlow<ShowOpening?>(null)
+
+    /** The show card being opened; null when none is. Kept over the show's page and Back. */
+    val showOpening: StateFlow<ShowOpening?> = _showOpening.asStateFlow()
+
     private var loadJob: Job? = null
     private var rowsJob: Job? = null
 
@@ -135,6 +188,58 @@ class PersonViewModel(
         if (!canShowMissing || show == _showMissing.value[row]) return
         _showMissing.value = _showMissing.value.with(row, show)
         (_state.value as? State.Loaded)?.let { loadRows(it.person) }
+    }
+
+    /**
+     * A show card of the page ([role]: the person's part in it). An acting role with a TMDB credit
+     * reads which episodes or seasons it is (one TMDB call, kept with the person), then opens the
+     * one there is, or lists them (EC-D2). Without one, or when the call fails, the show opens as
+     * it does from any other card. Main only, as the other calls.
+     */
+    fun openShow(
+        show: MediaItem,
+        role: PersonRole?,
+    ) {
+        val creditId = role?.creditId
+        when {
+            _showOpening.value is ShowOpening.Loading -> {
+                Unit
+            }
+
+            crew || creditId == null || personId == null -> {
+                _showOpening.value = ShowOpening.Open(show, ShowTarget())
+            }
+
+            else -> {
+                _showOpening.value = ShowOpening.Loading(show)
+                viewModelScope.launchGuarded(
+                    "PersonViewModel.openShow",
+                    Dispatchers.IO,
+                    onError = { _showOpening.value = ShowOpening.Open(show, ShowTarget()) },
+                ) {
+                    _showOpening.value =
+                        try {
+                            showOpeningOf(show, data.appearances(personId, creditId, show))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // No TMDB or no episode list: the show opens as from any other card.
+                            android.util.Log.w(TAG, "Credit $creditId: ${e.message}")
+                            ShowOpening.Open(show, ShowTarget())
+                        }
+                }
+            }
+        }
+    }
+
+    /** The screen has opened the show page of [ShowOpening.Open]. */
+    fun opened() {
+        if (_showOpening.value is ShowOpening.Open) _showOpening.value = null
+    }
+
+    /** Closes the list of appearances (Back, or the sheet dismissed). */
+    fun closeShow() {
+        _showOpening.value = null
     }
 
     private fun load() {
@@ -243,6 +348,29 @@ class PersonViewModel(
             }
             return rows
         }
+
+        override suspend fun appearances(
+            personId: Int,
+            creditId: String,
+            show: MediaItem,
+        ): ShowLines {
+            val credit = TmdbPeople.getInstance(context).credit(personId, creditId)
+            val detail =
+                AppContainer
+                    .getInstance(context)
+                    .getMediaRepository(show.providerId)
+                    .getSeriesDetail(SeriesId(show.id))
+                    .getOrThrow()
+            val episodes =
+                detail.episodes
+                    .flatMap { (season, list) ->
+                        list.mapNotNull { episode ->
+                            (episode.seasonNumber ?: season.toIntOrNull())?.let { (it to episode.episodeNumber) to episode.id }
+                        }
+                    }.toMap()
+            val seasons = episodes.keys.mapTo(mutableSetOf()) { it.first }
+            return ShowLines(showAppearances(credit, episodes, seasons), seasons)
+        }
     }
 
     /** One person's rows for a profile, its sources and a catalogue sync (as `ChartRows` keeps its rows). */
@@ -255,12 +383,26 @@ class PersonViewModel(
         val catalogueUpdates: Long,
     )
 
-    private companion object {
-        const val TAG = "PersonViewModel"
-        const val MOVIE = "movie"
-        const val TV = "tv"
+    companion object {
+        /**
+         * Where a show card goes once its appearances are known (EC-D2): a role of one episode or
+         * one season opens it at once; a role TMDB names no line of opens the show; else the list.
+         */
+        fun showOpeningOf(
+            show: MediaItem,
+            found: ShowLines,
+        ): ShowOpening =
+            when (found.lines.size) {
+                0 -> ShowOpening.Open(show, ShowTarget())
+                1 -> ShowOpening.Open(show, showTarget(found.lines.single(), found.sourceSeasons))
+                else -> ShowOpening.Lines(show, found.lines, found.sourceSeasons)
+            }
+
+        private const val TAG = "PersonViewModel"
+        private const val MOVIE = "movie"
+        private const val TV = "tv"
 
         // The rows kept in memory, so going back to a person's page costs no catalogue query.
-        val kept = mutableMapOf<Key, PersonRows>()
+        private val kept = mutableMapOf<Key, PersonRows>()
     }
 }

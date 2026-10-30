@@ -13,11 +13,14 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
+import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.TmdbEpisode
 import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.tmdb.episodeGuests
 import org.njarasoa.fijerena.core.network.tmdb.listTitle
 import org.njarasoa.fijerena.core.network.tmdb.titleCredits
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
@@ -58,9 +61,10 @@ class XtreamMediaProvider(
     // concurrently on different dispatchers.
     private val searchDataSizes = ConcurrentHashMap<String, Long>()
 
-    // Cache: (tmdbSeriesId, season) -> (season, episodeNumber) -> overview.
-    // Keeps reopens cheap without hitting TMDB again this session.
-    private val tmdbOverviewCache = ConcurrentHashMap<Pair<Int, Int>, Map<Pair<Int, Int>, String>>()
+    // Cache: (tmdbSeriesId, season) -> TMDB's episodes of that season (empty when the call failed):
+    // their plots, and their guest stars for an episode's cast. Keeps reopens cheap without hitting
+    // TMDB again this session.
+    private val tmdbSeasonCache = ConcurrentHashMap<Pair<Int, Int>, List<TmdbEpisode>>()
 
     // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
     // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully
@@ -426,7 +430,9 @@ class XtreamMediaProvider(
         val tmdbSeriesId = id?.let { resolveSeriesTmdbId(null, repository.getCachedSeriesEntity(it)?.tmdbId) }
         val overview =
             if (tmdb.hasApiKey() && season != null && tmdbSeriesId != null) {
-                fetchTmdbOverviews(tmdbSeriesId, setOf(season))[season to episode.episodeNumber]
+                val episodes = fetchTmdbSeasons(tmdbSeriesId, setOf(season)).getValue(season)
+                if (episodes.isNotEmpty()) tmdbSeasonCache[tmdbSeriesId to season] = episodes
+                overviewsOf(season, episodes)[season to episode.episodeNumber]
             } else {
                 null
             }
@@ -507,14 +513,16 @@ class XtreamMediaProvider(
             }
         }
 
-        val missing = seasonNumbers.filterNot { tmdbOverviewCache.containsKey(tmdbSeriesId to it) }.toSet()
+        val missing = seasonNumbers.filterNot { tmdbSeasonCache.containsKey(tmdbSeriesId to it) }.toSet()
         if (missing.isNotEmpty()) {
-            val fetched = fetchTmdbOverviews(tmdbSeriesId, missing)
-            missing.forEach { season ->
-                tmdbOverviewCache[tmdbSeriesId to season] = fetched.filterKeys { it.first == season }
+            fetchTmdbSeasons(tmdbSeriesId, missing).forEach { (season, episodes) ->
+                tmdbSeasonCache[tmdbSeriesId to season] = episodes
             }
         }
-        val overviews = seasonNumbers.flatMap { tmdbOverviewCache[tmdbSeriesId to it].orEmpty().entries }.associate { it.toPair() }
+        val overviews =
+            seasonNumbers
+                .flatMap { season -> overviewsOf(season, tmdbSeasonCache[tmdbSeriesId to season].orEmpty()).entries }
+                .associate { it.toPair() }
 
         if (overviews.isEmpty()) return detail
 
@@ -559,10 +567,11 @@ class XtreamMediaProvider(
             list.any { it.metadata.plot.isNullOrBlank() }
         }
 
-    private suspend fun fetchTmdbOverviews(
+    /** TMDB's episodes of each of [seasons], one call per season; empty for a season whose call failed. */
+    private suspend fun fetchTmdbSeasons(
         tmdbSeriesId: Int,
         seasons: Set<Int>,
-    ): Map<Pair<Int, Int>, String> =
+    ): Map<Int, List<TmdbEpisode>> =
         coroutineScope {
             // A long-running show would otherwise fan out one request per season at once, which is
             // the shape most likely to get throttled at the other end.
@@ -570,19 +579,46 @@ class XtreamMediaProvider(
             seasons
                 .map { season ->
                     async {
-                        suspendRunCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
-                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
-                            .getOrNull()
-                            ?.episodes
-                            ?.mapNotNull { ep ->
-                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                                val s = ep.seasonNumber ?: season
-                                (s to ep.episodeNumber) to overview
-                            }.orEmpty()
+                        season to
+                            suspendRunCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
+                                .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                                .getOrNull()
+                                ?.episodes
+                                .orEmpty()
                     }
-                }.flatMap { it.await() }
-                .toMap()
+                }.associate { it.await() }
         }
+
+    /** The plots of TMDB's [episodes] of [season], by (season, episode number). */
+    private fun overviewsOf(
+        season: Int,
+        episodes: List<TmdbEpisode>,
+    ): Map<Pair<Int, Int>, String> =
+        episodes
+            .mapNotNull { ep ->
+                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                ((ep.seasonNumber ?: season) to ep.episodeNumber) to overview
+            }.toMap()
+
+    /**
+     * The guest stars of episode [episode] of season [season] of the TMDB show [tmdbId], in billing
+     * order (docs/plans/20261030_episode-cast-plan.md): from the season call the plots use, kept
+     * with them, so a season asked for its plots costs nothing more. Null without a TMDB id or key;
+     * empty when TMDB names none or fails.
+     */
+    suspend fun getTmdbEpisodeGuests(
+        tmdbId: String?,
+        season: Int,
+        episode: Int,
+    ): List<CastMember>? {
+        val id = tmdbId?.toIntOrNull()?.takeIf { tmdb.hasApiKey() }
+        return id?.let {
+            val episodes =
+                tmdbSeasonCache[id to season]
+                    ?: fetchTmdbSeasons(id, setOf(season)).getValue(season).also { tmdbSeasonCache[id to season] = it }
+            episodeGuests(episodes.firstOrNull { (it.seasonNumber ?: season) == season && it.episodeNumber == episode })
+        }
+    }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
         movieDetailCache.get(movieId)?.takeUnless { tmdbTextStale(it.metadata.facts, it.metadata.tmdbId) }?.let {
@@ -1173,7 +1209,7 @@ class XtreamMediaProvider(
     override fun trimMemory() {
         movieDetailCache.clear()
         seriesDetailCache.clear()
-        tmdbOverviewCache.clear()
+        tmdbSeasonCache.clear()
         tmdbImagesCache.clear()
         tmdbDetailsCache.clear()
         searchDataSizes.clear()

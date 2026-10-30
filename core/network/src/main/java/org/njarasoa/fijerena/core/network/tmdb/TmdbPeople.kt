@@ -21,18 +21,24 @@ import java.util.Locale
  * The people read from TMDB, kept 7 days for the device (docs/plans/20261030_cast-tab-plan.md,
  * Design 5): an actor page opened again asks TMDB nothing. Kept in memory and in one file per
  * person under [dir]. A person read in another TMDB language ([language]) is read again.
+ *
+ * The credits of the person opened on an actor page ([credit], `credit/{credit_id}`) are kept with
+ * the person, for as long as the person (docs/plans/20261030_episode-cast-plan.md).
  */
 class TmdbPeople(
     private val dir: File,
     private val fetchPerson: suspend (Int) -> TmdbPerson,
     private val language: () -> String = { "" },
     private val now: () -> Long = System::currentTimeMillis,
+    private val fetchCredit: suspend (String) -> TmdbCredit = { error("No credit call") },
 ) {
     @Serializable
     private data class Stored(
         val fetchedAtMs: Long,
         val person: TmdbPerson,
         val language: String = "",
+        // The person's credits read so far, by credit id.
+        val credits: Map<String, TmdbCredit> = emptyMap(),
     )
 
     private val json =
@@ -44,17 +50,38 @@ class TmdbPeople(
     private val memory = mutableMapOf<Int, Stored>()
 
     /** Person [personId]: the stored one, else TMDB's, stored. A failed call throws, and nothing is stored. */
-    suspend fun person(personId: Int): TmdbPerson =
+    suspend fun person(personId: Int): TmdbPerson = lock.withLock { storedPerson(personId).person }
+
+    /**
+     * Credit [creditId] of person [personId]: the stored one, else TMDB's, stored with the person.
+     * A failed call throws, and nothing is stored.
+     */
+    suspend fun credit(
+        personId: Int,
+        creditId: String,
+    ): TmdbCredit =
         lock.withLock {
-            val stored = memory[personId] ?: read(personId)?.also { memory[personId] = it }
-            if (stored != null && stored.language == language() && now() - stored.fetchedAtMs in 0 until MAX_AGE_MS) {
-                return@withLock stored.person
+            val stored = storedPerson(personId)
+            stored.credits[creditId] ?: fetchCredit(creditId).also { credit ->
+                val updated = stored.copy(credits = stored.credits + (creditId to credit))
+                memory[personId] = updated
+                write(personId, updated)
             }
-            val fetched = Stored(now(), fetchPerson(personId), language())
-            memory[personId] = fetched
-            write(personId, fetched)
-            fetched.person
         }
+
+    /** Under [lock]: the person stored and still fresh, else read again from TMDB and stored. */
+    private suspend fun storedPerson(personId: Int): Stored {
+        val stored = memory[personId] ?: read(personId)?.also { memory[personId] = it }
+        val fresh = stored != null && stored.language == language() && now() - stored.fetchedAtMs in 0 until MAX_AGE_MS
+        return if (fresh && stored != null) {
+            stored
+        } else {
+            Stored(now(), fetchPerson(personId), language()).also { fetched ->
+                memory[personId] = fetched
+                write(personId, fetched)
+            }
+        }
+    }
 
     /** Forgets every person read (Admin → Refresh Charts): the next actor page reads TMDB again. */
     suspend fun clear() {
@@ -109,6 +136,7 @@ class TmdbPeople(
                         File(context.applicationContext.cacheDir, "tmdb_people"),
                         tmdb::getPerson,
                         language = { TmdbApiService.tmdbLanguage(Locale.getDefault().language) },
+                        fetchCredit = tmdb::getCredit,
                     )
                 }.also { instance = it }
             }
@@ -127,11 +155,14 @@ data class PersonRows(
 
 /**
  * A person's part in one title: the role played ([character]), or on a crew page the jobs
- * ([jobs], in [CrewRole] order).
+ * ([jobs], in [CrewRole] order). For a show's role, [episodeCount] (0 when TMDB gives none) and
+ * [creditId], which `credit/{credit_id}` turns into the episodes or seasons of the role.
  */
 data class PersonRole(
     val character: String? = null,
     val jobs: List<CrewRole> = emptyList(),
+    val episodeCount: Int = 0,
+    val creditId: String? = null,
 )
 
 /**
@@ -185,7 +216,7 @@ internal fun personRoles(
                 entries
                     .filter { !it.character.isNullOrBlank() }
                     .maxByOrNull { it.episodeCount }
-                    ?.let { PersonRole(character = it.character?.trim()) }
+                    ?.let { PersonRole(character = it.character?.trim(), episodeCount = it.episodeCount, creditId = it.creditId) }
             }
         }.mapNotNull { (key, role) -> role?.let { key to it } }
         .toMap()

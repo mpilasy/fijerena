@@ -9,7 +9,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.TmdbEpisode
+import org.njarasoa.fijerena.core.network.tmdb.TmdbGuestStar
 import org.njarasoa.fijerena.core.network.tmdb.TmdbSeasonResponse
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
@@ -112,6 +115,42 @@ class XtreamSeriesTmdbCallsTest {
                     .single()
                     .metadata.plot,
             )
+        }
+
+    @Test
+    fun anEpisodesGuestStarsComeFromTheSeasonCallThePlotsMade() =
+        runTest {
+            coEvery { repository.getCachedSeriesEntity(30874) } returns row(System.currentTimeMillis() - day)
+            coEvery { tmdb.getSeason(549, 2) } returns
+                TmdbSeasonResponse(
+                    episodes =
+                        listOf(
+                            TmdbEpisode(
+                                episodeNumber = 1,
+                                seasonNumber = 2,
+                                guestStars = listOf(TmdbGuestStar(id = 7, name = "Guest", character = "Witness")),
+                            ),
+                        ),
+                )
+            provider.getSeriesDetail(SeriesId("30874"))
+
+            val guests = provider.getTmdbEpisodeGuests("549", season = 2, episode = 1)
+            // A season the plots did not need (season 1 had its plot) is asked once, then kept.
+            provider.getTmdbEpisodeGuests("549", season = 1, episode = 1)
+            provider.getTmdbEpisodeGuests("549", season = 1, episode = 1)
+
+            assertEquals(listOf(CastMember("7", "Guest", "Witness", null)), guests)
+            coVerify(exactly = 1) { tmdb.getSeason(549, 2) }
+            coVerify(exactly = 1) { tmdb.getSeason(549, 1) }
+        }
+
+    @Test
+    fun noTmdbKeyGivesNoGuestStarsAndNoCall() =
+        runTest {
+            every { tmdb.hasApiKey() } returns false
+
+            assertEquals(null, provider.getTmdbEpisodeGuests("549", season = 2, episode = 1))
+            coVerify(exactly = 0) { tmdb.getSeason(any(), any()) }
         }
 
     @Test

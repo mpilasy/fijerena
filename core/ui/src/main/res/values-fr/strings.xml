@@ -1519,6 +1519,16 @@
     <string name="person_none_in_library">Aucun de ses titres n\'est dans votre bibliothèque.</string>
     <string name="person_none_in_sources">Aucun dans vos sources</string>
     <string name="person_load_error">Impossible de charger la page de cette personne.</string>
+    <plurals name="person_episode_count" tools:ignore="ImpliedQuantity">
+        <item quantity="one">%1$d épisode</item>
+        <item quantity="many">%1$d épisodes</item>
+        <item quantity="other">%1$d épisodes</item>
+    </plurals>
+    <string name="person_episode_code">S%1$dE%2$d</string>
+    <string name="person_episode_code_title">S%1$dE%2$d · %3$s</string>
+    <string name="person_specials">Épisodes spéciaux</string>
+    <string name="person_not_in_source">%1$s n\'est pas dans votre source</string>
+    <string name="person_missing_mark">Pas dans votre source</string>
     <string name="tmdb_charts_refresh_title">Actualiser les classements</string>
     <string name="tmdb_charts_refresh_desc">Relit les classements depuis TMDB maintenant, sans attendre un jour.</string>
     <string name="tmdb_charts_refresh_done">Classements effacés. L\'accueil les relit.</string>

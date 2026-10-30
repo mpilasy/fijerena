@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
@@ -765,6 +766,13 @@ class MediaRepository(
         tmdbId: String?,
         contentType: String,
     ): TitleCredits? = (provider as? XtreamMediaProvider)?.getTmdbCredits(tmdbId, contentType)
+
+    /** See [XtreamMediaProvider.getTmdbEpisodeGuests]. Null for a source that is not Xtream. */
+    suspend fun getTmdbEpisodeGuests(
+        tmdbId: String?,
+        season: Int,
+        episode: Int,
+    ): List<CastMember>? = (provider as? XtreamMediaProvider)?.getTmdbEpisodeGuests(tmdbId, season, episode)
 
     /** See [MediaProvider.getTmdbLogoUrl]. */
     suspend fun getTmdbLogoUrl(

@@ -58,6 +58,26 @@ data class TmdbEpisode(
     val runtime: Int? = null,
     @SerialName("vote_average")
     val voteAverage: Double? = null,
+    // The episode's own cast, beside the show's regulars (docs/plans/20261030_episode-cast-plan.md).
+    @SerialName("guest_stars")
+    val guestStars: List<TmdbGuestStar> = emptyList(),
+)
+
+/** One guest star of an episode (`guest_stars` in a season's episodes). */
+@Serializable
+data class TmdbGuestStar(
+    // The TMDB person id.
+    @SerialName("id")
+    val id: Int? = null,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("character")
+    val character: String? = null,
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+    // The billing order; TMDB counts it over the whole show, so only the order of the numbers counts.
+    @SerialName("order")
+    val order: Int = Int.MAX_VALUE,
 )
 
 @Serializable
@@ -415,6 +435,9 @@ data class TmdbPersonCredit(
     // A show's cast only: the episodes the person plays [character] in.
     @SerialName("episode_count")
     val episodeCount: Int = 0,
+    // The credit's own id: `credit/{credit_id}` names the episodes or seasons of a show credit.
+    @SerialName("credit_id")
+    val creditId: String? = null,
     // Crew only.
     @SerialName("job")
     val job: String? = null,
@@ -436,6 +459,46 @@ data class TmdbPersonCredit(
             mediaType = mediaType,
         )
 }
+
+/**
+ * `credit/{credit_id}`: one credit of a person. For a show, [TmdbCreditMedia.episodes] names the
+ * episodes of a guest or recurring role; a regular role has none there, only [TmdbCreditMedia.seasons].
+ */
+@Serializable
+data class TmdbCredit(
+    @SerialName("id")
+    val id: String? = null,
+    @SerialName("media")
+    val media: TmdbCreditMedia = TmdbCreditMedia(),
+)
+
+/** The title of a [TmdbCredit], with the episodes and seasons of a show credit. */
+@Serializable
+data class TmdbCreditMedia(
+    @SerialName("episodes")
+    val episodes: List<TmdbCreditEpisode> = emptyList(),
+    @SerialName("seasons")
+    val seasons: List<TmdbCreditSeason> = emptyList(),
+)
+
+@Serializable
+data class TmdbCreditEpisode(
+    @SerialName("season_number")
+    val seasonNumber: Int? = null,
+    @SerialName("episode_number")
+    val episodeNumber: Int? = null,
+    @SerialName("name")
+    val name: String? = null,
+)
+
+@Serializable
+data class TmdbCreditSeason(
+    @SerialName("season_number")
+    val seasonNumber: Int? = null,
+    // The season's episodes, not only the person's.
+    @SerialName("episode_count")
+    val episodeCount: Int = 0,
+)
 
 /** `videos` on a details response: trailers, teasers, clips… */
 @Serializable

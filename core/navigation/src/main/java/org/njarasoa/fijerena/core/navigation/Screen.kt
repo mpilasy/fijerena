@@ -119,6 +119,8 @@ sealed interface Screen {
      * @param initialEpisodeId When set (e.g. arriving from Continue Watching), open straight to
      * this episode's detail/resume panel instead of the season/episode list.
      * @param providerId The source the show is on.
+     * @param initialSeason When set without [initialEpisodeId] (an actor's season, or an episode
+     * the source does not have), open on this season.
      */
     @Serializable
     data class EpisodeSelection(
@@ -127,6 +129,7 @@ sealed interface Screen {
         val categoryId: String,
         val initialEpisodeId: String? = null,
         val providerId: Long,
+        val initialSeason: Int? = null,
     ) : Screen
 
     /**
