@@ -22,6 +22,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -161,6 +162,21 @@ class LoadRaceTest {
 
         awaitState(viewModel.state) { (it as? StreamLoaderViewModel.StreamState.Success)?.streamId == "b" }
         coVerify(exactly = 0) { repository.resolvePlayableStream("a", any(), any(), any()) }
+    }
+
+    @Test
+    fun `an abandoned loader whose first load never resolved loads its channel again on return`() {
+        val ready = CompletableDeferred<Unit>()
+        coEvery { container.getMediaRepository(any()) } coAnswers {
+            ready.await()
+            repository
+        }
+        val viewModel = loader("a")
+
+        viewModel.abandon()
+        ready.complete(Unit)
+
+        assertNull(viewModel.requestedStreamId)
     }
 
     private fun loader(streamId: String): StreamLoaderViewModel =

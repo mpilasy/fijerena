@@ -663,6 +663,9 @@ class StreamLoaderViewModel(
     fun abandon() {
         cancelLoads()
         recentWrite.cancel()
+        // Its load may be cancelled before it resolved: a later return to this loader must load the
+        // channel again, not skip it as already asked (the preview showed its name over another).
+        requestedStreamId = null
     }
 
     fun retryLastLoad() {
