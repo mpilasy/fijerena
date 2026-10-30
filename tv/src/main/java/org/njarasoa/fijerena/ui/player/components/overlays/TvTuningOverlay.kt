@@ -34,8 +34,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * last frame. Not focusable; the remote keeps zapping. The ring is full size in the preview pane too,
  * so a wide logo stays readable. [compact] is the preview pane; full screen shows Expert mode's
  * [BufferingDetails] under the ring, as the loading indicator does.
- * [stalled]: the preview gave up on the channel (it didn't start in time) — no ring, and a pill
- * says so and that OK tries again, rather than tuning forever.
+ * [unavailable]: the screen gave up on the channel (its load failed, or no picture in 10 s) — no
+ * ring, and a pill says "<name> is not available right now" rather than tuning for ever; OK then
+ * goes to the next channel (UX audit fixes plan, UX-D2).
  */
 @Composable
 fun TvTuningOverlay(
@@ -43,7 +44,7 @@ fun TvTuningOverlay(
     modifier: Modifier = Modifier,
     logoUrl: String? = null,
     compact: Boolean = false,
-    stalled: Boolean = false,
+    unavailable: Boolean = false,
 ) {
     val background = CinemaTheme.colors.background
     val scrim = remember(background) { background.copy(alpha = CinemaAlpha.scrim) }
@@ -57,9 +58,9 @@ fun TvTuningOverlay(
         modifier = modifier.fillMaxSize().background(scrim),
         contentAlignment = Alignment.Center,
     ) {
-        if (stalled) {
+        if (unavailable) {
             CinemaText(
-                text = stringResource(R.string.live_preview_not_started_format, name),
+                text = stringResource(R.string.live_channel_unavailable, name),
                 modifier =
                     Modifier
                         .padding(Spacing.md)

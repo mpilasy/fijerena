@@ -837,7 +837,6 @@
     <string name="live_tuning_format">Mampifandray · %1$s</string>
     <string name="live_channel_unavailable">Tsy azo jerena izao i %1$s</string>
     <string name="live_channel_next">Fantsona manaraka</string>
-    <string name="live_preview_not_started_format">Tsy nandeha %1$s · OK raha hanandrana indray</string>
     <string name="live_preview_next_format">Manaraka: %1$s</string>
     <string name="live_preview_hint">OK  Alefaso   ·   OK indray  Efijery feno   ·   Tazony ny OK  Safidy</string>
     <!-- GD4 -->

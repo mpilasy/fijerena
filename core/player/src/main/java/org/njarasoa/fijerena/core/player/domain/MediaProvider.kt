@@ -89,6 +89,15 @@ interface MediaProvider {
      */
     suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> = emptyMap()
 
+    /**
+     * The ids among [itemIds] of [contentType] that this source no longer lists (a Recent row whose
+     * channel or title left it). Empty when the source cannot tell. Local, no network call.
+     */
+    suspend fun missingItems(
+        itemIds: Collection<String>,
+        contentType: String,
+    ): Set<String> = emptySet()
+
     /** Returns cached items for a category or null if not cached. Never hits the network. */
     fun getItemsIfCached(
         categoryId: String,

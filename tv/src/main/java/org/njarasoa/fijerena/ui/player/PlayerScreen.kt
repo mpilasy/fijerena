@@ -118,6 +118,12 @@ fun PlayerScreen(
     // The logo of the channel being tuned, in the tuning ring. Null: its name instead.
     tuningLogoUrl: String? = null,
     /**
+     * Live TV: the channel the caller gave up on (its load failed, or no picture in 10 s, UX-D2).
+     * "<name> is not available right now" shows over the video, and OK goes to the next channel
+     * ([onNextChannel]); Back leaves as usual. Null = none.
+     */
+    unavailableChannelName: String? = null,
+    /**
      * Live TV's Guide button on the OSD (GD5): opens the TV Guide on the playing channel. Null (no
      * guide for this source, VOD) leaves the button out.
      */
@@ -206,6 +212,12 @@ fun PlayerScreen(
                 // Inert fallback: Back is taken in onPreviewKeyEvent below while the panel is open.
                 state.showChannelPanel -> {
                     state.showChannelPanel = false
+                }
+
+                // While a channel tunes (or did not start), Back leaves at once: the banner that
+                // tuning holds up must not take the first press (UX-D6).
+                tuningChannelName != null || unavailableChannelName != null -> {
+                    onBack()
                 }
 
                 state.showStats || state.showControls || state.showStreamInfo -> {
@@ -319,6 +331,13 @@ fun PlayerScreen(
                             playbackState is PlaybackState.Error && !state.showControls && !state.isModalOpen &&
                                 keyEvent.key in UP_NEXT_CARD_KEYS -> {
                                 false
+                            }
+
+                            // A channel that did not start, OSD hidden: OK goes to the next one (UX-D2).
+                            unavailableChannelName != null && !state.showControls && !state.isModalOpen &&
+                                (keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) -> {
+                                if (keyEvent.type == KeyEventType.KeyUp) onNextChannel()
+                                true
                             }
 
                             // Card up, OSD hidden, focus on the player: Down moves onto the card.
@@ -446,8 +465,12 @@ fun PlayerScreen(
                 }
             }
 
-            // Zap feedback (LT5): under the banner and the panel, over the picture.
-            tuningChannelName?.let { TvTuningOverlay(channelName = it, logoUrl = tuningLogoUrl) }
+            // Zap feedback (LT5): under the banner and the panel, over the picture. A channel that
+            // did not start says so in its place (UX-D2).
+            when {
+                unavailableChannelName != null -> TvTuningOverlay(channelName = unavailableChannelName, unavailable = true)
+                tuningChannelName != null -> TvTuningOverlay(channelName = tuningChannelName, logoUrl = tuningLogoUrl)
+            }
 
             // P4: the connection can't keep up with the stream.
             rememberSlowConnectionText()?.let { TvSlowConnectionBanner(text = it) }

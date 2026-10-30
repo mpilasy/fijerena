@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
+import org.njarasoa.fijerena.core.player.model.EngineStream
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -418,12 +419,13 @@ class StreamingPlaybackService : MediaSessionService() {
         _positionSaves.tryEmit(PositionSave(position, duration, isPaused, audioIndex, subtitleIndex))
     }
 
-    /** Feeds [nowPlaying] from this instance's metadata and state until it is released. */
+    /** Feeds [nowPlaying] and [engineStream] from this instance's metadata and state until it is released. */
     private fun publishNowPlaying(scope: CoroutineScope) {
         scope.launch {
             combine(_currentMetadata, _playbackState, playSessionId) { metadata, state, session -> Triple(metadata, state, session) }
                 .collect { (metadata, state, session) ->
                     _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it, session.ifEmpty { null }) }
+                    _engineStream.value = EngineStream(metadata.streamUrl, state)
                 }
         }
     }
@@ -1701,6 +1703,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 instance = null
                 // The collector feeding it died with serviceScope above, before it could see Idle.
                 _nowPlaying.value = null
+                _engineStream.value = EngineStream()
                 // Any caller already suspended in awaitInstance() holds a reference to *this*
                 // deferred, not the field below — reassigning the field alone leaves them awaiting
                 // an object nobody will ever complete again if the service doesn't restart.
@@ -2285,6 +2288,15 @@ class StreamingPlaybackService : MediaSessionService() {
          * module can't depend on sync. See the live sync now playing plan.
          */
         val nowPlaying: StateFlow<NowPlayingSnapshot?> = _nowPlaying.asStateFlow()
+
+        private val _engineStream = MutableStateFlow(EngineStream())
+
+        /**
+         * The stream the engine has now and its state — process-wide, so it outlives service
+         * instances. The Live TV loader reads it to start its Recent delay only once the channel
+         * shows a picture (UX audit fixes plan, UX-D3).
+         */
+        val engineStream: StateFlow<EngineStream> = _engineStream.asStateFlow()
 
         // No replay: a save nobody collects (no player screen on screen) is dropped, never handed
         // to the next screen. DROP_OLDEST so the main-thread tryEmit never fails or blocks.

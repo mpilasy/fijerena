@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -290,6 +291,10 @@ class CategoryViewModel(
     private val _recentItems = MutableStateFlow<List<MediaItem>?>(null)
     val recentItems: StateFlow<List<MediaItem>?> = _recentItems.asStateFlow()
 
+    // The Recent rows whose source no longer lists their channel or title, by [sourceKey]: marked
+    // Gone from source as a gone favourite is, and OK on one says so instead of loading it.
+    private val goneRecent = MutableStateFlow<Set<String>>(emptySet())
+
     val supportsRemoveFromRecent: Boolean
         get() = repositoryOrNull?.supportsRemoveFromRecent ?: true
 
@@ -325,13 +330,14 @@ class CategoryViewModel(
      * available on a Wanted row, Gone from source on a favourite its source no longer lists.
      */
     val rowStatus: StateFlow<Map<String, String>> =
-        combine(uiState, wanted.state) { state, wantedState -> rowStatusOf(state, wantedState) }
+        combine(uiState, wanted.state, goneRecent) { state, wantedState, gone -> rowStatusOf(state, wantedState, gone) }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     private fun rowStatusOf(
         state: UiState,
         wantedState: WantedTitles.State,
+        goneRecentKeys: Set<String>,
     ): Map<String, String> {
         val success = state as? UiState.Success
         return when {
@@ -348,7 +354,7 @@ class CategoryViewModel(
                     }.toMap()
             }
 
-            wantedState.goneFavorites.isEmpty() -> {
+            wantedState.goneFavorites.isEmpty() && goneRecentKeys.isEmpty() -> {
                 emptyMap()
             }
 
@@ -356,7 +362,7 @@ class CategoryViewModel(
                 val gone = context.getString(R.string.favorite_gone_from_source)
                 success.streams
                     .orEmpty()
-                    .filter { wantedState.gone(it.providerId, it.id, contentType) != null }
+                    .filter { it.sourceKey in goneRecentKeys || wantedState.gone(it.providerId, it.id, contentType) != null }
                     .associate { it.sourceKey to gone }
             }
         }
@@ -388,8 +394,27 @@ class CategoryViewModel(
         }
     }
 
-    /** [item]'s favourite when its source no longer lists it (wanted titles plan → Favourites gone from their source). */
-    fun goneOf(item: MediaItem): GoneFavorite? = wanted.state.value.gone(item.sourceOr(sourceId), item.id, contentType)
+    /**
+     * [item]'s favourite when its source no longer lists it (wanted titles plan → Favourites gone
+     * from their source), or the same for a Recent row (no copy to move to).
+     */
+    fun goneOf(item: MediaItem): GoneFavorite? {
+        val source = item.sourceOr(sourceId)
+        return wanted.state.value.gone(source, item.id, contentType)
+            ?: GoneFavorite(source, item.id, contentType, copy = null).takeIf { sourceKey(source, item.id) in goneRecent.value }
+    }
+
+    /** The [sourceKey]s of the rows of [items] (a Recent list) that their source no longer lists. */
+    private suspend fun goneRecentOf(
+        merged: MergedLists,
+        items: List<MediaItem>,
+    ): Set<String> =
+        items
+            .groupBy { it.sourceOr(sourceId) }
+            .flatMap { (source, rows) ->
+                val gone = merged.repoFor(source).goneFromSource(rows, contentType)
+                rows.filter { it.id in gone }.map { sourceKey(source, it.id) }
+            }.toSet()
 
     /**
      * The user's move of a gone favourite to [gone]'s other copy: the copy becomes the favourite,
@@ -565,6 +590,7 @@ class CategoryViewModel(
             _sourceNames.value = merged.sourceNames
             val ownSource = repo.getProviderId()
             launch { merged.recentItems(contentType).collect { _recentItems.value = it?.onSources(ownSource) } }
+            launch { _recentItems.filterNotNull().collectLatest { goneRecent.value = goneRecentOf(merged, it) } }
             loadCategoriesInternal()
             if (wantedKind != null) launch { loadCharts(merged, wantedKind) }
             // Entering on a real category (from the EPG, search, or a saved selection) never

@@ -17,18 +17,22 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -39,11 +43,13 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.isResumableAt
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
+import org.njarasoa.fijerena.core.player.model.EngineStream
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.net.SocketTimeoutException
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 
@@ -64,6 +70,10 @@ class StreamLoaderViewModel(
     private val programTitle: String? = null,
     // The source the stream is on (the route's).
     private val providerId: Long = 0L,
+    // The engine's stream and state: a live channel goes into Recent only after it shows a picture.
+    private val engine: StateFlow<EngineStream> = StreamingPlaybackService.engineStream,
+    // How long a load may take, repository and URL together, before it ends in Error.
+    private val loadTimeoutMs: Long = LOAD_TIMEOUT_MS,
 ) : ViewModel() {
     // Live TV as it airs; false for catch-up, which plays a live channel's archive like a film.
     private val isLiveTv = contentType == ContentType.LIVE_TV && catchup == null
@@ -115,6 +125,8 @@ class StreamLoaderViewModel(
 
         data class Error(
             val message: String,
+            // The stream the failed load was for; null when no load was running (the repository).
+            val streamId: String? = null,
         ) : StreamState()
     }
 
@@ -181,11 +193,13 @@ class StreamLoaderViewModel(
         // The first stream is a load like the others: a later load (a preview re-pointed) cancels it.
         val initialLoad =
             viewModelScope.launchGuarded("StreamLoaderViewModel.initialLoad", Dispatchers.IO) {
-                loadStreamInternal(
-                    streamId = initialStreamId,
-                    streamName = initialStreamName,
-                    currentStreams = emptyList(),
-                )
+                withLoadDeadline(initialStreamId) {
+                    loadStreamInternal(
+                        streamId = initialStreamId,
+                        streamName = initialStreamName,
+                        currentStreams = emptyList(),
+                    )
+                }
             }
         loadJob = initialLoad
         if (mediaRepository != null || setupJob?.isActive == true) return
@@ -226,6 +240,27 @@ class StreamLoaderViewModel(
     }
 
     private suspend fun awaitRepository(): MediaRepository = repository.filterNotNull().first()
+
+    /**
+     * Runs the load [block] of [streamId] within [loadTimeoutMs]: a load that has not published by
+     * then (a repository that never comes, a source that never answers) ends in Error, so no screen
+     * waits for ever. A Success already published for [streamId] stays.
+     */
+    private suspend fun withLoadDeadline(
+        streamId: String,
+        block: suspend () -> Unit,
+    ) {
+        val finished = withTimeoutOrNull(loadTimeoutMs) { block() } != null
+        if (!finished) {
+            Log.w("StreamLoader", "Load of $streamId did not finish in $loadTimeoutMs ms")
+            val error =
+                StreamState.Error(
+                    friendlyErrorMessage(SocketTimeoutException("No stream after $loadTimeoutMs ms"), context, appSettings.isDevMode),
+                    streamId,
+                )
+            _state.update { if (it is StreamState.Success && it.streamId == streamId) it else error }
+        }
+    }
 
     private suspend fun loadStreamInternal(
         streamId: String,
@@ -328,7 +363,9 @@ class StreamLoaderViewModel(
                         }
                     }
 
-                    // Schedule history update (Recent) after the configured delay — LIVE TV ONLY.
+                    // Schedule history update (Recent) after the configured delay — LIVE TV ONLY. The
+                    // delay counts only time with picture: a channel that never plays never goes in
+                    // (UX audit fixes plan, UX-D3).
                     recentWrite.cancel()
                     if (isLiveTv) {
                         // Reads the category when it writes: a load into another category sets it
@@ -351,6 +388,7 @@ class StreamLoaderViewModel(
                             record,
                             recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped),
                             currentCoroutineContext()[Job],
+                            gate = { watchMs -> awaitPicture(engine, playable.uri, watchMs, ::monotonicMs) },
                         )
                     }
 
@@ -363,14 +401,16 @@ class StreamLoaderViewModel(
                         }
                 },
                 onFailure = { error ->
-                    _state.value = StreamState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode))
+                    // A superseded load must not publish over the load that replaced it.
+                    currentCoroutineContext().ensureActive()
+                    _state.value = StreamState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode), streamId)
                 },
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e("StreamLoader", "Failed to load stream $streamId", e)
-            _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode), streamId)
         }
     }
 
@@ -553,7 +593,8 @@ class StreamLoaderViewModel(
 
     /**
      * The live channel opens full screen from a preview: it goes into Recent now, not after the
-     * watch delay. When its load is not ready yet, that load writes Recent as soon as it is.
+     * watch delay — once it shows a picture. When its load is not ready yet, that load writes Recent
+     * as soon as it is and the channel plays.
      */
     fun addToRecentNow() = recentWrite.now()
 
@@ -580,17 +621,22 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                val repo = awaitRepository()
+                var repo: MediaRepository? = null
+                withLoadDeadline(item.id) {
+                    val ready = awaitRepository()
+                    repo = ready
 
-                val previousState = _state.value
-                _state.value = StreamState.Loading
+                    val previousState = _state.value
+                    _state.value = StreamState.Loading
 
-                val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else channels.value.items
+                    val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else channels.value.items
 
-                // Fast path: start loading stream immediately
-                loadStreamInternal(item.id, item.name, currentStreams, zapped = zapped)
+                    // Fast path: start loading stream immediately
+                    loadStreamInternal(item.id, item.name, currentStreams, zapped = zapped)
+                }
                 // Superseded while resolving: leave the category state to the load that replaced us.
                 ensureActive()
+                val loadedRepo = repo ?: return@launch
 
                 // If category changed, refresh category stream list asynchronously in background
                 if (item.categoryId != currentCategoryId && isLiveTv) {
@@ -598,7 +644,7 @@ class StreamLoaderViewModel(
                     categoryListJob?.cancel()
                     categoryListJob =
                         viewModelScope.launch(Dispatchers.IO) {
-                            val result = repo.getItems(currentCategoryId, contentType)
+                            val result = loadedRepo.getItems(currentCategoryId, contentType)
                             result.fold(
                                 onSuccess = { items ->
                                     channels.value = ChannelCursor.at(items, item.id)
@@ -620,13 +666,15 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                awaitRepository()
-                _state.value = StreamState.Loading
-                loadStreamInternal(
-                    streamId = nextEpisode.id,
-                    streamName = nextEpisode.title,
-                    currentStreams = emptyList(),
-                )
+                withLoadDeadline(nextEpisode.id) {
+                    awaitRepository()
+                    _state.value = StreamState.Loading
+                    loadStreamInternal(
+                        streamId = nextEpisode.id,
+                        streamName = nextEpisode.title,
+                        currentStreams = emptyList(),
+                    )
+                }
             }
     }
 
@@ -645,20 +693,23 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                awaitRepository()
-                _state.value = StreamState.Loading
-                loadStreamInternal(
-                    item.id,
-                    item.name,
-                    currentStreams = emptyList(),
-                    notifyProviderStarted = false,
-                )
+                withLoadDeadline(item.id) {
+                    awaitRepository()
+                    _state.value = StreamState.Loading
+                    loadStreamInternal(
+                        item.id,
+                        item.name,
+                        currentStreams = emptyList(),
+                        notifyProviderStarted = false,
+                    )
+                }
             }
     }
 
     /**
-     * Another loader takes over (the next channel is on another source, multi-source plan Phase 5):
-     * nothing pending here may still land — the load, its guide lookup, the delayed Recent write.
+     * Another loader takes over (the next channel is on another source, multi-source plan Phase 5),
+     * or the screen gave up on the channel (no picture in time, UX-D2): nothing pending here may
+     * still land — the load, its guide lookup, the delayed Recent write.
      */
     fun abandon() {
         cancelLoads()
@@ -1060,6 +1111,60 @@ class StreamLoaderViewModelFactory(
 internal const val ZAP_SETTLE_MS = 60_000L
 
 /**
+ * How long a load may take before it ends in Error: the repository (a source that connects, an M3U
+ * playlist read again) and the stream's URL together. The Live TV screens give up on a channel with
+ * no picture sooner (10 s, UX-D2); this is the floor under every load.
+ */
+internal const val LOAD_TIMEOUT_MS = 20_000L
+
+private fun monotonicMs(): Long = System.nanoTime() / NANOS_PER_MILLI
+
+private const val NANOS_PER_MILLI = 1_000_000L
+
+/**
+ * Suspends until the engine has shown the stream [url] with a picture for [watchMs] in all (0: its
+ * first picture) and returns true; returns false when the engine moves on to another stream (or to
+ * none) after it had [url]. Time without a picture (buffering, paused, an error, stopped) does not
+ * count. While the engine still has the stream before [url], it waits. [now] is a monotonic clock in
+ * milliseconds.
+ *
+ * The engine publishes the new URL a moment before the old stream's Playing ends: a Playing of [url]
+ * counts only after [url] was seen not playing, unless the engine already had [url] when the wait
+ * began (the channel already playing, loaded again).
+ */
+internal suspend fun awaitPicture(
+    engine: Flow<EngineStream>,
+    url: String,
+    watchMs: Long,
+    now: () -> Long,
+): Boolean {
+    var first = true
+    var onEngine = false
+    var trusted = false
+    var playedMs = 0L
+    var playingSince: Long? = null
+    return engine
+        .transformLatest { stream ->
+            playingSince?.let { playedMs += now() - it }
+            playingSince = null
+            val ours = stream.streamUrl.isNotEmpty() && XtreamStreamUrl.sameStream(stream.streamUrl, url)
+            val wasFirst = first
+            first = false
+            if (!ours) {
+                if (onEngine) emit(false)
+            } else {
+                onEngine = true
+                if (wasFirst || stream.state !is PlaybackState.Playing) trusted = true
+                if (trusted && stream.state is PlaybackState.Playing) {
+                    playingSince = now()
+                    delay((watchMs - playedMs).coerceAtLeast(0L))
+                    emit(true)
+                }
+            }
+        }.first()
+}
+
+/**
  * How long a live channel plays before it goes into Recent: the watch delay for a channel chosen
  * on purpose; for one reached by zapping, [ZAP_SETTLE_MS] or the watch delay if that is longer,
  * so zapping through a category doesn't fill Recent.
@@ -1123,6 +1228,9 @@ internal class RecentWrite(
     @Volatile
     private var pending: (suspend () -> Unit)? = null
 
+    // What [pending] waits for, with its watch delay ([schedule]'s gate).
+    private var pendingGate: suspend (Long) -> Boolean = ::plainDelay
+
     private var atOnce = false
 
     /** A new load starts: a [now] asked for the load before it no longer applies. */
@@ -1133,24 +1241,28 @@ internal class RecentWrite(
 
     /**
      * Schedules [write]. Nothing when [caller], the load that asks, is already cancelled: a newer
-     * load or an abandon came first, and its [cancel] must not be undone.
+     * load or an abandon came first, and its [cancel] must not be undone. [gate] waits out the delay
+     * it is given and returns true to write, false to drop the write (the channel went before it
+     * played long enough); by default a plain delay.
      */
     @Synchronized
     fun schedule(
         write: suspend () -> Unit,
         delayMs: Long,
         caller: Job? = null,
+        gate: suspend (Long) -> Boolean = ::plainDelay,
     ) {
         if (caller?.isCancelled == true) return
         job?.cancel()
         pending = write
+        pendingGate = gate
         val wait = if (atOnce) 0L else delayMs
         atOnce = false
         job =
             scope.launchGuarded("StreamLoaderViewModel.liveHistory", context) {
-                delay(wait)
-                pending = null
-                write()
+                val passed = gate(wait)
+                clearPending(write)
+                if (passed) write()
             }
     }
 
@@ -1160,7 +1272,7 @@ internal class RecentWrite(
         if (write == null) {
             atOnce = true
         } else {
-            schedule(write, 0L)
+            schedule(write, 0L, gate = pendingGate)
         }
     }
 
@@ -1169,4 +1281,15 @@ internal class RecentWrite(
         job?.cancel()
         pending = null
     }
+
+    // Only the write that finished: one scheduled since stays.
+    @Synchronized
+    private fun clearPending(write: suspend () -> Unit) {
+        if (pending === write) pending = null
+    }
+}
+
+private suspend fun plainDelay(ms: Long): Boolean {
+    delay(ms)
+    return true
 }

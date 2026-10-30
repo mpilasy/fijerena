@@ -1067,7 +1067,6 @@
     <string name="live_tuning_format">Syntonisation · %1$s</string>
     <string name="live_channel_unavailable">%1$s n\'est pas disponible pour le moment</string>
     <string name="live_channel_next">Chaîne suivante</string>
-    <string name="live_preview_not_started_format">%1$s n\'a pas démarré · OK pour réessayer</string>
     <string name="live_preview_next_format">Ensuite : %1$s</string>
     <string name="live_preview_hint">OK  Lire   ·   OK à nouveau  Plein écran   ·   OK maintenu  Options</string>
     <!-- GD4 -->

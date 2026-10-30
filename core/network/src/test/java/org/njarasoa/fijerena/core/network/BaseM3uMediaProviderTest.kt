@@ -67,11 +67,54 @@ class BaseM3uMediaProviderTest {
 
             provider.trimMemory()
 
-            // Marking disconnected is what makes this transparent: getCategories()/getItems() only
-            // re-scan when !connected, so a trimmed provider must fall back into that path on next
-            // use instead of permanently looking empty.
+            // Marking disconnected is what makes this transparent: every read connects again when
+            // !connected, so a trimmed provider must fall back into that path on next use instead
+            // of permanently looking empty.
             assertTrue(!provider.isConnected())
-            assertTrue(provider.search("dune", ContentType.MOVIES).getOrNull()!!.isEmpty())
+            assertEquals(1, provider.search("dune", ContentType.MOVIES).getOrNull()!!.size)
+            assertEquals(1, provider.connects)
+        }
+
+    @Test
+    fun resolvePlayableStream_afterTrimMemory_connectsAgainAndResolves() =
+        runTest {
+            val item =
+                MediaItem(id = "1", name = "News", mediaType = MediaType.LIVE_CHANNEL, categoryId = "cat1", streamUri = "http://x/1.ts")
+            val provider = TestM3uProvider(listOf(item))
+
+            provider.trimMemory()
+
+            assertEquals("http://x/1.ts", provider.resolvePlayableStream("1", ContentType.LIVE_TV, null, null).getOrNull()?.uri)
+            assertEquals(1, provider.connects)
+        }
+
+    @Test
+    fun resolvePlayableStream_ofAChannelNoLongerListed_fails() =
+        runTest {
+            val provider = TestM3uProvider(emptyList())
+
+            assertTrue(provider.resolvePlayableStream("gone", ContentType.LIVE_TV, null, null).isFailure)
+        }
+
+    @Test
+    fun missingItems_namesTheIdsTheListNoLongerHas() =
+        runTest {
+            val item = MediaItem(id = "1", name = "News", mediaType = MediaType.LIVE_CHANNEL, categoryId = "cat1")
+            val provider = TestM3uProvider(listOf(item))
+
+            assertEquals(setOf("2"), provider.missingItems(listOf("1", "2"), ContentType.LIVE_TV))
+        }
+
+    @Test
+    fun missingItems_withTheListDropped_marksNothing() =
+        runTest {
+            val item = MediaItem(id = "1", name = "News", mediaType = MediaType.LIVE_CHANNEL, categoryId = "cat1")
+            val provider = TestM3uProvider(listOf(item))
+
+            provider.trimMemory()
+
+            assertTrue(provider.missingItems(listOf("1", "2"), ContentType.LIVE_TV).isEmpty())
+            assertEquals(0, provider.connects)
         }
 
     @Test

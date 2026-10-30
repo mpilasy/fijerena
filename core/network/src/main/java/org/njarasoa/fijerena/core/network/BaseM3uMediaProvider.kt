@@ -33,8 +33,6 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         snapshot = Snapshot(categories, items)
     }
 
-    private val items: List<MediaItem> get() = snapshot?.items.orEmpty()
-
     /** The current snapshot; connects first when there is none. */
     private suspend fun loaded(): kotlin.Result<Snapshot> {
         snapshot?.let { return kotlin.Result.success(it) }
@@ -93,12 +91,27 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         return kotlin.Result.success(current.itemsByCategory[categoryId].orEmpty())
     }
 
+    /**
+     * The ids among [itemIds] the playlist no longer lists. From the list in memory only: empty when
+     * it is not loaded (never connected, or dropped by trimMemory()), so nothing is marked gone on a
+     * guess.
+     */
+    override suspend fun missingItems(
+        itemIds: Collection<String>,
+        contentType: String,
+    ): Set<String> {
+        val current = snapshot?.takeIf { it.items.isNotEmpty() } ?: return emptySet()
+        val listed = current.items.mapTo(HashSet()) { it.id }
+        return itemIds.filterTo(HashSet()) { it !in listed }
+    }
+
     override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
         kotlin.Result.failure(UnsupportedOperationException("M3U does not support series"))
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
+        val current = loaded().getOrElse { return kotlin.Result.failure(it) }
         val item =
-            items.find { it.id == movieId }
+            current.items.find { it.id == movieId }
                 ?: return kotlin.Result.failure(NoSuchElementException("Item not found: $movieId"))
 
         return kotlin.Result.success(
@@ -116,8 +129,11 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         episodeId: String?,
         extension: String?,
     ): kotlin.Result<PlayableStream> {
+        // loaded(), not the snapshot: after trimMemory() the list is read again, else every
+        // channel would be "not found" until a list screen reconnected the source.
+        val current = loaded().getOrElse { return kotlin.Result.failure(it) }
         val item =
-            items.find { it.id == itemId }
+            current.items.find { it.id == itemId }
                 ?: return kotlin.Result.failure(NoSuchElementException("Item not found: $itemId"))
 
         val uri =
@@ -138,8 +154,9 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         contentType: String,
         includeExcluded: Boolean,
     ): kotlin.Result<List<MediaItem>> {
+        val current = loaded().getOrElse { return kotlin.Result.failure(it) }
         val matched =
-            items.filter { item ->
+            current.items.filter { item ->
                 SearchUtils.matchesQuery(item.name, query)
             }
         return kotlin.Result.success(matched)

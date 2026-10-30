@@ -19,12 +19,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +44,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -94,9 +97,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * list on the right. See docs/live-tv-preview-pane-plan.md.
  *
  * The preview plays what OK picks, never what focus rests on: moving through the list or across its
- * tabs leaves the playing channel alone. OK on another row tunes the preview to it; OK on the row
- * already playing goes full screen. A watchdog also stops a channel that fails to start within 8s
- * rather than let it buffer indefinitely.
+ * tabs leaves the playing channel alone. OK on another row stops the channel playing at once and
+ * tunes the preview to the new one; OK on the row playing goes full screen once it shows a picture
+ * (UX-D6). A channel whose load fails, or that shows no picture in 10 s, is stopped and said to be
+ * not available right now; OK then goes to the next channel of the list (UX-D2).
  *
  * Full screen does not navigate to a separate destination. It PROMOTES the existing preview's
  * playback (same PlaybackViewModel, same StreamLoaderViewModel, same engine
@@ -452,24 +456,50 @@ internal fun LiveTvSplitLayout(
     // tunedId remembers that, so a later rebuffer of the same channel is not shown as a tune.
     // Hidden on a loader or playback error, which have their own UI.
     val playingMetadata by playback.currentMetadata.collectAsStateWithLifecycle()
+    // sameStream, not ==: the engine may have moved the stream to another login of the source.
     val targetPlaying =
         success != null &&
             success.streamId == target.id &&
-            playingMetadata.streamUrl == success.streamUrl &&
+            XtreamStreamUrl.sameStream(playingMetadata.streamUrl, success.streamUrl) &&
             previewPlaybackState is PlaybackState.Playing
     var tunedId by remember { mutableStateOf<String?>(null) }
-    // The channel the preview's watchdog stopped for not starting in time (below).
-    var stalledId by remember { mutableStateOf<String?>(null) }
+    // The channel this screen gave up on: its load failed, or it showed no picture in time (below).
+    var unavailableId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(targetPlaying, target.id) {
-        if (targetPlaying) tunedId = target.id
+        if (targetPlaying) {
+            tunedId = target.id
+            unavailableId = null
+        }
     }
+    val unavailable = unavailableId == target.id && !targetPlaying
     val tuningName =
         target.name.takeIf {
             target.id != tunedId &&
                 !targetPlaying &&
+                !unavailable &&
                 streamState !is StreamLoaderViewModel.StreamState.Error &&
                 previewPlaybackState !is PlaybackState.Error
         }
+
+    // A new pick: the channel playing stops at once, so its picture never shows under the new
+    // channel's name (UX-D2). Now, not through the view model's coroutine, which could land after
+    // the new channel started. [tuneTick] lets the play effect below start a channel whose Success
+    // the loader still holds from before (a quick pick away and back).
+    var tuneTick by remember { mutableIntStateOf(0) }
+    val tune: (MediaItem) -> Unit = { item ->
+        if (!item.isSameChannel(target, listSource)) {
+            StreamingPlaybackService.getInstance()?.stop()
+            tuneTick++
+        }
+        previewTarget = item
+    }
+
+    // Gives up on the target: stops it, drops its load and its Recent write, and says so.
+    val giveUp: () -> Unit = {
+        StreamingPlaybackService.getInstance()?.stop()
+        loader.abandon()
+        unavailableId = target.id
+    }
 
     // Re-point the loader whenever the previewed channel changes, via the lean resolution path
     // (skips the channel-switcher list refetch that a real "commit to watching" does — a preview
@@ -485,8 +515,10 @@ internal fun LiveTvSplitLayout(
         }
     }
 
-    LaunchedEffect(success?.streamId) {
-        val s = success
+    LaunchedEffect(success?.streamId, tuneTick) {
+        // Only the target's own Success: an older one still held while a new pick loads must not
+        // start the channel just stopped.
+        val s = success?.takeIf { it.streamId == target.id }
         // A promote-triggered upgrade from the dock's light load to a full load (see
         // onStreamPromote below) re-runs loadStream(), which briefly flips this state to
         // Loading and back — success?.streamId goes from the current id to null and back to the
@@ -518,25 +550,20 @@ internal fun LiveTvSplitLayout(
         onHome()
     }
 
-    // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the background
-    // indefinitely (background churn on a preview stream caused periodic main-thread ANRs). 15 s:
-    // a slow free channel took 5 s to its first byte and was stopped at 8 s while it was coming.
-    // The channel it stopped says so over the preview ([stalledId]) instead of "Tuning" forever.
-    LaunchedEffect(success?.streamId) {
-        val s = success ?: return@LaunchedEffect
-        stalledId = null
-        val reachedPlaying =
-            withTimeoutOrNull(PREVIEW_START_TIMEOUT_MS) {
-                // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it in
-                // snapshotFlow{} never registers an observable read, so it emits once and then
-                // never again, making first{} hang the full timeout regardless of whether playback
-                // actually started. first{} on the StateFlow directly works correctly.
-                playback.playbackState.first { it is PlaybackState.Playing }
-            }
-        if (reachedPlaying == null && success.streamId == s.streamId && !fullScreen) {
-            playback.stop()
-            stalledId = s.streamId
-        }
+    // Dead-stream watchdog (UX-D2): a channel with no picture 10 s after it was picked — in the
+    // preview or in full screen — is stopped rather than left to buffer in the background (that
+    // churn caused main-thread ANRs), and says so over the video instead of "Tuning" for ever. A
+    // failed load says so at once.
+    val currentTargetPlaying by rememberUpdatedState(targetPlaying)
+    LaunchedEffect(target.sourceKey) {
+        unavailableId = null
+        // targetPlaying reads Compose state (the collected flows), so snapshotFlow sees it change.
+        val played = withTimeoutOrNull(CHANNEL_START_TIMEOUT_MS) { snapshotFlow { currentTargetPlaying }.first { it } }
+        if (played == null) giveUp()
+    }
+    LaunchedEffect(streamState, target.id) {
+        val error = streamState as? StreamLoaderViewModel.StreamState.Error ?: return@LaunchedEffect
+        if (error.streamId == null || error.streamId == target.id) giveUp()
     }
 
     // Pause when this screen isn't RESUMED; resume on return. Release entirely on final disposal
@@ -616,6 +643,7 @@ internal fun LiveTvSplitLayout(
                 currentStreamId = success?.streamId,
                 tuningChannelName = tuningName,
                 tuningLogoUrl = target.thumbnailUrl,
+                unavailableChannelName = target.name.takeIf { unavailable },
                 // Guide (GD5): the TV Guide of the list being zapped through, on this channel's row.
                 onShowGuide =
                     onOpenGuide?.let { open ->
@@ -693,7 +721,7 @@ internal fun LiveTvSplitLayout(
                                 // watching" — use the full loadStream (with side effects), still on
                                 // the SAME loader/engine. A channel of another source gets its own
                                 // loader, which starts on it.
-                                previewTarget = newItem
+                                tune(newItem)
                                 zapOrder = null
                                 if (newItem.sourceOr(listSource) == targetSource) loader.loadStream(newItem)
                                 close()
@@ -708,7 +736,7 @@ internal fun LiveTvSplitLayout(
                     val order = zapOrder ?: contextStreams
                     zapOrder = order
                     neighborChannel(order, target, +1, listSource)?.let { newItem ->
-                        previewTarget = newItem
+                        tune(newItem)
                         loader.loadStream(newItem, zapped = true)
                     }
                 },
@@ -716,7 +744,7 @@ internal fun LiveTvSplitLayout(
                     val order = zapOrder ?: contextStreams
                     zapOrder = order
                     neighborChannel(order, target, -1, listSource)?.let { newItem ->
-                        previewTarget = newItem
+                        tune(newItem)
                         loader.loadStream(newItem, zapped = true)
                     }
                 },
@@ -752,13 +780,13 @@ internal fun LiveTvSplitLayout(
                     // watchdog-killed stream would otherwise look identical to a live frozen
                     // frame. Surface the state so it reads as "still loading", not "broken" —
                     // naming the channel while it is being tuned (LT5).
-                    if (tuningName != null) {
+                    if (unavailable) {
+                        TvTuningOverlay(channelName = target.name, compact = true, unavailable = true)
+                    } else if (tuningName != null) {
                         TvTuningOverlay(
                             channelName = tuningName,
                             logoUrl = target.thumbnailUrl,
                             compact = true,
-                            stalled =
-                                stalledId == target.id,
                         )
                     } else if (previewPlaybackState !is PlaybackState.Playing) {
                         // A wait after the channel played: the same ring, without the dimming.
@@ -856,10 +884,14 @@ internal fun LiveTvSplitLayout(
                 onStreamPromote = { item ->
                     // OK on another row plays it here: the target change re-points the SAME
                     // loader/engine (loadStreamLight above) — still only one connection ever.
-                    // OK on the row playing goes full screen.
+                    // OK on the row playing goes full screen once it shows a picture; before that
+                    // the OK does nothing (UX-D6). On a channel that did not start, OK goes to the
+                    // next channel of the list (UX-D2).
                     if (!item.isSameChannel(target, listSource)) {
-                        previewTarget = item
-                    } else {
+                        tune(item)
+                    } else if (unavailable) {
+                        neighborChannel(zapOrder ?: contextStreams, target, +1, listSource)?.let(tune)
+                    } else if (targetPlaying) {
                         // Upgrade from the dock's light load (empty categoryStreams/
                         // recent-channel list — see loadStreamLight's doc
                         // comment) to a full load so the promoted full-screen view has real category/
@@ -923,5 +955,8 @@ private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
         sourceName = s.sourceName,
     )
 
-/** How long the preview waits for a channel to play before giving up on it. */
-private const val PREVIEW_START_TIMEOUT_MS = 15_000L
+/**
+ * How long a picked channel may take to show a picture before the screen gives up on it (UX-D2).
+ * A slow free channel took 5 s to its first byte.
+ */
+private const val CHANNEL_START_TIMEOUT_MS = 10_000L

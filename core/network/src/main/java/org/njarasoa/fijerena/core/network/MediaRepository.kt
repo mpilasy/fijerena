@@ -711,6 +711,27 @@ class MediaRepository(
         return days
     }
 
+    /**
+     * The ids of the rows among [items] (a Recent list) whose channel or title this source no longer
+     * lists ([MediaProvider.missingItems]). Episode cards, category rows and `####` separators are
+     * never checked. Empty when the lookup fails: a row not marked gone is the whole cost.
+     */
+    suspend fun goneFromSource(
+        items: List<MediaItem>,
+        contentType: String,
+    ): Set<String> {
+        val ids =
+            items
+                .filter { it.target !is BrowseTarget.CategoryRef && it.target !is BrowseTarget.Episode && !it.isCategoryMarker }
+                .map { it.id }
+        val source = provider
+        return if (ids.isEmpty() || source == null) {
+            emptySet()
+        } else {
+            suspendRunCatching { source.missingItems(ids, contentType) }.getOrDefault(emptySet())
+        }
+    }
+
     suspend fun search(
         query: String,
         contentType: String,
