@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-30 | [Thread races](./20261030_thread-races-plan.md) | Remove the races between threads found after the Chromecast crash: a playback error on a buffer swap, the byte caps that never trip, and stale data on details pages, Live TV, Recent, settings and sync | Phases A–D in progress |
+| 2026-10-30 | [Thread races](./20261030_thread-races-plan.md) | Remove the races between threads found after the Chromecast crash: a playback error on a buffer swap, the byte caps that never trip, and stale data on details pages, Live TV, Recent, settings and sync | Done 2026-10-30, walked on both emulators |
 | 2026-10-30 | [Cast tab](./20261030_cast-tab-plan.md) | The Cast tab shows TMDB cast cards (photo, name, role) and crew lines; opening a person shows their films and shows that the profile's sources have, with a switch for the missing ones | Done 2026-10-30, walked on both emulators |
 | 2026-10-29 | [TMDB charts](./20261029_tmdb-charts-plan.md) | Home rows and a Charts list of today's TMDB charts (Trending, Popular, Top Rated; films and shows) cut down to what the profile's sources have; chart pages read only until a row has 20 titles | Done 2026-10-29, walked on both emulators; an Admin switch turns them off for the device |
 | 2026-10-28 | [Admin settings](./20261028_admin-settings-plan.md) | One rule: household and device settings are Admin, a profile's own are not; Settings becomes Your Profile, Admin (PIN once on the way in) and About; Expert mode becomes Admin in the UI | Done 2026-10-28, walked on both emulators |

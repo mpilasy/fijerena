@@ -1,6 +1,6 @@
 # Thread races
 
-**Status:** In progress 2026-10-30.
+**Status:** Done 2026-10-30, walked on both emulators.
 
 ## Goal
 
@@ -35,8 +35,21 @@ one commit.
 
 | Phase | Work | Status |
 |-------|------|--------|
-| A | Player: 1, 2, with unit tests | Done |
-| B | Stream loader and details pages: 3, 4, 5, 6 | Done |
-| C | Data layer: 7, 8, 12, 13, 14 | Done |
-| D | Sync and person page: 9, 10, 11 | Done |
-| E | Full checks, emulator walks (zap, preview, details copy switch, favourites, sync), release notes | Not started |
+| A | Player: 1, 2, with unit tests | Done (493f780e6) |
+| B | Stream loader and details pages: 3, 4, 5, 6 | Done (702ab537b, 8452f1391) |
+| C | Data layer: 7, 8, 12, 13, 14 | Done (07cf66150, 9dd01c9ab) |
+| D | Sync and person page: 9, 10, 11 | Done (f2322bbb5) |
+| E | Full checks, emulator walks (zap, preview, details copy switch, favourites, sync), release notes | Done |
+
+## Done notes (2026-10-30)
+
+- **Byte caps now apply:** Wi-Fi VOD stops loading at the device-scaled cap (64–160 MB), live TV
+  at 32 MB above its minimum buffer. Before, only the time targets limited the buffer.
+- **Walk finding, fixed (8452f1391):** an abandoned loader (Live TV preview, a channel on another
+  source) kept the channel of its cancelled load as "asked", so a return to it loaded nothing and
+  the preview named one channel while another played. Seen once on the TV emulator; not
+  reproduced in 12 later runs on one source.
+- **Not tested on the emulators:** the switch to another copy on a details page (no title has two
+  copies in the test sources); the unit tests cover it. The SMB fix has no unit test.
+- **Clear Cache:** a cleared Recent Categories list no longer comes back from the prefs before the
+  clear is written (9dd01c9ab).
