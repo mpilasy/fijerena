@@ -41,8 +41,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Remove local Java home from gradle.properties
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+      # The local Java home goes; the build's heap rises from 2.5 GB to 4 GB, because the release
+      # dex merge of the phone app ran out of memory at 2.5 GB (the runner has 16 GB).
+      - name: Fit gradle.properties to the runner
+        run: |
+          sed -i '/^org.gradle.java.home=/d' gradle.properties
+          sed -i 's/^org.gradle.jvmargs=-Xmx2560m /org.gradle.jvmargs=-Xmx4g /' gradle.properties
+          grep -q '^org.gradle.jvmargs=-Xmx4g ' gradle.properties
 
       # One Gradle run, so its tasks share the runner's cores: ktlint, the unit tests, Android Lint
       # (existing warnings live in each module's lint-baseline.xml; only new issues fail the build),
