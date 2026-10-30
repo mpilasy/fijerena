@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
+import org.njarasoa.fijerena.ui.components.MobileCreditsTabContent
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
@@ -81,6 +82,8 @@ fun MobileTmdbTitleScreen(
     onOpenCopy: (CatalogueHit) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    // A cast card or a crew name of the Cast tab: opens the person page.
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val playTrailer = rememberPlayTrailer()
@@ -207,6 +210,7 @@ fun MobileTmdbTitleScreen(
                         isShow = title.contentType != ContentType.MOVIES,
                         related = related,
                         onRelatedTitleSelected = onRelatedTitleSelected,
+                        onPersonSelected = onPersonSelected,
                     )
                 }
             }
@@ -224,8 +228,11 @@ private fun TmdbTitleTabs(
     isShow: Boolean,
     related: RelatedTitles,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
 ) {
-    val hasCast = details.cast.isNotEmpty()
+    // TMDB's cards and crew lines (cast tab plan), else the names alone.
+    val credits = details.credits?.takeUnless { it.isEmpty }
+    val hasCast = credits != null || details.cast.isNotEmpty()
     val hasMoreLikeThis = related.moreLikeThis.isNotEmpty() || related.collection.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -268,7 +275,15 @@ private fun TmdbTitleTabs(
         }
 
         TmdbTitleTab.CAST -> {
-            CastChipsTabContent(cast = details.cast.joinToString(", "))
+            if (credits != null) {
+                MobileCreditsTabContent(
+                    credits = credits,
+                    section = if (isShow) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
+                    onPersonSelected = onPersonSelected,
+                )
+            } else {
+                CastChipsTabContent(cast = details.cast.joinToString(", "))
+            }
         }
 
         TmdbTitleTab.MORE_LIKE_THIS -> {

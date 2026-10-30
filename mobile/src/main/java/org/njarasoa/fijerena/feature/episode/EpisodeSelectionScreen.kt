@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -105,6 +106,7 @@ import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
 import org.njarasoa.fijerena.ui.components.MobileCategoryLinkRow
+import org.njarasoa.fijerena.ui.components.MobileCreditsTabContent
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
 import org.njarasoa.fijerena.ui.components.OtherCopiesList
@@ -144,6 +146,8 @@ fun MobileEpisodeSelectionScreen(
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
     // The route's source.
     providerId: Long = 0L,
+    // A cast card or a crew name of the Cast tab: opens the person page.
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -157,6 +161,7 @@ fun MobileEpisodeSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val credits by viewModel.credits.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
@@ -316,6 +321,8 @@ fun MobileEpisodeSelectionScreen(
                             seriesDetail = displaySeriesDetail,
                             onRetry = { viewModel.refreshSeriesInfo() },
                             relatedTitles = relatedTitles,
+                            credits = credits,
+                            onPersonSelected = onPersonSelected,
                             tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
                             sourceNames = sourceNames,
@@ -363,6 +370,8 @@ private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     onRetry: () -> Unit,
     relatedTitles: RelatedTitles,
+    credits: TitleCredits?,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
@@ -631,7 +640,9 @@ private fun EpisodeListContent(
     // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
     // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
     // Episodes is the always-present, always-first tab.
-    val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
+    // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
+    val tmdbCredits = credits?.takeUnless { it.isEmpty }
+    val hasCast = tmdbCredits != null || !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -886,7 +897,15 @@ private fun EpisodeListContent(
                     )
                 } else if (selectedTab == SeriesDetailTab.CAST) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                    CastChipsTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                    if (tmdbCredits != null) {
+                        MobileCreditsTabContent(
+                            credits = tmdbCredits,
+                            section = ThumbnailContentType.TV_SHOW,
+                            onPersonSelected = onPersonSelected,
+                        )
+                    } else {
+                        CastChipsTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                    }
                 } else if (selectedTab == SeriesDetailTab.MORE_LIKE_THIS) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     RelatedTitlesRow(
@@ -1043,7 +1062,7 @@ private fun SeriesDetailsTabContent(
     }
 }
 
-/** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
+/** Cast tab without TMDB's credits (CT-D7): the source's comma string split into plain chips, not tappable. */
 @Composable
 private fun CastChipsTabContent(cast: String) {
     FlowRow(

@@ -836,6 +836,7 @@ fun TvNavHost(
                                     navController.navigate(copy.route(route.contentType)) { popUpTo<Screen.TmdbTitle> { inclusive = true } }
                                 },
                                 onBack = { navController.navigateUp() },
+                                onPersonSelected = { id, name, crew -> navController.navigateOnce(Screen.Person(id, name, crew)) },
                                 // As on a film or show page: a title no source has opens its TMDB page, else its source's page.
                                 onRelatedTitleSelected = { related ->
                                     val tmdbOnly = TmdbOnlyItem.titleOf(related, route.contentType)
@@ -977,6 +978,7 @@ fun TvNavHost(
                                 onBack = {
                                     navController.navigateUp()
                                 },
+                                onPersonSelected = { id, name, crew -> navController.navigateOnce(Screen.Person(id, name, crew)) },
                                 onRelatedTitleSelected = { related ->
                                     // A TMDB title no source has opens its TMDB page (wishlist UX plan, Phase 4).
                                     val tmdbOnly = TmdbOnlyItem.titleOf(related, ContentType.MOVIES)
@@ -1032,6 +1034,7 @@ fun TvNavHost(
                                 onBack = {
                                     navController.navigateUp()
                                 },
+                                onPersonSelected = { id, name, crew -> navController.navigateOnce(Screen.Person(id, name, crew)) },
                                 onRelatedTitleSelected = { related ->
                                     // A TMDB title no source has opens its TMDB page (wishlist UX plan, Phase 4).
                                     val tmdbOnly = TmdbOnlyItem.titleOf(related, ContentType.TV_SHOWS)

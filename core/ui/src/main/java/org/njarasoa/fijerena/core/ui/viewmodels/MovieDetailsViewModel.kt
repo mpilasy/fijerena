@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.suspendRunCatching
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -69,6 +70,13 @@ class MovieDetailsViewModel(
     /** TMDB's own title for the movie, shown next to the provider's (often raw) stream name. */
     private val _tmdbTitle = MutableStateFlow<String?>(null)
     val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
+
+    /**
+     * TMDB's cast and crew for the Cast tab (cast tab plan); null without a TMDB id or key, or when
+     * TMDB fails, and the tab then shows the source's cast names.
+     */
+    private val _credits = MutableStateFlow<TitleCredits?>(null)
+    val credits: StateFlow<TitleCredits?> = _credits.asStateFlow()
 
     /** TMDB's transparent-PNG wordmark art, shown in place of the plain-text headline when present. */
     private val _logoUrl = MutableStateFlow<String?>(null)
@@ -153,6 +161,7 @@ class MovieDetailsViewModel(
         relatedTitlesJob?.cancel()
         _relatedTitles.value = RelatedTitles()
         _tmdbTitle.value = null
+        _credits.value = null
         _logoUrl.value = null
         _backdropUrl.value = null
         try {
@@ -239,6 +248,8 @@ class MovieDetailsViewModel(
                 suspendRunCatching {
                     getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
                 }.getOrNull()
+            // The same TMDB call as the title, kept by the provider: no extra call.
+            _credits.value = suspendRunCatching { getRepository().getTmdbCredits(detail.metadata.tmdbId, "MOVIES") }.getOrNull()
         }
     }
 

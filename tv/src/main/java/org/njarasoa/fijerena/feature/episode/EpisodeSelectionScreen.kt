@@ -107,6 +107,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -167,6 +168,7 @@ import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvBackdropText
+import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
@@ -218,6 +220,8 @@ fun EpisodeSelectionScreen(
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
     // The route's source.
     providerId: Long = 0L,
+    // A cast card or a crew name of the Cast tab: opens the person page.
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -234,6 +238,7 @@ fun EpisodeSelectionScreen(
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val credits by viewModel.credits.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
@@ -269,6 +274,7 @@ fun EpisodeSelectionScreen(
                 seriesDetail = shown.seriesDetail,
                 // A child's are filtered like its Search (relatedInSources → forChild).
                 relatedTitles = relatedTitles,
+                credits = credits,
                 tmdbTitle = tmdbTitle,
                 logoUrl = logoUrl,
                 backdropUrl = backdropUrl,
@@ -298,6 +304,7 @@ fun EpisodeSelectionScreen(
                 onAlternateStreamSelected = {
                     if (viewModel.otherSourceOf(it) != null) onRelatedTitleSelected(it) else viewModel.switchToAlternateStream(it)
                 },
+                onPersonSelected = onPersonSelected,
             )
         }
 
@@ -333,6 +340,8 @@ internal fun EpisodeListContent(
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     sourceNames: Map<Long, String> = emptyMap(),
+    credits: TitleCredits? = null,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val playTrailer = rememberPlayTrailer()
@@ -479,7 +488,9 @@ internal fun EpisodeListContent(
     // follow. No separate Seasons tab: picking a season there did nothing but jump straight to
     // Episodes with that season selected — exactly what the season pills atop the Episodes tab
     // already do directly, one D-pad press instead of two.
-    val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
+    // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
+    val tmdbCredits = credits?.takeUnless { it.isEmpty }
+    val hasCast = tmdbCredits != null || !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -1450,7 +1461,17 @@ internal fun EpisodeListContent(
                                             .focusRestorer()
                                             .onFocusChanged { if (it.hasFocus) focusInSection = true },
                                 ) {
-                                    SeriesCastTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                                    if (tmdbCredits != null) {
+                                        TvCreditsTabContent(
+                                            credits = tmdbCredits,
+                                            section = ThumbnailContentType.TV_SHOW,
+                                            returnFocus = returnFocus,
+                                            onPersonSelected = onPersonSelected,
+                                            topFocusModifier = upToTabRow,
+                                        )
+                                    } else {
+                                        SeriesCastTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                                    }
                                 }
                             }
                         }
@@ -1543,7 +1564,7 @@ private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
         SeriesDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
-/** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
+/** Cast tab without TMDB's credits (CT-D7): the source's comma string split into plain chips, not openable. */
 @Composable
 private fun SeriesCastTabContent(cast: String) {
     val scale = LocalUiScale.current

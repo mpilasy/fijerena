@@ -1247,6 +1247,16 @@
         <item quantity="other">Networks:</item>
     </plurals>
     <string name="details_label_creators">Created By:</string>
+    <!-- Cast tab: crew lines and cast cards (cast tab plan) -->
+    <plurals name="details_label_directors">
+        <item quantity="one">Director:</item>
+        <item quantity="other">Directors:</item>
+    </plurals>
+    <plurals name="details_label_writers">
+        <item quantity="one">Writer:</item>
+        <item quantity="other">Writers:</item>
+    </plurals>
+    <string name="cast_as_character">as %1$s</string>
     <string name="details_label_status">Status:</string>
     <string name="details_status_returning">Returning</string>
     <string name="details_status_ended">Ended</string>

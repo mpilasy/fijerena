@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -737,6 +738,12 @@ class MediaRepository(
         tmdbId: String?,
         contentType: String,
     ): String? = provider?.getTmdbTitle(tmdbId, contentType)
+
+    /** See [XtreamMediaProvider.getTmdbCredits]. Null for a source that is not Xtream. */
+    suspend fun getTmdbCredits(
+        tmdbId: String?,
+        contentType: String,
+    ): TitleCredits? = (provider as? XtreamMediaProvider)?.getTmdbCredits(tmdbId, contentType)
 
     /** See [MediaProvider.getTmdbLogoUrl]. */
     suspend fun getTmdbLogoUrl(

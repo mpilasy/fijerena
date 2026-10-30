@@ -1249,6 +1249,16 @@
         <item quantity="other">Chaînes :</item>
     </plurals>
     <string name="details_label_creators">Créée par :</string>
+    <!-- Cast tab: crew lines and cast cards (cast tab plan) -->
+    <plurals name="details_label_directors" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Réalisateur :</item>
+        <item quantity="other">Réalisateurs :</item>
+    </plurals>
+    <plurals name="details_label_writers" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Scénariste :</item>
+        <item quantity="other">Scénaristes :</item>
+    </plurals>
+    <string name="cast_as_character">dans le rôle de %1$s</string>
     <string name="details_label_status">Statut :</string>
     <string name="details_status_returning">En cours</string>
     <string name="details_status_ended">Terminée</string>

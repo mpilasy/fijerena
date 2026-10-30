@@ -68,6 +68,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
@@ -88,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -107,6 +109,7 @@ import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
@@ -142,6 +145,8 @@ fun MovieDetailsScreen(
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
     // The route's source.
     providerId: Long = 0L,
+    // A cast card or a crew name of the Cast tab: opens the person page.
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -163,6 +168,7 @@ fun MovieDetailsScreen(
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val credits by viewModel.credits.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
@@ -205,6 +211,7 @@ fun MovieDetailsScreen(
                 movieDetail = state.movieDetail,
                 // A child's are filtered like its Search (relatedInSources → forChild).
                 relatedTitles = relatedTitles,
+                credits = credits,
                 tmdbTitle = tmdbTitle,
                 logoUrl = logoUrl,
                 backdropUrl = backdropUrl,
@@ -236,6 +243,7 @@ fun MovieDetailsScreen(
                     if (viewModel.otherSourceOf(it) != null) onRelatedTitleSelected(it) else viewModel.switchToAlternateStream(it)
                 },
                 providerId = providerId,
+                onPersonSelected = onPersonSelected,
             )
         }
     }
@@ -246,6 +254,7 @@ private fun MovieDetailsContent(
     wishlist: WishlistControl?,
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
+    credits: TitleCredits?,
     tmdbTitle: String?,
     logoUrl: String?,
     backdropUrl: String?,
@@ -267,6 +276,7 @@ private fun MovieDetailsContent(
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     providerId: Long,
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -333,7 +343,9 @@ private fun MovieDetailsContent(
     // actually has, never a fixed list. Only the selected tab's content composes below — the old
     // single-column screen composed cast, tech rows and up to three related rows on every visit,
     // whether on screen or not.
-    val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
+    // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
+    val tmdbCredits = credits?.takeUnless { it.isEmpty }
+    val hasCast = tmdbCredits != null || !movieDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -676,7 +688,16 @@ private fun MovieDetailsContent(
                     ) {
                         when (tabs.getOrNull(safeTabIndex)) {
                             MovieDetailTab.CAST -> {
-                                CastTabContent(cast = movieDetail.metadata.cast.orEmpty())
+                                if (tmdbCredits != null) {
+                                    TvCreditsTabContent(
+                                        credits = tmdbCredits,
+                                        section = ThumbnailContentType.MOVIE,
+                                        returnFocus = returnFocus,
+                                        onPersonSelected = onPersonSelected,
+                                    )
+                                } else {
+                                    CastTabContent(cast = movieDetail.metadata.cast.orEmpty())
+                                }
                             }
 
                             MovieDetailTab.DETAILS -> {
@@ -793,7 +814,7 @@ private fun movieDetailTabLabel(tab: MovieDetailTab): String =
         MovieDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
-/** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
+/** Cast tab without TMDB's credits (CT-D7): the source's comma string split into plain chips, not openable. */
 @Composable
 internal fun CastTabContent(cast: String) {
     val scale = LocalUiScale.current

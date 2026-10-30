@@ -13,8 +13,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.tmdb.titleCredits
 import org.njarasoa.fijerena.core.network.wanted.CatalogueHit
 import org.njarasoa.fijerena.core.network.wanted.CatalogueLookup
 import org.njarasoa.fijerena.core.network.wanted.ReleaseStatus
@@ -55,6 +57,8 @@ class TmdbTitleViewModel(
         val releaseDate: String? = null,
         val director: String? = null,
         val cast: List<String> = emptyList(),
+        /** The Cast tab's cards and crew lines; null when TMDB has none or fails. */
+        val credits: TitleCredits? = null,
         /** The trailer on YouTube, which the Trailer button opens as on a film page. */
         val trailerUrl: String? = null,
         /** Country, original title, studios… as a film page lists them; the makers are in [director]. */
@@ -138,6 +142,7 @@ class TmdbTitleViewModel(
                         .orEmpty()
                         .mapNotNull { it.name?.takeIf(String::isNotBlank) }
                         .take(MAX_CAST),
+                credits = info?.let { titleCredits(it, movie) },
                 trailerUrl =
                     info?.videos?.let { videos ->
                         trailerUrl(

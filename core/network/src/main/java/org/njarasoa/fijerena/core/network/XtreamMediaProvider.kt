@@ -6,15 +6,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
+import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.tmdb.titleCredits
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncException
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
@@ -67,6 +71,12 @@ class XtreamMediaProvider(
     // response — cache it so a caller that wants both (the TV detail hero) makes one network
     // round trip instead of two.
     private val tmdbImagesCache = TtlCache<Pair<Int, String>, TmdbImagesResponse>(DETAIL_CACHE_TTL_MS)
+
+    // getTmdbTitle, getTmdbTrailerUrl and getTmdbCredits all read one details response with the
+    // credits and the videos (getDetailsWithCredits). The mutex makes the three callers of a details
+    // page share one call.
+    private val tmdbDetailsCache = TtlCache<Pair<Int, String>, TmdbRecommendation>(DETAIL_CACHE_TTL_MS)
+    private val tmdbDetailsMutex = Mutex()
 
     override val capabilities =
         ProviderCapabilities(
@@ -859,21 +869,13 @@ class XtreamMediaProvider(
     override suspend fun getTmdbTitle(
         tmdbId: String?,
         contentType: String,
-    ): String? {
-        if (!tmdb.hasApiKey()) return null
-        val id = tmdbId?.toIntOrNull() ?: return null
-        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+    ): String? = getTmdbDetails(tmdbId, contentType)?.originalDisplayTitle
 
-        return try {
-            val details = if (contentType == ContentType.MOVIES) tmdb.getMovieDetails(id) else tmdb.getTvDetails(id)
-            details.originalDisplayTitle
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("XtreamMediaProvider", "TMDB title for $contentType $id: ${e.message}")
-            null
-        }
-    }
+    /** The Cast tab's people (cast tab plan): null without a TMDB id or key, or when TMDB fails. */
+    suspend fun getTmdbCredits(
+        tmdbId: String?,
+        contentType: String,
+    ): TitleCredits? = getTmdbDetails(tmdbId, contentType)?.let { titleCredits(it, movie = contentType == ContentType.MOVIES) }
 
     override suspend fun getTmdbLogoUrl(
         tmdbId: String?,
@@ -895,25 +897,37 @@ class XtreamMediaProvider(
         tmdbId: String?,
         contentType: String,
     ): String? {
+        val videos = getTmdbDetails(tmdbId, contentType)?.videos ?: return null
+        return trailerUrl(
+            TmdbApiService.bestTrailerKey(
+                videos.results,
+                java.util.Locale
+                    .getDefault()
+                    .language,
+            ),
+        )
+    }
+
+    /** Shared by [getTmdbTitle], [getTmdbTrailerUrl] and [getTmdbCredits]: one details call, cached. */
+    private suspend fun getTmdbDetails(
+        tmdbId: String?,
+        contentType: String,
+    ): TmdbRecommendation? {
         if (!tmdb.hasApiKey()) return null
         val id = tmdbId?.toIntOrNull() ?: return null
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
 
-        return try {
-            val videos = tmdb.getVideos(contentType == ContentType.MOVIES, id).results
-            trailerUrl(
-                TmdbApiService.bestTrailerKey(
-                    videos,
-                    java.util.Locale
-                        .getDefault()
-                        .language,
-                ),
-            )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("XtreamMediaProvider", "TMDB trailer for $contentType $id: ${e.message}")
-            null
+        val cacheKey = id to contentType
+        return tmdbDetailsMutex.withLock {
+            tmdbDetailsCache.get(cacheKey)?.let { return@withLock it }
+            try {
+                tmdb.getDetailsWithCredits(contentType == ContentType.MOVIES, id).also { tmdbDetailsCache.put(cacheKey, it) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("XtreamMediaProvider", "TMDB details for $contentType $id: ${e.message}")
+                null
+            }
         }
     }
 
@@ -1114,6 +1128,7 @@ class XtreamMediaProvider(
         seriesDetailCache.clear()
         tmdbOverviewCache.clear()
         tmdbImagesCache.clear()
+        tmdbDetailsCache.clear()
         searchDataSizes.clear()
     }
 

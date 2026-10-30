@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
@@ -62,11 +63,14 @@ import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.movie.CastTabContent
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
@@ -91,6 +95,8 @@ fun TmdbTitleScreen(
     onOpenCopy: (CatalogueHit) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    // A cast card or a crew name of the Cast tab: opens the person page.
+    onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val playTrailer = rememberPlayTrailer()
@@ -117,7 +123,11 @@ fun TmdbTitleScreen(
     val actionFocus = remember { FocusRequester() }
     val tabRowFocus = remember { FocusRequester() }
     var focusInSection by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { actionFocus.requestFocusWithRetry() }
+    // Back from a person page lands on the cast card or crew name that opened it, its section
+    // scrolled in first; else the first open focuses the action.
+    val returnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(returnFocus, fallback = tabRowFocus) { listState.scrollToItem(TAB_SECTION_ITEM_INDEX) }
+    LaunchedEffect(Unit) { if (returnFocus.key == null) actionFocus.requestFocusWithRetry() }
 
     // As the film page: Back out of an open section goes to the tab row, else out of the page.
     val back = {
@@ -125,7 +135,9 @@ fun TmdbTitleScreen(
     }
     BackHandler { back() }
 
-    val hasCast = details.cast.isNotEmpty()
+    // TMDB's cards and crew lines (cast tab plan), else the names alone.
+    val credits = details.credits?.takeUnless { it.isEmpty }
+    val hasCast = credits != null || details.cast.isNotEmpty()
     val hasMoreLikeThis = related.moreLikeThis.isNotEmpty() || related.collection.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -294,7 +306,21 @@ fun TmdbTitleScreen(
                             }
 
                             TmdbTitleTab.CAST -> {
-                                CastTabContent(cast = details.cast.joinToString(", "))
+                                if (credits != null) {
+                                    TvCreditsTabContent(
+                                        credits = credits,
+                                        section =
+                                            if (title.contentType == ContentType.MOVIES) {
+                                                ThumbnailContentType.MOVIE
+                                            } else {
+                                                ThumbnailContentType.TV_SHOW
+                                            },
+                                        returnFocus = returnFocus,
+                                        onPersonSelected = onPersonSelected,
+                                    )
+                                } else {
+                                    CastTabContent(cast = details.cast.joinToString(", "))
+                                }
                             }
 
                             TmdbTitleTab.MORE_LIKE_THIS -> {
@@ -335,6 +361,9 @@ fun TmdbTitleScreen(
         }
     }
 }
+
+/** The selected tab's section in the LazyColumn: after the hero (0) and the tab row (1). */
+private const val TAB_SECTION_ITEM_INDEX = 2
 
 /** The film page's tabs, from what TMDB has; Details is always there. */
 private enum class TmdbTitleTab { DETAILS, CAST, MORE_LIKE_THIS }

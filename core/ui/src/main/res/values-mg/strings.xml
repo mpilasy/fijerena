@@ -1241,6 +1241,16 @@
         <item quantity="other">Fahitalavitra:</item>
     </plurals>
     <string name="details_label_creators">Namorona:</string>
+    <!-- Cast tab: crew lines and cast cards (cast tab plan) -->
+    <plurals name="details_label_directors" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Mpanatontosa:</item>
+        <item quantity="other">Mpanatontosa:</item>
+    </plurals>
+    <plurals name="details_label_writers" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Mpanoratra:</item>
+        <item quantity="other">Mpanoratra:</item>
+    </plurals>
+    <string name="cast_as_character">amin\'ny anjaran\'i %1$s</string>
     <string name="details_label_status">Toe-javatra:</string>
     <string name="details_status_returning">Mbola mitohy</string>
     <string name="details_status_ended">Vita</string>
