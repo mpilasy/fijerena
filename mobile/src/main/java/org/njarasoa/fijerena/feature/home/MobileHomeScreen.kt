@@ -570,9 +570,11 @@ private fun HomeRowsColumn(
                 onLongClick = { onMenu(HomeMenu.Recent(item.providerId, item.id, item.contentType, item.name)) },
             ) { onContinueWatching(item) }
         }
+        // Recent channels second, alone like Continue Watching (user, 2026-10-30).
+        HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
         // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on its
         // section's tint, its favourites first.
-        if (rows.favoriteChannels.isNotEmpty() || rows.channels.isNotEmpty()) {
+        if (rows.favoriteChannels.isNotEmpty()) {
             HomeSection(ThumbnailContentType.LIVE_TV) {
                 HomeRow(
                     stringResource(R.string.home_favorite_channels),
@@ -580,7 +582,6 @@ private fun HomeRowsColumn(
                     { it.item.sourceKey },
                     content = channelCard,
                 )
-                HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
             }
         }
         sectionRows(ContentType.TV_SHOWS, rows.favoriteShows, R.string.home_favorite_shows)

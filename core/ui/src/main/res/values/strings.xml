@@ -722,7 +722,7 @@
     <string name="home_sync_loading_films">Loading films… %1$s</string>
     <string name="home_sync_loading_shows">Loading shows… %1$s</string>
     <string name="home_library_still_loading">Still loading your library…</string>
-    <string name="home_live_row_title">Channels</string>
+    <string name="home_live_row_title">Recent Channels</string>
     <string name="home_live_last_watched">Last watched</string>
     <string name="home_favorite_movies">Favourite Movies</string>
     <string name="home_favorite_shows">Favourite Shows</string>

@@ -11,8 +11,10 @@ import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 internal enum class HomeShelf {
     CONTINUE_WATCHING,
 
-    FAVORITE_CHANNELS,
+    /** Recent channels, alone under Continue Watching (user, 2026-10-30). */
     CHANNELS,
+
+    FAVORITE_CHANNELS,
 
     FAVORITE_SHOWS,
 

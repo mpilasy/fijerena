@@ -503,9 +503,9 @@ fun ContentTypeSelectionScreen(
 
                     continueWatchingItems.isNotEmpty() -> shelfFirstFocus
 
-                    favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
-
                     liveRowEntries.isNotEmpty() -> liveRowFirstFocus
+
+                    favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
 
                     else -> sectionFirstFocus(ContentType.TV_SHOWS) ?: sectionFirstFocus(ContentType.MOVIES)
                 }
@@ -1367,9 +1367,47 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
+                            // Recent channels second, alone like Continue Watching (user, 2026-10-30).
+                            if (liveRowEntries.isNotEmpty()) {
+                                TvLiveRow(
+                                    title = stringResource(R.string.home_live_row_title),
+                                    entries = liveRowEntries,
+                                    nowPlaying = liveNowPlaying,
+                                    onEntrySelected = { entry ->
+                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey) {
+                                            onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
+                                        }
+                                    },
+                                    firstItemFocus = liveRowFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_LIVE_ROW_PREFIX) },
+                                    onOpenActions =
+                                        if (child) {
+                                            null
+                                        } else {
+                                            (
+                                                { entry ->
+                                                    openCardMenu(HomeShelf.CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
+                                                }
+                                            )
+                                        },
+                                    listState = liveRowListState,
+                                    itemModifier = { entry ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.sourceKey))
+                                            .then(artOnFocus(entry.item.thumbnailUrl, false))
+                                    },
+                                    sourceNames = sourceNames,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
+
                             // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on
                             // its section's tint, its favourites first.
-                            if (favoriteChannelEntries.isNotEmpty() || liveRowEntries.isNotEmpty()) {
+                            if (favoriteChannelEntries.isNotEmpty()) {
                                 SectionPanel(
                                     section = ThumbnailContentType.LIVE_TV,
                                     modifier =
@@ -1419,43 +1457,6 @@ fun ContentTypeSelectionScreen(
                                                         returnFocus,
                                                         RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey,
                                                     ).then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.sourceKey))
-                                                    .then(artOnFocus(entry.item.thumbnailUrl, false))
-                                            },
-                                            sourceNames = sourceNames,
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(top = Spacing.xl.scaled(scale)),
-                                        )
-                                    }
-
-                                    if (liveRowEntries.isNotEmpty()) {
-                                        TvLiveRow(
-                                            title = stringResource(R.string.home_live_row_title),
-                                            entries = liveRowEntries,
-                                            nowPlaying = liveNowPlaying,
-                                            onEntrySelected = { entry ->
-                                                leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey) {
-                                                    onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
-                                                }
-                                            },
-                                            firstItemFocus = liveRowFirstFocus,
-                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_LIVE_ROW_PREFIX) },
-                                            onOpenActions =
-                                                if (child) {
-                                                    null
-                                                } else {
-                                                    (
-                                                        { entry ->
-                                                            openCardMenu(HomeShelf.CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
-                                                        }
-                                                    )
-                                                },
-                                            listState = liveRowListState,
-                                            itemModifier = { entry ->
-                                                Modifier
-                                                    .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey)
-                                                    .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.sourceKey))
                                                     .then(artOnFocus(entry.item.thumbnailUrl, false))
                                             },
                                             sourceNames = sourceNames,

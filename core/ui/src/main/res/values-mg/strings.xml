@@ -567,7 +567,7 @@
     <string name="home_sync_loading_films">Maka ny sarimihetsika… %1$s</string>
     <string name="home_sync_loading_shows">Maka ny andian-tantara… %1$s</string>
     <string name="home_library_still_loading">Mbola maka ny tahirinao…</string>
-    <string name="home_live_row_title">Fantsona</string>
+    <string name="home_live_row_title">Fantsona vao haingana</string>
     <string name="home_live_last_watched">Vao nojerena farany</string>
     <string name="home_favorite_movies">Sarimihetsika ankafizina</string>
     <string name="home_favorite_shows">Andian-tantara ankafizina</string>

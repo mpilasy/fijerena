@@ -686,7 +686,7 @@
     <string name="home_sync_loading_films">Chargement des films… %1$s</string>
     <string name="home_sync_loading_shows">Chargement des séries… %1$s</string>
     <string name="home_library_still_loading">Votre bibliothèque est encore en cours de chargement…</string>
-    <string name="home_live_row_title">Chaînes</string>
+    <string name="home_live_row_title">Chaînes récentes</string>
     <string name="home_live_last_watched">Dernière regardée</string>
     <string name="home_favorite_movies">Films favoris</string>
     <string name="home_favorite_shows">Séries favorites</string>

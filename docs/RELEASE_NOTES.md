@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Recent Channels second on Home:** the channels you watched last now come right after Continue Watching, by themselves, under the name Recent Channels. Favourite Channels stay on the Channels panel. TV and phone.
+
 ## Version: 0.8.20261030142207
 
 - **Fewer playback errors after a network change, and buffer size limits that work:** a switch between Wi-Fi and mobile data, or from a channel to a film, during playback could stop the stream with a playback error. The player's memory limit for buffered video now applies, so a high-bitrate film no longer fills memory past it. TV and phone.
