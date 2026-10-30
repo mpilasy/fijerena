@@ -1,11 +1,8 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
-
-- **Fixed a rare crash when a stream starts:** starting or switching a stream could close the app on a slower device (seen on a Chromecast with Google TV), when Android freed memory at the wrong moment. TV and phone.
-
 ## Version: 0.8.20261030025701
 
+- **Fixed a rare crash when a stream starts:** starting or switching a stream could close the app on a slower device (seen on a Chromecast with Google TV), when Android freed memory at the wrong moment. TV and phone.
 - **Original names on the TMDB lists:** the cards of More Like This, the TMDB charts (Home and the Charts lists), an actor's page and the Wishlist now show each title's original name, whatever name your source gives it: "The Godfather Part II", "Le Fabuleux Destin d'Amélie Poulain", "La casa de papel". A title in another script (Korean, Japanese, Russian…) shows its English name. These cards no longer show the source's tags (language code, 4K). The page the card opens keeps the source's name. TV and phone.
 
 ## Version: 0.8.20261030015910
