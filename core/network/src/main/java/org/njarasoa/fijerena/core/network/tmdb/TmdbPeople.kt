@@ -174,14 +174,16 @@ private val ROLE_PARTS = Regex("[/,()-]")
 /**
  * The rows of an actor page (Design 3–4): [person]'s titles ([personCredits]) cut down to the
  * catalogue, films and shows apart, each from the first of [sources] that has it (the profile's
- * order), most popular first. With [withMissing], the titles no source has are TMDB-only cards
- * (`TmdbOnlyItem`) in their place. Makes no TMDB call.
+ * order), most popular first. With [missingMovies] (films) or [missingShows] (shows), that row's
+ * titles no source has are TMDB-only cards (`TmdbOnlyItem`) in their place: each row has its own
+ * switch (UX-D7). Makes no TMDB call.
  */
 suspend fun personRows(
     person: TmdbPerson,
     crew: Boolean,
     sources: List<PersonTitleSource>,
-    withMissing: Boolean = false,
+    missingMovies: Boolean = false,
+    missingShows: Boolean = false,
 ): PersonRows {
     val credits = personCredits(person, crew)
 
@@ -189,6 +191,7 @@ suspend fun personRows(
         mediaType: String,
         contentType: String,
         itemType: MediaType,
+        withMissing: Boolean,
     ): List<MediaItem> {
         val titles = credits.filter { it.mediaType == mediaType }.map { it.toRecommendation() }
         val typed = sources.map { source -> suspend { list: List<TmdbRecommendation> -> source(list, contentType) } }
@@ -199,7 +202,7 @@ suspend fun personRows(
         }
     }
     return PersonRows(
-        movies = row(MOVIE, ContentType.MOVIES, MediaType.MOVIE),
-        shows = row(TV, ContentType.TV_SHOWS, MediaType.SERIES),
+        movies = row(MOVIE, ContentType.MOVIES, MediaType.MOVIE, missingMovies),
+        shows = row(TV, ContentType.TV_SHOWS, MediaType.SERIES, missingShows),
     )
 }

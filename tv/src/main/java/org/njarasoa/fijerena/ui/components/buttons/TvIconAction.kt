@@ -27,8 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -57,6 +61,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * is focused, so a row of actions stays compact and the one being pointed at says what it does.
  * The icon carries the state (filled or outlined star); [label] names the action and is the
  * button's content description. [danger] (Remove, Delete) is outlined in the error colour.
+ * [on]: the button is a switch (UX-D7) — its glyph takes `TvButtonStyle.iconOnContent` at rest while
+ * on, and it reads as a switch with that state; [label] then names the setting and its state.
  * See the icon buttons plan.
  */
 @Composable
@@ -69,6 +75,7 @@ fun TvIconAction(
     danger: Boolean = false,
     iconTint: Color? = null,
     iconModifier: Modifier = Modifier,
+    on: Boolean? = null,
 ) {
     val scale = LocalUiScale.current
     var focused by remember { mutableStateOf(false) }
@@ -82,7 +89,13 @@ fun TvIconAction(
                 .height(size)
                 .defaultMinSize(minWidth = size)
                 .onFocusChanged { focused = it.isFocused }
-                .semantics { contentDescription = label },
+                .semantics {
+                    contentDescription = label
+                    if (on != null) {
+                        role = Role.Switch
+                        toggleableState = ToggleableState(on)
+                    }
+                },
         colors =
             ClickableSurfaceDefaults.colors(
                 containerColor = if (danger) CinemaTheme.colors.clear else TvButtonStyle.iconContainer,
@@ -128,6 +141,7 @@ fun TvIconAction(
                     when {
                         !enabled -> TvButtonStyle.disabledContent
                         focused -> androidx.tv.material3.LocalContentColor.current
+                        on == true -> iconTint ?: TvButtonStyle.iconOnContent
                         else -> iconTint ?: androidx.tv.material3.LocalContentColor.current
                     },
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)).then(iconModifier),

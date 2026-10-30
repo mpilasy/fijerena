@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
+import org.njarasoa.fijerena.ui.components.input.pageKeys
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
@@ -211,7 +212,9 @@ internal fun CategoryList(
                     )
                     // The screen header above stays outside the pane: Up from the first category
                     // reaches it. Left from a row goes to the rail, whose Right comes back to it.
-                    .tvPane(paneFocus, exitRight = itemsPane, leftToRail = true),
+                    .tvPane(paneFocus, exitRight = itemsPane, leftToRail = true)
+                    // CH+/CH- and Page Up/Down: a screen of categories at a time (UX-D9).
+                    .pageKeys(listState, paneFocus) { index -> regularCategories.getOrNull(index)?.key },
         ) {
             // See MinimalBringIntoView: the list keeps its first row whole when it opens.
             CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {

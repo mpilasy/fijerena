@@ -152,11 +152,28 @@ class TmdbPeopleTest {
         runTest {
             val sources = listOf(source { it == "Title 1" })
             assertEquals(listOf("Title 1"), personRows(person, crew = false, sources = sources).movies.map { it.name })
-            val rows = personRows(person, crew = false, sources = sources, withMissing = true)
+            val rows = personRows(person, crew = false, sources = sources, missingMovies = true, missingShows = true)
             assertEquals(listOf(TmdbOnlyItem.PREFIX + "3", "Title 1"), rows.movies.map { it.id })
             assertEquals(MediaType.SERIES, rows.shows.single().mediaType)
             assertTrue(
                 rows.shows
+                    .single()
+                    .id
+                    .startsWith(TmdbOnlyItem.PREFIX),
+            )
+        }
+
+    @Test
+    fun `each row has its own switch for the missing titles`() =
+        runTest {
+            val sources = listOf(source { it == "Title 1" })
+            val moviesOnly = personRows(person, crew = false, sources = sources, missingMovies = true)
+            assertEquals(listOf(TmdbOnlyItem.PREFIX + "3", "Title 1"), moviesOnly.movies.map { it.id })
+            assertTrue(moviesOnly.shows.isEmpty())
+            val showsOnly = personRows(person, crew = false, sources = sources, missingShows = true)
+            assertEquals(listOf("Title 1"), showsOnly.movies.map { it.name })
+            assertTrue(
+                showsOnly.shows
                     .single()
                     .id
                     .startsWith(TmdbOnlyItem.PREFIX),

@@ -82,6 +82,8 @@ fun TvFavoritesRow(
     statusOf: (MediaItem) -> String? = { null },
     /** See [HomeRow]: one more item before the cards, the row's first. */
     leading: (@Composable (modifier: Modifier) -> Unit)? = null,
+    /** See [HomeRow]: said beside [leading] while the row has no card. */
+    emptyText: String? = null,
 ) {
     HomeRow(
         title = title,
@@ -92,6 +94,7 @@ fun TvFavoritesRow(
         restoreFocus = restoreFocus,
         modifier = modifier,
         leading = leading,
+        emptyText = emptyText,
     ) { item, rowModifier ->
         val tmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
         TvFavoriteCard(

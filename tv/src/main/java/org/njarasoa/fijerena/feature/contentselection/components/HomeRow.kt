@@ -50,6 +50,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * [leading]: one more item before the cards (a Trending chart row's switch), the row's first. It
  * takes the rail's Left, and Left on the first card goes to it; focus coming into the row still
  * lands on the first card. With it, the row shows even with no card, and it takes the row's focus.
+ * [emptyText]: said after the leading item while the row has no card ("None in your sources" on a
+ * person's page); not a focus stop, the leading item beside it is.
  *
  * Focus coming into the row brings the whole row into view, its title too: the card's own request
  * scrolled Home only as far as the card, and the title stayed under the header.
@@ -64,6 +66,7 @@ fun <T> HomeRow(
     modifier: Modifier = Modifier,
     restoreFocus: FocusRequester? = null,
     leading: (@Composable (modifier: Modifier) -> Unit)? = null,
+    emptyText: String? = null,
     itemContent: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
     if (items.isEmpty() && leading == null) return
@@ -111,6 +114,9 @@ fun <T> HomeRow(
             modifier = Modifier.focusRestorer(restoreFocus ?: firstItemFocus),
         ) {
             if (leading != null) item(key = LEADING_KEY) { leading(placed(0)) }
+            if (items.isEmpty() && leading != null && emptyText != null) {
+                item(key = EMPTY_KEY) { CinemaText(text = emptyText, tone = TextTone.Secondary) }
+            }
             itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
                 itemContent(item, placed(index + offset))
             }
@@ -120,6 +126,9 @@ fun <T> HomeRow(
 
 /** The leading item's key: no card's key (a source and an id) looks like it. */
 private const val LEADING_KEY = "homeRow:leading"
+
+/** The empty row's text: shown only with no card, so its key never meets a card's. */
+private const val EMPTY_KEY = "homeRow:empty"
 
 /**
  * The Menu key on a Home card opens its actions, as long-press OK does (row actions, CONTRIBUTING.md →

@@ -46,11 +46,11 @@ import org.njarasoa.fijerena.core.ui.person.personFactsLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.home.HomeRow
+import org.njarasoa.fijerena.feature.home.MissingTitlesSwitch
 import org.njarasoa.fijerena.feature.home.TitleCard
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
-import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -59,9 +59,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * A person's page on the phone (docs/plans/20261030_cast-tab-plan.md, Design 3): the photo, the
  * name, the birth and death dates and place, the biography (a few lines; a tap shows all of it),
  * then the person's Movies and TV Shows that the profile's sources have, as Home's rows. Each row's
- * title line ends with the switch for the titles no source has (one switch for both rows, off on
- * each opening, none for a child); a row keeps its switch while it has no card. A tap on a card
- * opens the title on its own source, or a TMDB-only card its TMDB page ([onTitleSelected]).
+ * title line ends with its own switch for the titles no source has (UX-D7: off on each opening,
+ * none for a child); a row keeps its switch while it has no card, and then says "None in your
+ * sources" under its title. A tap on a card opens the title on its own source, or a TMDB-only card
+ * its TMDB page ([onTitleSelected]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,46 +132,51 @@ private fun PersonContent(
     state: PersonViewModel.State.Loaded,
     name: String,
     canShowMissing: Boolean,
-    showMissing: Boolean,
-    onShowMissing: (Boolean) -> Unit,
+    showMissing: PersonViewModel.ShowMissing,
+    onShowMissing: (PersonViewModel.Row, Boolean) -> Unit,
     onTitleSelected: (item: MediaItem, contentType: String) -> Unit,
 ) {
     val person = state.person
     val rows = state.rows
     val movies = rows?.movies.orEmpty()
     val shows = rows?.shows.orEmpty()
-    // The eye at the end of a row's title, as on Home's Trending rows.
-    val switch: @Composable () -> Unit = {
-        IconAction(
-            onClick = { onShowMissing(!showMissing) },
-            icon = if (showMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-            label = stringResource(if (showMissing) R.string.chart_hide_missing else R.string.chart_show_missing),
-            // Not the default content colour: the page has no surface under it. The accent while it is on.
-            tint = if (showMissing) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
-        )
-    }
-    val titleRow: @Composable (String, List<MediaItem>, String, Boolean) -> Unit = { title, items, contentType, hasSwitch ->
-        HomeRow(title, items, { it.sourceKey }, action = if (hasSwitch) switch else null, showEmpty = hasSwitch) { item ->
-            TitleCard(
-                title = item.listTitle ?: item.name,
-                // CT-D5: the release year on each card. Some sources send no date, only the year
-                // in the name ("Lupin (2021)"), which the card's one line cuts off.
-                subtitle =
-                    item.metadata.releaseDate
-                        ?.takeIf { it.isNotBlank() }
-                        ?.take(YEAR_LENGTH)
-                        ?: (item.metadata.year ?: parseDisplayTitle(item.name).year)?.toString(),
-                thumbnailUrl = item.thumbnailUrl,
-                thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
-                progress = null,
-                sourceName = null,
-                providerId = item.providerId,
-                onLongClick = null,
-                notAvailable = item.id.startsWith(TmdbOnlyItem.PREFIX),
-                tags = item.listTitle == null,
-            ) { onTitleSelected(item, contentType) }
+    // A row with no card keeps its switch while the person has titles of its kind (as Trending).
+    val movieSwitch = canShowMissing && state.hasMovies
+    val showSwitch = canShowMissing && state.hasShows
+    val noneInSources = stringResource(R.string.person_none_in_sources)
+    val titleRow: @Composable (String, List<MediaItem>, String, PersonViewModel.Row, Boolean) -> Unit =
+        { title, items, contentType, row, hasSwitch ->
+            val on = showMissing[row]
+            // The eye at the end of the row's title, as on Home's Trending rows: this row's own.
+            val switch: @Composable () -> Unit = { MissingTitlesSwitch(on = on, onChange = { onShowMissing(row, it) }) }
+            HomeRow(
+                title,
+                items,
+                { it.sourceKey },
+                action = if (hasSwitch) switch else null,
+                showEmpty = hasSwitch,
+                emptyText = noneInSources.takeUnless { on },
+            ) { item ->
+                TitleCard(
+                    title = item.listTitle ?: item.name,
+                    // CT-D5: the release year on each card. Some sources send no date, only the year
+                    // in the name ("Lupin (2021)"), which the card's one line cuts off.
+                    subtitle =
+                        item.metadata.releaseDate
+                            ?.takeIf { it.isNotBlank() }
+                            ?.take(YEAR_LENGTH)
+                            ?: (item.metadata.year ?: parseDisplayTitle(item.name).year)?.toString(),
+                    thumbnailUrl = item.thumbnailUrl,
+                    thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
+                    progress = null,
+                    sourceName = null,
+                    providerId = item.providerId,
+                    onLongClick = null,
+                    notAvailable = item.id.startsWith(TmdbOnlyItem.PREFIX),
+                    tags = item.listTitle == null,
+                ) { onTitleSelected(item, contentType) }
+            }
         }
-    }
     Column(
         modifier =
             Modifier
@@ -198,15 +204,16 @@ private fun PersonContent(
         if (rows == null) {
             CinemaSpinner(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else {
-            if (movies.isEmpty() && shows.isEmpty() && !showMissing) {
+            // No row to show at all (a child, or no title of either kind): one line for the page.
+            if (movies.isEmpty() && shows.isEmpty() && !movieSwitch && !showSwitch) {
                 CinemaText(
                     text = stringResource(R.string.person_none_in_library),
                     tone = TextTone.Secondary,
                     modifier = Modifier.padding(horizontal = Spacing.md),
                 )
             }
-            titleRow(stringResource(R.string.provider_movies_label), movies, ContentType.MOVIES, canShowMissing && state.hasMovies)
-            titleRow(stringResource(R.string.provider_tv_shows_label), shows, ContentType.TV_SHOWS, canShowMissing && state.hasShows)
+            titleRow(stringResource(R.string.provider_movies_label), movies, ContentType.MOVIES, PersonViewModel.Row.MOVIES, movieSwitch)
+            titleRow(stringResource(R.string.provider_tv_shows_label), shows, ContentType.TV_SHOWS, PersonViewModel.Row.SHOWS, showSwitch)
         }
     }
 }

@@ -79,6 +79,11 @@ abstract class ButtonStyle {
         @Composable @ReadOnlyComposable
         get() = CinemaTheme.colors.textPrimary
 
+    /** The glyph of an icon-only switch while its setting is on (a filled icon, UX-D7): the accent. */
+    open val iconOnContent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.accent
+
     /** An icon-only button that deletes: [ButtonKind.Danger]'s colour, faint at rest. */
     open val dangerIconContainer: Color
         @Composable @ReadOnlyComposable

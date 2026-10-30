@@ -180,6 +180,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
+import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
 import org.njarasoa.fijerena.feature.contentselection.components.TvWantedBanner
 import org.njarasoa.fijerena.feature.contentselection.components.TvWantedRow
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -188,7 +189,6 @@ import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.clearOfTvClock
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
@@ -1110,18 +1110,12 @@ fun ContentTypeSelectionScreen(
                 leading =
                     if (chart.canShowMissing) {
                         { switchModifier ->
-                            TvIconAction(
-                                onClick = {
+                            TvMissingTitlesSwitch(
+                                on = chartsShowMissing,
+                                onChange = { show ->
                                     chartSwitchFlipped = shelf
-                                    ChartRows.setShowMissing(context, !chartsShowMissing)
+                                    ChartRows.setShowMissing(context, show)
                                 },
-                                icon = if (chartsShowMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-                                label =
-                                    if (chartsShowMissing) {
-                                        stringResource(R.string.chart_hide_missing)
-                                    } else {
-                                        stringResource(R.string.chart_show_missing)
-                                    },
                                 modifier = switchModifier.focusRequester(chartSwitchFocus.getValue(shelf)),
                             )
                         }

@@ -30,9 +30,9 @@ import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 /**
  * A person's page (docs/plans/20261030_cast-tab-plan.md, Design 3): the person TMDB knows, then
  * their films and shows that the profile's sources have. With [crew], the titles the person directed
- * or wrote (CT-D4). The switch for the titles no source has starts off each time the page opens and
- * is not stored (CT-D8); a child profile does not get it (CT-D9). The rows are made again after each
- * catalogue sync.
+ * or wrote (CT-D4). The Movies row and the TV Shows row each have their own switch for the titles
+ * no source has (UX-D7); both start off each time the page opens and are not stored (CT-D8); a
+ * child profile does not get them (CT-D9). The rows are made again after each catalogue sync.
  */
 class PersonViewModel(
     private val personId: Int?,
@@ -58,8 +58,32 @@ class PersonViewModel(
         suspend fun rows(
             person: TmdbPerson,
             crew: Boolean,
-            withMissing: Boolean,
+            missing: ShowMissing,
         ): PersonRows
+    }
+
+    /** The page's two rows, each with its own switch (UX-D7). */
+    enum class Row { MOVIES, SHOWS }
+
+    /** Which rows also show the titles no source has. */
+    data class ShowMissing(
+        val movies: Boolean = false,
+        val shows: Boolean = false,
+    ) {
+        operator fun get(row: Row): Boolean =
+            when (row) {
+                Row.MOVIES -> movies
+                Row.SHOWS -> shows
+            }
+
+        fun with(
+            row: Row,
+            show: Boolean,
+        ): ShowMissing =
+            when (row) {
+                Row.MOVIES -> copy(movies = show)
+                Row.SHOWS -> copy(shows = show)
+            }
     }
 
     sealed interface State {
@@ -85,13 +109,13 @@ class PersonViewModel(
     private val _state = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    /** Whether the page has the switch for the titles no source has (CT-D9: not for a child). */
+    /** Whether the page has the switches for the titles no source has (CT-D9: not for a child). */
     val canShowMissing: Boolean = !data.child
 
-    private val _showMissing = MutableStateFlow(false)
+    private val _showMissing = MutableStateFlow(ShowMissing())
 
-    /** The switch: also the titles no source has. Off each time the page opens (CT-D8). */
-    val showMissing: StateFlow<Boolean> = _showMissing.asStateFlow()
+    /** Each row's switch: also the titles no source has. Both off each time the page opens (CT-D8). */
+    val showMissing: StateFlow<ShowMissing> = _showMissing.asStateFlow()
 
     private var loadJob: Job? = null
     private var rowsJob: Job? = null
@@ -103,9 +127,13 @@ class PersonViewModel(
     /** Reads the person again, after a failure. */
     fun retry() = load()
 
-    fun setShowMissing(show: Boolean) {
-        if (!canShowMissing || show == _showMissing.value) return
-        _showMissing.value = show
+    /** Flips [row]'s switch only; the other row keeps its own. */
+    fun setShowMissing(
+        row: Row,
+        show: Boolean,
+    ) {
+        if (!canShowMissing || show == _showMissing.value[row]) return
+        _showMissing.value = _showMissing.value.with(row, show)
         (_state.value as? State.Loaded)?.let { loadRows(it.person) }
     }
 
@@ -147,10 +175,10 @@ class PersonViewModel(
     /** On Main only: [rowsJob] is read and replaced without a lock. The work itself runs on IO. */
     private fun loadRows(person: TmdbPerson) {
         rowsJob?.cancel()
-        val withMissing = _showMissing.value
+        val missing = _showMissing.value
         rowsJob =
             viewModelScope.launchGuarded("PersonViewModel.rows", Dispatchers.IO) {
-                val rows = data.rows(person, crew, withMissing)
+                val rows = data.rows(person, crew, missing)
                 // The rows kept on screen until the new ones are ready: no flash of an empty page.
                 (_state.value as? State.Loaded)?.let { _state.value = it.copy(rows = rows) }
             }
@@ -186,14 +214,14 @@ class PersonViewModel(
         override suspend fun rows(
             person: TmdbPerson,
             crew: Boolean,
-            withMissing: Boolean,
+            missing: ShowMissing,
         ): PersonRows {
             val merged = MergedLists.forSections(context)
             val key =
                 Key(
                     personId = person.id,
                     crew = crew,
-                    withMissing = withMissing,
+                    missing = missing,
                     profileId = settings.activeProfileId,
                     sources = merged?.inProfileOrder?.map { it.providerId }.orEmpty(),
                     catalogueUpdates = ProviderSyncRunner.catalogueUpdates.value,
@@ -205,7 +233,7 @@ class PersonViewModel(
                         source.repo.findTmdbTitles(titles, contentType).map { it?.copy(providerId = source.providerId) }
                     }
                 }
-            val rows = personRows(person, crew, sources, withMissing)
+            val rows = personRows(person, crew, sources, missingMovies = missing.movies, missingShows = missing.shows)
             synchronized(kept) {
                 // Rows of an older sync, another profile or other sources are of no more use.
                 kept.keys.removeAll {
@@ -221,7 +249,7 @@ class PersonViewModel(
     private data class Key(
         val personId: Int,
         val crew: Boolean,
-        val withMissing: Boolean,
+        val missing: ShowMissing,
         val profileId: String,
         val sources: List<Long>,
         val catalogueUpdates: Long,

@@ -53,12 +53,11 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
+import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvErrorState
-import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -73,9 +72,10 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * A person's page on TV (docs/plans/20261030_cast-tab-plan.md, Design 3): the photo, the name, the
  * birth and death dates and place, the biography (a few lines; OK shows all of it), then the
  * person's Movies and TV Shows that the profile's sources have, as Home's rows. Each row starts with
- * the switch for the titles no source has (one switch for both rows, off on each opening, none for
- * a child), and keeps the switch while it has no card. A card opens the title on its own source, or
- * a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES` or `TV_SHOWS`).
+ * its own switch for the titles no source has (UX-D7: off on each opening, none for a child), and
+ * keeps the switch while it has no card, then saying "None in your sources" beside it. A card opens
+ * the title on its own source, or a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES`
+ * or `TV_SHOWS`).
  *
  * Focus: on the first card on entry, else on the biography, else on a row's switch; Back from a
  * title returns to the card left.
@@ -133,8 +133,8 @@ private fun PersonContent(
     state: PersonViewModel.State.Loaded,
     name: String,
     canShowMissing: Boolean,
-    showMissing: Boolean,
-    onShowMissing: (Boolean) -> Unit,
+    showMissing: PersonViewModel.ShowMissing,
+    onShowMissing: (PersonViewModel.Row, Boolean) -> Unit,
     onTitleSelected: (item: MediaItem, contentType: String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -181,17 +181,11 @@ private fun PersonContent(
         prepare = { snapshotFlow { rows != null }.first { it } },
     )
 
-    val switch: @Composable (Modifier) -> Unit = { switchModifier ->
-        TvIconAction(
-            onClick = { onShowMissing(!showMissing) },
-            icon = if (showMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-            label = stringResource(if (showMissing) R.string.chart_hide_missing else R.string.chart_show_missing),
-            modifier = switchModifier,
-        )
-    }
-    val titleRow: @Composable (String, List<MediaItem>, String, Boolean, FocusRequester, LazyListState) -> Unit =
-        { title, items, contentType, hasSwitch, focus, rowListState ->
+    val noneInSources = stringResource(R.string.person_none_in_sources)
+    val titleRow: @Composable (String, List<MediaItem>, String, PersonViewModel.Row, Boolean, FocusRequester, LazyListState) -> Unit =
+        { title, items, contentType, row, hasSwitch, focus, rowListState ->
             val prefix = "person:$contentType:"
+            val on = showMissing[row]
             TvFavoritesRow(
                 title = title,
                 items = items,
@@ -211,7 +205,16 @@ private fun PersonContent(
                         ?.toString()
                         ?.takeIf { item.metadata.releaseDate.isNullOrBlank() }
                 },
-                leading = if (hasSwitch) switch else null,
+                // This row's own switch (UX-D7).
+                leading =
+                    if (hasSwitch) {
+                        { switchModifier ->
+                            TvMissingTitlesSwitch(on = on, onChange = { onShowMissing(row, it) }, modifier = switchModifier)
+                        }
+                    } else {
+                        null
+                    },
+                emptyText = noneInSources.takeUnless { on },
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
             )
         }
@@ -274,7 +277,8 @@ private fun PersonContent(
                 }
             }
         } else {
-            if (movies.isEmpty() && shows.isEmpty() && !showMissing) {
+            // No row to show at all (a child, or no title of either kind): one line for the page.
+            if (movies.isEmpty() && shows.isEmpty() && !movieSwitch && !showSwitch) {
                 item(key = "none") {
                     CinemaText(
                         text = stringResource(R.string.person_none_in_library),
@@ -288,6 +292,7 @@ private fun PersonContent(
                     stringResource(R.string.provider_movies_label),
                     movies,
                     ContentType.MOVIES,
+                    PersonViewModel.Row.MOVIES,
                     movieSwitch,
                     movieFocus,
                     movieListState,
@@ -298,6 +303,7 @@ private fun PersonContent(
                     stringResource(R.string.provider_tv_shows_label),
                     shows,
                     ContentType.TV_SHOWS,
+                    PersonViewModel.Row.SHOWS,
                     showSwitch,
                     showFocus,
                     showListState,

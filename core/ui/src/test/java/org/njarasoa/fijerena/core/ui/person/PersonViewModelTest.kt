@@ -31,15 +31,15 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * A person's page (cast tab plan, Phase 3): the switch for missing titles starts off and is not for
- * a child, the crew flag reaches the matching, a failed or impossible TMDB call is an error, and a
+ * A person's page (cast tab plan, Phase 3): each row's switch for missing titles starts off, flips
+ * only its own row (UX-D7) and is not for a child, the crew flag reaches the matching, a failed or impossible TMDB call is an error, and a
  * catalogue sync makes the rows again.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonViewModelTest {
     private class RowsCall(
         val crew: Boolean,
-        val withMissing: Boolean,
+        val missing: PersonViewModel.ShowMissing,
     )
 
     private class FakeData(
@@ -63,9 +63,9 @@ class PersonViewModelTest {
         override suspend fun rows(
             person: TmdbPerson,
             crew: Boolean,
-            withMissing: Boolean,
+            missing: PersonViewModel.ShowMissing,
         ): PersonRows {
-            calls += RowsCall(crew, withMissing)
+            calls += RowsCall(crew, missing)
             return PersonRows(movies = listOf(item("m${calls.size}")), shows = emptyList())
         }
     }
@@ -99,26 +99,26 @@ class PersonViewModelTest {
     private fun PersonViewModel.error() = await { state.first { it is PersonViewModel.State.Error } as PersonViewModel.State.Error }
 
     @Test
-    fun `the switch starts off and the rows have only the library's titles`() {
+    fun `both switches start off and the rows have only the library's titles`() {
         val data = FakeData()
         val vm = page(data)
 
         val state = vm.loaded()
 
         assertTrue(vm.canShowMissing)
-        assertFalse(vm.showMissing.value)
-        assertFalse(data.calls.single().withMissing)
+        assertEquals(PersonViewModel.ShowMissing(), vm.showMissing.value)
+        assertEquals(PersonViewModel.ShowMissing(movies = false, shows = false), data.calls.single().missing)
         assertTrue(state.hasMovies)
         assertFalse(state.hasShows)
     }
 
     @Test
-    fun `the switch on makes the rows again with the missing titles`() {
+    fun `the Movies switch on makes the rows again with the missing films only`() {
         val data = FakeData()
         val vm = page(data)
         vm.loaded()
 
-        vm.setShowMissing(true)
+        vm.setShowMissing(PersonViewModel.Row.MOVIES, true)
         vm.loaded {
             it.rows
                 ?.movies
@@ -126,8 +126,60 @@ class PersonViewModelTest {
                 ?.id == "m2"
         }
 
-        assertTrue(vm.showMissing.value)
-        assertTrue(data.calls.last().withMissing)
+        assertEquals(PersonViewModel.ShowMissing(movies = true, shows = false), vm.showMissing.value)
+        assertEquals(PersonViewModel.ShowMissing(movies = true, shows = false), data.calls.last().missing)
+    }
+
+    @Test
+    fun `each row keeps its own switch`() {
+        val data = FakeData()
+        val vm = page(data)
+        vm.loaded()
+
+        vm.setShowMissing(PersonViewModel.Row.SHOWS, true)
+        vm.loaded {
+            it.rows
+                ?.movies
+                ?.first()
+                ?.id == "m2"
+        }
+        vm.setShowMissing(PersonViewModel.Row.MOVIES, true)
+        vm.loaded {
+            it.rows
+                ?.movies
+                ?.first()
+                ?.id == "m3"
+        }
+        vm.setShowMissing(PersonViewModel.Row.SHOWS, false)
+        vm.loaded {
+            it.rows
+                ?.movies
+                ?.first()
+                ?.id == "m4"
+        }
+
+        assertEquals(
+            listOf(
+                PersonViewModel.ShowMissing(),
+                PersonViewModel.ShowMissing(shows = true),
+                PersonViewModel.ShowMissing(movies = true, shows = true),
+                PersonViewModel.ShowMissing(movies = true),
+            ),
+            data.calls.map { it.missing },
+        )
+        assertTrue(vm.showMissing.value[PersonViewModel.Row.MOVIES])
+        assertFalse(vm.showMissing.value[PersonViewModel.Row.SHOWS])
+    }
+
+    @Test
+    fun `a switch set to the state it has makes no new rows`() {
+        val data = FakeData()
+        val vm = page(data)
+        vm.loaded()
+
+        vm.setShowMissing(PersonViewModel.Row.MOVIES, false)
+
+        assertEquals(1, data.calls.size)
     }
 
     @Test
@@ -136,10 +188,11 @@ class PersonViewModelTest {
         val vm = page(data)
         vm.loaded()
 
-        vm.setShowMissing(true)
+        vm.setShowMissing(PersonViewModel.Row.MOVIES, true)
+        vm.setShowMissing(PersonViewModel.Row.SHOWS, true)
 
         assertFalse(vm.canShowMissing)
-        assertFalse(vm.showMissing.value)
+        assertEquals(PersonViewModel.ShowMissing(), vm.showMissing.value)
         assertEquals(1, data.calls.size)
     }
 

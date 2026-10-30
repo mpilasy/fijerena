@@ -98,7 +98,6 @@ import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
-import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -508,14 +507,7 @@ private fun HomeRowsColumn(
             val action: (@Composable () -> Unit)? =
                 if (chart.chart.canShowMissing) {
                     {
-                        IconAction(
-                            onClick = { onShowMissing(!chart.showsMissing) },
-                            icon = if (chart.showsMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-                            label = stringResource(if (chart.showsMissing) R.string.chart_hide_missing else R.string.chart_show_missing),
-                            // Not the default content colour: Home has no surface under it, so the
-                            // icon was drawn black on the dark ground. The accent while it is on.
-                            tint = if (chart.showsMissing) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
-                        )
+                        MissingTitlesSwitch(on = chart.showsMissing, onChange = onShowMissing)
                     }
                 } else {
                     null
@@ -726,7 +718,7 @@ private fun WantedBanner(
 
 /**
  * One titled row of cards; nothing at all when [items] is empty, unless [showEmpty] (then its title
- * alone). [action]: an icon button at the end of the title line.
+ * alone, and [emptyText] under it when given). [action]: an icon button at the end of the title line.
  */
 @Composable
 internal fun <T> HomeRow(
@@ -735,6 +727,7 @@ internal fun <T> HomeRow(
     key: (T) -> String,
     action: (@Composable () -> Unit)? = null,
     showEmpty: Boolean = false,
+    emptyText: String? = null,
     content: @Composable (T) -> Unit,
 ) {
     if (items.isEmpty() && !showEmpty) return
@@ -755,7 +748,10 @@ internal fun <T> HomeRow(
                 action()
             }
         }
-        if (items.isEmpty()) return@Column
+        if (items.isEmpty()) {
+            emptyText?.let { CinemaText(text = it, tone = TextTone.Secondary, modifier = Modifier.padding(horizontal = Spacing.md)) }
+            return@Column
+        }
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyRow(
             state = listState,

@@ -296,6 +296,15 @@ object CinemaIcons {
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Visibility, Icons.Outlined.Visibility, Icons.Sharp.Visibility)
 
+    /** A switch's eye while its setting is off (UX-D7): the outline in every look, so "on" can be filled. */
+    val VisibilityOutline: ImageVector
+        get() = Icons.Outlined.Visibility
+
+    /** A switch's eye while its setting is on (UX-D7): filled in every look. */
+    val VisibilityFilled: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Visibility, Icons.Rounded.Visibility, Icons.Sharp.Visibility)
+
     val Tune: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Tune, Icons.Outlined.Tune, Icons.Sharp.Tune)

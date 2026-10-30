@@ -122,6 +122,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
+import org.njarasoa.fijerena.ui.components.input.pageKeys
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.tvPane
@@ -475,7 +476,9 @@ internal fun StreamList(
                         // The screen header above stays outside the pane: Up from the first row
                         // reaches it. Right goes nowhere (R1).
                         if (paneFocus != null) Modifier.tvPane(paneFocus, exitLeft = categoriesPane) else Modifier,
-                    ),
+                    )
+                    // CH+/CH- and Page Up/Down: a screen of rows at a time (UX-D9).
+                    .pageKeys(listState, pane) { index -> streams?.getOrNull(index)?.sourceKey?.takeUnless(markerIds::contains) },
         ) {
             when {
                 streamsLoading -> {
