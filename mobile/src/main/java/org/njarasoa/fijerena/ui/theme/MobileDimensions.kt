@@ -59,7 +59,7 @@ object MobileDimensions {
     val homeCardWidth: Dp = 160.dp
 
     /** A film or show in a row of titles (PosterCard): 2:3 poster art this wide, about three a screen. */
-    val posterCardWidth: Dp = 112.dp
+    val posterCardWidth: Dp = 100.dp
 
     val streamThumbnailWidth: Dp = 96.dp
     val streamThumbnailHeight: Dp = 54.dp

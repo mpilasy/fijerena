@@ -5,7 +5,7 @@
 ## Goal
 
 More titles per screen on the phone (user, 2026-10-30, with a screenshot of Google TV's phone app):
-film and show cards as 2:3 posters about 112 dp wide, about 3.3 per screen, in place of 160 dp 16:9
+film and show cards as 2:3 posters about 100 dp wide, about 3.3 per screen, in place of 160 dp 16:9
 cards (about 2.3).
 
 ## Decisions (user, 2026-10-30)
