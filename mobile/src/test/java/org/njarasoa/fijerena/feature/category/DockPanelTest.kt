@@ -29,9 +29,9 @@ class DockPanelTest {
     }
 
     @Test
-    fun `the category is the first of three tabs, else Recent and Favourites`() {
+    fun `the category is the third of three tabs, else Recent and Favourites`() {
         assertEquals(
-            listOf(PreviewListSource.CATEGORY, PreviewListSource.RECENT, PreviewListSource.FAVORITES),
+            listOf(PreviewListSource.RECENT, PreviewListSource.FAVORITES, PreviewListSource.CATEGORY),
             dockTabs(hasCategory = true),
         )
         assertEquals(listOf(PreviewListSource.RECENT, PreviewListSource.FAVORITES), dockTabs(hasCategory = false))
