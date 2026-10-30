@@ -1106,6 +1106,8 @@
     <string name="player_osd_next_format">Next: %1$s (%2$s)</string>
     <!-- LT5 -->
     <string name="live_tuning_format">Tuning · %1$s</string>
+    <string name="live_channel_unavailable">%1$s is not available right now</string>
+    <string name="live_channel_next">Next channel</string>
     <string name="live_preview_not_started_format">%1$s didn\'t start · OK to try again</string>
     <string name="live_preview_next_format">Next: %1$s</string>
     <string name="live_preview_hint">OK  Play   ·   OK again  Full screen   ·   Hold OK  Options</string>

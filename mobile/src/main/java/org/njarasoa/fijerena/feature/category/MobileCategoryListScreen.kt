@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -111,6 +112,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -119,11 +121,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -356,6 +360,21 @@ fun MobileCategoryListScreen(
     // a bare entry (no passive "focus" state to preview from on touch).
     val isLiveTv = contentType == ContentType.LIVE_TV
     var dockTarget by remember { mutableStateOf<MediaItem?>(null) }
+    // The category the docked channel was picked from (UX-D8): a dock tab of its own. Null for a
+    // channel docked from Recent or Favourites, or seeded on entry.
+    var dockCategory by remember { mutableStateOf<String?>(null) }
+    // The channel (its sourceKey) that did not start (UX-D2): the dock says so and offers Next.
+    var unavailableKey by remember { mutableStateOf<String?>(null) }
+    // Bumped by a tap on the docked channel's own row: try it again.
+    var dockRetry by remember { mutableStateOf(0) }
+    // Docks [item]; its own row again retries it.
+    val dockChannel: (MediaItem) -> Unit = { item ->
+        if (item.sourceKey == dockTarget?.sourceKey) dockRetry++
+        unavailableKey = null
+        dockTarget = item
+    }
+    // The category list's scroll, kept here so its dock tab opens where the list was (UX-D8).
+    val browseListState = rememberLazyListState()
     // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
     // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
     // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
@@ -455,13 +474,13 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // While a preview is docked, the list below defaults to the shared Recent list — regardless
-    // of which category/tab (if any) was actually browsed to get here — with the currently
-    // previewed channel included and highlighted. Independent of the CategoryViewModel's own
+    // While a preview is docked, the list below is the category the channel was picked from
+    // (UX-D8), or else the shared Recent list, with the playing channel included and highlighted.
+    // Recent and Favourites are independent of the CategoryViewModel's own
     // selectedCategoryId/streams so normal category/tab browsing is untouched when nothing's
-    // docked, and mirrors TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
-    // Shows (target is always null there). The Recent | Favorites tabs above the list (see
-    // DockListTabs) switch it over to Favorites instead.
+    // docked, and mirror TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
+    // Shows (target is always null there). The tabs above the list (see DockListTabs) switch
+    // between them.
     var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
     // Bumped by pull-to-refresh on the docked panel — the viewer asking for current truth, and so
     // the one place the frozen order below is allowed to re-sort.
@@ -485,9 +504,9 @@ fun MobileCategoryListScreen(
     // The docked channel plays from its own source (multi-source plan, Phase 5): Recent and
     // Favourites mix the profile's sources, and a channel of another one gets that source's loader.
     // A swipe in full screen zaps within the loader's own source.
+    val dockSource = target?.sourceOr(viewModel.sourceId) ?: 0L
     val dockLoader: StreamLoaderViewModel? =
         if (isLiveTv && target != null) {
-            val dockSource = target.sourceOr(viewModel.sourceId)
             viewModel(
                 key = "dockLoader:$dockSource",
                 factory =
@@ -506,8 +525,11 @@ fun MobileCategoryListScreen(
     // A tap on the docked video opens it full screen, and opening it is a choice: Recent now, not
     // after the watch delay.
     val promoteDock = {
-        dockLoader?.addToRecentNow()
-        fullScreen = true
+        // Not a channel that did not start (UX-D2): its dock offers Next instead.
+        if (unavailableKey != dockTarget?.sourceKey) {
+            dockLoader?.addToRecentNow()
+            fullScreen = true
+        }
     }
     // The loader a channel of another source took over from: nothing of it may land any more (its
     // delayed Recent write would record a channel no longer playing).
@@ -520,18 +542,73 @@ fun MobileCategoryListScreen(
     }
     val dockLoaderState = dockLoader?.state?.collectAsStateWithLifecycle()?.value
     val dockSuccess = dockLoaderState as? StreamLoaderViewModel.StreamState.Success
+    // What the dock names: only the docked channel's own load, never the one before it.
+    val dockShown = dockSuccess?.takeIf { it.streamId == target?.id }
     // Mirrors TV's previewPlaybackState (LiveTvSplitLayout.kt) — used by the landscape split to
     // show a loading spinner over the video box while a channel is still resolving/buffering.
     val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
 
     if (target != null && dockLoader != null) {
-        LaunchedEffect(target.sourceKey) {
-            // Skip re-resolving if this is already the loaded stream (e.g. promoting an
-            // already-docked channel to full screen) — same call-site guard TV's
+        LaunchedEffect(target.sourceKey, dockRetry) {
+            // Skip re-resolving if the engine already plays this channel (e.g. back from full
+            // screen on the channel it zapped to) — same call-site guard TV's
             // LiveTvSplitLayout.onStreamPromote uses instead of a VM/service-level dedup guard.
-            if (dockSuccess?.streamId != target.id) {
+            val enginePlaysIt =
+                dockSuccess != null &&
+                    dockPlayback != null &&
+                    dockSuccess.streamId == target.id &&
+                    dockPlayback.currentMetadata.value.streamUrl == dockSuccess.streamUrl &&
+                    dockPlayback.playbackState.value !is PlaybackState.Idle &&
+                    dockPlayback.playbackState.value !is PlaybackState.Error
+            if (!enginePlaysIt) {
+                // A new pick stops the old stream at once (UX-D2): its picture must never show
+                // under the new channel's name while the new one resolves.
+                dockPlayback?.stop()
                 dockLoader.loadStream(target)
             }
+        }
+    }
+
+    // A zap in full screen re-points the loader, not the dock: back in the dock, the dock is on
+    // the loader's channel (UX audit finding 5), found in the loader's channel list.
+    var dockChannels by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    LaunchedEffect(dockSuccess?.categoryStreams) {
+        dockSuccess?.categoryStreams?.takeIf { it.isNotEmpty() }?.let { dockChannels = it }
+    }
+    LaunchedEffect(fullScreen) {
+        val loader = dockLoader
+        val docked = dockTarget
+        if (!fullScreen && loader != null && docked != null) {
+            val loaded = loader.state.value as? StreamLoaderViewModel.StreamState.Success
+            dockTarget =
+                dockTargetAfterFullScreen(
+                    target = docked,
+                    loaderStreamId = loaded?.streamId ?: loader.requestedStreamId,
+                    loaderStreamName = loaded?.streamName,
+                    loaderChannels = loaded?.categoryStreams?.takeIf { it.isNotEmpty() } ?: dockChannels,
+                )
+        }
+    }
+
+    // UX-D2: a channel that does not start says so. The loader's Error marks it at once; an Error
+    // left from the channel before is not this one's.
+    val staleLoaderError =
+        remember(target?.sourceKey, dockLoader, dockRetry) { dockLoaderState as? StreamLoaderViewModel.StreamState.Error }
+    if (target != null) {
+        LaunchedEffect(dockLoaderState, fullScreen) {
+            if (dockLoaderState is StreamLoaderViewModel.StreamState.Error && dockLoaderState !== staleLoaderError && !fullScreen) {
+                unavailableKey = target.sourceKey
+            }
+        }
+    }
+    // Full screen shows its own error.
+    val dockUnavailable = target != null && !fullScreen && unavailableKey == target.sourceKey
+    LaunchedEffect(dockUnavailable) {
+        if (dockUnavailable) {
+            // Nothing of it may still land: a late Success would play it, a pending Recent write
+            // would record a channel that never played.
+            dockLoader?.abandon()
+            dockPlayback?.stop()
         }
     }
 
@@ -583,20 +660,32 @@ fun MobileCategoryListScreen(
             }
         }
 
-        // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the
-        // background indefinitely — mirrors TV's LiveTvSplitLayout watchdog.
-        LaunchedEffect(dockSuccess?.streamId) {
-            val s = dockSuccess ?: return@LaunchedEffect
-            val reachedPlaying =
-                withTimeoutOrNull(8_000) {
-                    // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
-                    // in snapshotFlow{} never registers an observable read, so it emits once and
-                    // never again, making first{} hang the full timeout regardless of whether
-                    // playback actually started. first{} on the StateFlow directly works correctly.
-                    dockPlayback.playbackState.first { it is PlaybackState.Playing }
-                }
-            if (reachedPlaying == null && dockSuccess.streamId == s.streamId && !fullScreen) {
-                dockPlayback.stop()
+        // Dead-stream watchdog (UX-D2): a pick with no picture after DOCK_START_TIMEOUT_MS is not
+        // available — rather than let a bad channel buffer in the background indefinitely. It
+        // counts from the pick (a loader that never answers too), only while the app is in sight
+        // (a stop in the background is not the channel's fault), and never in full screen, whose
+        // player has its own error.
+        val appStarted =
+            lifecycleOwner.lifecycle
+                .currentStateAsState()
+                .value
+                .isAtLeast(Lifecycle.State.STARTED)
+        if (target != null && dockLoader != null) {
+            LaunchedEffect(target.sourceKey, dockRetry, fullScreen, appStarted) {
+                if (fullScreen || !appStarted || unavailableKey == target.sourceKey) return@LaunchedEffect
+                val reachedPlaying =
+                    withTimeoutOrNull(DOCK_START_TIMEOUT_MS) {
+                        // This channel's picture, not the one before: the loader resolved it and
+                        // the engine plays its URL. The flows directly, not snapshotFlow{}: they
+                        // are plain StateFlows, not Compose snapshot state.
+                        combine(dockLoader.state, dockPlayback.playbackState, dockPlayback.currentMetadata) { loaded, playing, metadata ->
+                            loaded is StreamLoaderViewModel.StreamState.Success &&
+                                loaded.streamId == target.id &&
+                                playing is PlaybackState.Playing &&
+                                metadata.streamUrl == loaded.streamUrl
+                        }.first { it }
+                    }
+                if (reachedPlaying == null) unavailableKey = target.sourceKey
             }
         }
 
@@ -919,46 +1008,51 @@ fun MobileCategoryListScreen(
                                     CinemaDivider()
                                 }
 
-                                // Streams list with pull-to-refresh — while a preview is docked, always
-                                // Recent or favorites (see listSource above), regardless of the real
-                                // selected category/tab. INCLUDE keeps the docked channel in the list
-                                // even before its delayed history write lands.
+                                // Streams list with pull-to-refresh — while a preview is docked, Recent,
+                                // Favourites or the category the channel was docked from (see listSource
+                                // above). INCLUDE keeps the docked channel in Recent even before its
+                                // delayed history write lands.
+                                val hasDockCategory = dockCategory != null && dockCategory == state.selectedCategoryKey
+                                val dockList = dockListSource(listSource, hasDockCategory)
+                                // The category list as browsed: undocked, or its dock tab.
+                                val showsCategory = target == null || dockList == PreviewListSource.CATEGORY
                                 val displayedStreams =
-                                    if (target == null) {
-                                        state.streams
-                                    } else if (listSource == PreviewListSource.FAVORITES) {
-                                        favoriteStreams
-                                    } else {
-                                        recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, viewModel.sourceId)
+                                    when {
+                                        showsCategory -> state.streams
+                                        dockList == PreviewListSource.FAVORITES -> favoriteStreams
+                                        else -> recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, viewModel.sourceId)
                                     }
                                 val displayedStreamsLoading =
-                                    if (target == null) {
-                                        state.streamsLoading
-                                    } else if (listSource == PreviewListSource.FAVORITES) {
-                                        favoriteStreamsLoading
-                                    } else {
-                                        publishedRecentStreams == null
+                                    when {
+                                        showsCategory -> state.streamsLoading
+                                        dockList == PreviewListSource.FAVORITES -> favoriteStreamsLoading
+                                        else -> publishedRecentStreams == null
                                     }
                                 val displayedCategoryId =
                                     when {
-                                        target == null -> state.selectedCategoryId
-                                        listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
+                                        showsCategory -> state.selectedCategoryId
+                                        dockList == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
                                         else -> CategoryViewModel.RECENT_CATEGORY_ID
                                     }
                                 // The list's identity across sources: the same category id on two of them
                                 // is two lists (multi-source plan, Phase 6).
-                                val displayedCategoryKey = if (target == null) state.selectedCategoryKey else displayedCategoryId
+                                val displayedCategoryKey = if (showsCategory) state.selectedCategoryKey else displayedCategoryId
                                 val streamsList: @Composable () -> Unit = {
                                     Column(modifier = Modifier.fillMaxSize()) {
                                         if (target != null) {
-                                            DockListTabs(selected = listSource, onSelect = { listSource = it })
+                                            DockListTabs(
+                                                tabs = dockTabs(hasDockCategory),
+                                                selected = dockList,
+                                                categoryName = state.selectedCategory?.name.orEmpty(),
+                                                onSelect = { listSource = it },
+                                            )
                                         }
                                         PullToRefreshBox(
                                             isRefreshing = displayedStreamsLoading,
                                             onRefresh = {
-                                                if (target == null) {
+                                                if (showsCategory) {
                                                     state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
-                                                } else if (listSource == PreviewListSource.FAVORITES) {
+                                                } else if (dockList == PreviewListSource.FAVORITES) {
                                                     composableScope.launch {
                                                         favoriteStreamsLoading = true
                                                         favoriteStreams = viewModel.getFavoritesSnapshot()
@@ -1001,8 +1095,12 @@ fun MobileCategoryListScreen(
                                             // dock closes may both be Recent, and a row left revealed
                                             // (its delete showing) must not carry over (phone UI audit #12).
                                             key(target == null) {
+                                                // Recent and Favourites in the dock start at their top; the
+                                                // category keeps its place across docking (UX-D8).
+                                                val dockListState = rememberLazyListState()
                                                 StreamsList(
                                                     items = displayedStreams,
+                                                    listState = if (showsCategory) browseListState else dockListState,
                                                     streamsLoading = displayedStreamsLoading,
                                                     libraryLoading = libraryLoading,
                                                     selectedCategoryId = displayedCategoryId,
@@ -1013,7 +1111,8 @@ fun MobileCategoryListScreen(
                                                     catchupDays = catchupDays,
                                                     watchedIds = watchedIds,
                                                     watchProgress = watchProgress,
-                                                    currentlyPlayingId = target?.id,
+                                                    currentlyPlayingKey = dockPlayingKey(target, dockSuccess?.streamId, dockSource),
+                                                    listSource = viewModel.sourceId,
                                                     sourceNames = sourceNames,
                                                     categoryNames = categoryNames,
                                                     onItemSelected = { item ->
@@ -1058,7 +1157,19 @@ fun MobileCategoryListScreen(
                                                             isLiveTv && selected !is BrowseTarget.CategoryRef -> {
                                                                 // Dock locally instead of navigating away — mirrors
                                                                 // TV's LiveTvChannelList.onStreamPromote interception.
-                                                                dockTarget = item
+                                                                if (target == null) {
+                                                                    // Docked from a category: it becomes the dock's
+                                                                    // selected tab (UX-D8).
+                                                                    dockCategory =
+                                                                        dockCategoryKey(state.selectedCategoryId, state.selectedCategoryKey)
+                                                                    listSource =
+                                                                        if (dockCategory != null) {
+                                                                            PreviewListSource.CATEGORY
+                                                                        } else {
+                                                                            dockListSource(listSource, hasCategory = false)
+                                                                        }
+                                                                }
+                                                                dockChannel(item)
                                                             }
 
                                                             else -> {
@@ -1123,6 +1234,18 @@ fun MobileCategoryListScreen(
                                     }
                                 }
 
+                                // UX-D2's Next: the channel after the docked one in the list on screen.
+                                val dockNext =
+                                    if (dockUnavailable && target != null) {
+                                        nextDockChannel(displayedStreams, target, viewModel.sourceId) { row ->
+                                            !row.isSeparatorRow &&
+                                                row.browseTarget(contentType) !is BrowseTarget.CategoryRef &&
+                                                viewModel.goneOf(row) == null
+                                        }
+                                    } else {
+                                        null
+                                    }
+
                                 if (isLiveTv && target != null && isLandscape) {
                                     // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
                                     // layout as closely as possible: video+EPG pane left (0.66), channel
@@ -1176,9 +1299,15 @@ fun MobileCategoryListScreen(
                                                     // own, so a stalled or watchdog-killed stream would
                                                     // otherwise look identical to a live frozen frame —
                                                     // mirrors TV's LiveTvSplitLayout.
-                                                    if (dockPlaybackState !is PlaybackState.Playing) {
+                                                    if (dockUnavailable) {
+                                                        DockUnavailable(
+                                                            name = target.name,
+                                                            onNext = dockNext?.let { next -> { dockChannel(next) } },
+                                                            modifier = Modifier.fillMaxSize(),
+                                                        )
+                                                    } else if (dockPlaybackState !is PlaybackState.Playing) {
                                                         DockWait(
-                                                            name = dockSuccess?.streamName ?: target.name,
+                                                            name = dockShown?.streamName ?: target.name,
                                                             logoUrl = target.thumbnailUrl,
                                                             modifier = Modifier.align(Alignment.Center),
                                                         )
@@ -1202,11 +1331,11 @@ fun MobileCategoryListScreen(
                                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                                             // The clean name with its badges, as in the player.
                                             BadgedTitle(
-                                                raw = dockSuccess?.streamName ?: target.name,
+                                                raw = dockShown?.streamName ?: target.name,
                                                 role = TextRole.Title,
                                                 tone = TextTone.Primary,
                                             )
-                                            val nowProg = dockSuccess?.currentEpgProgram
+                                            val nowProg = dockShown?.currentEpgProgram
                                             if (nowProg != null) {
                                                 CinemaText(
                                                     text = stringResource(R.string.epg_now_prefix, nowProg.title),
@@ -1217,7 +1346,7 @@ fun MobileCategoryListScreen(
                                                 val fraction = nowProg.elapsedFraction()
                                                 CinemaProgressBar(progress = { fraction }, modifier = Modifier.fillMaxWidth())
                                             }
-                                            val nextProg = dockSuccess?.nextEpgProgram
+                                            val nextProg = dockShown?.nextEpgProgram
                                             if (nextProg != null) {
                                                 CinemaText(
                                                     text = stringResource(R.string.category_up_next_format, nextProg.title),
@@ -1253,9 +1382,15 @@ fun MobileCategoryListScreen(
                                             ) {
                                                 // TextureView — see the landscape dock box above.
                                                 EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
-                                                if (dockPlaybackState !is PlaybackState.Playing) {
+                                                if (dockUnavailable) {
+                                                    DockUnavailable(
+                                                        name = target.name,
+                                                        onNext = dockNext?.let { next -> { dockChannel(next) } },
+                                                        modifier = Modifier.fillMaxSize(),
+                                                    )
+                                                } else if (dockPlaybackState !is PlaybackState.Playing) {
                                                     DockWait(
-                                                        name = dockSuccess?.streamName ?: target.name,
+                                                        name = dockShown?.streamName ?: target.name,
                                                         logoUrl = target.thumbnailUrl,
                                                         modifier = Modifier.align(Alignment.Center),
                                                     )
@@ -1292,11 +1427,11 @@ fun MobileCategoryListScreen(
                                                 ) {
                                                     // The clean name with its badges, as in the player.
                                                     BadgedTitle(
-                                                        raw = dockSuccess?.streamName ?: target.name,
+                                                        raw = dockShown?.streamName ?: target.name,
                                                         role = TextRole.Title,
                                                         tone = TextTone.OnMedia,
                                                     )
-                                                    val nowProg = dockSuccess?.currentEpgProgram
+                                                    val nowProg = dockShown?.currentEpgProgram
                                                     if (nowProg != null) {
                                                         CinemaText(
                                                             text = stringResource(R.string.epg_now_prefix, nowProg.title),
@@ -1354,14 +1489,8 @@ fun MobileCategoryListScreen(
     }
 }
 
-/** Which list the docked Live TV preview's channel panel is showing, picked with [DockListTabs]. */
-private enum class PreviewListSource { RECENT, FAVORITES }
-
-/**
- * The docked preview's Recent | Favorites tabs (phone UI audit #12): a sideways swipe used to
- * switch the list, and fought the rows' own swipe actions. A sideways swipe on a row is its row
- * actions now; the tabs are the way to switch.
- */
+/** How long a docked channel has to show a picture before the dock says it is not available (UX-D2). */
+private const val DOCK_START_TIMEOUT_MS = 10_000L
 
 /** The dock's wait: the live ring with the channel's logo in it (its clean name when it has none). */
 @Composable
@@ -1380,25 +1509,73 @@ private fun DockWait(
     )
 }
 
+/**
+ * The dock's channel lists: Recent and Favourites, and first the category the channel was docked
+ * from (UX-D8), named [categoryName]. Tabs (phone UI audit #12): a sideways swipe used to switch
+ * the list, and fought the rows' own swipe actions. A sideways swipe on a row is its row actions
+ * now; the tabs are the way to switch.
+ */
 @Composable
 private fun DockListTabs(
+    tabs: List<PreviewListSource>,
     selected: PreviewListSource,
+    categoryName: String,
     onSelect: (PreviewListSource) -> Unit,
 ) {
+    val recentLabel = stringResource(R.string.category_recent_label)
+    val favoritesLabel = stringResource(R.string.settings_import_favorites_label)
     CinemaTabRow(
-        selectedIndex = selected.ordinal,
+        selectedIndex = tabs.indexOf(selected),
         labels =
-            PreviewListSource.entries.map { source ->
-                stringResource(
-                    when (source) {
-                        PreviewListSource.RECENT -> R.string.category_recent_label
-                        PreviewListSource.FAVORITES -> R.string.settings_import_favorites_label
-                    },
-                )
+            tabs.map { source ->
+                when (source) {
+                    PreviewListSource.CATEGORY -> categoryName
+                    PreviewListSource.RECENT -> recentLabel
+                    PreviewListSource.FAVORITES -> favoritesLabel
+                }
             },
-        onSelect = { onSelect(PreviewListSource.entries[it]) },
+        onSelect = { onSelect(tabs[it]) },
         transparent = true,
     )
+}
+
+/**
+ * The dock over a channel that did not start (UX-D2): "<name> is not available right now", and
+ * Next — a tap anywhere on it, or on its icon — plays the next channel of the list. [onNext] is
+ * null when the list has no other channel. Opaque, so no frame of an earlier channel shows.
+ */
+@Composable
+private fun DockUnavailable(
+    name: String,
+    onNext: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val clean = parseDisplayTitle(name).title.ifBlank { name }
+    val nextLabel = stringResource(R.string.live_channel_next)
+    Column(
+        modifier =
+            modifier
+                .background(CinemaTheme.colors.mediaScrim)
+                .then(if (onNext != null) Modifier.clickable(onClickLabel = nextLabel, onClick = onNext) else Modifier)
+                .padding(CinemaSpacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CinemaText(
+            text = stringResource(R.string.live_channel_unavailable, clean),
+            role = TextRole.Body,
+            tone = TextTone.OnMedia,
+            textAlign = TextAlign.Center,
+        )
+        if (onNext != null) {
+            IconAction(
+                onClick = onNext,
+                icon = CinemaIcons.SkipNext,
+                label = nextLabel,
+                tint = CinemaTheme.colors.onMedia,
+            )
+        }
+    }
 }
 
 /** Anchor values for a stream row's swipe-reveal action strip (see [StreamsList]). */
@@ -1759,6 +1936,8 @@ private fun CategoryChip(
 @Composable
 private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
+    /** The list's scroll: the screen keeps the category's, so docking a channel keeps its place. */
+    listState: LazyListState,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     /** The list's identity across sources (a category's key); per-list state is keyed on it. */
@@ -1771,7 +1950,10 @@ private fun StreamsList(
     catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
-    currentlyPlayingId: String? = null,
+    // The docked channel's key (sourceKey): its row is marked Playing. Rows that leave their
+    // source 0 are on [listSource].
+    currentlyPlayingKey: String? = null,
+    listSource: Long = 0L,
     contentType: String,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     // Each source's name while the list mixes several (Recent, Favourites): a badge on its rows.
@@ -1797,7 +1979,6 @@ private fun StreamsList(
     // Removes a Wanted row (its long-press menu's one action); null on every other list.
     onRemoveWanted: ((MediaItem) -> Unit)? = null,
 ) {
-    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
 
@@ -1933,10 +2114,10 @@ private fun StreamsList(
                                 // Per-row state by the row's sourceKey (Phase 6).
                                 nowPlayingProgram = nowPlaying[item.sourceKey],
                                 catchupDays = catchupDays[item.sourceKey] ?: 0,
-                                isCurrentlyPlaying = item.id == currentlyPlayingId,
+                                isCurrentlyPlaying = isPlayingRow(item, currentlyPlayingKey, listSource),
                                 isCurrent =
-                                    if (currentlyPlayingId != null) {
-                                        item.id == currentlyPlayingId
+                                    if (currentlyPlayingKey != null) {
+                                        isPlayingRow(item, currentlyPlayingKey, listSource)
                                     } else {
                                         item.isLastPlayed(lastPlayedItemId, lastPlayedSource)
                                     },
