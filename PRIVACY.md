@@ -41,7 +41,9 @@ says what the app stores, what it sends and to whom.
   you type (three characters or more), to find films and shows your sources don't have; a child
   profile never does. With TMDB Charts on (Settings → Admin → Sources & Guide, on by default), the
   app also asks TMDB for its public chart pages (trending, popular, top rated), sending only your
-  key; which of those titles your sources have is worked out on the device. If TMDB refuses the
+  key; which of those titles your sources have is worked out on the device. When you open a
+  person from a Cast tab, the app sends TMDB that person's TMDB id; which of their titles your
+  sources have is worked out on the device. If TMDB refuses the
   key, the app
   stops asking until you enter another. The key is never put in an export; with live sync it goes
   to your other devices inside the encrypted records. TMDB's own privacy policy applies to those

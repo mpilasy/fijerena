@@ -1,6 +1,6 @@
 # Cast tab: TMDB cast cards and actor pages
 
-**Status:** Agreed 2026-10-30 (all decisions below). Phase 1 done; phases 2 and 3 in progress.
+**Status:** Done 2026-10-30, walked on both emulators.
 
 ## Goal
 
@@ -97,10 +97,20 @@ profile's sources have. The titles that no source has can show too, behind a swi
 | Phase | Work | Status |
 |-------|------|--------|
 | 1 | Data: the TMDB rate limiter (CT-D0), the credits model (id, character, photo; `aggregate_credits` for shows), the person call, the 7-day cache, the matching from a list. Unit tests. | Done (c7c45350f, 74dc238a1) |
-| 2 | Cast tab: crew lines and cast cards on TV and phone, film and show pages and the TMDB title pages; chips as the fallback. | In progress |
-| 3 | Actor page on TV and phone: header, Movies and TV Shows rows, the missing-titles switch, navigation and Back focus. | In progress |
-| 4 | Docs (FEATURES, NAVIGATION_GUIDE, PRIVACY: person ids sent to TMDB, RELEASE_NOTES), focus walks, emulator walk. | Not started |
+| 2 | Cast tab: crew lines and cast cards on TV and phone, film and show pages and the TMDB title pages; chips as the fallback. | Done (14fb44e58) |
+| 3 | Actor page on TV and phone: header, Movies and TV Shows rows, the missing-titles switch, navigation and Back focus. | Done (90cc59ada) |
+| 4 | Docs (FEATURES, NAVIGATION_GUIDE, PRIVACY: person ids sent to TMDB, RELEASE_NOTES), focus walks, emulator walk. | Done (walk fixes f61fa6cf7) |
 
 ## Privacy
 
 The person ids of the actors opened go to TMDB, as the title ids already do. PRIVACY.md says so.
+
+## Done notes (2026-10-30)
+
+- **Walk fixes** (f61fa6cf7): talk, news and reality shows and "Self" roles left out of a person's
+  rows; the TV person page opens at its top; Malagasy month names in `displayDate` (app-wide);
+  the phone person cards fall back to the year in the name.
+- **TV tabs by name:** a details page keeps the tab picked by its name, so a Cast tab that comes
+  late does not move the user to another tab.
+- **One call less:** a details page gets the title, trailer and credits from one TMDB call.
+- **Not done:** no focus walk script for the person page yet.

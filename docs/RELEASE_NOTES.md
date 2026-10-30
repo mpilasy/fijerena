@@ -1,5 +1,11 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Cast with photos, and an actor's titles:** the Cast tab of a film, a show and a TMDB title page now shows the director (or the show's creators) and writers, then the first 10 actors with their photo and role ("as Neo"), from TMDB. A show's cast covers all its seasons. Open an actor, a director or a writer for their page: photo, dates, a short biography, and their movies and shows that your sources have, most popular first. A switch on each row also shows the ones you don't have; open one for its TMDB page. Needs a TMDB key; without one, or for a title with no TMDB id, the tab shows the source's cast names as before. TV and phone.
+- **TMDB calls kept under the limit:** the app now makes at most 20 TMDB calls a second and 4 at once, and waits when TMDB asks it to slow down. A film's or show's page now makes one TMDB call where it made two.
+- **Malagasy dates:** dates now use Malagasy month names ("20 Janoary 1978"), not English ones. TV and phone.
+
 ## Version: 0.8.20261030003643
 
 - **Home grouped by section:** after Continue Watching, Home now shows three groups, each on a faint tint of its section's colour: Channels (Favourite Channels, Channels), TV Shows (Favourite Shows, your Wishlist's shows, then the show charts) and Movies (the same for movies). The Wishlist row is split in two, one in each group. TV and phone.
