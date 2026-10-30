@@ -20,6 +20,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
@@ -125,7 +127,10 @@ class StreamLoaderViewModel(
     private val _recentItems = MutableStateFlow<List<MediaItem>>(emptyList())
     val recentItems: StateFlow<List<MediaItem>> = _recentItems.asStateFlow()
 
-    private var mediaRepository: MediaRepository? = null
+    // Set once by the init job on IO. A load waits for it ([awaitRepository]) rather than returning
+    // without it: a preview re-pointed before it is ready must still play the channel it names.
+    private val repository = MutableStateFlow<MediaRepository?>(null)
+    private val mediaRepository: MediaRepository? get() = repository.value
     private var sourceName: String? = null
     private val appSettings = AppSettings(context)
 
@@ -163,50 +168,64 @@ class StreamLoaderViewModel(
     // Live TV category channel list refresh after a channel pick from another category.
     private var categoryListJob: Job? = null
 
+    // Builds the repository; not a load, so a new load never cancels it.
+    private var setupJob: Job? = null
+
     init {
         currentCategoryId = categoryId
         initializeAndLoad()
     }
 
     private fun initializeAndLoad() {
-        viewModelScope.launchGuarded(
-            "StreamLoaderViewModel.init",
-            Dispatchers.IO,
-            onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isDevMode)) },
-        ) {
-            val container =
-                org.njarasoa.fijerena.core.ui.di.AppContainer
-                    .getInstance(context)
-            val repo = container.getMediaRepository(providerId)
-            mediaRepository = repo
-            sourceName = container.providerRepository.getProviderById(repo.getProviderId())?.name
-
-            if (isLiveTv) {
-                launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
-                repo.refreshRecentItems(contentType)
+        cancelLoads()
+        // The first stream is a load like the others: a later load (a preview re-pointed) cancels it.
+        val initialLoad =
+            viewModelScope.launchGuarded("StreamLoaderViewModel.initialLoad", Dispatchers.IO) {
+                loadStreamInternal(
+                    streamId = initialStreamId,
+                    streamName = initialStreamName,
+                    currentStreams = emptyList(),
+                )
             }
+        loadJob = initialLoad
+        if (mediaRepository != null || setupJob?.isActive == true) return
+        setupJob =
+            viewModelScope.launchGuarded(
+                "StreamLoaderViewModel.init",
+                Dispatchers.IO,
+                onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isDevMode)) },
+            ) {
+                val container =
+                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                        .getInstance(context)
+                val repo = container.getMediaRepository(providerId)
+                sourceName = container.providerRepository.getProviderById(repo.getProviderId())?.name
+                repository.value = repo
 
-            // The initial stream first (fast path); the category channel list follows in the background.
-            loadStreamInternal(
-                streamId = initialStreamId,
-                streamName = initialStreamName,
-                currentStreams = emptyList(),
-            )
+                if (isLiveTv) {
+                    launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
+                    repo.refreshRecentItems(contentType)
+                }
 
-            if (isLiveTv) {
-                launch {
-                    val result = repo.getItems(currentCategoryId, contentType)
-                    result.fold(
-                        onSuccess = { items ->
-                            channels.value = ChannelCursor.at(items, initialStreamId)
-                            updateCategoryStreams(items)
-                        },
-                        onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
-                    )
+                // The initial stream first (fast path); the category channel list follows in the background.
+                initialLoad.join()
+
+                if (isLiveTv) {
+                    launch {
+                        val result = repo.getItems(currentCategoryId, contentType)
+                        result.fold(
+                            onSuccess = { items ->
+                                channels.value = ChannelCursor.at(items, initialStreamId)
+                                updateCategoryStreams(items)
+                            },
+                            onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
+                        )
+                    }
                 }
             }
-        }
     }
+
+    private suspend fun awaitRepository(): MediaRepository = repository.filterNotNull().first()
 
     private suspend fun loadStreamInternal(
         streamId: String,
@@ -221,7 +240,7 @@ class StreamLoaderViewModel(
         // Reached by zapping (Up/Down, a swipe) rather than chosen: Recent waits longer for it.
         zapped: Boolean = false,
     ) {
-        val repo = mediaRepository ?: return
+        val repo = awaitRepository()
 
         try {
             val window = catchup
@@ -328,7 +347,11 @@ class StreamLoaderViewModel(
 
                             repo.refreshRecentItems(contentType)
                         }
-                        recentWrite.schedule(record, recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped))
+                        recentWrite.schedule(
+                            record,
+                            recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped),
+                            currentCoroutineContext()[Job],
+                        )
                     }
 
                     // Enrich metadata (EPG & Plot description) asynchronously in background
@@ -446,9 +469,8 @@ class StreamLoaderViewModel(
             if (isLiveTv) logoUrl = channelLogo(streamId, currentStreams)
         }
 
-        val currentState = _state.value
-        if (currentState is StreamState.Success && currentState.streamId == streamId) {
-            _state.value =
+        _state.update { currentState ->
+            if (currentState is StreamState.Success && currentState.streamId == streamId) {
                 currentState.copy(
                     currentEpgProgram = currentProgram,
                     nextEpgProgram = nextProgram,
@@ -459,6 +481,9 @@ class StreamLoaderViewModel(
                     supportsAutoplayNext = repo.supportsAutoplayNextEpisode,
                     archiveDays = archiveDays,
                 )
+            } else {
+                currentState
+            }
         }
 
         // The episode's synopsis hasn't been fetched yet: ask for it now and patch it in on arrival.
@@ -466,9 +491,16 @@ class StreamLoaderViewModel(
         val seriesRaw = seriesId
         if (missing != null && seriesRaw != null) {
             val plot = repo.fetchEpisodePlot(SeriesId(seriesRaw), missing)
-            val latest = _state.value
-            if (plot != null && latest is StreamState.Success && latest.streamId == streamId) {
-                _state.value = latest.copy(description = plot)
+            if (plot != null) {
+                _state.update { latest ->
+                    if (latest is StreamState.Success &&
+                        latest.streamId == streamId
+                    ) {
+                        latest.copy(description = plot)
+                    } else {
+                        latest
+                    }
+                }
             }
         }
     }
@@ -492,11 +524,14 @@ class StreamLoaderViewModel(
     }
 
     private fun updateCategoryStreams(items: List<MediaItem>) {
-        val currentState = _state.value
-        if (currentState is StreamState.Success) {
-            // The first channel can start before the list is in: its icon comes with the list.
-            val logoUrl = currentState.logoUrl ?: channelLogo(currentState.streamId, items).takeIf { currentState.isLive }
-            _state.value = currentState.copy(categoryStreams = items, logoUrl = logoUrl)
+        _state.update { currentState ->
+            if (currentState is StreamState.Success) {
+                // The first channel can start before the list is in: its icon comes with the list.
+                val logoUrl = currentState.logoUrl ?: channelLogo(currentState.streamId, items).takeIf { currentState.isLive }
+                currentState.copy(categoryStreams = items, logoUrl = logoUrl)
+            } else {
+                currentState
+            }
         }
     }
 
@@ -545,7 +580,7 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                val repo = mediaRepository ?: return@launch
+                val repo = awaitRepository()
 
                 val previousState = _state.value
                 _state.value = StreamState.Loading
@@ -585,7 +620,7 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                if (mediaRepository == null) return@launch
+                awaitRepository()
                 _state.value = StreamState.Loading
                 loadStreamInternal(
                     streamId = nextEpisode.id,
@@ -610,7 +645,7 @@ class StreamLoaderViewModel(
         cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
-                if (mediaRepository == null) return@launch
+                awaitRepository()
                 _state.value = StreamState.Loading
                 loadStreamInternal(
                     item.id,
@@ -631,12 +666,11 @@ class StreamLoaderViewModel(
     }
 
     fun retryLastLoad() {
-        if (lastLoadRequest != null) {
-            loadStream(lastLoadRequest!!, lastLoadZapped)
-        } else {
-            // Failed on the very first load before a stream was selected
-            initializeAndLoad()
-        }
+        val request = lastLoadRequest
+        // Failed on the very first load before a stream was selected, or before the repository
+        // was built: build it again (a load waits for it).
+        if (request == null || mediaRepository == null) initializeAndLoad()
+        if (request != null) loadStream(request, lastLoadZapped)
     }
 
     fun nextChannel() {
@@ -652,13 +686,24 @@ class StreamLoaderViewModel(
             val currentState = _state.value as? StreamState.Success ?: return@launchGuarded
             val repo = mediaRepository ?: return@launchGuarded
 
-            if (currentState.isFavorite) {
-                if (repo.removeFavoriteSuspend(currentState.streamId, contentType)) {
-                    _state.value = currentState.copy(isFavorite = false)
+            val favorite = !currentState.isFavorite
+            val done =
+                if (favorite) {
+                    repo.addFavoriteSuspend(currentState.streamId, currentState.streamName, currentCategoryId, contentType)
+                } else {
+                    repo.removeFavoriteSuspend(currentState.streamId, contentType)
                 }
-            } else {
-                if (repo.addFavoriteSuspend(currentState.streamId, currentState.streamName, currentCategoryId, contentType)) {
-                    _state.value = currentState.copy(isFavorite = true)
+            // Written over the state as it is now (the guide lookup may have written it since), and
+            // only while the same stream is on screen.
+            if (done) {
+                _state.update {
+                    if (it is StreamState.Success &&
+                        it.streamId == currentState.streamId
+                    ) {
+                        it.copy(isFavorite = favorite)
+                    } else {
+                        it
+                    }
                 }
             }
         }
@@ -1062,6 +1107,9 @@ internal data class ChannelCursor(
 /**
  * A live channel's Recent write, after the watch delay. [now] writes it at once; when the load it
  * is for has not scheduled it yet, that load's [schedule] writes at once.
+ *
+ * The loads call it on IO and the screen on Main: each method holds the lock, so a [cancel] can
+ * never fall between [schedule]'s cancel of the old job and its start of the new one.
  */
 internal class RecentWrite(
     private val scope: CoroutineScope,
@@ -1072,18 +1120,25 @@ internal class RecentWrite(
     @Volatile
     private var pending: (suspend () -> Unit)? = null
 
-    @Volatile
     private var atOnce = false
 
     /** A new load starts: a [now] asked for the load before it no longer applies. */
+    @Synchronized
     fun loadStarted() {
         atOnce = false
     }
 
+    /**
+     * Schedules [write]. Nothing when [caller], the load that asks, is already cancelled: a newer
+     * load or an abandon came first, and its [cancel] must not be undone.
+     */
+    @Synchronized
     fun schedule(
         write: suspend () -> Unit,
         delayMs: Long,
+        caller: Job? = null,
     ) {
+        if (caller?.isCancelled == true) return
         job?.cancel()
         pending = write
         val wait = if (atOnce) 0L else delayMs
@@ -1096,6 +1151,7 @@ internal class RecentWrite(
             }
     }
 
+    @Synchronized
     fun now() {
         val write = pending
         if (write == null) {
@@ -1105,6 +1161,7 @@ internal class RecentWrite(
         }
     }
 
+    @Synchronized
     fun cancel() {
         job?.cancel()
         pending = null

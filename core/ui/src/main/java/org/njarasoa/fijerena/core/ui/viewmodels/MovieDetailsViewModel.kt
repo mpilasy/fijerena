@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -100,6 +102,10 @@ class MovieDetailsViewModel(
 
     private var relatedTitlesJob: Job? = null
 
+    // The detail load in flight (init, refresh, retry, switch); each new one cancels it, so a slow
+    // load of the copy before a switch cannot publish its details under the new copy. Main only.
+    private var loadJob: Job? = null
+
     // Each viewModelScope.launch(Dispatchers.IO) call may run on a different pool thread, so a
     // write here has no guaranteed visibility to the next one without @Volatile.
     @Volatile
@@ -112,18 +118,26 @@ class MovieDetailsViewModel(
 
     /** Explicit user refresh — see SeriesDetailsViewModel.refreshSeriesInfo. */
     fun refreshMovieInfo() {
-        viewModelScope.launch(Dispatchers.IO) {
-            suspendRunCatching { getRepository().invalidateCachedDetail(movieId) }
-            loadMovieInfo()
-        }
+        val shown = ShownFilm(movieId, categoryId, streamName)
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                suspendRunCatching { getRepository().invalidateCachedDetail(shown.id) }
+                _uiState.value = UiState.Loading
+                _alternateStreams.value = emptyList()
+                loadMovieDetail(shown)
+            }
     }
 
     fun loadMovieInfo() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
-            _alternateStreams.value = emptyList()
-            loadMovieDetail()
-        }
+        val shown = ShownFilm(movieId, categoryId, streamName)
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _uiState.value = UiState.Loading
+                _alternateStreams.value = emptyList()
+                loadMovieDetail(shown)
+            }
     }
 
     /**
@@ -141,10 +155,19 @@ class MovieDetailsViewModel(
         movieId = alternate.id
         categoryId = alternate.categoryId
         streamName = alternate.name
+        val shown = ShownFilm(movieId, categoryId, streamName)
         // The copies stay listed until the new ones load: the picker row is focused across the
         // switch, and with no copies it is plain text that cannot hold focus (TV focus went dead).
-        viewModelScope.launch(Dispatchers.IO) { loadMovieDetail() }
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(Dispatchers.IO) { loadMovieDetail(shown) }
     }
+
+    /** The film a load is for, read on Main when the load started: the fields can change under a slow load. */
+    private data class ShownFilm(
+        val id: String,
+        val categoryId: String,
+        val streamName: String,
+    )
 
     /**
      * The source of [alternate] when it is on another one than this screen's, null on this one: a
@@ -156,7 +179,7 @@ class MovieDetailsViewModel(
         return alternate.providerId.takeIf { it != 0L && it != own }
     }
 
-    private suspend fun loadMovieDetail() {
+    private suspend fun loadMovieDetail(shown: ShownFilm) {
         // A load already in flight belongs to the previous movie or provider — drop it.
         relatedTitlesJob?.cancel()
         _relatedTitles.value = RelatedTitles()
@@ -168,20 +191,23 @@ class MovieDetailsViewModel(
             val repo = getRepository()
             mediaRepository = repo
 
-            val movieResult = repo.getMovieDetail(movieId)
+            val movieResult = repo.getMovieDetail(shown.id)
+            // Superseded by a switch or a refresh: leave the screen to the load that replaced this one.
+            currentCoroutineContext().ensureActive()
             movieResult.fold(
                 onSuccess = { detail ->
-                    val resume = resolveResumeState(repo)
+                    val resume = resolveResumeState(repo, shown.id)
 
-                    val isFav = repo.isFavorite(movieId, "MOVIES")
+                    val isFav = repo.isFavorite(shown.id, "MOVIES")
 
                     val categoryName =
                         repo
                             .getFilteredCategories("MOVIES")
                             .getOrNull()
-                            ?.firstOrNull { it.id == categoryId }
+                            ?.firstOrNull { it.id == shown.categoryId }
                             ?.name
 
+                    currentCoroutineContext().ensureActive()
                     _uiState.value =
                         UiState.Success(
                             movieDetail = detail,
@@ -190,8 +216,8 @@ class MovieDetailsViewModel(
                             isFavorite = isFav,
                             isWatched = resume.isWatched,
                             categoryName = categoryName,
-                            categoryId = categoryId,
-                            streamName = streamName,
+                            categoryId = shown.categoryId,
+                            streamName = shown.streamName,
                         )
 
                     loadRelatedTitles(detail)
@@ -302,7 +328,7 @@ class MovieDetailsViewModel(
                 // opened from: Home and More like this pass the official or a cleaned-up title.
                 own?.let { copy ->
                     streamName = copy.name
-                    (_uiState.value as? UiState.Success)?.let { _uiState.value = it.copy(streamName = copy.name) }
+                    _uiState.update { if (it is UiState.Success && it.movieDetail.id == detail.id) it.copy(streamName = copy.name) else it }
                 }
                 _sourceNames.value = lists.sourceNames
                 _alternateStreams.value = copies.filterNot { it === own }
@@ -317,7 +343,10 @@ class MovieDetailsViewModel(
         val isWatched: Boolean,
     )
 
-    private suspend fun resolveResumeState(repo: MediaRepository): ResumeState {
+    private suspend fun resolveResumeState(
+        repo: MediaRepository,
+        movieId: String,
+    ): ResumeState {
         val watched = repo.getPlaybackPositionSuspend(movieId, "MOVIES")
         var positionMs = 0L
         var durationMs = 0L
@@ -345,13 +374,10 @@ class MovieDetailsViewModel(
             val currentState = _uiState.value as? UiState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
 
-            if (currentState.isFavorite) {
-                repo.removeFavorite(movieId, "MOVIES")
-                _uiState.value = currentState.copy(isFavorite = false)
-            } else {
-                repo.addFavorite(movieId, movieName, categoryId, "MOVIES")
-                _uiState.value = currentState.copy(isFavorite = true)
-            }
+            // Written over the state as it is now, and only while the same film is on screen.
+            val favorite = !currentState.isFavorite
+            if (favorite) repo.addFavorite(movieId, movieName, categoryId, "MOVIES") else repo.removeFavorite(movieId, "MOVIES")
+            _uiState.update { it.sameFilm(currentState)?.copy(isFavorite = favorite) ?: it }
         }
     }
 
@@ -370,10 +396,9 @@ class MovieDetailsViewModel(
     fun refreshResumeState() {
         viewModelScope.launchGuarded("MovieDetailsViewModel.refreshResumeState", Dispatchers.IO) {
             val repo = mediaRepository ?: return@launchGuarded
-            val resume = resolveResumeState(repo)
             val currentState = _uiState.value as? UiState.Success ?: return@launchGuarded
-            _uiState.value =
-                currentState.copy(isWatched = resume.isWatched, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
+            val resume = resolveResumeState(repo, movieId)
+            _uiState.update { it.sameFilm(currentState)?.withResume(resume) ?: it }
         }
     }
 
@@ -389,17 +414,27 @@ class MovieDetailsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _uiState.value as? UiState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
-            repo.setWatched(movieId, "MOVIES", !currentState.isWatched)
+            val id = movieId
+            repo.setWatched(id, "MOVIES", !currentState.isWatched)
             // Re-derived rather than assumed: setWatched is a suspend call, not fire-and-forget,
             // so its write (if any) has already landed by the time it returns — but it silently
             // no-ops for a server-backed provider (Jellyfin owns this state server-side and has
             // no local write to accept), so blindly flipping isWatched here would show a check
             // that the server was never told about.
-            val resume = resolveResumeState(repo)
-            _uiState.value =
-                currentState.copy(isWatched = resume.isWatched, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
+            val resume = resolveResumeState(repo, id)
+            _uiState.update { it.sameFilm(currentState)?.withResume(resume) ?: it }
         }
     }
+
+    /** This state when it is a Success for the film of [read], else null: a write after a suspend call skips another film's state. */
+    private fun UiState.sameFilm(read: UiState.Success): UiState.Success? =
+        (this as? UiState.Success)?.takeIf {
+            it.movieDetail.id ==
+                read.movieDetail.id
+        }
+
+    private fun UiState.Success.withResume(resume: ResumeState): UiState.Success =
+        copy(isWatched = resume.isWatched, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
 }
 
 class MovieDetailsViewModelFactory(

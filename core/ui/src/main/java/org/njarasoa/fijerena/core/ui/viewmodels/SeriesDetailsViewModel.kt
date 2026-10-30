@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -130,6 +132,10 @@ class SeriesDetailsViewModel(
     private var alternateStreamsJob: Job? = null
     private var alternateStreamsTmdbId: String? = null
 
+    // The detail load in flight (init, refresh, switch); each new one cancels it, so a slow load
+    // of the copy before a switch cannot publish its episodes under the new copy. Main only.
+    private var loadJob: Job? = null
+
     init {
         loadSeriesInfo()
     }
@@ -140,18 +146,24 @@ class SeriesDetailsViewModel(
      * — including an empty one — and appears to do nothing.
      */
     fun refreshSeriesInfo() {
-        viewModelScope.launch(Dispatchers.IO) {
-            suspendRunCatching { ensureRepo().invalidateCachedDetail(seriesId) }
-            // Deliberately not from the cache: an explicit refresh that redraws the stored copy
-            // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
-            loadSeriesDetail(useCache = false, isSwitch = false)
-        }
+        val shown = PlayedSeries(seriesId, seriesName, categoryId)
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                suspendRunCatching { ensureRepo().invalidateCachedDetail(shown.seriesId) }
+                // Deliberately not from the cache: an explicit refresh that redraws the stored copy
+                // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
+                loadSeriesDetail(shown, useCache = false, isSwitch = false)
+            }
     }
 
     fun loadSeriesInfo(useCache: Boolean = true) {
-        viewModelScope.launch(Dispatchers.IO) {
-            loadSeriesDetail(useCache = useCache, isSwitch = false)
-        }
+        val shown = PlayedSeries(seriesId, seriesName, categoryId)
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                loadSeriesDetail(shown, useCache = useCache, isSwitch = false)
+            }
     }
 
     /**
@@ -169,9 +181,12 @@ class SeriesDetailsViewModel(
         seriesId = alternate.id
         categoryId = alternate.categoryId
         seriesName = alternate.name
-        viewModelScope.launch(Dispatchers.IO) {
-            loadSeriesDetail(useCache = true, isSwitch = true)
-        }
+        val shown = PlayedSeries(seriesId, seriesName, categoryId)
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                loadSeriesDetail(shown, useCache = true, isSwitch = true)
+            }
     }
 
     /**
@@ -184,7 +199,9 @@ class SeriesDetailsViewModel(
         return alternate.providerId.takeIf { it != 0L && it != own }
     }
 
+    /** Loads [shown], read on Main when the load started: the fields can change under a slow load. */
     private suspend fun loadSeriesDetail(
+        shown: PlayedSeries,
         useCache: Boolean,
         isSwitch: Boolean,
     ) {
@@ -217,16 +234,19 @@ class SeriesDetailsViewModel(
             // restart — showing episodes it already had on disk the whole time. The fetch below
             // still runs: only it can notice episodes added since.
             val cached =
-                if (useCache) suspendRunCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
+                if (useCache) suspendRunCatching { repo.getCachedSeriesDetail(SeriesId(shown.seriesId)) }.getOrNull() else null
             if (cached != null) {
-                _uiState.value =
+                val state =
                     UiState.Success(
                         seriesDetail = withTmdbTrailer(cached),
-                        isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
-                        categoryName = categoryNameOrNull(repo),
-                        categoryId = categoryId,
-                        streamName = seriesName,
+                        isFavorite = repo.isFavorite(shown.seriesId, "TV_SHOWS"),
+                        categoryName = categoryNameOrNull(repo, shown.categoryId),
+                        categoryId = shown.categoryId,
+                        streamName = shown.seriesName,
                     )
+                // Superseded by a switch or a refresh: leave the screen to the load that replaced this one.
+                currentCoroutineContext().ensureActive()
+                _uiState.value = state
                 loadRelatedTitles(cached)
                 loadTmdbTitle(cached)
                 loadArtwork(cached)
@@ -238,17 +258,20 @@ class SeriesDetailsViewModel(
                 _uiState.value = UiState.Loading
             }
 
-            val result = repo.getSeriesDetail(SeriesId(seriesId))
+            val result = repo.getSeriesDetail(SeriesId(shown.seriesId))
+            currentCoroutineContext().ensureActive()
             result.fold(
                 onSuccess = { detail ->
-                    _uiState.value =
+                    val state =
                         UiState.Success(
                             seriesDetail = withTmdbTrailer(detail),
-                            isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
-                            categoryName = categoryNameOrNull(repo),
-                            categoryId = categoryId,
-                            streamName = seriesName,
+                            isFavorite = repo.isFavorite(shown.seriesId, "TV_SHOWS"),
+                            categoryName = categoryNameOrNull(repo, shown.categoryId),
+                            categoryId = shown.categoryId,
+                            streamName = shown.seriesName,
                         )
+                    currentCoroutineContext().ensureActive()
+                    _uiState.value = state
 
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
@@ -385,7 +408,15 @@ class SeriesDetailsViewModel(
                     // As on the film page: the Stream name row names this copy as the catalogue does.
                     own?.let { copy ->
                         seriesName = copy.name
-                        (_uiState.value as? UiState.Success)?.let { _uiState.value = it.copy(streamName = copy.name) }
+                        _uiState.update {
+                            if (it is UiState.Success &&
+                                it.seriesDetail.id == detail.id
+                            ) {
+                                it.copy(streamName = copy.name)
+                            } else {
+                                it
+                            }
+                        }
                     }
                     _sourceNames.value = lists.sourceNames
                     _alternateStreams.value = copies.filterNot { it === own }
@@ -393,7 +424,10 @@ class SeriesDetailsViewModel(
             }
     }
 
-    private suspend fun categoryNameOrNull(repo: MediaRepository): String? =
+    private suspend fun categoryNameOrNull(
+        repo: MediaRepository,
+        categoryId: String,
+    ): String? =
         repo
             .getFilteredCategories("TV_SHOWS")
             .getOrNull()
@@ -433,14 +467,15 @@ class SeriesDetailsViewModel(
     fun toggleFavorite(seriesName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _uiState.value as? UiState.Success ?: return@launch
+            val id = seriesId
+            val catId = categoryId
             val repo = ensureRepo()
 
-            if (currentState.isFavorite) {
-                repo.removeFavorite(seriesId, "TV_SHOWS")
-                _uiState.value = currentState.copy(isFavorite = false)
-            } else {
-                repo.addFavorite(seriesId, seriesName, categoryId, "TV_SHOWS")
-                _uiState.value = currentState.copy(isFavorite = true)
+            // Written over the state as it is now, and only while the same show is on screen.
+            val favorite = !currentState.isFavorite
+            if (favorite) repo.addFavorite(id, seriesName, catId, "TV_SHOWS") else repo.removeFavorite(id, "TV_SHOWS")
+            _uiState.update {
+                if (it is UiState.Success && it.seriesDetail.id == currentState.seriesDetail.id) it.copy(isFavorite = favorite) else it
             }
         }
     }

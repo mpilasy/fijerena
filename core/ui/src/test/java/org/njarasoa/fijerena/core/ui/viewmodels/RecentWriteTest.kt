@@ -1,12 +1,15 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.concurrent.CyclicBarrier
+import kotlin.concurrent.thread
 
 /** A live channel opened full screen from a preview goes into Recent at once, not after the watch delay. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -63,7 +66,34 @@ class RecentWriteTest {
         assertEquals(0, writes)
     }
 
+    @Test
+    fun `a load cancelled before it schedules writes nothing`() {
+        val load = Job()
+        load.cancel()
+        recentWrite.schedule(write, DELAY, load)
+        scope.advanceTimeBy(DELAY * 2)
+        assertEquals(0, writes)
+    }
+
+    @Test
+    fun `schedules from two threads at once leave one write`() {
+        repeat(ROUNDS) {
+            val start = CyclicBarrier(2)
+            val threads =
+                List(2) {
+                    thread {
+                        start.await()
+                        recentWrite.schedule(write, DELAY)
+                    }
+                }
+            threads.forEach { it.join() }
+        }
+        scope.advanceTimeBy(DELAY * 2)
+        assertEquals(1, writes)
+    }
+
     private companion object {
         const val DELAY = 10_000L
+        const val ROUNDS = 200
     }
 }

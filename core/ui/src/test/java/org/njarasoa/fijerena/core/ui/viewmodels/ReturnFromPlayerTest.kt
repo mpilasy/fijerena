@@ -74,7 +74,8 @@ class ReturnFromPlayerTest {
         runBlocking {
             val viewModel =
                 StreamLoaderViewModelFactory(context, MOVIE, "Film", "c1", ContentType.MOVIES).create(StreamLoaderViewModel::class.java)
-            coVerify(timeout = TIMEOUT_MS) { repository.getProviderId() }
+            // The first load starts once the repository is ready.
+            coVerify(timeout = TIMEOUT_MS) { repository.resolvePlayableStream(any(), any(), any(), any()) }
 
             viewModel.stopPlaybackAwaited(POSITION_MS, DURATION_MS)
 
