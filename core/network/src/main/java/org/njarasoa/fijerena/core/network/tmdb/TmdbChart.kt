@@ -230,17 +230,46 @@ suspend fun matchChart(
                 Log.w("TmdbChart", "Chart ${chart.name} page $number: ${e.message}")
                 null
             } ?: break
-        val found = sources.map { source -> source(page.titles) }
-        for ((index, result) in page.titles.withIndex()) {
-            val key = result.displayTitle?.let { TitleMatcher.normalize(it).text }
-            if (key.isNullOrBlank() || key in taken) continue
-            val hit = found.firstNotNullOfOrNull { it.getOrNull(index) } ?: continue
-            taken += key
-            matches += hit
-            if (matches.size == limit) return matches
-        }
+        if (matchInto(page.titles, sources, matches, taken, limit)) return matches
     }
     return matches
+}
+
+/**
+ * [titles] cut down to the catalogue, as [matchChart] does with a chart's pages: each title from
+ * the first of [sources] that has it, one card per title, the order of [titles] kept, [limit] at
+ * most. One call of each source for all the titles.
+ */
+suspend fun matchTitles(
+    titles: List<TmdbRecommendation>,
+    sources: List<suspend (List<TmdbRecommendation>) -> List<MediaItem?>>,
+    limit: Int = Int.MAX_VALUE,
+): List<MediaItem> {
+    if (sources.isEmpty() || titles.isEmpty()) return emptyList()
+    return mutableListOf<MediaItem>().also { matchInto(titles, sources, it, mutableSetOf(), limit) }
+}
+
+/**
+ * Adds to [matches] each of [titles] that one of [sources] has and whose name is not in [taken]
+ * yet. True when [matches] has [limit] titles.
+ */
+private suspend fun matchInto(
+    titles: List<TmdbRecommendation>,
+    sources: List<suspend (List<TmdbRecommendation>) -> List<MediaItem?>>,
+    matches: MutableList<MediaItem>,
+    taken: MutableSet<String>,
+    limit: Int,
+): Boolean {
+    val found = sources.map { source -> source(titles) }
+    for ((index, result) in titles.withIndex()) {
+        val key = result.displayTitle?.let { TitleMatcher.normalize(it).text }
+        if (key.isNullOrBlank() || key in taken) continue
+        val hit = found.firstNotNullOfOrNull { it.getOrNull(index) } ?: continue
+        taken += key
+        matches += hit
+        if (matches.size == limit) return true
+    }
+    return false
 }
 
 /**
@@ -264,10 +293,23 @@ suspend fun chartWithMissing(
             Log.w("TmdbChart", "Chart ${chart.name} page 1: ${e.message}")
             null
         } ?: return emptyList()
-    val found = sources.map { source -> source(page.titles) }
+    return titlesWithMissing(page.titles, sources, missing, limit)
+}
+
+/**
+ * The first [limit] of [titles], in their order, each from the first of [sources] that has it,
+ * else as a TMDB-only card ([missing]). One card per title name.
+ */
+suspend fun titlesWithMissing(
+    titles: List<TmdbRecommendation>,
+    sources: List<suspend (List<TmdbRecommendation>) -> List<MediaItem?>>,
+    missing: (TmdbRecommendation) -> MediaItem,
+    limit: Int = Int.MAX_VALUE,
+): List<MediaItem> {
+    val found = sources.map { source -> source(titles) }
     val taken = mutableSetOf<String>()
     val row = mutableListOf<MediaItem>()
-    for ((index, result) in page.titles.withIndex()) {
+    for ((index, result) in titles.withIndex()) {
         val key = result.displayTitle?.let { TitleMatcher.normalize(it).text }
         if (key.isNullOrBlank() || !taken.add(key)) continue
         row += found.firstNotNullOfOrNull { it.getOrNull(index) } ?: missing(result)

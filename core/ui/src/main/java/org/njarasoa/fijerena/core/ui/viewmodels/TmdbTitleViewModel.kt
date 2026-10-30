@@ -133,7 +133,7 @@ class TmdbTitleViewModel(
                 facts = info?.facts?.copy(creators = emptyList()) ?: TitleFacts(),
                 cast =
                     info
-                        ?.credits
+                        ?.anyCredits
                         ?.cast
                         .orEmpty()
                         .mapNotNull { it.name?.takeIf(String::isNotBlank) }

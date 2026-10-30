@@ -9,6 +9,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.network.tmdb.TmdbChartPages
+import org.njarasoa.fijerena.core.network.tmdb.TmdbPeople
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.chartWithMissing
 import org.njarasoa.fijerena.core.network.tmdb.matchChart
@@ -55,9 +56,13 @@ object ChartRows {
     /** Goes up on each [refresh]: the screens showing chart rows load them again. */
     val refreshes: StateFlow<Int> = refreshCount.asStateFlow()
 
-    /** Admin → Refresh Charts: forgets the chart pages and rows, so they are read from TMDB again. */
+    /**
+     * Admin → Refresh Charts: forgets the chart pages and rows, and the people of the actor pages
+     * ([TmdbPeople]), so they are read from TMDB again.
+     */
     suspend fun refresh(context: Context) {
         TmdbChartPages.getInstance(context).clear()
+        TmdbPeople.getInstance(context).clear()
         synchronized(kept) { kept.clear() }
         refreshCount.value++
     }

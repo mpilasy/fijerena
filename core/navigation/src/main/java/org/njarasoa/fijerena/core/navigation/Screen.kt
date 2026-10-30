@@ -145,6 +145,22 @@ sealed interface Screen {
         val posterPath: String? = null,
     ) : Screen
 
+    /**
+     * A person as TMDB knows them: the photo, the facts, and the films and shows of the person that
+     * the profile's sources have. The Cast tab opens it. See docs/plans/20261030_cast-tab-plan.md.
+     *
+     * @param tmdbId The TMDB person id.
+     * @param name The name to show until TMDB answers.
+     * @param crew True when opened from a crew line: the titles the person made, not the titles
+     *   the person acted in (CT-D4).
+     */
+    @Serializable
+    data class Person(
+        val tmdbId: String,
+        val name: String,
+        val crew: Boolean = false,
+    ) : Screen
+
     /** @param providerId The source the film is on. */
     @Serializable
     data class MovieDetails(

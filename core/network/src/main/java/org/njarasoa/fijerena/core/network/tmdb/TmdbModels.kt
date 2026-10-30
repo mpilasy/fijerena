@@ -155,10 +155,14 @@ data class TmdbRecommendation(
     val runtime: Int? = null,
     // A show's makers.
     @SerialName("created_by")
-    val createdBy: List<TmdbNamed> = emptyList(),
-    // Only with `append_to_response=credits`.
+    val createdBy: List<TmdbCreator> = emptyList(),
+    // Only with `append_to_response=credits` (a film's, from getDetailsWithCredits).
     @SerialName("credits")
     val credits: TmdbCredits? = null,
+    // Only with `append_to_response=aggregate_credits` (a show's, from getDetailsWithCredits): the
+    // cast and crew of all seasons, each with their roles or jobs and episode counts.
+    @SerialName("aggregate_credits")
+    val aggregateCredits: TmdbCredits? = null,
     // Only with `append_to_response=videos`.
     @SerialName("videos")
     val videos: TmdbVideos? = null,
@@ -214,6 +218,10 @@ data class TmdbRecommendation(
     /** Release/air year, or null when the date is missing or not a `yyyy-MM-dd` string. */
     val year: Int?
         get() = (releaseDate ?: firstAirDate)?.take(4)?.toIntOrNull()
+
+    /** The credits a details response has: a film's [credits], else a show's [aggregateCredits]. */
+    val anyCredits: TmdbCredits?
+        get() = credits ?: aggregateCredits
 }
 
 /** The collection a movie belongs to, as embedded in a `/movie/{id}` response. */
@@ -257,22 +265,172 @@ data class TmdbNamed(
     val name: String? = null,
 )
 
-/** `credits` on a details response: the cast in billing order, and the crew. */
+/** A show's maker (`created_by`). */
+@Serializable
+data class TmdbCreator(
+    @SerialName("id")
+    val id: Int? = null,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+)
+
+/**
+ * `credits` or `aggregate_credits` on a details response: the cast in billing order, and the crew.
+ * The two have the same shape, except that `aggregate_credits` gives a list of roles (cast) or jobs
+ * (crew) with episode counts in place of one `character` or `job`.
+ */
 @Serializable
 data class TmdbCredits(
     @SerialName("cast")
-    val cast: List<TmdbNamed> = emptyList(),
+    val cast: List<TmdbCastMember> = emptyList(),
     @SerialName("crew")
     val crew: List<TmdbCrewMember> = emptyList(),
 )
 
 @Serializable
-data class TmdbCrewMember(
+data class TmdbCastMember(
+    // The TMDB person id.
+    @SerialName("id")
+    val id: Int? = null,
     @SerialName("name")
     val name: String? = null,
+    // `credits` only.
+    @SerialName("character")
+    val character: String? = null,
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+    // `aggregate_credits` only.
+    @SerialName("roles")
+    val roles: List<TmdbRole> = emptyList(),
+    @SerialName("total_episode_count")
+    val totalEpisodeCount: Int? = null,
+)
+
+/** One role of a show's cast member (`aggregate_credits`). */
+@Serializable
+data class TmdbRole(
+    @SerialName("character")
+    val character: String? = null,
+    @SerialName("episode_count")
+    val episodeCount: Int = 0,
+)
+
+@Serializable
+data class TmdbCrewMember(
+    // The TMDB person id.
+    @SerialName("id")
+    val id: Int? = null,
+    @SerialName("name")
+    val name: String? = null,
+    // `credits` only.
     @SerialName("job")
     val job: String? = null,
+    @SerialName("department")
+    val department: String? = null,
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+    // `aggregate_credits` only.
+    @SerialName("jobs")
+    val jobs: List<TmdbJob> = emptyList(),
+    @SerialName("total_episode_count")
+    val totalEpisodeCount: Int? = null,
 )
+
+/** One job of a show's crew member (`aggregate_credits`). */
+@Serializable
+data class TmdbJob(
+    @SerialName("job")
+    val job: String? = null,
+    @SerialName("episode_count")
+    val episodeCount: Int = 0,
+)
+
+/** `person/{id}`, with `combined_credits` when it is appended. */
+@Serializable
+data class TmdbPerson(
+    @SerialName("id")
+    val id: Int = 0,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+    // `yyyy-MM-dd`.
+    @SerialName("birthday")
+    val birthday: String? = null,
+    @SerialName("deathday")
+    val deathday: String? = null,
+    @SerialName("place_of_birth")
+    val placeOfBirth: String? = null,
+    @SerialName("biography")
+    val biography: String? = null,
+    @SerialName("combined_credits")
+    val combinedCredits: TmdbCombinedCredits? = null,
+)
+
+/** A person's films and shows: as an actor ([cast]) and as crew ([crew]). */
+@Serializable
+data class TmdbCombinedCredits(
+    @SerialName("cast")
+    val cast: List<TmdbPersonCredit> = emptyList(),
+    @SerialName("crew")
+    val crew: List<TmdbPersonCredit> = emptyList(),
+)
+
+/** One film or show of a person. A film has `title` and `release_date`, a show `name` and `first_air_date`. */
+@Serializable
+data class TmdbPersonCredit(
+    // The title's TMDB id.
+    @SerialName("id")
+    val id: Int,
+    // `movie` or `tv`.
+    @SerialName("media_type")
+    val mediaType: String? = null,
+    @SerialName("title")
+    val title: String? = null,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("original_title")
+    val originalTitle: String? = null,
+    @SerialName("original_name")
+    val originalName: String? = null,
+    @SerialName("release_date")
+    val releaseDate: String? = null,
+    @SerialName("first_air_date")
+    val firstAirDate: String? = null,
+    @SerialName("poster_path")
+    val posterPath: String? = null,
+    @SerialName("overview")
+    val overview: String? = null,
+    @SerialName("popularity")
+    val popularity: Double = 0.0,
+    @SerialName("vote_count")
+    val voteCount: Int = 0,
+    // Cast only.
+    @SerialName("character")
+    val character: String? = null,
+    // Crew only.
+    @SerialName("job")
+    val job: String? = null,
+    @SerialName("department")
+    val department: String? = null,
+) {
+    /** The title in the shape the catalogue matching takes. */
+    fun toRecommendation(): TmdbRecommendation =
+        TmdbRecommendation(
+            id = id,
+            title = title,
+            name = name,
+            originalTitle = originalTitle,
+            originalName = originalName,
+            releaseDate = releaseDate,
+            firstAirDate = firstAirDate,
+            posterPath = posterPath,
+            overview = overview,
+            mediaType = mediaType,
+        )
+}
 
 /** `videos` on a details response: trailers, teasers, clips… */
 @Serializable

@@ -146,6 +146,8 @@ class TmdbApiService(
     /**
      * As [getMovieDetails] or [getTvDetails], with the cast and crew and the videos in the same call
      * (a TMDB page). Videos in the app language, English or none, since most trailers are English.
+     * A film's cast and crew come in `credits`; a show's in `aggregate_credits`, which covers all its
+     * seasons (CT-D3). [TmdbRecommendation.anyCredits] gives either.
      */
     suspend fun getDetailsWithCredits(
         movie: Boolean,
@@ -155,7 +157,7 @@ class TmdbApiService(
             if (movie) "movie/$id" else "tv/$id",
             Language.APP,
             mapOf(
-                "append_to_response" to "credits,videos",
+                "append_to_response" to if (movie) "credits,videos" else "aggregate_credits,videos",
                 "include_video_language" to "${appLanguage()},en,null",
             ),
         ).body()
@@ -218,6 +220,32 @@ class TmdbApiService(
      */
     suspend fun searchMulti(query: String): TmdbRecommendationsResponse =
         fetch("search/multi", Language.APP, mapOf("query" to query, "include_adult" to "false")).body()
+
+    /**
+     * A person and all the films and shows of the person (`combined_credits`). The titles are in
+     * English, as the catalogue matching needs. The name and the biography are in the app language:
+     * when it is not English, a second call without the credits gets them; a blank biography there
+     * keeps the English one.
+     */
+    suspend fun getPerson(personId: Int): TmdbPerson {
+        val english: TmdbPerson =
+            fetch("person/$personId", Language.ENGLISH, mapOf("append_to_response" to "combined_credits")).body()
+        if (tmdbLanguage(appLanguage()) == ENGLISH) return english
+        val local: TmdbPerson =
+            try {
+                fetch("person/$personId", Language.APP).body()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The English text is better than no page.
+                Log.w(TAG, "TMDB person $personId in the app language: ${e.message}")
+                return english
+            }
+        return english.copy(
+            name = local.name?.takeIf { it.isNotBlank() } ?: english.name,
+            biography = local.biography?.takeIf { it.isNotBlank() } ?: english.biography,
+        )
+    }
 
     private enum class Language { NONE, ENGLISH, APP }
 
@@ -334,6 +362,7 @@ class TmdbApiService(
         const val POSTER_SIZE_ORIGINAL = "original"
         const val LOGO_SIZE_W500 = "w500"
         const val BACKDROP_SIZE_W1280 = "w1280"
+        const val PROFILE_SIZE_W185 = "w185"
 
         fun posterUrl(
             path: String?,
@@ -343,6 +372,12 @@ class TmdbApiService(
             if (p.isEmpty()) return null
             return "$IMAGE_BASE_URL$size/$p"
         }
+
+        /** A person's photo (`profile_path`), or null when TMDB has none. */
+        fun profileUrl(
+            path: String?,
+            size: String = PROFILE_SIZE_W185,
+        ): String? = posterUrl(path, size)
 
         /**
          * Best logo for the OSD wordmark: prefer English, then any language-neutral mark (no
