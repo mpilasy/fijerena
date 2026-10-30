@@ -37,6 +37,18 @@ enum class CrewRole { DIRECTOR, CREATOR, WRITER }
 /** CT-D2: the cast cards the Cast tab shows before its More card. */
 const val MAX_CAST_CARDS = 10
 
+/**
+ * The actors each press of the More card adds. A long show's cast runs to thousands
+ * (Law & Order: over 7,600): only the cards asked for are ever built.
+ */
+const val CAST_MORE_STEP = 30
+
+/** The actors a More card adds when [shown] of [total] are on screen. */
+fun castMoreCount(
+    shown: Int,
+    total: Int,
+): Int = (total - shown).coerceIn(0, CAST_MORE_STEP)
+
 /** The most people on the Writers line. */
 const val MAX_WRITERS = 5
 

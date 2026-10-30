@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -24,11 +25,13 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import org.njarasoa.fijerena.core.network.tmdb.CAST_MORE_STEP
 import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.CrewLine
 import org.njarasoa.fijerena.core.network.tmdb.CrewRole
 import org.njarasoa.fijerena.core.network.tmdb.MAX_CAST_CARDS
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
+import org.njarasoa.fijerena.core.network.tmdb.castMoreCount
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -108,13 +111,13 @@ private fun CastCardRow(
     topFocusModifier: Modifier,
 ) {
     val rowState = rememberLazyListState()
-    // The whole cast once the More card is pressed, kept while the page is open (also over a
-    // person page and Back), not stored.
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val collapsed = !expanded && cast.size > MAX_CAST_CARDS
-    // Collapsed, the card after the first MAX_CAST_CARDS is the More card. It is the same card as
-    // the actor that takes its place, so OK on it keeps the focus there: on the 11th actor.
-    val shown = if (collapsed) cast.take(MAX_CAST_CARDS + 1) else cast
+    // The actors on screen: MAX_CAST_CARDS, then CAST_MORE_STEP more per press of the More card,
+    // kept while the page is open (also over a person page and Back), not stored.
+    var shownCount by rememberSaveable { mutableIntStateOf(MAX_CAST_CARDS) }
+    val collapsed = cast.size > shownCount
+    // Collapsed, the card after the shown ones is the More card. It is the same card as
+    // the actor that takes its place, so OK on it keeps the focus there: on the first actor it adds.
+    val shown = if (collapsed) cast.take(shownCount + 1) else cast
     // Back from a person page: the card that opened it is scrolled in, so its requester attaches.
     val returnId = returnFocus.key?.takeIf { it.startsWith(RETURN_CAST_PREFIX) }?.removePrefix(RETURN_CAST_PREFIX)
     LaunchedEffect(returnId) {
@@ -132,11 +135,11 @@ private fun CastCardRow(
     ) {
         itemsIndexed(shown, key = { _, member -> member.personId }) { index, member ->
             val key = RETURN_CAST_PREFIX + member.personId
-            val more = collapsed && index == MAX_CAST_CARDS
+            val more = collapsed && index == shownCount
             TvCard(
                 onClick = {
                     if (more) {
-                        expanded = true
+                        shownCount += CAST_MORE_STEP
                     } else {
                         returnFocus.leaveFrom(key)
                         onPersonSelected(member.personId, member.name, false)
@@ -151,7 +154,7 @@ private fun CastCardRow(
                         .then(topFocusModifier),
             ) {
                 if (more) {
-                    MoreCardContent(count = cast.size - MAX_CAST_CARDS)
+                    MoreCardContent(count = castMoreCount(shownCount, cast.size))
                 } else {
                     CastCardContent(member, section)
                 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -21,11 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import org.njarasoa.fijerena.core.network.tmdb.CAST_MORE_STEP
 import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.CrewLine
 import org.njarasoa.fijerena.core.network.tmdb.CrewRole
 import org.njarasoa.fijerena.core.network.tmdb.MAX_CAST_CARDS
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
+import org.njarasoa.fijerena.core.network.tmdb.castMoreCount
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -78,20 +81,24 @@ private fun CastCardGrid(
     section: ThumbnailContentType,
     onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit,
 ) {
-    // The whole cast once the More card is tapped, kept while the page is open (also over a person
-    // page and Back), not stored.
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val collapsed = !expanded && cast.size > MAX_CAST_CARDS
-    // Collapsed, the More card takes the place of the actor after the first MAX_CAST_CARDS.
-    val shown = if (collapsed) cast.take(MAX_CAST_CARDS + 1) else cast
+    // The actors on screen: MAX_CAST_CARDS, then CAST_MORE_STEP more per press of the More card,
+    // kept while the page is open (also over a person page and Back), not stored.
+    var shownCount by rememberSaveable { mutableIntStateOf(MAX_CAST_CARDS) }
+    val collapsed = cast.size > shownCount
+    // Collapsed, the More card takes the place of the actor after the shown ones.
+    val shown = if (collapsed) cast.take(shownCount + 1) else cast
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val columns = (maxWidth / CARD_MIN_WIDTH).toInt().coerceAtLeast(MIN_COLUMNS)
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             shown.withIndex().chunked(columns).forEach { rowMembers ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     rowMembers.forEach { (index, member) ->
-                        if (collapsed && index == MAX_CAST_CARDS) {
-                            MoreCard(count = cast.size - MAX_CAST_CARDS, onClick = { expanded = true }, modifier = Modifier.weight(1f))
+                        if (collapsed && index == shownCount) {
+                            MoreCard(
+                                count = castMoreCount(shownCount, cast.size),
+                                onClick = { shownCount += CAST_MORE_STEP },
+                                modifier = Modifier.weight(1f),
+                            )
                         } else {
                             CastCard(
                                 member = member,
