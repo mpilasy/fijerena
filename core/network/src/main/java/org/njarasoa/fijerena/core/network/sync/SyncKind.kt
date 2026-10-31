@@ -73,6 +73,17 @@ object SyncKind {
     /** The `providerId` of [WANTED] rows in `xtream_v2.db`'s `sync_version` and `sync_tombstone`. */
     const val WANTED_PROVIDER_ID = 0L
 
+    /**
+     * A team or league a profile follows; keyed by its id at its source, with
+     * `FollowedSportEntity.syncContentType` (`<kind>:<source>`) as the content type. Not tied to a
+     * provider: its version and tombstone rows use [FOLLOWED_SPORT_PROVIDER_ID]. See the sports
+     * teams plan.
+     */
+    const val FOLLOWED_SPORT = "followed_sport"
+
+    /** The `providerId` of [FOLLOWED_SPORT] rows in `xtream_v2.db`'s `sync_version` and `sync_tombstone`. */
+    const val FOLLOWED_SPORT_PROVIDER_ID = 0L
+
     /** The profile slot of anything the whole household shares. */
     const val SHARED = "shared"
 

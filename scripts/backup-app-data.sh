@@ -4,7 +4,8 @@
 #
 # User data only: shared_prefs (settings, category filters, recent categories), providers.db
 # (sources, profiles, guide sources, live sync) and xtream_v2_user_data.db — the watch_state,
-# favorite_state, wanted_title and sync_* tables of xtream_v2.db (wanted_title only from v26 on). The rest of xtream_v2.db is the sources'
+# favorite_state, wanted_title, followed_sport and sync_* tables of xtream_v2.db (wanted_title only from v26
+# on, followed_sport from v29). The rest of xtream_v2.db is the sources'
 # catalogue, which a sync downloads again, so it is copied off with its -wal (commits not yet
 # checkpointed live there), cut down to those tables on this machine, and discarded. The small
 # database is written by sqlite3 here in rollback-journal mode, so it has no -wal of its own.
@@ -17,7 +18,7 @@ OUT="${2:?usage: $0 <serial> <output.tar.gz>}"
 PKG="$("$(dirname "${BASH_SOURCE[0]}")/app-package.sh" "$SERIAL")"
 USER_TABLES=(watch_state favorite_state sync_version sync_tombstone sync_clock)
 # Tables an older app version doesn't have yet: copied only when the device has them.
-OPTIONAL_TABLES=(wanted_title)
+OPTIONAL_TABLES=(wanted_title followed_sport)
 
 command -v sqlite3 >/dev/null || { echo "ERROR: sqlite3 is needed (apt install sqlite3)." >&2; exit 1; }
 

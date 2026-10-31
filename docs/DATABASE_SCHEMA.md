@@ -219,7 +219,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 28
+**Version:** 29
 
 **Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
 pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
@@ -251,7 +251,8 @@ v26 added `wanted_title` (a profile's Wanted list) and `tmdbId` on `favorite_sta
 the wanted titles plan; v27 added the ask-once answer and release data to
 `wanted_title`, see the wishlist ux plan; v28 added `facts` to `xtream_streams` and `xtream_series`
 and cleared their `detailFetchedAt` (and `xtream_series.episodesFetchedAt`), so the next open of
-each film or show fetches its facts once.)
+each film or show fetches its facts once; v29 added `followed_sport` (the teams and leagues a
+profile follows), see the sports teams plan.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -490,6 +491,29 @@ Whether a source has the title is not stored: each device works it out from its 
 Synced as `wanted` (live sync; the release columns stay each device's own and are kept when a record
 arrives), exported with favourites, deleted with its profile.
 
+### Table: `followed_sport` (added v29)
+The teams and leagues a profile follows. The Sports section, the Home row and game reminders fetch
+games only for these. Per profile and not per provider: a team belongs to no source. See the sports
+teams plan.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `profileId` | TEXT (PK) | The owner profile |
+| `kind` | TEXT (PK) | `TEAM` or `LEAGUE` (`FollowKind.id`) |
+| `source` | TEXT (PK) | The sports source the item comes from: `espn`, `fifa`, `uefa`, `nhl`, `mlb`, `ehf` or `worldaquatics` (`SportsSource.id`) |
+| `itemId` | TEXT (PK) | The team or league id at that source |
+| `league` | TEXT? | A team's league key at its source (ESPN `soccer/eng.1`, a FIFA competition id…); NULL for a league |
+| `name` | TEXT | The name the source gives |
+| `shortName` | TEXT? | The short name or abbreviation |
+| `altNames` | TEXT | The other names the source gives (location, nickname…), as a JSON list of strings; `[]` when none. Used to find the team in guide titles and in other sources |
+| `sport` | TEXT | The sport, as the source names it (`soccer`, `basketball`…) |
+| `logoUrl` | TEXT? | The logo |
+| `createdAt` | INTEGER | When the profile first followed it; following it again keeps it |
+
+Synced as `followed_sport` (live sync; every column), exported with favourites, deleted with its
+profile. A row whose kind or source the build does not know (written by a newer build) is kept and
+not shown.
+
 ### Table: `sync_tombstone` (added v21)
 Removed favourites and cleared watch histories, kept so live sync can tell other devices — without
 them the next device to sync would bring the item back. See
@@ -497,16 +521,16 @@ the live sync plan → Deletions (tombstones).
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `providerId` | INTEGER (PK) | The provider, by local id; the sync client sends its `providerKey`. 0 for `wanted` (no provider) |
-| `profileId` | TEXT (PK) | The profile the favourite, history or Wanted title belonged to |
-| `kind` | TEXT (PK) | `favorite_stream`, `favorite_category`, `watch_clear` or `wanted` (v26) |
-| `itemId` | TEXT (PK) | The favourite's `itemId`, or the Wanted title's `tmdbId`; empty for `watch_clear` |
-| `contentType` | TEXT (PK) | The favourite's `contentType`; empty for `watch_clear` |
+| `providerId` | INTEGER (PK) | The provider, by local id; the sync client sends its `providerKey`. 0 for `wanted` and `followed_sport` (no provider) |
+| `profileId` | TEXT (PK) | The profile the favourite, history, Wanted title or followed item belonged to |
+| `kind` | TEXT (PK) | `favorite_stream`, `favorite_category`, `watch_clear`, `wanted` (v26) or `followed_sport` (v29) |
+| `itemId` | TEXT (PK) | The favourite's `itemId`, the Wanted title's `tmdbId`, or the followed item's `itemId`; empty for `watch_clear` |
+| `contentType` | TEXT (PK) | The favourite's `contentType`; for `followed_sport`, `<kind>:<source>` (`TEAM:espn`); empty for `watch_clear` |
 | `deletedAt` | INTEGER | When it was removed, on the sync clock (v22); for `watch_clear`, every older watch row of that provider and profile is dropped |
 
 **Index:** `(deletedAt)`
 
-Written by `FavoriteStateDao`, `WatchStateDao` and `WantedTitleDao` in the same transaction as the delete, with
+Written by `FavoriteStateDao`, `WatchStateDao`, `WantedTitleDao` and `FollowedSportDao` in the same transaction as the delete, with
 `deletedAt = 0`, which the `sync_tombstone_insert` trigger replaces with the sync clock (v22); re-adding
 the same favourite (or restoring it from an export or a provider copy) removes its tombstone. Not
 written for Jellyfin's history, which it keeps server-side. Deleting a provider or profile removes
@@ -518,8 +542,9 @@ what the merge compares an incoming record against (last writer wins) — and `p
 local change not yet sent (the outbox). Only the key is kept: the sync client reads the current row
 (or its tombstone) when it sends, so repeated changes to one item collapse into one entry. Same key
 columns as `sync_tombstone`, plus `hlc` and `pending`; indexed on `(pending, hlc)`.
-`kind` is `watch`, `favorite_stream`, `favorite_category`, `watch_clear` or `wanted` (v26, with
-`providerId` 0 and the TMDB id as `itemId`). Deleting a provider or profile removes its entries (its
+`kind` is `watch`, `favorite_stream`, `favorite_category`, `watch_clear`, `wanted` (v26, with
+`providerId` 0 and the TMDB id as `itemId`) or `followed_sport` (v29, with `providerId` 0, the
+item's id as `itemId` and `<kind>:<source>` as `contentType`). Deleting a provider or profile removes its entries (its
 own tombstone covers them).
 
 ### Table: `sync_clock` (added v22)
@@ -541,6 +566,7 @@ a trigger SQLite applies the firing statement's conflict rule, and Room's `@Inse
 | `sync_watch_state_insert` / `_update` | any insert/update of `watch_state` | `watch` |
 | `sync_favorite_state_insert` / `_update` | any insert/update of `favorite_state` | `favorite_stream` / `favorite_category` |
 | `sync_wanted_title_insert` / `_update` | any insert/update of `wanted_title` (v26) | `wanted`, with `providerId` 0 |
+| `sync_followed_sport_insert` / `_update` | any insert/update of `followed_sport` (v29) | `followed_sport`, with `providerId` 0 and `<kind>:<source>` as `contentType` |
 | `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's own kind; stamps `deletedAt` when it is 0 |
 
 Row deletions fire nothing: a removal is queued through its tombstone, and rows deleted with their

@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         SyncVersionEntity::class,
         SyncClockEntity::class,
         WantedTitleEntity::class,
+        FollowedSportEntity::class,
     ],
     version = XtreamDatabase.DB_VERSION,
     exportSchema = true,
@@ -48,6 +49,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun syncVersionDao(): SyncVersionDao
 
     abstract fun wantedTitleDao(): WantedTitleDao
+
+    abstract fun followedSportDao(): FollowedSportDao
 
     companion object {
         @Volatile
@@ -463,7 +466,24 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        const val DB_VERSION = 28
+        /**
+         * Migration 28→29: the teams and leagues each profile follows (`followed_sport`). See the
+         * sports teams plan → Followed teams and leagues.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigration28To29Test.
+        internal val MIGRATION_28_29 =
+            object : Migration(28, 29) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `followed_sport` (`profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                            "`source` TEXT NOT NULL, `itemId` TEXT NOT NULL, `league` TEXT, `name` TEXT NOT NULL, " +
+                            "`shortName` TEXT, `altNames` TEXT NOT NULL, `sport` TEXT NOT NULL, `logoUrl` TEXT, " +
+                            "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `kind`, `source`, `itemId`))",
+                    )
+                }
+            }
+
+        const val DB_VERSION = 29
         private const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
@@ -540,6 +560,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 MIGRATION_25_26,
                 MIGRATION_26_27,
                 MIGRATION_27_28,
+                MIGRATION_28_29,
             )
 
         fun getInstance(context: Context): XtreamDatabase =

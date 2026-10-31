@@ -3,8 +3,9 @@
 # Usage: scripts/restore-app-data.sh <serial> <backup.tar.gz>
 #
 # Overwrites, on the device: shared_prefs files present in the backup, providers.db, and the
-# watch_state, favorite_state, wanted_title and sync_* tables of xtream_v2.db (wanted_title only when
-# both the backup and the device have it; otherwise the device's own list stays). The catalogue in xtream_v2.db
+# watch_state, favorite_state, wanted_title, followed_sport and sync_* tables of xtream_v2.db (wanted_title
+# and followed_sport only when both the backup and the device have them; otherwise the device's own rows
+# stay). The catalogue in xtream_v2.db
 # is kept as it is. The app is force-stopped first and must have been opened at least once since
 # install (so its xtream_v2.db exists); it is not relaunched.
 #
@@ -18,7 +19,7 @@ BACKUP="${2:?usage: $0 <serial> <backup.tar.gz>}"
 PKG="$("$(dirname "${BASH_SOURCE[0]}")/app-package.sh" "$SERIAL")"
 DATA=/data/data/$PKG
 USER_TABLES=(watch_state favorite_state sync_version sync_tombstone sync_clock)
-OPTIONAL_TABLES=(wanted_title)
+OPTIONAL_TABLES=(wanted_title followed_sport)
 
 command -v sqlite3 >/dev/null || { echo "ERROR: sqlite3 is needed (apt install sqlite3)." >&2; exit 1; }
 [ -s "$BACKUP" ] || { echo "ERROR: no backup at $BACKUP." >&2; exit 1; }

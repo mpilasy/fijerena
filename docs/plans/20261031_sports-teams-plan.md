@@ -174,7 +174,7 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 |-------|------|--------|
 | 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | In progress |
 | 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | In progress |
-| 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | In progress |
+| 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | In progress |
 | 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Not started |
 | 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Not started |

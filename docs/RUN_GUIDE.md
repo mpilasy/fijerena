@@ -152,9 +152,10 @@ scripts/restore-app-data.sh <serial> backups/<name>.tar.gz   # force-stops the a
 ```
 
 A backup holds user data only: `shared_prefs`, `providers.db` (sources, profiles, guide sources,
-live sync) and `xtream_v2_user_data.db` — the `watch_state`, `favorite_state`, `wanted_title` and
-`sync_*` tables, copied out of `xtream_v2.db` on the host (`wanted_title` only when the device has it:
-it came with v26; a restore keeps the device's own Wanted list when the backup has none) (its `-wal` comes off the device with it, so uncommitted
+live sync) and `xtream_v2_user_data.db` — the `watch_state`, `favorite_state`, `wanted_title`,
+`followed_sport` and `sync_*` tables, copied out of `xtream_v2.db` on the host (`wanted_title` and
+`followed_sport` only when the device has them: they came with v26 and v29; a restore keeps the
+device's own rows when the backup has none) (its `-wal` comes off the device with it, so uncommitted
 pages aren't lost). The catalogue is left out; a sync downloads it again. Both scripts use `run-as`,
 so they work with debug builds.
 

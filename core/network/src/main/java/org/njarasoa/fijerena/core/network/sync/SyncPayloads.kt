@@ -7,6 +7,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WantedTitleEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
@@ -116,6 +117,53 @@ object SyncPayloads {
         companion object {
             fun of(e: WantedTitleEntity) =
                 Wanted(e.title, e.originalTitle, e.year, e.posterPath, e.addedAt, e.notifiedAt, e.seenAt, e.askedAt)
+        }
+    }
+
+    /**
+     * A team or league a profile follows; the key carries the profile, the item id, and the kind
+     * and source (`FollowedSportEntity.syncContentType`).
+     */
+    @Serializable
+    data class FollowedSport(
+        val league: String? = null,
+        val name: String,
+        val shortName: String? = null,
+        val altNames: List<String> = emptyList(),
+        val sport: String,
+        val logoUrl: String? = null,
+        val createdAt: Long,
+    ) {
+        fun toEntity(
+            profileId: String,
+            kind: String,
+            source: String,
+            itemId: String,
+        ) = FollowedSportEntity(
+            profileId,
+            kind,
+            source,
+            itemId,
+            league,
+            name,
+            shortName,
+            FollowedSportEntity.encodeAltNames(altNames),
+            sport,
+            logoUrl,
+            createdAt,
+        )
+
+        companion object {
+            fun of(e: FollowedSportEntity) =
+                FollowedSport(
+                    e.league,
+                    e.name,
+                    e.shortName,
+                    FollowedSportEntity.decodeAltNames(e.altNames),
+                    e.sport,
+                    e.logoUrl,
+                    e.createdAt,
+                )
         }
     }
 

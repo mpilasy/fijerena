@@ -4,7 +4,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
- * Queues every local change to favourites, watch state, the Wanted list and deletions for live sync, from inside
+ * Queues every local change to favourites, watch state, the Wanted list, followed teams and leagues
+ * and deletions for live sync, from inside
  * SQLite: triggers run in the writing transaction, so nothing is changed without being queued, and
  * they catch every write path — including indirect ones such as a TMDB group completion updating
  * sibling rows — without each call site having to remember. See
@@ -44,6 +45,16 @@ internal object XtreamSyncTriggers {
             "AND `kind` = '${SyncKind.WANTED}' AND `itemId` = NEW.`tmdbId` AND `contentType` = NEW.`contentType`; " +
             "INSERT INTO `sync_version` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`, `pending`) " +
             "VALUES (${SyncKind.WANTED_PROVIDER_ID}, NEW.`profileId`, '${SyncKind.WANTED}', NEW.`tmdbId`, NEW.`contentType`, $CLOCK, 1);"
+
+    // A followed team or league has no provider either; its kind and source share the content
+    // type slot: see SyncKind.FOLLOWED_SPORT and FollowedSportEntity.syncContentType.
+    private const val FOLLOWED_CONTENT_TYPE = "NEW.`kind` || ':' || NEW.`source`"
+    private val followedSport =
+        "DELETE FROM `sync_version` WHERE `providerId` = ${SyncKind.FOLLOWED_SPORT_PROVIDER_ID} AND `profileId` = NEW.`profileId` " +
+            "AND `kind` = '${SyncKind.FOLLOWED_SPORT}' AND `itemId` = NEW.`itemId` AND `contentType` = $FOLLOWED_CONTENT_TYPE; " +
+            "INSERT INTO `sync_version` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`, `pending`) " +
+            "VALUES (${SyncKind.FOLLOWED_SPORT_PROVIDER_ID}, NEW.`profileId`, '${SyncKind.FOLLOWED_SPORT}', NEW.`itemId`, " +
+            "$FOLLOWED_CONTENT_TYPE, $CLOCK, 1);"
 
     private val favoriteKind =
         "CASE NEW.`kind` WHEN '${FavoriteKind.CATEGORY}' THEN '${SyncKind.FAVORITE_CATEGORY}' ELSE '${SyncKind.FAVORITE_STREAM}' END"
@@ -90,6 +101,12 @@ internal object XtreamSyncTriggers {
                 "sync_wanted_title_$suffix",
                 "CREATE TRIGGER `sync_wanted_title_$suffix` AFTER $event ON `wanted_title` " +
                     "WHEN $NOT_APPLYING$wantedChanged BEGIN $TICK $wanted END",
+            )
+            createTrigger(
+                db,
+                "sync_followed_sport_$suffix",
+                "CREATE TRIGGER `sync_followed_sport_$suffix` AFTER $event ON `followed_sport` " +
+                    "WHEN $NOT_APPLYING BEGIN $TICK $followedSport END",
             )
         }
         createTrigger(

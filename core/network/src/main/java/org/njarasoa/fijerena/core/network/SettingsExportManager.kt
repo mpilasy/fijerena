@@ -20,6 +20,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WantedTitleEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -35,6 +36,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
  *   `xmltv.php` guide, which carries its login: the source's next login adds it again
  * - Favorites per provider (item ID, name, category, content type, TMDB id), active profile only
  * - The active profile's Wanted list
+ * - The teams and leagues the active profile follows
  * - Whether each provider is one of the active profile's sources
  *
  * NOT exported (for security/size reasons):
@@ -62,7 +64,10 @@ class SettingsExportManager(
         // 6: added a favourite's tmdbId and the active profile's Wanted list (`wanted`), both with
         // defaults, so a version 5 file restores unchanged and an older build ignores them
         // (the wanted titles plan).
-        private const val EXPORT_VERSION = 6
+        // 7: added the teams and leagues the active profile follows (`followedSports`), with a
+        // default, so a version 6 file restores unchanged and an older build ignores them (the
+        // sports teams plan).
+        private const val EXPORT_VERSION = 7
 
         internal val json =
             Json {
@@ -115,6 +120,22 @@ class SettingsExportManager(
         val providerFavoriteCategories: List<ProviderFavoriteCategories> = emptyList(),
         val providerWatchState: List<ProviderWatchState> = emptyList(),
         val wanted: List<ExportedWanted> = emptyList(),
+        val followedSports: List<ExportedFollowedSport> = emptyList(),
+    )
+
+    /** A team or league the profile follows; [kind] is `TEAM` or `LEAGUE`, [source] a sports source id. */
+    @Serializable
+    data class ExportedFollowedSport(
+        val kind: String,
+        val source: String,
+        val itemId: String,
+        val league: String? = null,
+        val name: String,
+        val shortName: String? = null,
+        val altNames: List<String> = emptyList(),
+        val sport: String,
+        val logoUrl: String? = null,
+        val createdAt: Long,
     )
 
     /** A title on the Wanted list; [contentType] is `MOVIES` or `TV_SHOWS`. */
@@ -295,7 +316,8 @@ class SettingsExportManager(
             settings.providerFavorites.isNotEmpty() ||
                 settings.providerFavoriteCategories.isNotEmpty() ||
                 settings.providerWatchState.isNotEmpty() ||
-                settings.wanted.isNotEmpty()
+                settings.wanted.isNotEmpty() ||
+                settings.followedSports.isNotEmpty()
     }
 
     suspend fun exportToJson(): String =
@@ -433,6 +455,23 @@ class SettingsExportManager(
                     ExportedWanted(it.contentType, it.tmdbId, it.title, it.originalTitle, it.year, it.posterPath, it.addedAt)
                 }
 
+            // Followed teams and leagues ride with favourites too (the sports teams plan).
+            val followedSports =
+                XtreamDatabase.getInstance(context).followedSportDao().getAll(profileId).map {
+                    ExportedFollowedSport(
+                        it.kind,
+                        it.source,
+                        it.itemId,
+                        it.league,
+                        it.name,
+                        it.shortName,
+                        FollowedSportEntity.decodeAltNames(it.altNames),
+                        it.sport,
+                        it.logoUrl,
+                        it.createdAt,
+                    )
+                }
+
             val exported =
                 ExportedSettings(
                     global = global,
@@ -442,6 +481,7 @@ class SettingsExportManager(
                     providerWatchState = providerWatchState,
                     providerFavoriteCategories = providerFavoriteCategories,
                     wanted = wanted,
+                    followedSports = followedSports,
                 )
 
             json.encodeToString(exported)
@@ -840,6 +880,26 @@ class SettingsExportManager(
                                 w.year,
                                 w.posterPath,
                                 w.addedAt,
+                            ),
+                        )
+                    }
+                    // Followed teams and leagues too; one already followed is kept as is.
+                    val followedDao = XtreamDatabase.getInstance(context).followedSportDao()
+                    for (f in exported.followedSports) {
+                        if (followedDao.isFollowed(profileId, f.kind, f.source, f.itemId)) continue
+                        followedDao.upsertClearingTombstone(
+                            FollowedSportEntity(
+                                profileId,
+                                f.kind,
+                                f.source,
+                                f.itemId,
+                                f.league,
+                                f.name,
+                                f.shortName,
+                                FollowedSportEntity.encodeAltNames(f.altNames),
+                                f.sport,
+                                f.logoUrl,
+                                f.createdAt,
                             ),
                         )
                     }

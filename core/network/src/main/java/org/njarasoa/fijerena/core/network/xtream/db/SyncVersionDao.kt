@@ -121,6 +121,12 @@ interface SyncVersionDao {
     suspend fun seedWanted()
 
     @Query(
+        "INSERT OR IGNORE INTO sync_version SELECT ${SyncKind.FOLLOWED_SPORT_PROVIDER_ID}, profileId, " +
+            "'${SyncKind.FOLLOWED_SPORT}', itemId, kind || ':' || source, createdAt, 1 FROM followed_sport",
+    )
+    suspend fun seedFollowedSports()
+
+    @Query(
         "INSERT OR IGNORE INTO sync_version SELECT providerId, profileId, kind, itemId, contentType, deletedAt, 1 FROM sync_tombstone",
     )
     suspend fun seedTombstones()

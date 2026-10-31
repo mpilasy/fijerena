@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -108,6 +109,7 @@ class SyncApplier(
             SyncKind.FAVORITE_STREAM,
             SyncKind.FAVORITE_CATEGORY,
             SyncKind.WANTED,
+            SyncKind.FOLLOWED_SPORT,
             SyncKind.WATCH,
             SyncKind.NOW_PLAYING,
             SyncKind.REMOTE_COMMAND,
@@ -232,6 +234,7 @@ class SyncApplier(
         return when (key.kind) {
             SyncKind.WATCH, SyncKind.WATCH_CLEAR, SyncKind.FAVORITE_STREAM, SyncKind.FAVORITE_CATEGORY -> applyUserData(record)
             SyncKind.WANTED -> applyWanted(record)
+            SyncKind.FOLLOWED_SPORT -> applyFollowedSport(record)
             SyncKind.PROFILE -> applyProfile(record)
             SyncKind.PROVIDER -> applyProvider(record)
             SyncKind.EPG_SOURCE -> applyEpgSource(record)
@@ -467,6 +470,43 @@ class SyncApplier(
                 )
             } else {
                 wanted.delete(key.profileKey, key.contentType, key.itemId)
+                xtreamDb.syncTombstoneDao().upsert(
+                    SyncTombstoneEntity(noProvider, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc),
+                )
+            }
+            versions.upsert(
+                SyncVersionEntity(noProvider, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc, pending = false),
+            )
+            versions.setApplying(false)
+        }
+        return Outcome.Applied
+    }
+
+    /**
+     * A followed team or league (xtream_v2.db, no provider: see [SyncKind.FOLLOWED_SPORT_PROVIDER_ID]).
+     * Screens observe the table, so nothing else is told. A content type that is not
+     * `<kind>:<source>` is skipped.
+     */
+    private suspend fun applyFollowedSport(record: SyncRecord): Outcome {
+        val key = record.key
+        val (kind, source) = FollowedSportEntity.parseSyncContentType(key.contentType) ?: return Outcome.Skipped
+        val noProvider = SyncKind.FOLLOWED_SPORT_PROVIDER_ID
+        val local =
+            SyncMerge.Local(
+                version = versions.get(noProvider, key.profileKey, key.kind, key.itemId, key.contentType)?.hlc,
+                tombstone = xtreamDb.syncTombstoneDao().get(noProvider, key.profileKey, key.kind, key.itemId, key.contentType)?.deletedAt,
+                profile = profilePresence(key.profileKey),
+            )
+        val resolution = SyncMerge.resolve(record, local)
+        if (resolution !is Resolution.Upsert && resolution !is Resolution.Delete) return skippedOrDeferred(resolution)
+        val followed = xtreamDb.followedSportDao()
+        xtreamDb.withTransaction {
+            versions.setApplying(true)
+            if (resolution is Resolution.Upsert) {
+                val payload = SyncPayloads.decode<SyncPayloads.FollowedSport>(record.payload)
+                followed.upsertClearingTombstone(payload.toEntity(key.profileKey, kind, source, key.itemId))
+            } else {
+                followed.delete(key.profileKey, kind, source, key.itemId)
                 xtreamDb.syncTombstoneDao().upsert(
                     SyncTombstoneEntity(noProvider, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc),
                 )

@@ -232,6 +232,7 @@ class ProfileRepository(
                         xtreamDb.watchStateDao().deleteProfile(id)
                         xtreamDb.favoriteStateDao().deleteProfile(id)
                         xtreamDb.wantedTitleDao().deleteProfile(id)
+                        xtreamDb.followedSportDao().deleteProfile(id)
                         // The profile's own tombstone (below) covers its favourite and history
                         // ones, and anything of it still waiting to be sent.
                         xtreamDb.syncTombstoneDao().deleteForProfile(id)

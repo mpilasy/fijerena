@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
@@ -70,7 +71,7 @@ class LocalRecords(
         val providersById = HashMap<Long, ProviderEntity?>()
         for (version in versions.getPending(limit - out.size)) {
             val provider =
-                if (version.kind == SyncKind.WANTED) {
+                if (version.kind == SyncKind.WANTED || version.kind == SyncKind.FOLLOWED_SPORT) {
                     null
                 } else {
                     providersById.getOrPut(version.providerId) { sync.providerById(version.providerId) }
@@ -105,6 +106,7 @@ class LocalRecords(
             seedWatch()
             seedFavorites()
             seedWanted()
+            seedFollowedSports()
             seedTombstones()
         }
         sync.seedProviders()
@@ -218,6 +220,7 @@ class LocalRecords(
         provider: ProviderEntity?,
     ): SyncRecord? {
         if (v.kind == SyncKind.WANTED) return wantedRecord(v)
+        if (v.kind == SyncKind.FOLLOWED_SPORT) return followedSportRecord(v)
         provider ?: return null
         // Jellyfin keeps favourites and history itself; they never go through sync.
         if (provider.type == "JELLYFIN") return null
@@ -258,6 +261,21 @@ class LocalRecords(
             SyncRecord(key, v.hlc, deleted = true)
         } else {
             SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Wanted.of(row)))
+        }
+    }
+
+    /**
+     * A followed team or league: no provider, so its key's provider slot stays empty. Null (the
+     * version is dropped) when its content type is not `<kind>:<source>`.
+     */
+    private suspend fun followedSportRecord(v: SyncVersionEntity): SyncRecord? {
+        val (kind, source) = FollowedSportEntity.parseSyncContentType(v.contentType) ?: return null
+        val key = SyncKey(v.profileId, "", SyncKind.FOLLOWED_SPORT, v.itemId, v.contentType)
+        val row = xtreamDb.followedSportDao().get(v.profileId, kind, source, v.itemId)
+        return if (row == null) {
+            SyncRecord(key, v.hlc, deleted = true)
+        } else {
+            SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.FollowedSport.of(row)))
         }
     }
 }
