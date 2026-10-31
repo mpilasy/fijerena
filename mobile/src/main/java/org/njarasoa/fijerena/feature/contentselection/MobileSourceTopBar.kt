@@ -77,6 +77,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
+import org.njarasoa.fijerena.ui.components.HideMobileClock
+import org.njarasoa.fijerena.ui.components.LocalMobileClock
+import org.njarasoa.fijerena.ui.components.MobileClockText
 import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -89,9 +92,10 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * line for all the profile's sources (O3 of docs/plans/20261012_multi-source-search-history-plan.md:
  * "Updated 2 hours ago", "Updating 1 of 3…", "1 failed"), which opens a sheet with each source's
  * status and reason; nothing when no source syncs. Then Search the guide ([onSearchGuide], Live TV
- * only, once the guide index is ready) and the section's Search ([onSearch]). Last, at the far right
- * (left of the clock when it shows), the profile avatar: [onProfile] opens the profile menu (switch
- * profile, Settings, Browse entries).
+ * only, once the guide index is ready) and the section's Search ([onSearch]). Last, at the far right,
+ * the profile avatar: [onProfile] opens the profile menu (switch profile, Settings, Browse entries).
+ * The clock (when Show Clock is on) leaves its top-right corner here for the avatar and sits first,
+ * left of the actions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +119,11 @@ fun MobileSourceTopBar(
     val epgIndexState by remember { EpgIndexer.getInstance(context.applicationContext).state }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
+    // The avatar takes the top-right corner: the screen clock moves into the bar, before the actions.
+    val clock = LocalMobileClock.current
+    val clockInBar = clock != null && !clock.off
+    if (clockInBar) HideMobileClock()
+
     TopAppBar(
         windowInsets = mobileClockTopBarInsets(),
         title = {
@@ -135,6 +144,7 @@ fun MobileSourceTopBar(
         // The title plus the summary line's 48 dp touch row, whatever the status.
         expandedHeight = MobileDimensions.homeTopBarHeight,
         actions = {
+            if (clockInBar) MobileClockText(modifier = Modifier.padding(horizontal = CinemaSpacing.sm))
             if (onSearchGuide != null && hasEpgData) {
                 IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
             }
