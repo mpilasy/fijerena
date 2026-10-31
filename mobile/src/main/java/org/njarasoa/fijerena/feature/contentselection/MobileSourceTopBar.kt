@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -77,9 +78,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
-import org.njarasoa.fijerena.ui.components.HideMobileClock
-import org.njarasoa.fijerena.ui.components.LocalMobileClock
-import org.njarasoa.fijerena.ui.components.MobileClockText
 import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -91,11 +89,10 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * The top bar of every tab root on the phone: no back arrow; [title] (the section's name) over one
  * line for all the profile's sources (O3 of docs/plans/20261012_multi-source-search-history-plan.md:
  * "Updated 2 hours ago", "Updating 1 of 3…", "1 failed"), which opens a sheet with each source's
- * status and reason; nothing when no source syncs. Then Search the guide ([onSearchGuide], Live TV
- * only, once the guide index is ready) and the section's Search ([onSearch]). Last, at the far right,
- * the profile avatar: [onProfile] opens the profile menu (switch profile, Settings, Browse entries).
- * The clock (when Show Clock is on) leaves its top-right corner here for the avatar and sits first,
- * left of the actions.
+ * status and reason; nothing when no source syncs. Before the title, the profile avatar:
+ * [onProfile] opens the profile menu (switch profile, Settings, Browse entries); the clock keeps its
+ * top-right corner, as on every screen. At the right, Search the guide ([onSearchGuide], Live TV only,
+ * once the guide index is ready) and the section's Search ([onSearch]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,65 +116,72 @@ fun MobileSourceTopBar(
     val epgIndexState by remember { EpgIndexer.getInstance(context.applicationContext).state }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
-    // The avatar takes the top-right corner: the screen clock moves into the bar, before the actions.
-    val clock = LocalMobileClock.current
-    val clockInBar = clock != null && !clock.off
-    if (clockInBar) HideMobileClock()
-
     TopAppBar(
         windowInsets = mobileClockTopBarInsets(),
         title = {
             Column {
-                CinemaText(
-                    text = title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                )
+                // The avatar leads the title line, in the same place on every tab; the clock keeps the
+                // top-right corner it has on every screen.
+                // One row: the avatar, the title, then the icons, level with the clock.
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    activeProfile?.let { profile -> ProfileButton(profile.name, profile.colorIndex, onProfile) }
+                    CinemaText(
+                        text = title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (onSearchGuide != null && hasEpgData) {
+                        IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
+                    }
+                    if (onSearch != null) {
+                        IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
+                    }
+                }
                 MobileSyncSummaryLine(
                     summary = syncSummary,
                     onClick = { showSourcesSheet = true },
+                    // Under the title's text, not under the avatar.
+                    modifier = Modifier.padding(start = if (activeProfile != null) MobileDimensions.minTouchTarget else CinemaSpacing.none),
                 )
             }
         },
         // The title plus the summary line's 48 dp touch row, whatever the status.
         expandedHeight = MobileDimensions.homeTopBarHeight,
-        actions = {
-            if (clockInBar) MobileClockText(modifier = Modifier.padding(horizontal = CinemaSpacing.sm))
-            if (onSearchGuide != null && hasEpgData) {
-                IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
-            }
-            if (onSearch != null) {
-                IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
-            }
-            // The profile menu's way in, on every tab root.
-            activeProfile?.let { profile ->
-                val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
-                // An icon action like the others: the label in a tooltip on long-press.
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { CinemaText(switchLabel, role = TextRole.BodySmall, tone = TextTone.Inherit) } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onProfile,
-                        modifier = Modifier.semantics { contentDescription = switchLabel },
-                    ) {
-                        ProfileSettingsAvatar(
-                            name = profile.name,
-                            colorIndex = profile.colorIndex,
-                            size = MobileDimensions.iconLarge,
-                            fontSize = textStyleOf(TextRole.Label).fontSize,
-                        )
-                    }
-                }
-            }
-        },
     )
 
     if (showSourcesSheet) {
         MobileSourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
+    }
+}
+
+/** The profile menu's way in, on every tab root: the avatar, its label in a tooltip on long-press. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileButton(
+    name: String,
+    colorIndex: Int,
+    onClick: () -> Unit,
+) {
+    val switchLabel = stringResource(R.string.profile_switch_description, name)
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { CinemaText(switchLabel, role = TextRole.BodySmall, tone = TextTone.Inherit) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(MobileDimensions.minTouchTarget).semantics { contentDescription = switchLabel },
+        ) {
+            ProfileSettingsAvatar(
+                name = name,
+                colorIndex = colorIndex,
+                size = MobileDimensions.iconLarge,
+                fontSize = textStyleOf(TextRole.Label).fontSize,
+            )
+        }
     }
 }
 

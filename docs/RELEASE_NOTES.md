@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Profile before the title:** on the phone, the profile avatar now leads each tab's title, with the guide and search icons on the same line, and the clock keeps its top-right corner as on every screen. Neither moves from tab to tab. Phone.
+
 ## Version: 0.9.20261031225103
 
 - **Profile at the far right:** on the phone, the profile avatar is the last icon at the top right of each tab; the clock moves into the top bar, before the icons. Phone.
