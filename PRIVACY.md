@@ -38,8 +38,9 @@ says what the app stores, what it sends and to whom.
   sent to TMDB. If you enter one (Settings → Admin → Sources & Guide → Film and Series Details), the app
   asks [The Movie Database](https://www.themoviedb.org) for artwork and details of films and
   shows, sending your key and the TMDB id of the title you open. Search also sends TMDB the text
-  you type (three characters or more), to find films and shows your sources don't have; a child
-  profile never does. With TMDB Charts on (Settings → Admin → Sources & Guide, on by default), the
+  you type (three characters or more), to find films and shows your sources don't have, and its
+  People type sends what you type there (two characters or more) to find people, films and shows
+  on TMDB; a child profile never does either. With TMDB Charts on (Settings → Admin → Sources & Guide, on by default), the
   app also asks TMDB for its public chart pages (trending, popular, top rated), sending only your
   key; which of those titles your sources have is worked out on the device. For an episode's
   cast, the app asks TMDB for that episode's season, sending the show's TMDB id and the season

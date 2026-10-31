@@ -145,6 +145,7 @@ EpgBrowser ─→ CategoryList(LIVE_TV, category, channel)   Watch
 AddProvider(editId) ─→ EpgManagement(editId)             Guide sources row (source with live channels): opens on that source's group
 
 Search ─→ TmdbTitle                        a "Not in your sources" result (wanted titles plan)
+Search ─→ Person                           a person in the People type's results (people search plan)
 MovieDetails | EpisodeSelection | TmdbTitle ─→ Person      a Cast tab's card or crew name (cast tab plan); an actor card in an episode's cast (episode cast plan, EC-D1)
 Person ─→ MovieDetails | EpisodeSelection | TmdbTitle      a card: its source copy, else (switch on) its TMDB page
 Person ─→ EpisodeSelection(initialEpisodeId | initialSeason)   a show card of a source: a line of the person's appearances, also for a role of one episode (TV `ShowAppearancesOverlay`, phone `ShowAppearancesSheet`); an episode the source lacks opens on its season, with a toast (episode cast plan, EC-D2, EC-D3)

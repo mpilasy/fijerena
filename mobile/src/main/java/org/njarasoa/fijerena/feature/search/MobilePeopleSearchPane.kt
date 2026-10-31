@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CardColors
@@ -88,6 +90,9 @@ internal fun MobilePeopleSearchPane(
     val context = LocalContext.current
     val viewModel: PeopleSearchViewModel = viewModel(factory = remember { PeopleSearchViewModel.Factory(context.applicationContext) })
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Here, not in the list: the list leaves while results load, and Back from a result must find
+    // the place the user left (saved with the screen).
+    val listState = rememberLazyListState()
     // The type shown with text it has not searched: at once. Then once typing stops.
     LaunchedEffect(Unit) { viewModel.search(query) }
     LaunchedEffect(query) {
@@ -164,6 +169,7 @@ internal fun MobilePeopleSearchPane(
                     )
                 } else {
                     PeopleResultsList(
+                        listState = listState,
                         results = shown.results,
                         wishlistKeys = wishlistKeys,
                         onPersonSelected = onPersonSelected,
@@ -179,6 +185,7 @@ internal fun MobilePeopleSearchPane(
 
 @Composable
 private fun PeopleResultsList(
+    listState: LazyListState,
     results: PeopleSearchResults,
     wishlistKeys: Set<WantedTitles.Key>,
     onPersonSelected: (tmdbId: String, name: String) -> Unit,
@@ -189,6 +196,7 @@ private fun PeopleResultsList(
     // Built once for the list, as the catalogue's results do.
     val cardColors = CardDefaults.cardColors(containerColor = CinemaTheme.colors.surface)
     LazyColumn(
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         contentPadding = PaddingValues(bottom = Spacing.md + LocalDockInset.current),
     ) {

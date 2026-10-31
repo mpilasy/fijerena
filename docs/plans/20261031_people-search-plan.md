@@ -1,6 +1,6 @@
 # People search
 
-**Status:** In progress 2026-10-31.
+**Status:** Done 2026-10-31, walked on both emulators.
 
 ## Goal
 
@@ -27,12 +27,12 @@ and find films and shows by name on TMDB, also ones no source has.
   one a source has opens there; one no source has is a TMDB-only card (Not available mark) that
   opens its TMDB page (Add to Wishlist). Titles show their list title (original name in Latin
   script, else English).
-- A child profile: no People type (PS-D4). The profile's filters apply to the matched titles.
+- A child profile: no People type (PS-D4); a Live TV section's search neither (TMDB has no channels). The profile's filters apply to the matched titles.
 - No TMDB key: the type is not shown. A failed call: "Couldn't reach TMDB" with Retry.
 
 ## Phases
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | Data (search/multi, matching), the search type and results on TV and phone, tests | In progress |
-| 2 | Checks with Android Lint, emulator walks, docs, release | Not started |
+| 1 | Data (search/multi, matching), the search type and results on TV and phone, tests | Done |
+| 2 | Checks with Android Lint, emulator walks, docs, release | Done |
