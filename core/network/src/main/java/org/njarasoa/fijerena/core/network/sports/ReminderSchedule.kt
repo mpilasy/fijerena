@@ -45,6 +45,49 @@ object ReminderSchedule {
         return maxOf(nowMs, (startEpochSec - LEAD_SEC) * 1000)
     }
 
+    /** How the alarm of a reminder is set ([alarm]). */
+    sealed interface Alarm {
+        /** An exact alarm at [atMs] (`setExactAndAllowWhileIdle`). */
+        data class Exact(
+            val atMs: Long,
+        ) : Alarm
+
+        /** An alarm that rings between [startMs] and [startMs] + [lengthMs] (`setWindow`). */
+        data class Window(
+            val startMs: Long,
+            val lengthMs: Long,
+        ) : Alarm
+
+        /** An alarm set for now (`setAndAllowWhileIdle`): Android gives it no delay window. */
+        data class Now(
+            val atMs: Long,
+        ) : Alarm
+    }
+
+    /** Without exact alarms, the alarm's window opens this long before the game starts. */
+    const val WINDOW_LEAD_MS = 20 * 60_000L
+
+    /** Without exact alarms, the alarm's window is this long: the shortest window Android allows. */
+    const val WINDOW_MS = 10 * 60_000L
+
+    /**
+     * How the alarm that rings at [triggerAtMs] ([triggerAtMs] of the function above) for a game
+     * starting at [startEpochSec] is set at [nowMs]. With [exactAllowed], an exact alarm. Else never
+     * a plain inexact alarm, which Android can deliver up to an hour late: a 10-minute window that
+     * opens 20 minutes before the start, so the reminder rings 10 to 20 minutes before. When that
+     * window has opened already, the alarm is set for now.
+     */
+    fun alarm(
+        triggerAtMs: Long,
+        startEpochSec: Long,
+        nowMs: Long,
+        exactAllowed: Boolean,
+    ): Alarm {
+        if (exactAllowed) return Alarm.Exact(triggerAtMs)
+        val windowStartMs = startEpochSec * 1000 - WINDOW_LEAD_MS
+        return if (windowStartMs > nowMs) Alarm.Window(windowStartMs, WINDOW_MS) else Alarm.Now(nowMs)
+    }
+
     /**
      * What the alarm of a reminder stored for [storedStartSec] does at [nowMs], with the game as
      * read again ([reread]; null when it could not be read, then the stored time is trusted).
@@ -74,7 +117,8 @@ object ReminderSchedule {
     // An alarm in Doze can ring a few minutes late: it still rings while the game is this young.
     private const val LATE_RING_MS = 5 * 60_000L
 
-    // An alarm that fires a little early (inexact alarms) still rings: no new alarm for 30 s.
+    // An alarm that fires a little early (inexact alarms) still rings: no new alarm for 30 s. An
+    // alarm in its window ([alarm], 10 to 20 minutes before the start) rings: the game kept its time.
     private const val EARLY_SLACK_MS = 30_000L
 
     private val OFF_STATES = setOf(GameState.CANCELLED, GameState.POSTPONED, GameState.FINISHED)

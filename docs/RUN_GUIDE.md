@@ -404,8 +404,11 @@ receiver's KDoc.
 
 A game reminder is an `AlarmManager` alarm 10 minutes before the game (`GameReminders`,
 `core:network` sports package). The permissions come from the `core:network` manifest:
-`SCHEDULE_EXACT_ALARM` (the alarm rings on time only when the user allows "Alarms & reminders" for
-the app, Android 12 and later; else it can ring a few minutes late in Doze), `POST_NOTIFICATIONS`
+`USE_EXACT_ALARM` (Android 13 and later, granted at install) and `SCHEDULE_EXACT_ALARM` (Android 12
+and 12L only, granted at install; the user can turn off "Alarms & reminders"), so the alarm is exact
+on every supported version (Android 11 needs no permission). When exact alarms are not allowed, the
+alarm has a 10-minute window that opens 20 minutes before the game, never a plain inexact alarm,
+which Android can deliver up to an hour late; `POST_NOTIFICATIONS`
 (asked when the first bell is set, Android 13 and later) and `RECEIVE_BOOT_COMPLETED`. Two
 receivers: `GameReminderReceiver` (the alarm, not exported) and `GameReminderRescheduleReceiver`
 (boot, app update, clock and time zone changes, exact-alarm permission changes), which is off in the
@@ -414,8 +417,12 @@ nothing. On TV, a reminder shows as a banner at the top while the app is on scre
 notification (in the notification panel only).
 
 ```bash
-# The app's alarms (one per reminder; the intent data is fijerena-reminder://game/<profile>/<source>/<game>)
+# The app's alarms (one per reminder; the intent data is fijerena-reminder://game/<profile>/<source>/<game>).
+# An exact alarm shows window=0; window=+10m0s0ms means exact alarms are not allowed (see above);
+# window=+1h0m0s0ms is the old inexact alarm, which can ring at the game's start or later.
 adb -s <device-id> shell dumpsys alarm | grep -A 3 '<pkg>'
+# Whether the app may set exact alarms (USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM granted)
+adb -s <device-id> shell dumpsys package <pkg> | grep -i exact_alarm
 # Whether the reschedule receiver is on
 adb -s <device-id> shell pm dump <pkg> | grep -A 2 GameReminderRescheduleReceiver
 ```

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -31,6 +32,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -179,6 +181,10 @@ fun TvGameReminderBanner(
     Row(
         modifier =
             modifier
+                // The TV Surface's Box passes its minimum size on to its content: without this, the
+                // bar would fill the whole screen. The bar keeps its own size, at the top centre.
+                .wrapContentSize(Alignment.TopCenter)
+                .testTag(REMINDER_BANNER_TAG)
                 .padding(top = Spacing.tvSafeMarginVertical)
                 .widthIn(max = TvDimensions.dialogWidthLarge)
                 .background(CinemaTheme.colors.surface, shape)
@@ -228,7 +234,8 @@ fun TvGameReminderBanner(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!state.holdsFocus) {
+            // Only with Watch: with Dismiss alone there is nothing to choose, and the banner goes by itself.
+            if (hasChannel && !state.holdsFocus) {
                 CinemaText(text = stringResource(R.string.game_reminder_banner_hint), role = TextRole.Caption, tone = TextTone.Tertiary)
             }
         }
@@ -249,3 +256,6 @@ fun TvGameReminderBanner(
         )
     }
 }
+
+/** The banner's test tag: its bar, without the screen around it. */
+internal const val REMINDER_BANNER_TAG = "game_reminder_banner"

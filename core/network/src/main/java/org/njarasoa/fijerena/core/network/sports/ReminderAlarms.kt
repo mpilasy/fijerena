@@ -26,10 +26,12 @@ interface ReminderAlarms {
 
 /**
  * [ReminderAlarms] on `AlarmManager`: `setExactAndAllowWhileIdle` when the app may set exact
- * alarms (Android 12 and later: the user grants "Alarms & reminders"), else
- * `setAndAllowWhileIdle`, which can ring a few minutes late in Doze. One alarm per reminder, told
- * apart by its intent's data URI. The alarm intent carries the game's names and start, so
- * [GameReminderReceiver] can ring without the database (crash-loop safe mode).
+ * alarms, else a 10-minute window that rings 10 to 20 minutes before the game
+ * ([ReminderSchedule.alarm]). The app may set exact alarms on every supported Android version
+ * (see the `core:network` manifest), unless the user turns off "Alarms & reminders" on Android 12
+ * or 12L. One alarm per reminder, told apart by its intent's data URI. The alarm intent carries the
+ * game's names and start, so [GameReminderReceiver] can ring without the database (crash-loop safe
+ * mode).
  */
 class AndroidReminderAlarms(
     context: Context,
@@ -42,10 +44,19 @@ class AndroidReminderAlarms(
         atMs: Long,
     ) {
         val pending = pendingIntent(reminder, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
-        if (canScheduleExact(alarmManager)) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMs, pending)
-        } else {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMs, pending)
+        val alarm = ReminderSchedule.alarm(atMs, reminder.startEpoch, System.currentTimeMillis(), canScheduleExact(alarmManager))
+        when (alarm) {
+            is ReminderSchedule.Alarm.Exact -> {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.atMs, pending)
+            }
+
+            is ReminderSchedule.Alarm.Window -> {
+                alarmManager.setWindow(AlarmManager.RTC_WAKEUP, alarm.startMs, alarm.lengthMs, pending)
+            }
+
+            is ReminderSchedule.Alarm.Now -> {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.atMs, pending)
+            }
         }
     }
 

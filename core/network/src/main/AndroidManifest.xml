@@ -4,11 +4,22 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- EpgSyncWorker waits on ConnectivityManager.activeNetwork before starting a sync. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Game reminders (GameReminders): the alarm rings on time when the user allows exact alarms
-         (Android 12 and later), else a few minutes late in Doze; the notification needs
-         POST_NOTIFICATIONS (Android 13 and later), asked when the first bell is set; the alarms
-         are set again after a reboot. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Game reminders (GameReminders): the alarm rings 10 minutes before the game only as an exact
+         alarm. The rules for this app (minSdk 30, targetSdk 35):
+         - Android 11: exact alarms need no permission.
+         - Android 12 and 12L: SCHEDULE_EXACT_ALARM, granted at install; the user can turn it off
+           ("Alarms & reminders"), then the alarm rings 10 to 20 minutes before the game.
+         - Android 13 and later: USE_EXACT_ALARM, granted at install and the user cannot turn it off.
+           SCHEDULE_EXACT_ALARM is not used there: Android 14 and later deny it by default to apps
+           that target Android 13 or later. Google Play allows USE_EXACT_ALARM only for alarm and
+           calendar apps; this app is not distributed on Google Play, and reminders are set by the
+           user.
+         The notification needs POST_NOTIFICATIONS (Android 13 and later), asked when the first bell
+         is set; the alarms are set again after a reboot. -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 

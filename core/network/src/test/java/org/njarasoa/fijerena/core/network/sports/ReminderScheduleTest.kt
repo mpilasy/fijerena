@@ -40,6 +40,37 @@ class ReminderScheduleTest {
     }
 
     @Test
+    fun `with exact alarms the alarm is exact at its trigger`() {
+        val now = startMs - 3_600_000
+        assertEquals(
+            ReminderSchedule.Alarm.Exact(startMs - 600_000),
+            ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = true),
+        )
+    }
+
+    @Test
+    fun `without exact alarms the alarm rings in a 10-minute window 10 to 20 minutes before the start`() {
+        val now = startMs - 3 * 3_600_000
+        assertEquals(
+            ReminderSchedule.Alarm.Window(startMs - 1_200_000, 600_000),
+            ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = false),
+        )
+    }
+
+    @Test
+    fun `without exact alarms an alarm whose window has opened is set for now`() {
+        val now = startMs - 900_000
+        assertEquals(ReminderSchedule.Alarm.Now(now), ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = false))
+        val late = startMs - 120_000
+        assertEquals(ReminderSchedule.Alarm.Now(late), ReminderSchedule.alarm(late, start, late, exactAllowed = false))
+    }
+
+    @Test
+    fun `an alarm that rings early in its window rings`() {
+        assertEquals(ReminderSchedule.Decision.Ring(start), ReminderSchedule.decide(start, game(), startMs - 1_200_000))
+    }
+
+    @Test
     fun `an alarm whose game kept its time rings`() {
         val decision = ReminderSchedule.decide(start, game(), startMs - 600_000)
         assertEquals(ReminderSchedule.Decision.Ring(start), decision)
