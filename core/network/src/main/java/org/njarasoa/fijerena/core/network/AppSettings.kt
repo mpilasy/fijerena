@@ -898,7 +898,7 @@ class AppSettings(
         }.distinctUntilChanged()
 
     /**
-     * The sports teams, leagues and games (docs/plans/20261031_sports-teams-plan.md, SP-D9): the
+     * The sports teams, leagues and games (the sports teams plan, SP-D9): the
      * data comes from sports APIs the project does not control. This device's, set in Admin: not
      * per profile, not synced, not exported. On by default. Off, no sports API is called.
      */

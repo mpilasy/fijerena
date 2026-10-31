@@ -1,6 +1,6 @@
 # Sports teams
 
-**Status:** In progress since 2026-10-31: Phases 1–4 and 6b done; Phase 5, Phase 6 and the core of Phase 7 built; left: the emulator walks (Phases 5–7) and Phase 8. Phase 6b cut the feature to its core (SP-D15); the Data sources and Design sections below describe the cut design.
+**Status:** Done 2026-10-31, released in 0.9; walked on both emulators. Known limits: a guide that names only the competition finds no game; women's and youth games with the same club names can match; a team search may put a team named like the query ("euro" → Europa Travels Ltd) before the league.
 
 ## Goal
 
@@ -200,11 +200,11 @@ parser.
 | 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | Done 2026-10-31: 26 competitions, 743 rows, 214 countries. Removed in Phase 6b (SP-D15) |
 | 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |
-| 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Built 2026-10-31: Teams type (switch on, not a child, ALL or Live TV search), `Screen.SportsTeam`, `Screen.SportsLeague`, game sheet (TV overlay, phone bottom sheet). Left: emulator walks with Phase 6 |
-| 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Built 2026-10-31: TV rail item and phone tab (after the first follow) on `Screen.SportsTab`, Upcoming Games row (48 h, 10 games, read again at most every 15 min), game and team bells. Left: emulator walks, match misses |
+| 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Done 2026-10-31, walked on both emulators |
+| 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Done 2026-10-31, walked on both emulators |
 | 6b | Cut to the core (SP-D15): remove the UEFA, FIFA, World Aquatics clients, the season table and its check, country detection; channel-name (PPV) match; game sheet shows only matched channels and programmes, else "Not found on your channels"; rewrite this plan's Data sources and Design to match | Done 2026-10-31: UEFA, FIFA, World Aquatics clients and parsers, the season table and its check, `ProfileCountries`, `ChannelCountries` and their two DAO queries removed; `SportsSource` keeps ESPN, NHL, MLB; `GameChannelMatcher` step 3 matches team names in channel names, with `ChannelNameDates`; a game shows only matched channels, else "Not found on your channels"; `TeamNames` keeps `sameGame` for NHL, MLB and the Sports section, without its cross-source alias table |
-| 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Core done 2026-10-31: `game_reminder` (v30, not synced), `GameReminders`, alarms, reschedule receiver (on only while a reminder exists), phone notification, TV banner (never takes focus by itself; Menu moves to it; closes after 30 s). Left: the bells (Phase 6) and emulator walks |
-| 8 | Android Lint, docs (FEATURES, NAVIGATION_GUIDE, RUN_GUIDE, RELEASE_NOTES, a CONTRIBUTING rule for the sports sources), release | Not started; the docs and the CONTRIBUTING rule follow each phase since Phase 6b |
+| 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Done 2026-10-31, walked on both emulators |
+| 8 | Android Lint, docs (FEATURES, NAVIGATION_GUIDE, RUN_GUIDE, RELEASE_NOTES, a CONTRIBUTING rule for the sports sources), release | Done 2026-10-31, walked on both emulators |
 
 ## Not in this plan
 
