@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: 0.8.20261031023845
+
+- **Guest stars apart:** an episode's details show its **Guest Stars** in one row and the **Series Cast** in another, each with its own "+N more". TV and phone.
+
 ## Version: 0.8.20261031021156
 
 - **An actor's episode opens its page on the phone:** picking an episode from an actor's list now opens that episode's own page (plot, cast, Play). Back shows the show's list on it. Phone.
