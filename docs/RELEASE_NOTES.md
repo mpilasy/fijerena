@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: 0.8.20261031000446
+
+- **Actor pages saved before the episode lists:** an actor's page opened before the last update was kept for up to 7 days without the episode counts, so its show cards opened the show instead of the actor's episodes. Such pages are now read again. TV and phone.
+
 ## Version: 0.8.20261030231741
 
 - **Who is in an episode:** an episode's details show its cast: the episode's guest stars first, then the show's regular cast, with photos. A card opens the actor's page. TV and phone.
