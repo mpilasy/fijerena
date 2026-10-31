@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
@@ -1581,6 +1582,9 @@ private fun SeasonTabs(
         contentPadding = PaddingValues(horizontal = CinemaSpacing.md),
         modifier =
             Modifier
+                // Above the episode cards: moved down by the shift, it overlaps the items after it,
+                // which the list draws later, so without this they covered the pinned row.
+                .zIndex(1f)
                 .offset { IntOffset(0, pinShift()) }
                 .fillMaxWidth()
                 .layout { measurable, constraints ->
