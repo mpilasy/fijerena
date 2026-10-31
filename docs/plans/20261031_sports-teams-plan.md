@@ -105,7 +105,8 @@ their name forms, start time, competition), its broadcasters (above), the profil
    ↔ "C+ Sport", "beIN Sports 1" ↔ "beIN 1", "SuperSport Premier League" ↔ "SS Premier League"…;
    a channel's country prefix ("FR:", "UK|") must agree with the broadcaster's country when both
    are known). On those channels, a programme that
-   starts between 60 min before and 30 min after the game and whose title or description has a
+   starts between 60 min before and 30 min after the game, or is on at the start and began up to
+   3 h before (pre-match shows such as Sky's "Live PL") and whose title or description has a
    name of either team.
 2. **Guide programme anywhere.** An FTS search for each team's names in the same window
    (`searchByTitleFts`, the window bounded both ways), kept when the programme names both teams, or
@@ -114,7 +115,14 @@ their name forms, start time, competition), its broadcasters (above), the profil
    and sport.
 3. **Broadcaster's channel, no programme** (SP-D4): the channels of step 1 without a programme,
    shown under "On <broadcaster>".
-4. **Nothing:** the broadcaster names as text, or "TV not announced yet" when there are none.
+4. **Nothing:** the broadcasters with no channel are listed last as text; "TV not announced yet"
+   only when the list is otherwise empty.
+
+Broadcaster names use their own word normalization (`SportsAliases`), not
+`ChannelNameNormalizer`, which drops "+" ("ESPN+" would read as "ESPN"). Known misses: a guide
+that names only the competition ("Basket-ball : NBA") never matches the game, only "On beIN";
+women's and youth games with the same club names can match; "Spurs" can match San Antonio on
+Tottenham's broadcaster at the same time.
 
 The guide keeps only the first `<category>` and no `sub-title`; this plan does not change the
 parser. Team names in titles ("Arsenal v Chelsea", "Handball: THW Kiel – Barça") are enough for the
@@ -175,7 +183,7 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 | 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | In progress |
 | 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | Done 2026-10-31: 26 competitions, 743 rows, 214 countries; rows name ISO codes, regions (`SUB_SAHARAN_AFRICA`…) or `WORLD`; lookups are suspend; thin: Bundesliga, Argentine LPF, South African PSL, Top 14, EHF Champions League |
 | 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
-| 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | In progress |
+| 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |
 | 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Not started |
 | 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Not started |
 | 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Not started |
