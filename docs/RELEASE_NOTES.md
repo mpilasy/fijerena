@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261031225103
 
 - **Profile at the far right:** on the phone, the profile avatar is the last icon at the top right of each tab; the clock moves into the top bar, before the icons. Phone.
 
