@@ -368,6 +368,8 @@ fun MobileEpisodeSelectionScreen(
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeState = resumeState,
                             initialEpisodeId = initialEpisodeId,
+                            // An actor's episode names its season too; a Continue Watching card does not.
+                            openAtTop = initialEpisodeId != null && initialSeason == null,
                             categoryName = lastSuccess?.categoryName,
                             logoUrl = logoUrl,
                             backdropUrl = backdropUrl,
@@ -421,6 +423,9 @@ private fun EpisodeListContent(
     resumeState: EpisodeResumeState,
     // The episode the route opened the screen on (Continue Watching, an actor's episode).
     initialEpisodeId: String?,
+    // Continue Watching: the page stays at its top, where Play resumes that episode; the list does
+    // not scroll to it (user, 2026-10-31). An actor's episode scrolls into view.
+    openAtTop: Boolean,
     categoryName: String?,
     logoUrl: String?,
     backdropUrl: String?,
@@ -497,6 +502,7 @@ private fun EpisodeListContent(
     LaunchedEffect(resumeState.resumeEpisodeId) {
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
         if (targetId == anchorMovedByMark) return@LaunchedEffect
+        if (openAtTop && targetId == initialEpisodeId) return@LaunchedEffect
         if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }

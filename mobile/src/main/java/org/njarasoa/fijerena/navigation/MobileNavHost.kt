@@ -1395,8 +1395,9 @@ private fun browseTargetRoute(
     contentType: String,
 ): Screen =
     when (target) {
-        // Continue Watching: the card stands for the show, so open episode
-        // selection with the last-watched episode's panel already up.
+        // Continue Watching: the card stands for the show. Its page opens at the top, Play on the
+        // episode to resume (one tap), the season of that episode picked; the list does not
+        // scroll to it (user, 2026-10-31).
         is BrowseTarget.Series -> {
             Screen.EpisodeSelection(
                 seriesId = target.seriesId.raw,
