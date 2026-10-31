@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261031213847
 
 - **Followed teams packed tighter:** on the Sports page, your followed teams and leagues are smaller cards (half as wide) in one alphabetical row. TV and phone.
 - **Slate:** a new colour theme and UI theme: a neutral dark grey with white text, a light blue accent, the system font and large round corners. Pick it on a profile's page (Look). TV and phone.
