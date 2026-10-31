@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-10-31 | [Sports teams](./20261031_sports-teams-plan.md) | Find pro and college teams (ESPN, NHL and MLB APIs), see their next games and TV networks, and open a game on a matching live channel or guide programme; Teams search type, Sports section, Upcoming Games row; followed teams synced per profile | Planned; open decisions SP-Q1 to SP-Q6 wait for the user |
 | 2026-10-31 | [People search](./20261031_people-search-plan.md) | A People search type between Catalogue and Guide (with a TMDB key): TMDB's people, films and shows; a person opens their actor page | Done 2026-10-31, walked on both emulators |
 | 2026-10-30 | [Phone poster cards](./20261030_phone-poster-cards-plan.md) | Film and show rows on the phone (Home favourites, Wishlist, charts; actor pages; More Like This) as 2:3 posters, about 3.3 per screen | Done 2026-10-30, walked on the phone emulator |
 | 2026-10-30 | [Episode cast](./20261030_episode-cast-plan.md) | An episode's details show its guest stars, then the regular cast; an actor's page names and opens the episode of a guest role | Done 2026-10-30, walked on both emulators |
