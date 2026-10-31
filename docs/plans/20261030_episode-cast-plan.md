@@ -24,7 +24,7 @@ Victims Unit only as Merritt Rook in S9E17 "Authority"; today the app cannot sho
 | # | Question | Decision |
 |---|----------|----------|
 | EC-D1 | Cast on an episode's details? | The episode's guest stars first, then the show's regular cast; the same cards, "+N more" and actor pages as the Cast tab. |
-| EC-D2 | What does an actor-page show card open? (changed by the user, 2026-10-30) | A list of the person's appearances in the show. A guest or recurring role: every episode by name ("S9E17 · Authority"), each opening the episode, the ones the source lacks marked. A regular role (TMDB lists only seasons): the seasons ("Seasons 1–29 · 602 episodes"), each opening the show on that season. A one-episode role opens the episode straight away. The card says "1 episode · as …" / "24 episodes · as …". |
+| EC-D2 | What does an actor-page show card open? (changed by the user, 2026-10-30) | A list of the person's appearances in the show. A guest or recurring role: every episode by name ("S9E17 · Authority"), each opening the episode, the ones the source lacks marked. A regular role (TMDB lists only seasons): the seasons ("Seasons 1–29 · 602 episodes"), each opening the show on that season. A one-episode role opens the episode straight away (changed by the user on 2026-10-31: the list shows for one episode too, so the user sees which episode first). The card says "1 episode · as …" / "24 episodes · as …". |
 | EC-D3 | A guest episode the source does not have (the show is there)? | The card opens the show's page on that season, with a short note "S9E17 is not in your source". |
 
 ## Design

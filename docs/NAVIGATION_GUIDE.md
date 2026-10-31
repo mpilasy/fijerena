@@ -147,7 +147,7 @@ AddProvider(editId) ─→ EpgManagement(editId)             Guide sources row (
 Search ─→ TmdbTitle                        a "Not in your sources" result (wanted titles plan)
 MovieDetails | EpisodeSelection | TmdbTitle ─→ Person      a Cast tab's card or crew name (cast tab plan); an actor card in an episode's cast (episode cast plan, EC-D1)
 Person ─→ MovieDetails | EpisodeSelection | TmdbTitle      a card: its source copy, else (switch on) its TMDB page
-Person ─→ EpisodeSelection(initialEpisodeId | initialSeason)   a show card of a source: a role in one episode or season at once, else a line of the person's appearances (TV `ShowAppearancesOverlay`, phone `ShowAppearancesSheet`); an episode the source lacks opens on its season, with a toast (episode cast plan, EC-D2, EC-D3)
+Person ─→ EpisodeSelection(initialEpisodeId | initialSeason)   a show card of a source: a line of the person's appearances, also for a role of one episode (TV `ShowAppearancesOverlay`, phone `ShowAppearancesSheet`); an episode the source lacks opens on its season, with a toast (episode cast plan, EC-D2, EC-D3)
 ContentTypeSelection | HomeTab ─→ TmdbTitle | MovieDetails | EpisodeSelection   a Wanted card: its source copy when a source has it, else its TMDB page
 ContentTypeSelection ─→ TmdbTitle                  a TMDB-only card of a Trending chart row (the row's switch on; tmdb charts plan, F3)
 CategoryList(MOVIES | TV_SHOWS, "wanted") ─→ the same, from a Wanted row (`LocalOpenWanted`, provided by each nav host)

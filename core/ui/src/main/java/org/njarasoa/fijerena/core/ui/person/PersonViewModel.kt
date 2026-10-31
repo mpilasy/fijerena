@@ -385,17 +385,18 @@ class PersonViewModel(
 
     companion object {
         /**
-         * Where a show card goes once its appearances are known (EC-D2): a role of one episode or
-         * one season opens it at once; a role TMDB names no line of opens the show; else the list.
+         * Where a show card goes once its appearances are known (EC-D2): the list, also for a role
+         * of one episode, so the user sees which episode before it opens (user, 2026-10-31); a role
+         * TMDB names no line of opens the show.
          */
         fun showOpeningOf(
             show: MediaItem,
             found: ShowLines,
         ): ShowOpening =
-            when (found.lines.size) {
-                0 -> ShowOpening.Open(show, ShowTarget())
-                1 -> ShowOpening.Open(show, showTarget(found.lines.single(), found.sourceSeasons))
-                else -> ShowOpening.Lines(show, found.lines, found.sourceSeasons)
+            if (found.lines.isEmpty()) {
+                ShowOpening.Open(show, ShowTarget())
+            } else {
+                ShowOpening.Lines(show, found.lines, found.sourceSeasons)
             }
 
         private const val TAG = "PersonViewModel"

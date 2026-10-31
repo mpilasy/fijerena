@@ -288,20 +288,21 @@ class PersonViewModelTest {
         await { showOpening.first { it != null && predicate(it) }!! }
 
     @Test
-    fun `a one-episode role opens that episode at once, after the credit call`() {
+    fun `a one-episode role lists that one episode, after the credit call`() {
         val data = FakeData()
-        data.lines = PersonViewModel.ShowLines(listOf(ShowAppearance(9, 17, "Authority", "e917")), setOf(9))
+        val lines = listOf(ShowAppearance(9, 17, "Authority", "e917"))
+        data.lines = PersonViewModel.ShowLines(lines, setOf(9))
         val vm = page(data)
         vm.loaded()
 
         vm.openShow(SHOW, PersonRole(character = "Merritt Rook", episodeCount = 1, creditId = "c1"))
 
         assertEquals(
-            PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(episodeId = "e917", season = 9)),
-            vm.opening { it is PersonViewModel.ShowOpening.Open },
+            PersonViewModel.ShowOpening.Lines(SHOW, lines, setOf(9)),
+            vm.opening { it is PersonViewModel.ShowOpening.Lines },
         )
         assertEquals(listOf("c1"), data.creditCalls)
-        vm.opened()
+        vm.closeShow()
         assertNull(vm.showOpening.value)
     }
 
@@ -347,11 +348,9 @@ class PersonViewModelTest {
 
         // No line: the show as it opens.
         assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget()), of())
-        // One season of a regular role: that season.
-        assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(season = 3)), of(ShowAppearance(3)))
-        // One episode the source lacks: its season, with the note (EC-D3).
-        val lacking = ShowAppearance(3, 4, "Four", null, inSource = false)
-        assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(season = 3, missing = lacking)), of(lacking))
+        // One line, a season or an episode the source lacks: still the list.
+        assertTrue(of(ShowAppearance(3)) is PersonViewModel.ShowOpening.Lines)
+        assertTrue(of(ShowAppearance(3, 4, "Four", null, inSource = false)) is PersonViewModel.ShowOpening.Lines)
         // Several: the list.
         assertTrue(of(ShowAppearance(3), ShowAppearance(4, inSource = false)) is PersonViewModel.ShowOpening.Lines)
     }

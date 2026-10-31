@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **The episode list for one episode too:** on an actor's page, a show card opens the list of their episodes even when there is only one, so you see which episode it is before it opens. TV and phone.
+
 ## Version: 0.8.20261031000446
 
 - **Actor pages saved before the episode lists:** an actor's page opened before the last update was kept for up to 7 days without the episode counts, so its show cards opened the show instead of the actor's episodes. Such pages are now read again. TV and phone.
