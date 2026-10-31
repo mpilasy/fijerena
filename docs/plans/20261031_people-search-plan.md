@@ -14,6 +14,7 @@ and find films and shows by name on TMDB, also ones no source has.
 | PS-D1 | Where? | A new search type between **Catalogue** and **Guide** on the Search screen (TV and phone), shown only when a TMDB key is set. |
 | PS-D2 | What does it return? | TMDB's multi search: people (actors and actresses), films and shows. |
 | PS-D3 | Its label? | **People** (fr "Personnes", mg "Olona"). |
+| PS-D4 | A child profile? | The People type is not shown at all. |
 
 ## Design
 
@@ -26,8 +27,7 @@ and find films and shows by name on TMDB, also ones no source has.
   one a source has opens there; one no source has is a TMDB-only card (Not available mark) that
   opens its TMDB page (Add to Wishlist). Titles show their list title (original name in Latin
   script, else English).
-- A child profile: people and the titles the sources have; no TMDB-only titles (as CT-D9). The
-  profile's filters apply.
+- A child profile: no People type (PS-D4). The profile's filters apply to the matched titles.
 - No TMDB key: the type is not shown. A failed call: "Couldn't reach TMDB" with Retry.
 
 ## Phases
