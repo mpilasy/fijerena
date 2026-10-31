@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -71,8 +71,13 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import java.text.Collator
 
 /** A team or a league the profile follows, as the section's row of logos shows it. */
+
+/** Followed teams and leagues together in alphabetical order, accents and case ignored. */
+private val byName: Collator = Collator.getInstance().apply { strength = Collator.PRIMARY }
+
 private data class FollowedItem(
     val key: String,
     val name: String,
@@ -119,8 +124,10 @@ fun SportsSectionScreen(
     val items =
         remember(followed) {
             followed?.let { f ->
-                f.teams.map { FollowedItem("followed:team:${it.source.id}:${it.id}", it.name, it.logoUrl, it.route()) } +
-                    f.leagues.map { FollowedItem("followed:league:${it.source.id}:${it.id}", it.name, it.logoUrl, it.route()) }
+                (
+                    f.teams.map { FollowedItem("followed:team:${it.source.id}:${it.id}", it.name, it.logoUrl, it.route()) } +
+                        f.leagues.map { FollowedItem("followed:league:${it.source.id}:${it.id}", it.name, it.logoUrl, it.route()) }
+                ).sortedWith(compareBy(byName) { it.name })
             }
         }
     // The effects below wait for the follows: they read this state, not [items] as it was when they started
@@ -330,16 +337,20 @@ private fun FollowedCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TvCard(onClick = onClick, look = TvCardLooks.shelf(), modifier = modifier.width(TvDimensions.posterWidth)) {
-        Column(modifier = Modifier.padding(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    TvCard(onClick = onClick, look = TvCardLooks.shelf(), modifier = modifier.width(TvDimensions.followedCardWidth)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
             CinemaThumbnail(
                 url = item.logoUrl,
                 fallbackLetter = item.name.firstOrNull(Char::isLetterOrDigit),
                 contentType = ThumbnailContentType.LIVE_TV,
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().height(TvDimensions.posterHeight),
+                modifier = Modifier.size(TvDimensions.followedLogoSize),
             )
-            CinemaText(text = item.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            CinemaText(text = item.name, role = TextRole.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

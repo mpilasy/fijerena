@@ -76,6 +76,10 @@ object TvDimensions {
     val statsDotSize: Dp = 12.dp
 
     val posterWidth: Dp = 160.dp
+
+    /** A followed team or league in the Sports section's row: half a poster wide, a square logo over its name. */
+    val followedCardWidth: Dp = 80.dp
+    val followedLogoSize: Dp = 56.dp
     val posterHeight: Dp = 90.dp
     val posterHeightLarge: Dp = 240.dp
     val contentTypeCardWidth: Dp = 340.dp

@@ -58,6 +58,9 @@ object MobileDimensions {
     /** Home's Continue Watching and channel cards: 16:9 art this wide, as on TV Home. */
     val homeCardWidth: Dp = 160.dp
 
+    /** A followed team or league in the Sports tab's row: its logo over its name, half a Home card. */
+    val followedCardWidth: Dp = 80.dp
+
     /** A film or show in a row of titles (PosterCard): 2:3 poster art this wide, about three a screen. */
     val posterCardWidth: Dp = 100.dp
 

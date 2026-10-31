@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import java.text.Collator
 
 /**
  * The phone's Sports tab (the sports teams plan → Sports section, SP-D7): under the tab's top bar
@@ -81,6 +82,22 @@ fun MobileSportsSectionScreen(
     val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
     val cardColors = sportsCardColors()
+    val followedSorted =
+        remember(followed) {
+            followed
+                ?.let { f ->
+                    (
+                        f.teams.map { FollowedEntry("team:${it.source.id}:${it.id}", it.name, it.logoUrl) { onTeamSelected(it.route()) } } +
+                            f.leagues.map {
+                                FollowedEntry(
+                                    "league:${it.source.id}:${it.id}",
+                                    it.name,
+                                    it.logoUrl,
+                                ) { onLeagueSelected(it.route()) }
+                            }
+                    ).sortedWith(compareBy(byName) { it.name })
+                }.orEmpty()
+        }
     Scaffold(containerColor = CinemaTheme.colors.clear, topBar = sourceTopBar) { padding ->
         val follows = followed
         when {
@@ -107,12 +124,9 @@ fun MobileSportsSectionScreen(
                 ) {
                     item(key = "followed_heading") { MobileSportsHeading(stringResource(R.string.sports_following_heading)) }
                     item(key = "followed") {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                            items(follows.teams, key = { "team:${it.source.id}:${it.id}" }) { team ->
-                                FollowedCard(team.name, team.logoUrl) { onTeamSelected(team.route()) }
-                            }
-                            items(follows.leagues, key = { "league:${it.source.id}:${it.id}" }) { league ->
-                                FollowedCard(league.name, league.logoUrl) { onLeagueSelected(league.route()) }
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                            items(followedSorted, key = { it.key }) { item ->
+                                FollowedCard(item.name, item.logoUrl, item.onClick)
                             }
                         }
                     }
@@ -191,9 +205,9 @@ private fun FollowedCard(
     logoUrl: String?,
     onClick: () -> Unit,
 ) {
-    CinemaCard(onClick = onClick, modifier = Modifier.width(MobileDimensions.homeCardWidth), colors = sportsCardColors()) {
+    CinemaCard(onClick = onClick, modifier = Modifier.width(MobileDimensions.followedCardWidth), colors = sportsCardColors()) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(CinemaSpacing.sm),
+            modifier = Modifier.fillMaxWidth().padding(CinemaSpacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
@@ -208,3 +222,14 @@ private fun FollowedCard(
         }
     }
 }
+
+/** A followed team or league in the tab's row. */
+private class FollowedEntry(
+    val key: String,
+    val name: String,
+    val logoUrl: String?,
+    val onClick: () -> Unit,
+)
+
+/** Followed teams and leagues together in alphabetical order, accents and case ignored. */
+private val byName: Collator = Collator.getInstance().apply { strength = Collator.PRIMARY }

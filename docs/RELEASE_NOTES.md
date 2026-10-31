@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Followed teams packed tighter:** on the Sports page, your followed teams and leagues are smaller cards (half as wide) in one alphabetical row. TV and phone.
 - **Slate:** a new colour theme and UI theme: a neutral dark grey with white text, a light blue accent, the system font and large round corners. Pick it on a profile's page (Look). TV and phone.
 - **Cards on one line:** under a card's name, the source, the rating and the title's tags now sit on one line of the same height on every card. The best tags come first (the picture quality, then the language), and the tags that do not fit become one "+N" badge ("EN +4"), so a card no longer grows tall with tags that wrap letter by letter. The details page still shows every tag. TV and phone.
 - **Home cards show only the source and the rating:** Home's rows (Continue Watching, favourites, charts, channels) show the source and a star rating ("BEA ★ 7.8"), without the tags; the tags stay in lists, search, details and actor pages. Favourites take their rating from the catalogue, and TMDB-only chart cards show TMDB's rating. TV and phone.
