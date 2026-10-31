@@ -103,6 +103,7 @@
     <string name="sports_next_games_heading">Prochains matchs</string>
     <string name="sports_channels_heading">Vos chaînes</string>
     <string name="sports_follow">Suivre</string>
+    <string name="sports_open_team_page">Ouvrir la page de l\'équipe</string>
     <string name="sports_unfollow">Ne plus suivre</string>
     <string name="sports_followed">Suivi</string>
     <string name="sports_load_error">Impossible de charger les matchs</string>

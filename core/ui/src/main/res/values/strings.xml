@@ -106,6 +106,7 @@
     <string name="sports_next_games_heading">Next Games</string>
     <string name="sports_channels_heading">Your Channels</string>
     <string name="sports_follow">Follow</string>
+    <string name="sports_open_team_page">Open Team Page</string>
     <string name="sports_unfollow">Unfollow</string>
     <string name="sports_followed">Followed</string>
     <string name="sports_load_error">Couldn\'t load games</string>

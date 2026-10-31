@@ -111,6 +111,75 @@ fun MobileSportsItemCard(
     }
 }
 
+/**
+ * A Teams search's best team, over its games: its logo, its name, [details] (sport, league), then
+ * [MobileFollowActions] at its end. A tap on the card opens the team's page ([onOpen]).
+ */
+@Composable
+fun MobileBestTeamCard(
+    team: SportsTeam,
+    details: String,
+    followed: Boolean,
+    bells: GameBells,
+    onOpen: () -> Unit,
+    onToggleFollow: () -> Unit,
+    modifier: Modifier = Modifier,
+    cardColors: CardColors = sportsCardColors(),
+) {
+    CinemaCard(
+        onClick = onOpen,
+        modifier = modifier.fillMaxWidth().height(MobileDimensions.streamCardHeight),
+        colors = cardColors,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(CinemaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        ) {
+            CinemaThumbnail(
+                url = team.logoUrl,
+                fallbackLetter = team.name.firstOrNull(Char::isLetterOrDigit),
+                contentType = ThumbnailContentType.LIVE_TV,
+                contentDescription = team.name,
+                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                CinemaText(text = team.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (details.isNotEmpty()) {
+                    CinemaText(
+                        text = details,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            MobileFollowActions(followed = followed, onToggleFollow = onToggleFollow, bells = bells, team = team)
+        }
+    }
+}
+
+/**
+ * The team's bell for every game (for a team, [team] set, once the profile follows it), then
+ * Follow (a star) last, at the end of its row: the bell comes and goes to the star's left, so the
+ * star never moves and a second tap lands on it again. A league page passes no [team]: Follow alone.
+ */
+@Composable
+fun MobileFollowActions(
+    followed: Boolean,
+    onToggleFollow: () -> Unit,
+    bells: GameBells,
+    team: SportsTeam?,
+) {
+    if (team != null && followed) MobileTeamBell(team, bells)
+    IconAction(
+        onClick = onToggleFollow,
+        icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
+        label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
+    )
+}
+
 /** A heading over a group of cards (a day, Teams); it does nothing on a tap. */
 @Composable
 fun MobileSportsHeading(

@@ -63,7 +63,8 @@ import java.time.ZoneId
  * Back calls [onClose], and the page gives focus back to the game. An in-tree overlay: focus stays
  * in it.
  *
- * [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the first row
+ * [contentPadding]: the safe margins on a page of its own; none inside a screen that has them
+ * (Search). [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the first row
  * reaches them. Focus: the first row on opening, and again when the channels come; Back from a channel
  * returns to its row ([returnFocus]).
  */
@@ -75,6 +76,7 @@ fun GameSheetOverlay(
     onPlay: (GameChannel) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val resources = LocalResources.current
@@ -106,7 +108,7 @@ fun GameSheetOverlay(
                     }
                 }.focusProperties { onExit = { cancelFocusChange() } }
                 .focusGroup(),
-        contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item(key = "header") { TvScreenHeader(title = gameTitle(resources, game), subtitle = subtitle, actions = actions) }

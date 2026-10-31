@@ -99,6 +99,94 @@ sealed interface GamesState {
 }
 
 /**
+ * Reads the games ([loadGames]) into [state], then each game's channels as the [matcher] finds
+ * them, every game at once, so the first rows fill first. A failed read sets [GamesState.Failed]
+ * ([rawOf]: its raw text in dev mode); a matcher that cannot be made finds nothing. [onGames] gets
+ * the games before their channels. Shared by the team and league pages and the Teams search's best
+ * team.
+ */
+internal suspend fun readGamesAndChannels(
+    state: MutableStateFlow<GamesState>,
+    loadGames: suspend () -> List<SportsGame>,
+    matcher: suspend () -> GameMatcher,
+    rawOf: (Throwable) -> String?,
+    onGames: (List<SportsGame>) -> Unit = {},
+) {
+    val games =
+        try {
+            loadGames()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // No network or a source error: an expected failure, not one for the crash log.
+            android.util.Log.w(GAMES_TAG, "Games failed: ${e.javaClass.simpleName}")
+            state.value = GamesState.Failed(rawOf(e))
+            null
+        }
+    if (games != null) {
+        onGames(games)
+        state.value = GamesState.Loaded(games)
+        if (games.isNotEmpty()) matchChannels(state, games, matcher)
+    }
+}
+
+private suspend fun matchChannels(
+    state: MutableStateFlow<GamesState>,
+    games: List<SportsGame>,
+    matcher: suspend () -> GameMatcher,
+) {
+    val found =
+        try {
+            matcher()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The channels or the guide could not be read: no game is found on them.
+            android.util.Log.w(GAMES_TAG, "Channels failed: ${e.javaClass.simpleName}")
+            GameMatcher { emptyList() }
+        }
+    // Every game at once: each game's guide reads run beside the others'.
+    coroutineScope {
+        games.forEach { game ->
+            launch {
+                val channels = matchOrEmpty(found, game)
+                state.update { current ->
+                    (current as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: current
+                }
+            }
+        }
+    }
+}
+
+private const val GAMES_TAG = "SportsGamesViewModel"
+
+/**
+ * [route] (a team as a route or a search names it) completed from its own entry in [games]: the
+ * name the games give ("Bayern Munich", not search's "Bayern München"), so a page and its game
+ * titles agree, and what the route lacks (its logo, its other names, the route's name among them),
+ * so a team followed from it is stored whole. [route] itself when no game has the team.
+ */
+fun teamFromGames(
+    route: SportsTeam,
+    games: List<SportsGame>,
+): SportsTeam {
+    val found =
+        games.firstNotNullOfOrNull { game ->
+            listOfNotNull(game.home, game.away).firstOrNull { it.source == route.source && it.id == route.id }
+        }
+    return found?.let {
+        route.copy(
+            name = it.name,
+            shortName = route.shortName ?: it.shortName,
+            altNames = (route.altNames + route.name + it.allNames).filter { name -> name != it.name }.distinct(),
+            league = route.league ?: it.league,
+            leagueName = route.leagueName ?: it.leagueName,
+            logoUrl = route.logoUrl ?: it.logoUrl,
+        )
+    } ?: route
+}
+
+/**
  * A page of games (the team page, the league page; the sports teams plan → Screens): the games
  * once, then each game's channels as the matcher finds them, in the games' order, so the first
  * rows fill first. The page is not kept up to date (SP-D10): Retry or a new visit reads again.
@@ -128,41 +216,7 @@ abstract class SportsGamesViewModel(
                 Dispatchers.IO,
                 onError = { e -> _games.value = GamesState.Failed(rawOf(e)) },
             ) {
-                val games =
-                    try {
-                        loadGames()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // No network or a source error: an expected failure, not one for the crash log.
-                        android.util.Log.w(TAG, "Games failed: ${e.javaClass.simpleName}")
-                        _games.value = GamesState.Failed(rawOf(e))
-                        return@launchGuarded
-                    }
-                onGames(games)
-                _games.value = GamesState.Loaded(games)
-                if (games.isEmpty()) return@launchGuarded
-                val matcher =
-                    try {
-                        data.matcher()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // The channels or the guide could not be read: no game is found on them.
-                        android.util.Log.w(TAG, "Channels failed: ${e.javaClass.simpleName}")
-                        GameMatcher { emptyList() }
-                    }
-                // Every game at once: each game's guide reads run beside the others'.
-                coroutineScope {
-                    games.forEach { game ->
-                        launch {
-                            val channels = matchOrEmpty(matcher, game)
-                            _games.update { state ->
-                                (state as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: state
-                            }
-                        }
-                    }
-                }
+                readGamesAndChannels(_games, ::loadGames, data::matcher, ::rawOf, ::onGames)
             }
     }
 
@@ -171,10 +225,6 @@ abstract class SportsGamesViewModel(
     }
 
     private fun rawOf(e: Throwable): String? = if (data.devMode) Redact.text(e.message ?: e.javaClass.simpleName) else null
-
-    private companion object {
-        const val TAG = "SportsGamesViewModel"
-    }
 }
 
 /**
@@ -204,21 +254,7 @@ class SportsTeamViewModel(
     override suspend fun loadGames(): List<SportsGame> = data.teamGames(_team.value)
 
     override fun onGames(games: List<SportsGame>) {
-        val route = _team.value
-        val found =
-            games.firstNotNullOfOrNull { game ->
-                listOfNotNull(game.home, game.away).firstOrNull { it.source == route.source && it.id == route.id }
-            } ?: return
-        // The name the games give ("Bayern Munich", not search's "Bayern München"), so the page and its game titles agree.
-        _team.value =
-            route.copy(
-                name = found.name,
-                shortName = route.shortName ?: found.shortName,
-                altNames = (route.altNames + route.name + found.allNames).filter { it != found.name }.distinct(),
-                league = route.league ?: found.league,
-                leagueName = route.leagueName ?: found.leagueName,
-                logoUrl = route.logoUrl ?: found.logoUrl,
-            )
+        _team.value = teamFromGames(_team.value, games)
     }
 
     /** Follows the team, or stops following it. */

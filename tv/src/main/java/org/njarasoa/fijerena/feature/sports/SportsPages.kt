@@ -77,7 +77,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * A team's page on TV (the sports teams plan → Team page): the logo, the name, the sport and
- * league, a Follow icon action (and, once followed, a bell for every game of the team), then the
+ * league, a Follow icon action (and, once followed, a bell for every game of the team in a slot
+ * to its right that keeps its place, so Follow never moves), then the
  * team's coming games (up to 10) by day in the device's time zone, each with its bell. A game opens its sheet ([GameSheetOverlay]); a channel there opens its preview
  * ([onPlay], as a guide result).
  *
@@ -111,8 +112,8 @@ fun SportsTeamScreen(
         onRetry = viewModel::retry,
         onPlay = onPlay,
         onBack = onBack,
-        // Every game of the team: once the profile follows it (the sports teams plan → Reminders).
-        teamBell = shown.takeIf { followed },
+        // Every game of the team, once the profile follows it (the sports teams plan → Reminders); its slot always.
+        teamBell = shown,
     )
 }
 
@@ -182,7 +183,8 @@ fun SportsLeagueScreen(
  * The page both share: the header with Follow, the games by day, [extra] rows after them, and the
  * game sheet over the page while one is open (its game's key saved, so Back from a channel finds
  * it open). [secondFocus]: the entry focus when there is no game. [teamBell]: the team whose every
- * game the header's bell reminds of, after Follow; none on a league page.
+ * game the header's bell reminds of once followed, in a slot after Follow that keeps its width
+ * so Follow never moves ([TvFollowActions]); none on a league page.
  */
 @Composable
 private fun TvSportsPage(
@@ -274,27 +276,19 @@ private fun TvSportsPage(
                         )
                     },
                 ) {
-                    TvIconAction(
-                        onClick = onToggleFollow,
-                        icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
-                        label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
+                    TvFollowActions(
+                        followed = followed,
+                        onToggleFollow = onToggleFollow,
+                        bells = bells,
+                        team = teamBell,
                         modifier =
                             Modifier
                                 .focusRequester(followFocus)
                                 .onFocusChanged { followHasFocus = it.hasFocus }
                                 .leftToRail()
                                 .then(downToRows),
+                        bellModifier = downToRows,
                     )
-                    if (teamBell != null) {
-                        val on = bells.reminded.hasTeam(teamBell)
-                        TvIconAction(
-                            onClick = { bells.toggleTeam(teamBell) },
-                            icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
-                            label = stringResource(if (on) R.string.sports_remind_team_set else R.string.sports_remind_team),
-                            on = on,
-                            modifier = downToRows,
-                        )
-                    }
                 }
             }
             when (games) {

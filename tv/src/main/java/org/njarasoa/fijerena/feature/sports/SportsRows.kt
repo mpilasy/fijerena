@@ -109,6 +109,113 @@ fun TvSportsItemRow(
     }
 }
 
+/**
+ * A Teams search's best team, over its games: its logo, its name, [details] (sport, league) and an
+ * arrow, as one focus stop whose OK opens the team's page ([onOpen]); then [TvFollowActions] in
+ * fixed slots to its right (Right reaches them). [modifier] is the row's own (its focus requester,
+ * its Back target).
+ */
+@Composable
+fun TvBestTeamRow(
+    team: SportsTeam,
+    details: String,
+    followed: Boolean,
+    bells: GameBells,
+    onOpen: () -> Unit,
+    onToggleFollow: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            Modifier
+                .padding(horizontal = Spacing.md)
+                .fillMaxWidth()
+                .height(TvDimensions.cardHeight),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TvCard(
+            onClick = onOpen,
+            look = TvCardLooks.listRow(),
+            modifier =
+                modifier
+                    .leftToRail()
+                    .weight(1f)
+                    .fillMaxHeight(),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CinemaThumbnail(
+                    url = team.logoUrl,
+                    fallbackLetter = team.name.firstOrNull(Char::isLetterOrDigit),
+                    contentType = ThumbnailContentType.LIVE_TV,
+                    contentDescription = team.name,
+                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    CinemaText(text = team.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (details.isNotEmpty()) {
+                        CinemaText(
+                            text = details,
+                            role = TextRole.Body,
+                            tone = TextTone.Secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = CinemaIcons.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.sports_open_team_page),
+                    modifier = Modifier.size(TvDimensions.iconMedium),
+                )
+            }
+        }
+        TvFollowActions(followed = followed, onToggleFollow = onToggleFollow, bells = bells, team = team)
+    }
+}
+
+/**
+ * Follow (a star) and, for a team ([team] set), the slot of its bell for every game, shown once
+ * the profile follows it (the sports teams plan → Reminders). The bell's slot keeps its width while
+ * the bell is hidden, so the star never moves when it comes or goes, and a second press lands on
+ * the star again. A league page passes no [team]: Follow alone. [modifier] (Follow's) and [bellModifier]
+ * are the actions' own (focus requester, focus moves).
+ */
+@Composable
+fun TvFollowActions(
+    followed: Boolean,
+    onToggleFollow: () -> Unit,
+    bells: GameBells,
+    team: SportsTeam?,
+    modifier: Modifier = Modifier,
+    bellModifier: Modifier = Modifier,
+) {
+    TvIconAction(
+        onClick = onToggleFollow,
+        icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
+        label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
+        modifier = modifier,
+    )
+    if (team != null) {
+        Box(modifier = Modifier.widthIn(min = TvButtonStyle.iconButtonSize), contentAlignment = Alignment.Center) {
+            if (followed) {
+                val on = bells.reminded.hasTeam(team)
+                TvIconAction(
+                    onClick = { bells.toggleTeam(team) },
+                    icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
+                    label = stringResource(if (on) R.string.sports_remind_team_set else R.string.sports_remind_team),
+                    on = on,
+                    modifier = bellModifier,
+                )
+            }
+        }
+    }
+}
+
 /** A day's heading over its games ("Today", "Saturday 1 November"); it takes no focus. */
 @Composable
 fun TvSportsHeading(

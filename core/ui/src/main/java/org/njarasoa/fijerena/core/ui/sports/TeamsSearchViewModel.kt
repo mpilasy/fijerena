@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.sports.BestTeam
 import org.njarasoa.fijerena.core.network.sports.FollowKind
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.SportsData
+import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsSearchResult
 import org.njarasoa.fijerena.core.network.sports.SportsSource
@@ -42,16 +44,18 @@ fun followKeys(followed: FollowedSports.Followed): Set<String> =
 
 /**
  * Search's Teams type (the sports teams plan → Screens): one sports search per query
- * ([SportsData.search]: ESPN's teams and leagues, then the other sources' that ESPN does not have),
- * shown as two groups, Teams then Leagues, each row marked when the profile follows it. A child
- * profile never gets the Teams type, nor does any profile while Admin's Sports switch is off
- * (`showsTeamsTab`). The screen waits for the user to stop typing before it calls [search], as the
- * People type does.
+ * ([SportsData.search]: ESPN's teams and leagues). The user usually looks for one team, so the
+ * best team ([BestTeam]) comes first with its next games (up to 10) and each game's best channel,
+ * as on its page; the other teams, then the leagues, follow as rows that open their pages, each
+ * marked when the profile follows it. A child profile never gets the Teams type, nor does any
+ * profile while Admin's Sports switch is off (`showsTeamsTab`). The screen waits for the user to
+ * stop typing before it calls [search], as the People type does; the best team's games are read
+ * after its search, so they too wait for typing to stop.
  */
 class TeamsSearchViewModel(
     private val data: Data,
 ) : ViewModel() {
-    /** What the search reads: the sports sources and the profile's followed teams. A fake in the tests. */
+    /** What the search reads: the sports sources, the profile's follows and channels. A fake in the tests. */
     interface Data {
         /** Whether a failure shows its raw message too (Admin's dev mode). */
         val devMode: Boolean
@@ -61,6 +65,16 @@ class TeamsSearchViewModel(
 
         /** What the profile in use follows; emits again on every change. */
         fun followed(): Flow<FollowedSports.Followed>
+
+        /** [team]'s coming games, as on its page. */
+        suspend fun teamGames(team: SportsTeam): List<SportsGame>
+
+        /** A matcher on the profile's live channels and guide, as on a team page. */
+        suspend fun matcher(): GameMatcher
+
+        suspend fun follow(team: SportsTeam)
+
+        suspend fun unfollow(team: SportsTeam)
     }
 
     sealed interface State {
@@ -77,17 +91,33 @@ class TeamsSearchViewModel(
             val raw: String?,
         ) : State
 
+        /** [best]: the team shown first, with its games ([bestGames]); [teams]: the other teams. */
         data class Loaded(
             val query: String,
+            val best: SportsTeam?,
             val teams: List<SportsTeam>,
             val leagues: List<SportsLeague>,
         ) : State {
-            val isEmpty: Boolean get() = teams.isEmpty() && leagues.isEmpty()
+            val isEmpty: Boolean get() = best == null && teams.isEmpty() && leagues.isEmpty()
         }
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
+
+    private val _bestTeam = MutableStateFlow<SportsTeam?>(null)
+
+    /**
+     * The best team, completed from its games once they come ([teamFromGames]: the name its games
+     * give, its other names), so Follow and its bell store it whole as its page does. Null when
+     * the results have no team.
+     */
+    val bestTeam: StateFlow<SportsTeam?> = _bestTeam.asStateFlow()
+
+    private val _bestGames = MutableStateFlow<GamesState>(GamesState.Loading)
+
+    /** The best team's next games and their channels. */
+    val bestGames: StateFlow<GamesState> = _bestGames.asStateFlow()
 
     /** The [followKey]s of what the profile follows, for the rows' marks. */
     val followed: StateFlow<Set<String>> =
@@ -123,6 +153,30 @@ class TeamsSearchViewModel(
         (_state.value as? State.Failed)?.let { run(it.query) }
     }
 
+    /** Reads the best team's games again after a failure. Main only. */
+    fun retryBestGames() {
+        val team = (_state.value as? State.Loaded)?.best
+        if (team != null) {
+            job?.cancel()
+            _bestGames.value = GamesState.Loading
+            job =
+                viewModelScope.launchGuarded("TeamsSearchViewModel.bestGames", Dispatchers.IO, onError = ::bestGamesFailed) {
+                    readBestGames(team)
+                }
+        }
+    }
+
+    /** Follows the best team, or stops following it. */
+    fun toggleBestFollow() {
+        val team = _bestTeam.value
+        if (team != null) {
+            val on = team.followKey in followed.value
+            viewModelScope.launchGuarded("TeamsSearchViewModel.follow", Dispatchers.IO) {
+                if (on) data.unfollow(team) else data.follow(team)
+            }
+        }
+    }
+
     private fun run(term: String) {
         job?.cancel()
         _state.value = State.Loading(term)
@@ -132,18 +186,40 @@ class TeamsSearchViewModel(
                 Dispatchers.IO,
                 onError = { e -> _state.value = State.Failed(term, rawOf(e)) },
             ) {
-                _state.value =
+                val found =
                     try {
-                        val found = data.search(term)
-                        State.Loaded(term, found.teams, found.leagues)
+                        data.search(term)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         // No network or a source error: an expected failure, not one for the crash log.
                         android.util.Log.w(TAG, "Teams search failed: ${e.javaClass.simpleName}")
-                        State.Failed(term, rawOf(e))
+                        _state.value = State.Failed(term, rawOf(e))
+                        null
                     }
+                if (found != null) {
+                    val best = BestTeam.of(term, found.teams)
+                    // The best team and its games' Loading before the results, so its header shows at once.
+                    _bestTeam.value = best
+                    _bestGames.value = GamesState.Loading
+                    _state.value = State.Loaded(term, best, found.teams.filter { it != best }, found.leagues)
+                    if (best != null) readBestGames(best)
+                }
             }
+    }
+
+    private suspend fun readBestGames(team: SportsTeam) {
+        readGamesAndChannels(
+            state = _bestGames,
+            loadGames = { data.teamGames(team) },
+            matcher = data::matcher,
+            rawOf = ::rawOf,
+            onGames = { games -> _bestTeam.value = teamFromGames(team, games) },
+        )
+    }
+
+    private fun bestGamesFailed(e: Throwable) {
+        _bestGames.value = GamesState.Failed(rawOf(e))
     }
 
     private fun rawOf(e: Throwable): String? = if (data.devMode) Redact.text(e.message ?: e.javaClass.simpleName) else null
@@ -160,17 +236,26 @@ class TeamsSearchViewModel(
         }
     }
 
-    /** The real [Data]: [SportsData] and the profile's [FollowedSports]. */
+    /** The real [Data]: [SportsData], and the profile's follows and channels as a team page reads them ([AppSportsPageData]). */
     private class AppData(
         private val context: Context,
     ) : Data {
         private val settings = AppSettings(context)
+        private val pages = AppSportsPageData(context)
 
         override val devMode: Boolean get() = settings.isDevMode
 
         override suspend fun search(query: String): SportsSearchResult = SportsData.getInstance(context).search(query)
 
-        override fun followed(): Flow<FollowedSports.Followed> = FollowedSports.getInstance(context).observe(settings.activeProfileId)
+        override fun followed(): Flow<FollowedSports.Followed> = pages.followed()
+
+        override suspend fun teamGames(team: SportsTeam): List<SportsGame> = pages.teamGames(team)
+
+        override suspend fun matcher(): GameMatcher = pages.matcher()
+
+        override suspend fun follow(team: SportsTeam) = pages.follow(team)
+
+        override suspend fun unfollow(team: SportsTeam) = pages.unfollow(team)
     }
 
     companion object {
