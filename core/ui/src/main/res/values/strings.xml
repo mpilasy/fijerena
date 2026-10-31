@@ -388,6 +388,8 @@
     <string name="details_other_instances">Other instances of this title</string>
     <string name="details_collection_fallback">Collection</string>
     <string name="details_tab_cast">Cast</string>
+    <string name="episode_guest_stars">Guest Stars</string>
+    <string name="episode_series_cast">Series Cast</string>
     <string name="details_tab_details">Details</string>
     <string name="details_tab_seasons">Seasons</string>
     <string name="details_saved_copy">Saved details: the source couldn\'t be reached</string>

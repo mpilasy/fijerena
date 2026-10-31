@@ -1079,6 +1079,8 @@
     <string name="details_watch_trailer_description">Regarder la bande-annonce</string>
     <string name="details_community_rating">Note du public</string>
     <string name="details_tab_cast">Distribution</string>
+    <string name="episode_guest_stars">Invités</string>
+    <string name="episode_series_cast">Distribution de la série</string>
     <string name="details_tab_details">Détails</string>
     <string name="details_tab_seasons">Saisons</string>
     <string name="series_details_title">Détails de la série</string>

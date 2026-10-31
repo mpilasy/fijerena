@@ -58,7 +58,7 @@ class EpisodeCastTest {
     }
 
     @Test
-    fun `an episode's cast is its guest stars, then the show's cast, each once, without crew`() {
+    fun `an episode's cast is its guest stars and the show's cast apart, each once, without crew`() {
         val guest = CastMember("2157", "Robin Williams", "Merritt Rook", null)
         val regular = CastMember("6240", "Mariska Hargitay", "Olivia Benson", null)
         val show =
@@ -69,7 +69,17 @@ class EpisodeCastTest {
 
         val credits = episodeCredits(listOf(guest), show)
 
-        assertEquals(TitleCredits(cast = listOf(guest, regular), crew = emptyList()), credits)
+        assertEquals(
+            EpisodeCredits(
+                guests = TitleCredits(cast = listOf(guest), crew = emptyList()),
+                regulars = TitleCredits(cast = listOf(regular), crew = emptyList()),
+            ),
+            credits,
+        )
+        assertEquals(
+            EpisodeCredits(guests = null, regulars = TitleCredits(show.cast, emptyList())),
+            episodeCredits(emptyList(), show),
+        )
         assertNull(episodeCredits(emptyList(), null))
         assertNull(episodeCredits(emptyList(), TitleCredits(emptyList(), show.crew)))
     }

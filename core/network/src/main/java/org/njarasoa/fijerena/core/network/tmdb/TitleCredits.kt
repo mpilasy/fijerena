@@ -127,17 +127,34 @@ fun episodeGuests(episode: TmdbEpisode?): List<CastMember> =
 
 /**
  * An episode's cast section (docs/plans/20261030_episode-cast-plan.md, EC-D1): the episode's
- * [guests] first, then the show's cast ([show], the Cast tab's), each person once. No crew lines.
- * Null when TMDB has nobody for it: the section then is not shown.
+ * [guests] in one row and the show's regular cast ([show], the Cast tab's) in another (user,
+ * 2026-10-31), each person once: a guest is not again among the regulars. No crew lines. Null
+ * when TMDB has nobody for it: the section then is not shown.
  */
 fun episodeCredits(
     guests: List<CastMember>,
     show: TitleCredits?,
-): TitleCredits? =
-    (guests + show?.cast.orEmpty())
-        .distinctBy { it.personId }
-        .takeIf { it.isNotEmpty() }
-        ?.let { TitleCredits(cast = it, crew = emptyList()) }
+): EpisodeCredits? {
+    val guestCast = guests.distinctBy { it.personId }
+    val guestIds = guestCast.mapTo(HashSet()) { it.personId }
+    val regulars =
+        show
+            ?.cast
+            .orEmpty()
+            .filter { it.personId !in guestIds }
+            .distinctBy { it.personId }
+    if (guestCast.isEmpty() && regulars.isEmpty()) return null
+    return EpisodeCredits(
+        guests = guestCast.takeIf { it.isNotEmpty() }?.let { TitleCredits(cast = it, crew = emptyList()) },
+        regulars = regulars.takeIf { it.isNotEmpty() }?.let { TitleCredits(cast = it, crew = emptyList()) },
+    )
+}
+
+/** An episode's cast: its guest stars and the show's regular cast, each a row of cards, either null when empty. */
+data class EpisodeCredits(
+    val guests: TitleCredits?,
+    val regulars: TitleCredits?,
+)
 
 /** Each person once, in this order; a person without an id or a name is left out. */
 private fun List<TmdbCrewMember>.people(): List<CrewPerson> =

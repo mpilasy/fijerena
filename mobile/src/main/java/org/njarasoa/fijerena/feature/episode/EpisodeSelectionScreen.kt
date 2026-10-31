@@ -1484,28 +1484,35 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // The episode's cast (the episode cast plan, EC-D1): its guest stars, then the show's cast, as
-        // the Cast tab's cards; without TMDB's, the source's names as the tab's chips.
+        // The episode's cast (the episode cast plan, EC-D1): its guest stars and the show's cast, each
+        // under its own heading, as the Cast tab's cards; without TMDB's, the source's names as the
+        // tab's chips.
         val sourceCast = (episode.metadata.cast ?: seriesDetail.metadata.cast)?.takeIf { it.isNotBlank() }
-        if (episodeCredits != null || sourceCast != null) {
-            CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            // Each episode's own cards: a swipe to the next one starts it at the first actor.
-            key(episode.id) {
-                if (episodeCredits != null) {
+        // Each episode's own cards: a swipe to the next one starts them at the first actor.
+        key(episode.id) {
+            if (episodeCredits != null) {
+                listOfNotNull(
+                    episodeCredits.guests?.let { R.string.episode_guest_stars to it },
+                    episodeCredits.regulars?.let { R.string.episode_series_cast to it },
+                ).forEach { (heading, credits) ->
+                    CinemaText(text = stringResource(heading), role = TextRole.Heading)
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     MobileCreditsTabContent(
-                        credits = episodeCredits,
+                        credits = credits,
                         section = ThumbnailContentType.TV_SHOW,
                         onPersonSelected = { personId, name, crew ->
                             personScroll = scrollState.value
                             onPersonSelected(personId, name, crew)
                         },
                     )
-                } else {
-                    CastChipsTabContent(cast = sourceCast.orEmpty())
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
                 }
+            } else if (sourceCast != null) {
+                CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                CastChipsTabContent(cast = sourceCast)
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
             }
-            Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
 
         val director = episode.metadata.director ?: seriesDetail.metadata.director

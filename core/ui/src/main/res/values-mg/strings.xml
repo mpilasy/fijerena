@@ -856,6 +856,8 @@
     <string name="details_other_instances">Dika hafa amin\'ity lohateny ity</string>
     <string name="details_collection_fallback">Fitambarana</string>
     <string name="details_tab_cast">Mpilalao</string>
+    <string name="episode_guest_stars">Mpilalao vahiny</string>
+    <string name="episode_series_cast">Mpilalao ao amin\'ny andian-tantara</string>
     <string name="details_tab_details">Antsipiriany</string>
     <string name="details_tab_seasons">Vanim-potoana</string>
     <string name="details_saved_copy">Antsipiriany voatahiry: tsy tratra ny loharano</string>

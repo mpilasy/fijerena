@@ -2115,25 +2115,31 @@ private fun EpisodeDetailPanel(
                         .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                         .padding(top = Spacing.xl.scaled(scale), bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
             ) {
-                // The episode's cast (the episode cast plan, EC-D1): its guest stars, then the show's
-                // cast, as the Cast tab's cards; without TMDB's, the source's names as the tab's chips.
+                // The episode's cast (the episode cast plan, EC-D1): its guest stars and the show's
+                // cast, each under its own heading, as the Cast tab's cards; without TMDB's, the
+                // source's names as the tab's chips.
                 val sourceCast = (episode.metadata.cast ?: seriesDetail.metadata.cast)?.takeIf { it.isNotBlank() }
-                if (episodeCredits != null || sourceCast != null) {
-                    CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
-                    // Each episode's own cards: Next and Previous start its row at the first actor.
-                    key(episode.id) {
-                        if (episodeCredits != null) {
+                // Each episode's own cards: Next and Previous start its rows at the first actor.
+                key(episode.id) {
+                    if (episodeCredits != null) {
+                        listOfNotNull(
+                            episodeCredits.guests?.let { R.string.episode_guest_stars to it },
+                            episodeCredits.regulars?.let { R.string.episode_series_cast to it },
+                        ).forEach { (heading, credits) ->
+                            CinemaText(text = stringResource(heading), role = TextRole.Heading)
                             TvCreditsTabContent(
-                                credits = episodeCredits,
+                                credits = credits,
                                 section = ThumbnailContentType.TV_SHOW,
                                 returnFocus = returnFocus,
                                 onPersonSelected = onPersonSelected,
                             )
-                        } else {
-                            SeriesCastTabContent(cast = sourceCast.orEmpty())
+                            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                         }
+                    } else if (sourceCast != null) {
+                        CinemaText(text = stringResource(R.string.details_tab_cast), role = TextRole.Heading)
+                        SeriesCastTabContent(cast = sourceCast)
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                     }
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                 }
 
                 // A child's page has no technical rows: TMDB id, container, bitrate (UX-D5).
