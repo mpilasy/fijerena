@@ -235,6 +235,15 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         navController.navigate(screen)
     }
 
+    // The tab Settings was opened from: Back on Settings' root returns to it.
+    var settingsOpenedFrom by rememberSaveable { mutableStateOf<MobileTab?>(null) }
+
+    // Settings, from the profile menu: a tab off the bar, so Back returns to the tab it came from.
+    fun openSettings() {
+        navController.currentTab()?.takeIf { it != MobileTab.SETTINGS }?.let { settingsOpenedFrom = it }
+        selectTab(MobileTab.SETTINGS)
+    }
+
     // A tab root's top bar leaves it: the Live TV dock is stopped first, as the bar does.
     fun leaveTabRoot(go: () -> Unit) {
         stopLiveDocks()
@@ -454,13 +463,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
 
     // The top bar of [tab]'s root: the section's name over the sources' sync summary; Search the
-    // guide on Home and Live TV, and the section's Search (everything on Home). The profile avatar is in the dock — in the top bar
-    // only while there is no dock (no section).
+    // guide on Home and Live TV, the section's Search (everything on Home), then the profile avatar,
+    // which opens the profile menu.
     fun sourceTopBar(tab: MobileTab): @Composable ((() -> Unit)?) -> Unit =
         { onSearch ->
             MobileSourceTopBar(
                 title = tab.label(),
-                sections = profileSections,
                 // A section's Search: everything, with this section's chip chosen (one tap from
                 // all of it) — Home's comes from its screen.
                 onSearch =
@@ -471,14 +479,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     } else {
                         null
                     },
-                // Every screen may hold the previous profile's repository: start over on its last
-                // tab, as after the profile page's switch.
-                onProfileChosen = { coroutineScope.launch { startOver() } },
-                // A Browse entry (O1): that source's section, on it alone, pushed in this tab.
-                onBrowseSection = ::browseSection,
-                onBrowseSignIn = ::browseSignIn,
-                showProfile = tabs.isEmpty(),
-                onSettings = { selectTab(MobileTab.SETTINGS) },
+                onProfile = { showProfileMenu = true },
             )
         }
 
@@ -605,15 +606,21 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val dockCovers = entry != null && liveDocks[entry.id]?.second == true
     val showBar = currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)
     var barHeightPx by remember { mutableIntStateOf(0) }
-    // The dock's profile slot: the profile in use, and its menu.
+    // The profile in use, for the profile menu and the PIN prompts.
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else CinemaSpacing.none
     // Back never leaves the app (household UX plan, 2026-10-19): on a tab's start it goes to Home,
-    // on Home it does nothing — a child pressing Back stays in. Composed before the NavHost, so the
-    // NavHost's own Back (popping a screen) and a screen's (Live TV's dock) come first.
+    // on Home it does nothing — a child pressing Back stays in. On Settings' start it goes to the
+    // tab Settings was opened from. Composed before the NavHost, so the NavHost's own Back (popping
+    // a screen) and a screen's (Live TV's dock) come first.
     BackHandler(enabled = currentTab != null && navController.previousBackStackEntry == null) {
-        if (currentTab != MobileTab.HOME && MobileTab.HOME in tabs) selectTab(MobileTab.HOME)
+        val from = settingsOpenedFrom.takeIf { currentTab == MobileTab.SETTINGS }
+        if (from != null) {
+            selectTab(from)
+        } else if (currentTab != MobileTab.HOME && MobileTab.HOME in tabs) {
+            selectTab(MobileTab.HOME)
+        }
     }
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
         CompositionLocalProvider(
@@ -934,7 +941,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     )
                 }
 
-                // A tab root (the bar's Settings tab): no back arrow; Back goes to Home as on the others.
+                // A tab root (Settings' tab, off the bar): no back arrow; Back goes to the tab it was
+                // opened from.
                 composable<Screen.Settings> {
                     MobileSettingsScreen(
                         onBack = null,
@@ -1367,10 +1375,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             MobileBottomBar(
                 tabs = tabs,
                 selected = currentTab,
-                // The profile slot opens its menu (switch profile, Settings, Browse entries).
-                onSelect = { tab -> if (tab == MobileTab.SETTINGS) showProfileMenu = true else selectTab(tab) },
+                onSelect = ::selectTab,
                 modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { barHeightPx = it.height },
-                profile = activeProfile,
             )
         }
     }
@@ -1422,7 +1428,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         // Every screen may hold the previous profile's repository: start over on its last tab.
         onProfileChosen = { coroutineScope.launch { startOver() } },
         mustChoose = mustChooseProfile,
-        onSettings = { selectTab(MobileTab.SETTINGS) },
+        onSettings = ::openSettings,
         onBrowseSection = ::browseSection,
         onBrowseSignIn = ::browseSignIn,
     )

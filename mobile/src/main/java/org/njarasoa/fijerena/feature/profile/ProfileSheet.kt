@@ -43,7 +43,7 @@ import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * The profile menu's sheet (the dock's profile slot): the profiles, the one in use marked — tapping another
+ * The profile menu's sheet (the top bar's profile avatar): the profiles, the one in use marked — tapping another
  * switches to it and then calls [onProfileChosen], for the caller to start over on its last tab —
  * and Settings (not for a child profile, which has none). Under them, a "Browse <source>" row for each
  * of the profile's sources outside the merged tabs ([browse]: Jellyfin, M3U;

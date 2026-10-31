@@ -19,8 +19,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The profile's avatar with a small gear badge at its lower end: the avatar opens the profile menu,
- * which has Settings (settings flow review, SF-D4). The bottom bar's profile slot and the top bar's
- * avatar (when there is no bottom bar) use it.
+ * which has Settings (settings flow review, SF-D4). Each tab root's top bar shows it, last.
  */
 @Composable
 fun ProfileSettingsAvatar(

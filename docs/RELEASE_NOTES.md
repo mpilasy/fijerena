@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Profile avatar at the top right:** on the phone, your profile's avatar moves from the bottom bar to the top right of each tab, after the Search icons, as in other TV apps. It opens the same menu (switch profile, Settings). Back from Settings returns to the tab you came from. Phone.
+
 ## Version: 0.9.20261031213847
 
 - **Followed teams packed tighter:** on the Sports page, your followed teams and leagues are smaller cards (half as wide) in one alphabetical row. TV and phone.

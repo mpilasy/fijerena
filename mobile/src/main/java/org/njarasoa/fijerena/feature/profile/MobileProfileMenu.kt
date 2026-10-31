@@ -30,8 +30,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
- * The profile menu, opened from the dock's profile slot (or the top bar's avatar while the
- * profile has no section, so no dock): [ProfileSheet] while [visible] — switch profile
+ * The profile menu, opened from the profile avatar at the right of a tab root's top bar:
+ * [ProfileSheet] while [visible] — switch profile
  * ([onProfileChosen] runs after the switch), Settings ([onSettings]), and a "Browse <source>" row
  * per source outside the merged tabs ([sections]' Browse entries, O1): [onBrowseSection] opens the
  * section picked (a dialog asks which when it has several), [onBrowseSignIn] the source's sign-in

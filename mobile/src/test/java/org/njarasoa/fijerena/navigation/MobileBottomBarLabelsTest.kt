@@ -19,7 +19,7 @@ class MobileBottomBarLabelsTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val tabs = listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS)
+    private val tabs = listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS)
 
     private fun setBar() {
         composeTestRule.setContent { MobileBottomBar(tabs = tabs, selected = MobileTab.LIVE_TV, onSelect = {}) }

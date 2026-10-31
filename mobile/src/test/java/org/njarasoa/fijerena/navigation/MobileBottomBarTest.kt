@@ -18,25 +18,31 @@ class MobileBottomBarTest {
     @Test
     fun `Home first, every section in bar order whatever order the source lists them in`() {
         assertEquals(
-            listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS),
+            listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS),
             visibleTabs(listOf(ContentType.TV_SHOWS, ContentType.LIVE_TV, ContentType.MOVIES)),
         )
     }
 
     @Test
-    fun `only the sections the source has, between Home and Settings`() {
+    fun `only the sections the source has, after Home`() {
         assertEquals(
-            listOf(MobileTab.HOME, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS),
+            listOf(MobileTab.HOME, MobileTab.MOVIES, MobileTab.TV_SHOWS),
             visibleTabs(listOf(ContentType.MOVIES, ContentType.TV_SHOWS)),
         )
     }
 
     @Test
-    fun `a single section still shows the bar, for Home and Settings`() {
+    fun `a single section still shows the bar, for Home`() {
         assertEquals(
-            listOf(MobileTab.HOME, MobileTab.MOVIES, MobileTab.SETTINGS),
+            listOf(MobileTab.HOME, MobileTab.MOVIES),
             visibleTabs(listOf(ContentType.MOVIES)),
         )
+    }
+
+    @Test
+    fun `Settings is never on the bar, the top bar's avatar opens it`() {
+        assertFalse(MobileTab.SETTINGS in visibleTabs(ALL, sports = true))
+        assertFalse(MobileTab.SETTINGS in visibleTabs(listOf(ContentType.MOVIES)))
     }
 
     @Test
@@ -92,7 +98,7 @@ class MobileBottomBarTest {
     fun `no Live TV tab when the profile's sources have no channels`() {
         // ProfileSections.merged when no Xtream source of the profile has live categories.
         val sections = setOf(ContentType.MOVIES, ContentType.TV_SHOWS)
-        assertEquals(listOf(MobileTab.HOME, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS), visibleTabs(sections))
+        assertEquals(listOf(MobileTab.HOME, MobileTab.MOVIES, MobileTab.TV_SHOWS), visibleTabs(sections))
         assertEquals(MobileTab.HOME, startTab(ContentType.LIVE_TV, sections))
     }
 
@@ -102,12 +108,12 @@ class MobileBottomBarTest {
     }
 
     @Test
-    fun `Sports sits between the sections and Settings when shown`() {
+    fun `Sports comes after the sections when shown`() {
         assertEquals(
-            listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SPORTS, MobileTab.SETTINGS),
+            listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SPORTS),
             visibleTabs(ALL, sports = true),
         )
-        assertEquals(listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS), visibleTabs(ALL))
+        assertEquals(listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS), visibleTabs(ALL))
         // No section, no bar: Sports alone does not bring it.
         assertEquals(emptyList<MobileTab>(), visibleTabs(emptySet(), sports = true))
     }

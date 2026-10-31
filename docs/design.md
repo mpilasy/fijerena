@@ -370,8 +370,8 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Bottom bar | `navigation/MobileBottomBar.kt`, `MobileDockStyle.kt` | Home, the section tabs, the profile slot |
-| Tab header | `feature/contentselection/MobileSourceTopBar.kt` | Section name, the sources' sync line, Search the guide, Search |
+| Bottom bar | `navigation/MobileBottomBar.kt`, `MobileDockStyle.kt` | Home, the section tabs, Sports |
+| Tab header | `feature/contentselection/MobileSourceTopBar.kt` | Section name, the sources' sync line, Search the guide, Search, the profile avatar |
 | Category list | `feature/category/MobileCategoryListScreen.kt` | Categories and items; Live TV dock and full screen |
 | Movie details | `feature/movie/MovieDetailsScreen.kt` | Hero, Play / Resume, related titles |
 | Episodes | `feature/episode/EpisodeSelectionScreen.kt` | Season tabs, episode list |
