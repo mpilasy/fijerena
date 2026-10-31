@@ -195,9 +195,9 @@ fun MobileEpisodeSelectionScreen(
     // episode's page again (the navigation round trip drops every plain remember).
     var personReturnEpisodeId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Selected episode for detail panel — only set by an explicit tap (including on the
-    // Continue Watching resume episode below); arriving here never auto-opens it, except on the
-    // way back from a person page opened from the episode's page.
+    // Selected episode for detail panel — set by an explicit tap (including on the Continue
+    // Watching resume episode below), on the way back from a person page opened from the episode's
+    // page, and for an actor's episode (below).
     var selectedEpisode by remember {
         mutableStateOf(
             personReturnEpisodeId?.let { id ->
@@ -207,6 +207,18 @@ fun MobileEpisodeSelectionScreen(
     }
     // Used once: a later return (from the player) opens on the list again.
     LaunchedEffect(Unit) { personReturnEpisodeId = null }
+    // An actor's episode (the route names its season too): its page opens once the show is in,
+    // so the episode picked is the one on screen (user, 2026-10-31). Once only: Back shows the
+    // list on it, and a return from the player stays where the user was.
+    var actorEpisodeOpened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(displaySeriesDetail) {
+        if (actorEpisodeOpened || initialEpisodeId == null || initialSeason == null) return@LaunchedEffect
+        val episode =
+            displaySeriesDetail?.episodes?.values?.firstNotNullOfOrNull { list -> list.firstOrNull { it.id == initialEpisodeId } }
+                ?: return@LaunchedEffect
+        actorEpisodeOpened = true
+        selectedEpisode = episode
+    }
     val closeEpisode: () -> Unit = {
         selectedEpisode = null
         personReturnEpisodeId = null
