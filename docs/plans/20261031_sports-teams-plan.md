@@ -1,6 +1,6 @@
 # Sports teams
 
-**Status:** In progress since 2026-10-31: Phases 1–4 done; Phase 5 and the core of Phase 7 built; Phase 6 in progress.
+**Status:** In progress since 2026-10-31: Phases 1–4 done; Phase 5 and the core of Phase 7 built; Phase 6 in progress; then Phase 6b cuts the feature to its core (SP-D15). The Data sources and Design sections below still describe the larger design until Phase 6b rewrites them.
 
 ## Goal
 
@@ -27,6 +27,7 @@ programme when the guide has it, else a channel whose name has the broadcaster's
 | SP-D12 | Game reminders? | **In this plan**: a bell on a game sets a reminder (see Reminders). |
 | SP-D13 | UEFA countries? | Ask UEFA only for the countries found in the profile's channel names and categories ("FR:", "UK|"), plus Madagascar; the season table covers the others for UEFA games. |
 | SP-D14 | TV rights outside the live APIs? | Read **directly from Wikipedia** by the app (its broadcaster list pages, or the broadcasting section of a league's article), only for followed competitions, at most once a week, the last good result kept on failure. No bundled or hand-edited table. Wikipedia tables are written by hand, not structured data: the parser is loose and some pages will have gaps. |
+| SP-D15 | Cut to the core (user, later on 2026-10-31: "over-engineered") | The goal is a followed team's schedule (Bayern, Ajax…) and whether the profile's channels, guide or PPV/event channels carry each game. Kept: ESPN team search and schedules, following, guide matching, and a **new match of team names in channel names** (PPV and event channels). ESPN, NHL and MLB network names stay only inside the matcher, to find the profile's channels with those names; they are never shown as a list. Removed: UEFA and Wikipedia TV rights, the season table, country detection, FIFA and World Aquatics, and the game sheet's list of networks without a channel. This replaces SP-D4, SP-D5, SP-D13 and SP-D14, the TV part of SP-D10, and SP-D6 beyond what ESPN lists. |
 
 ## Data sources
 
@@ -197,6 +198,7 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |
 | 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Built 2026-10-31: Teams type (switch on, not a child, ALL or Live TV search), `Screen.SportsTeam`, `Screen.SportsLeague`, game sheet (TV overlay, phone bottom sheet); broadcasters without a channel grouped by name ("48 countries"). Left: emulator walks with Phase 6 |
 | 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | In progress |
+| 6b | Cut to the core (SP-D15): remove the UEFA, FIFA, World Aquatics clients, the season table and its check, country detection; channel-name (PPV) match; game sheet shows only matched channels and programmes, else "Not found on your channels"; rewrite this plan's Data sources and Design to match | Not started |
 | 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Core done 2026-10-31: `game_reminder` (v30, not synced), `GameReminders`, alarms, reschedule receiver (on only while a reminder exists), phone notification, TV banner (never takes focus by itself; Menu moves to it; closes after 30 s). Left: the bells (Phase 6) and emulator walks |
 | 8 | Android Lint, docs (FEATURES, NAVIGATION_GUIDE, RUN_GUIDE with the season table update steps, RELEASE_NOTES, a CONTRIBUTING rule for the sports sources), release | Not started |
 
