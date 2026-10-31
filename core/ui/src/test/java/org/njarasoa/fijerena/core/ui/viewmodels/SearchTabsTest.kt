@@ -87,6 +87,29 @@ class SearchTabsTest {
     }
 
     @Test
+    fun `with the Sports switch on, Teams after People, over live channels only, never for a child`() {
+        assertEquals(
+            listOf(SearchTab.CATALOGUE, SearchTab.PEOPLE, SearchTab.TEAMS, SearchTab.GUIDE),
+            searchTabs(SearchViewModel.CONTENT_TYPE_ALL, hasGuide = true, hasTmdbKey = true, sportsOn = true),
+        )
+        assertEquals(
+            listOf(SearchTab.CATALOGUE, SearchTab.TEAMS, SearchTab.GUIDE),
+            searchTabs(ContentType.LIVE_TV, hasGuide = true, hasTmdbKey = true, sportsOn = true),
+        )
+        assertEquals(
+            listOf(SearchTab.CATALOGUE, SearchTab.PEOPLE),
+            searchTabs(ContentType.MOVIES, hasGuide = true, hasTmdbKey = true, sportsOn = true),
+        )
+        // A child: no Teams, whatever the switch.
+        assertEquals(
+            listOf(SearchTab.CATALOGUE, SearchTab.GUIDE),
+            searchTabs(SearchViewModel.CONTENT_TYPE_ALL, hasGuide = true, hasTmdbKey = true, child = true, sportsOn = true),
+        )
+        // The switch off: no Teams.
+        assertEquals(emptyList<SearchTab>(), searchTabs(SearchViewModel.CONTENT_TYPE_ALL, hasGuide = false, hasTmdbKey = false))
+    }
+
+    @Test
     fun `a type no longer offered shows the catalogue`() {
         assertEquals(SearchTab.CATALOGUE, activeSearchTab(SearchTab.PEOPLE, listOf(SearchTab.CATALOGUE, SearchTab.GUIDE)))
         assertEquals(SearchTab.CATALOGUE, activeSearchTab(SearchTab.PEOPLE, emptyList()))

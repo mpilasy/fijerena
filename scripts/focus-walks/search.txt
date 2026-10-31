@@ -33,13 +33,22 @@ CENTER	People
 WAIT 1	People
 DOWN	Search actors, films and shows
 UP	People
+# Teams after People (the sports teams plan; Admin's Sports switch is on by default). OK on it
+# switches type and keeps focus on it; Down → its field, Up → Teams.
+RIGHT	Teams
+CENTER	Teams
+WAIT 1	Teams
+DOWN	Search teams and leagues
+UP	Teams
 # OK on Guide switches tab and keeps focus on the tab; Down → the guide's field, Up → Guide.
 RIGHT	Guide
 CENTER	Guide
 WAIT 1	Guide
 DOWN	Enter programme title…
 UP	Guide
+LEFT	Teams
 LEFT	People
+
 LEFT	Catalogue
 CENTER	Catalogue
 WAIT 1	Catalogue

@@ -81,6 +81,8 @@ import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
+import org.njarasoa.fijerena.core.ui.sports.league
+import org.njarasoa.fijerena.core.ui.sports.team
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -109,6 +111,8 @@ import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.feature.sports.MobileSportsLeagueScreen
+import org.njarasoa.fijerena.feature.sports.MobileSportsTeamScreen
 import org.njarasoa.fijerena.feature.wanted.MobileTmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.LocalMobileClock
@@ -503,6 +507,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         MobileSearchScreen(
             onTmdbTitleSelected = { navController.navigateOnce(it.route()) },
             onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
+            onTeamSelected = { navController.navigateOnce(it) },
+            onLeagueSelected = { navController.navigateOnce(it) },
             onResultOpening = { query, source ->
                 openingQuery = query
                 openingSource = source
@@ -1055,7 +1061,39 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     )
                 }
 
+                // A team's and a league's page (the sports teams plan). A game's channel opens as
+                // Search the guide's result: the docked mini-player; Back returns to the page.
+                composable<Screen.SportsTeam> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.SportsTeam>()
+                    val team = remember(route) { route.team() }
+                    if (team == null) {
+                        LaunchedEffect(Unit) { navController.navigateUp() }
+                    } else {
+                        MobileSportsTeamScreen(
+                            team = team,
+                            onPlay = { navController.navigateOnce(it) },
+                            onBack = { navController.navigateUp() },
+                        )
+                    }
+                }
+
+                composable<Screen.SportsLeague> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.SportsLeague>()
+                    val league = remember(route) { route.league() }
+                    if (league == null) {
+                        LaunchedEffect(Unit) { navController.navigateUp() }
+                    } else {
+                        MobileSportsLeagueScreen(
+                            league = league,
+                            onTeamSelected = { navController.navigateOnce(it) },
+                            onPlay = { navController.navigateOnce(it) },
+                            onBack = { navController.navigateUp() },
+                        )
+                    }
+                }
+
                 composable<Screen.Person> { backStackEntry ->
+
                     val route = backStackEntry.toRoute<Screen.Person>()
                     MobilePersonScreen(
                         tmdbId = route.tmdbId,

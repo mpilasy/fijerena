@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.wanted.ReleaseInfo
@@ -161,6 +162,9 @@ fun MobileSearchScreen(
     onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
     // A person found by the People type: their actor page (the people search plan).
     onPersonSelected: (tmdbId: String, name: String) -> Unit = { _, _ -> },
+    // A team or league found by the Teams type: its page (the sports teams plan).
+    onTeamSelected: (Screen.SportsTeam) -> Unit = {},
+    onLeagueSelected: (Screen.SportsLeague) -> Unit = {},
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -212,7 +216,9 @@ fun MobileSearchScreen(
     // People only with a TMDB key (PS-D1), never for a child.
     val hasTmdbKey = remember { TmdbApiService.getInstance(context.applicationContext).hasApiKey() }
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
-    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child)
+    // Teams while Admin's Sports switch is on (SP-D9), never for a child (SP-D8).
+    val sportsOn = remember { appSettings.showSports }
+    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, sportsOn = sportsOn)
     val showTabs = tabs.isNotEmpty()
     val activeTab = activeSearchTab(selectedTab, tabs)
     val guideActive = activeTab == SearchTab.GUIDE
@@ -383,6 +389,15 @@ fun MobileSearchScreen(
                         onTmdbTitleSelected(title)
                     },
                     onTmdbTitleLongPress = { tmdbMenu = it },
+                )
+                return@Column
+            }
+            if (activeTab == SearchTab.TEAMS) {
+                MobileTeamsSearchPane(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onTeamSelected = onTeamSelected,
+                    onLeagueSelected = onLeagueSelected,
                 )
                 return@Column
             }
@@ -580,7 +595,8 @@ fun MobileSearchScreen(
     }
 }
 
-/** "Catalogue | People | Guide" ([tabs]), in the look of the category list's mode tabs (phone UI audit #1). */
+/** "Catalogue | People | Teams | Guide" ([tabs]), in the look of the category list's mode tabs (phone UI audit #1). */
+
 @Composable
 internal fun MobileSearchTabs(
     tabs: List<SearchTab>,
@@ -595,6 +611,7 @@ internal fun MobileSearchTabs(
                     when (tab) {
                         SearchTab.CATALOGUE -> R.string.search_tab_catalogue
                         SearchTab.PEOPLE -> R.string.search_tab_people
+                        SearchTab.TEAMS -> R.string.search_tab_teams
                         SearchTab.GUIDE -> R.string.search_tab_guide
                     },
                 )

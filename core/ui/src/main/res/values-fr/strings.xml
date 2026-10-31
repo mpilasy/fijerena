@@ -96,6 +96,48 @@
     <string name="search_tab_people">Personnes</string>
     <string name="search_people_unreachable">Impossible de joindre TMDB</string>
     <string name="search_people_placeholder">Rechercher acteurs, films et séries</string>
+    <!-- Search's Teams type and the sports pages (the sports teams plan) -->
+    <string name="search_tab_teams">Équipes</string>
+    <string name="search_teams_placeholder">Rechercher des équipes et des ligues</string>
+    <string name="sports_leagues_heading">Ligues</string>
+    <string name="sports_next_games_heading">Prochains matchs</string>
+    <string name="sports_channels_heading">Vos chaînes</string>
+    <string name="sports_broadcasters_heading">Autres diffuseurs</string>
+    <string name="sports_follow">Suivre</string>
+    <string name="sports_unfollow">Ne plus suivre</string>
+    <string name="sports_followed">Suivi</string>
+    <string name="sports_load_error">Impossible de charger les matchs</string>
+    <string name="sports_no_games">Aucun match dans les prochains jours</string>
+    <string name="sports_not_announced">Diffusion pas encore annoncée</string>
+    <string name="sports_on_broadcaster">Sur %1$s</string>
+    <string name="sports_in_guide">Dans le guide</string>
+    <string name="sports_starts_at">Commence à %1$s</string>
+    <string name="sports_matching">Recherche des chaînes…</string>
+    <string name="sports_home_game">Domicile</string>
+    <string name="sports_away_game">Extérieur</string>
+    <string name="sports_game_format">%1$s – %2$s</string>
+    <string name="sports_worldwide">Monde entier</string>
+    <plurals name="sports_countries">
+        <item quantity="one">%d pays</item>
+        <item quantity="many">%d pays</item>
+        <item quantity="other">%d pays</item>
+    </plurals>
+    <string name="sport_soccer">Football</string>
+    <string name="sport_american_football">Football américain</string>
+    <string name="sport_basketball">Basket-ball</string>
+    <string name="sport_baseball">Baseball</string>
+    <string name="sport_hockey">Hockey sur glace</string>
+    <string name="sport_rugby">Rugby</string>
+    <string name="sport_rugby_league">Rugby à XIII</string>
+    <string name="sport_cricket">Cricket</string>
+    <string name="sport_tennis">Tennis</string>
+    <string name="sport_golf">Golf</string>
+    <string name="sport_mma">MMA</string>
+    <string name="sport_racing">Sport automobile</string>
+    <string name="sport_australian_football">Football australien</string>
+    <string name="sport_lacrosse">Crosse</string>
+    <string name="sport_volleyball">Volley-ball</string>
+    <string name="sport_water_polo">Water-polo</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Toutes les sources</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->

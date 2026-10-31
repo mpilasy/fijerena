@@ -87,6 +87,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.wanted.ReleaseInfo
@@ -216,6 +217,9 @@ fun SearchScreen(
     onTmdbTitleSelected: (TmdbTitle) -> Unit = {},
     // A person found by the People type: their actor page (the people search plan).
     onPersonSelected: (tmdbId: String, name: String) -> Unit = { _, _ -> },
+    // A team or league found by the Teams type: its page (the sports teams plan).
+    onTeamSelected: (Screen.SportsTeam) -> Unit = {},
+    onLeagueSelected: (Screen.SportsLeague) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -257,7 +261,9 @@ fun SearchScreen(
     val child = remember { AppSettings(context.applicationContext).isChildProfile(profileId) }
     // People only with a TMDB key (PS-D1), never for a child.
     val hasTmdbKey = remember { TmdbApiService.getInstance(context.applicationContext).hasApiKey() }
-    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child)
+    // Teams while Admin's Sports switch is on (SP-D9), never for a child (SP-D8).
+    val sportsOn = remember { AppSettings(context.applicationContext).showSports }
+    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child, sportsOn = sportsOn)
     val showsTabs = tabs.isNotEmpty()
     SearchSession.forProfile(profileId)
     var selectedTab by SearchSession::tab
@@ -426,6 +432,16 @@ fun SearchScreen(
                     onTitleSelected = { item, type -> onStreamSelected(item.id, item.name, item.categoryId, type, item.providerId) },
                     onTmdbTitleSelected = onTmdbTitleSelected,
                     onTmdbTitleActions = { tmdbMenu = it },
+                )
+            } else if (activeTab == SearchTab.TEAMS) {
+                TeamsSearchPane(
+                    query = fieldText,
+                    onQueryChange = { fieldText = it },
+                    holdFocus = holdFocus,
+                    fieldModifier = fieldModifier,
+                    returnFocus = returnFocus,
+                    onTeamSelected = onTeamSelected,
+                    onLeagueSelected = onLeagueSelected,
                 )
             } else if (activeTab == SearchTab.GUIDE) {
                 GuideTab(
@@ -601,6 +617,7 @@ private fun SearchTabRow(
                         when (tab) {
                             SearchTab.CATALOGUE -> R.string.search_tab_catalogue
                             SearchTab.PEOPLE -> R.string.search_tab_people
+                            SearchTab.TEAMS -> R.string.search_tab_teams
                             SearchTab.GUIDE -> R.string.search_tab_guide
                         },
                     ),

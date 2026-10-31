@@ -47,4 +47,16 @@ class MobileSearchTabsTest {
 
         assertEquals(SearchTab.PEOPLE, selected)
     }
+
+    @Test
+    fun `Teams shows after People, and tapping it selects it`() {
+        var selected: SearchTab? = null
+        composeTestRule.setContent {
+            MobileSearchTabs(tabs = SearchTab.entries, selected = SearchTab.CATALOGUE, onSelect = { selected = it })
+        }
+
+        composeTestRule.onNodeWithText("Teams").performClick()
+
+        assertEquals(SearchTab.TEAMS, selected)
+    }
 }

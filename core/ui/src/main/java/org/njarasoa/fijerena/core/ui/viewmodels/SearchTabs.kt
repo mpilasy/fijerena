@@ -2,14 +2,14 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
-// Search's Catalogue | People | Guide types, the same rules on TV and phone
-// (the search guide tab plan, the people search plan).
+// Search's Catalogue | People | Teams | Guide types, the same rules on TV and phone
+// (the search guide tab plan, the people search plan, the sports teams plan).
 
 /**
  * Search's types, in the order they show: the catalogue, TMDB's people, films and shows (PS-D1),
- * or programme titles in the guide (D1).
+ * sports teams and leagues (SP-D2), or programme titles in the guide (D1).
  */
-enum class SearchTab { CATALOGUE, PEOPLE, GUIDE }
+enum class SearchTab { CATALOGUE, PEOPLE, TEAMS, GUIDE }
 
 /** The Guide tab shows when Search covers live channels and a source of the profile has some (O1). */
 fun showsGuideTab(
@@ -28,9 +28,21 @@ fun showsPeopleTab(
 ): Boolean = hasTmdbKey && !child && contentType != ContentType.LIVE_TV
 
 /**
+ * The Teams type shows while Admin's Sports switch is on (SP-D9), never on a child profile (SP-D8),
+ * and only where Search covers live channels (everything, or Live TV): games are watched on live
+ * channels, so a search of films or shows alone has no use for it.
+ */
+fun showsTeamsTab(
+    contentType: String,
+    sportsOn: Boolean,
+    child: Boolean = false,
+): Boolean = sportsOn && !child && (contentType == SearchViewModel.CONTENT_TYPE_ALL || contentType == ContentType.LIVE_TV)
+
+/**
  * The types the Search screen offers, in order; empty when only the catalogue is left (no type
- * selector then). [child]: a child profile, which never gets the People type. [guideAllowed] is
- * false where the Guide type never shows (a child profile on TV).
+ * selector then). [child]: a child profile, which never gets the People or Teams type.
+ * [guideAllowed] is false where the Guide type never shows (a child profile on TV). [sportsOn]:
+ * Admin's Sports switch.
  */
 fun searchTabs(
     contentType: String,
@@ -38,11 +50,13 @@ fun searchTabs(
     hasTmdbKey: Boolean,
     child: Boolean = false,
     guideAllowed: Boolean = true,
+    sportsOn: Boolean = false,
 ): List<SearchTab> {
     val tabs =
         listOfNotNull(
             SearchTab.CATALOGUE,
             SearchTab.PEOPLE.takeIf { showsPeopleTab(contentType, hasTmdbKey, child) },
+            SearchTab.TEAMS.takeIf { showsTeamsTab(contentType, sportsOn, child) },
             SearchTab.GUIDE.takeIf { guideAllowed && showsGuideTab(contentType, hasGuide) },
         )
     return if (tabs.size > 1) tabs else emptyList()

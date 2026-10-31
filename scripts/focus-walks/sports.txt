@@ -1,0 +1,19 @@
+# Sports pages (Search's Teams type, the team page, the game sheet; the sports teams plan, Phase 5),
+# TV emulator, any source with live channels (the iptv test source has a guide), Admin's Sports
+# switch on. Team names, games and channels come from the sports sources and change every day, so
+# rows are unasserted; only the fixed controls are.
+# Start: Home → Search → Teams, "arsenal" searched, Back out of the keyboard; focus on the field.
+# Covers: Down from the field → the first team; OK → its page on its first game (Follow while the
+# games load or when it has none); Up → Follow; OK on a game → its sheet on its first row; Back →
+# the game again; Back → the team row in Search.
+# Written 2026-10-31 from the plan; re-record with -r on the emulator before relying on it.
+@start Search teams and leagues
+DOWN
+CENTER
+WAIT 5
+UP	Follow
+DOWN
+CENTER
+WAIT 1
+BACK
+BACK

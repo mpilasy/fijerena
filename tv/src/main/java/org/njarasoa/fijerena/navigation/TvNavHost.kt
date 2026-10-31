@@ -69,6 +69,8 @@ import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
+import org.njarasoa.fijerena.core.ui.sports.league
+import org.njarasoa.fijerena.core.ui.sports.team
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -93,6 +95,8 @@ import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
+import org.njarasoa.fijerena.feature.sports.SportsLeagueScreen
+import org.njarasoa.fijerena.feature.sports.SportsTeamScreen
 import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
@@ -954,12 +958,46 @@ fun TvNavHost(
                             )
                         }
 
+                        // A team's and a league's page (the sports teams plan). A game's channel opens as a
+                        // guide result: the preview on the channel; Back returns to the game sheet.
+                        composable<Screen.SportsTeam> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.SportsTeam>()
+                            val team = remember(route) { route.team() }
+                            if (team == null) {
+                                LaunchedEffect(Unit) { navController.navigateUp() }
+                            } else {
+                                SportsTeamScreen(
+                                    team = team,
+                                    onPlay = { navController.navigateOnce(it) },
+                                    onBack = { navController.navigateUp() },
+                                )
+                            }
+                        }
+
+                        composable<Screen.SportsLeague> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.SportsLeague>()
+                            val league = remember(route) { route.league() }
+                            if (league == null) {
+                                LaunchedEffect(Unit) { navController.navigateUp() }
+                            } else {
+                                SportsLeagueScreen(
+                                    league = league,
+                                    onTeamSelected = { navController.navigateOnce(it) },
+                                    onPlay = { navController.navigateOnce(it) },
+                                    onBack = { navController.navigateUp() },
+                                )
+                            }
+                        }
+
                         composable<Screen.Search> { backStackEntry ->
+
                             val searchScreen = backStackEntry.toRoute<Screen.Search>()
                             SearchScreen(
                                 contentType = searchScreen.contentType,
                                 onTmdbTitleSelected = { navController.navigateOnce(it.route()) },
                                 onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
+                                onTeamSelected = { navController.navigateOnce(it) },
+                                onLeagueSelected = { navController.navigateOnce(it) },
                                 onSearchEverything =
                                     { query: String ->
                                         navController.navigateToSearch(

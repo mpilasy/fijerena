@@ -96,6 +96,47 @@
     <string name="search_tab_people">Olona</string>
     <string name="search_people_unreachable">Tsy tratra ny TMDB</string>
     <string name="search_people_placeholder">Tadiavo mpilalao, sarimihetsika ary andian-tantara</string>
+    <!-- Search's Teams type and the sports pages (the sports teams plan) -->
+    <string name="search_tab_teams">Ekipa</string>
+    <string name="search_teams_placeholder">Tadiavo ekipa sy ligy</string>
+    <string name="sports_leagues_heading">Ligy</string>
+    <string name="sports_next_games_heading">Lalao manaraka</string>
+    <string name="sports_channels_heading">Ny fantsonao</string>
+    <string name="sports_broadcasters_heading">Mpandefa hafa</string>
+    <string name="sports_follow">Araho</string>
+    <string name="sports_unfollow">Aza arahina intsony</string>
+    <string name="sports_followed">Arahina</string>
+    <string name="sports_load_error">Tsy voaangona ny lalao</string>
+    <string name="sports_no_games">Tsy misy lalao amin\'ny andro ho avy</string>
+    <string name="sports_not_announced">Mbola tsy fantatra ny fantsona mandefa</string>
+    <string name="sports_on_broadcaster">Ao amin\'ny %1$s</string>
+    <string name="sports_in_guide">Ao amin\'ny fandaharana</string>
+    <string name="sports_starts_at">Manomboka amin\'ny %1$s</string>
+    <string name="sports_matching">Mitady fantsona…</string>
+    <string name="sports_home_game">An-tokotany</string>
+    <string name="sports_away_game">Any ivelany</string>
+    <string name="sports_game_format">%1$s – %2$s</string>
+    <string name="sports_worldwide">Eran-tany</string>
+    <plurals name="sports_countries">
+        <item quantity="one">firenena %d</item>
+        <item quantity="other">firenena %d</item>
+    </plurals>
+    <string name="sport_soccer">Baolina kitra</string>
+    <string name="sport_american_football">Baolina kitra amerikanina</string>
+    <string name="sport_basketball">Basikety</string>
+    <string name="sport_baseball">Baseball</string>
+    <string name="sport_hockey">Hockey amin\'ny ranomandry</string>
+    <string name="sport_rugby">Rugby</string>
+    <string name="sport_rugby_league">Rugby à XIII</string>
+    <string name="sport_cricket">Cricket</string>
+    <string name="sport_tennis">Tenisy</string>
+    <string name="sport_golf">Golf</string>
+    <string name="sport_mma">MMA</string>
+    <string name="sport_racing">Hazakazaka fiara</string>
+    <string name="sport_australian_football">Baolina kitra aostraliana</string>
+    <string name="sport_lacrosse">Lacrosse</string>
+    <string name="sport_volleyball">Volley</string>
+    <string name="sport_water_polo">Water-polo</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Ny loharano rehetra</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->

@@ -164,6 +164,40 @@ sealed interface Screen {
         val crew: Boolean = false,
     ) : Screen
 
+    /**
+     * A sports team's page: its coming games with the channels that show them, and Follow. Opened
+     * from Search's Teams type and from a league page (the sports teams plan → Screens).
+     *
+     * @param source The sports source's id (`SportsSource.id`: "espn", "fifa"…).
+     * @param teamId The team's id in that source.
+     * @param name The name to show until the games come.
+     * @param sport The source's sport key, when known ("soccer").
+     * @param league The source's league key, when known (ESPN reads a soccer team's games with it).
+     * @param logoUrl The team's logo, when known.
+     */
+    @Serializable
+    data class SportsTeam(
+        val source: String,
+        val teamId: String,
+        val name: String,
+        val sport: String? = null,
+        val league: String? = null,
+        val logoUrl: String? = null,
+    ) : Screen
+
+    /**
+     * A league's page: its games of the next 7 days, its teams, and Follow (the sports teams plan
+     * → Screens). The parameters as [SportsTeam]'s.
+     */
+    @Serializable
+    data class SportsLeague(
+        val source: String,
+        val leagueId: String,
+        val name: String,
+        val sport: String? = null,
+        val logoUrl: String? = null,
+    ) : Screen
+
     /** @param providerId The source the film is on. */
     @Serializable
     data class MovieDetails(
