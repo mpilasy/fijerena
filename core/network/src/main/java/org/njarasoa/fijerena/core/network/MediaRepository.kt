@@ -1984,7 +1984,10 @@ class MediaRepository(
                 // Already name-sorted by getFavoritesForContentType — sorted again below anyway,
                 // since a server-backed provider's own order needs it too and both paths should
                 // read the same regardless of which one served them.
-                rehydrateThumbnails(withoutHiddenCategories(getFavoritesForContentType(contentType), contentType), contentType)
+                rehydrateRatings(
+                    rehydrateThumbnails(withoutHiddenCategories(getFavoritesForContentType(contentType), contentType), contentType),
+                    contentType,
+                )
             }
         return result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
     }
@@ -2190,6 +2193,33 @@ class MediaRepository(
      * `streamIcon` for movies/live, `cover` for series) so these tiles show art instead of the
      * letter fallback. Items not yet in the cache are left with a null thumbnail, as before.
      */
+
+    /**
+     * A stored favourite keeps only its id and name: its rating comes from the catalogue row, for
+     * the rating on its Home card. Items the catalogue does not have keep none.
+     */
+    private suspend fun rehydrateRatings(
+        items: List<MediaItem>,
+        contentType: String,
+    ): List<MediaItem> {
+        val ids = items.filter { it.metadata.rating == null }.mapNotNull { it.id.toIntOrNull() }
+        if (ids.isEmpty()) return items
+        val ratings: Map<Int, String> =
+            withContext(Dispatchers.IO) {
+                val db = XtreamDatabase.getInstance(context)
+                when (contentType) {
+                    ContentType.MOVIES -> db.streamDao().getRatingsByIds(providerId, XtreamStreamEntity.TYPE_VOD, ids)
+                    ContentType.TV_SHOWS -> db.seriesDao().getRatingsByIds(providerId, ids)
+                    else -> emptyMap()
+                }
+            }
+        if (ratings.isEmpty()) return items
+        return items.map { item ->
+            val rating = if (item.metadata.rating == null) item.id.toIntOrNull()?.let { ratings[it] } else null
+            if (rating.isNullOrBlank()) item else item.copy(metadata = item.metadata.copy(rating = rating))
+        }
+    }
+
     private suspend fun rehydrateThumbnails(
         items: List<MediaItem>,
         contentType: String,

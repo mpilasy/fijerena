@@ -92,6 +92,18 @@ interface XtreamSeriesDao {
         Int,
     >
 
+    /** The ratings of the shows among [ids] that have one: a favourite card's rating. */
+    @Query("SELECT seriesId, rating FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids) AND rating IS NOT NULL")
+    fun getRatingsByIds(
+        providerId: Long,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "rating")
+        String,
+    >
+
     @Query("SELECT seriesId, cover FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids) AND cover IS NOT NULL")
     fun getCoversByIds(
         providerId: Long,

@@ -14,14 +14,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.player.domain.ParsedTitle
+import org.njarasoa.fijerena.core.player.domain.isResolutionTag
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
@@ -131,6 +135,94 @@ fun TitleBadges(
 }
 
 private const val BADGE_SEPARATOR = " · "
+
+/**
+ * The badges of [parsed] in the order a card shows them: the resolution first ("4K"), then the
+ * code (the first language), then the other tags in their order, then [events] for an events-only
+ * channel.
+ */
+internal fun cardBadgeTexts(
+    parsed: ParsedTitle,
+    events: String,
+): List<String> {
+    val (quality, rest) = parsed.tags.partition(::isResolutionTag)
+    return quality + listOfNotNull(parsed.badge) + rest + listOfNotNull(events.takeIf { parsed.eventsOnly })
+}
+
+/**
+ * A card's line under its name, always one line: the source ([SourceBadge]), the [rating]
+ * ([RatingBadge], none when missing or 0), then the badges of [parsed] one pill each
+ * ([cardBadgeTexts] order), then [trailing] in the room that is left. The badges that do not fit
+ * give way to one "+N" pill ("EN +4"); the source and the rating always stay; a pill never wraps or
+ * is cut. Without room, [trailing] is left out. Detail pages keep [TitleBadges], which shows every tag.
+ */
+@Composable
+fun CardBadgeLine(
+    parsed: ParsedTitle?,
+    modifier: Modifier = Modifier,
+    sourceName: String? = null,
+    providerId: Long? = null,
+    rating: String? = null,
+    trailing: @Composable () -> Unit = {},
+) {
+    // A number above 0 only: "0" is a source's way to say it has none.
+    val stars = rating?.takeIf { (it.trim().toDoubleOrNull() ?: 0.0) > 0.0 }
+    val events = stringResource(R.string.title_badge_events)
+    val texts = remember(parsed, events) { parsed?.let { cardBadgeTexts(it, events) }.orEmpty() }
+    SubcomposeLayout(modifier) { constraints ->
+        val gap = CinemaSpacing.xs.roundToPx()
+        val bounded = constraints.hasBoundedWidth
+        val maxWidth = constraints.maxWidth
+        // A pill at its own width, so it stays on one line.
+        val free = Constraints(maxHeight = constraints.maxHeight)
+        // The source and the rating: never left out.
+        val lead =
+            subcompose(SLOT_SOURCE) { sourceName?.let { SourceBadge(it, providerId = providerId) } }
+                .map { it.measure(Constraints(maxWidth = maxWidth, maxHeight = constraints.maxHeight)) } +
+                subcompose(SLOT_RATING) { stars?.let { RatingBadge(it, role = TextRole.Caption) } }.map { it.measure(free) }
+        val badges = texts.mapIndexed { i, text -> subcompose(i) { LanguageBadge(text, maxLines = 1) }.single().measure(free) }
+
+        fun widthOf(pills: List<Placeable>): Int = pills.sumOf { it.width } + gap * (pills.size - 1).coerceAtLeast(0)
+
+        var pills = lead + badges
+        if (bounded && widthOf(pills) > maxWidth) {
+            // The most badges that still leave room for a "+N" of the rest; none when even that does not fit.
+            pills = lead
+            for (kept in badges.size - 1 downTo 0) {
+                val more = badges.size - kept
+                val plus = subcompose(SLOT_MORE to more) { CinemaBadge("+$more", maxLines = 1) }.single().measure(free)
+                val line = lead + badges.take(kept) + plus
+                if (widthOf(line) <= maxWidth) {
+                    pills = line
+                    break
+                }
+            }
+        }
+        val used = if (pills.isEmpty()) 0 else widthOf(pills) + gap
+        val room = if (bounded) maxWidth - used else Constraints.Infinity
+        val after =
+            if (room > 0) {
+                subcompose(SLOT_TRAILING, trailing).map { it.measure(Constraints(maxWidth = room, maxHeight = constraints.maxHeight)) }
+            } else {
+                emptyList()
+            }
+        val placed = pills + after
+        val height = (placed.maxOfOrNull { it.height } ?: 0).coerceAtLeast(constraints.minHeight)
+        val width = if (bounded) maxWidth else used + after.sumOf { it.width }
+        layout(width, height) {
+            var x = 0
+            placed.forEach {
+                it.placeRelative(x, (height - it.height) / 2)
+                x += it.width + gap
+            }
+        }
+    }
+}
+
+private const val SLOT_SOURCE = "source"
+private const val SLOT_RATING = "rating"
+private const val SLOT_MORE = "more"
+private const val SLOT_TRAILING = "trailing"
 
 /** [TitleBadges] read aloud, for a row that sets one description for all its content. */
 @Composable

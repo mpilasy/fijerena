@@ -2,11 +2,10 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -18,13 +17,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -52,6 +51,10 @@ fun PosterCard(
     notAvailable: Boolean = false,
     // False: [title] shows as it is, without tags (a TMDB list's title, MediaItem.listTitle).
     tags: Boolean = true,
+    // False: the clean name without its tags as badges (Home's rows: the source and the rating only).
+    titleBadges: Boolean = true,
+    // Out of 10; shown after the source when above 0.
+    rating: String? = null,
     subtitleLines: Int = 1,
     onClick: () -> Unit,
 ) {
@@ -73,14 +76,27 @@ fun PosterCard(
             }
         }
         // Two lines for the title, as on a store's poster rows: a narrow card cuts long names early.
-        CardLines(title, subtitle, sourceName, providerId, width, tags, titleLines = 2, subtitleLines = subtitleLines)
+        CardLines(
+            title,
+            subtitle,
+            sourceName,
+            providerId,
+            width,
+            tags,
+            titleBadges = titleBadges,
+            rating = rating,
+            titleLines = 2,
+            subtitleLines = subtitleLines,
+        )
     }
 }
 
 /**
- * A card's clean name ("From (2022)", not "ES - From (2022)"), then its source (Expert mode), the
- * name's tags as badges and [subtitle] on [subtitleLines] lines — as TV Home's cards and the lists show it.
- * Without [tags], [title] shows as it is and has no badges: a TMDB list's title.
+ * A card's clean name ("From (2022)", not "ES - From (2022)"), then on one line its source (Expert
+ * mode), its [rating], the name's tags as badges ("+N" for those that do not fit, CardBadgeLine) and
+ * [subtitle] on [subtitleLines] lines — as TV Home's cards and the lists show it.
+ * Without [tags], [title] shows as it is and has no badges: a TMDB list's title. Without
+ * [titleBadges], the name is clean but its tags do not show: Home's rows.
  */
 @Composable
 internal fun CardLines(
@@ -90,6 +106,8 @@ internal fun CardLines(
     providerId: Long,
     width: Dp,
     tags: Boolean = true,
+    titleBadges: Boolean = true,
+    rating: String? = null,
     titleLines: Int = 1,
     subtitleLines: Int = 1,
 ) {
@@ -103,9 +121,14 @@ internal fun CardLines(
             minLines = titleLines,
             overflow = TextOverflow.Ellipsis,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-            sourceName?.let { SourceBadge(it, providerId = providerId) }
-            if (tags) TitleBadges(parsed)
+        // One line of one height on every card: the badges that do not fit become "+N".
+        CardBadgeLine(
+            parsed = parsed.takeIf { tags && titleBadges },
+            sourceName = sourceName,
+            providerId = providerId,
+            rating = rating,
+            modifier = Modifier.heightIn(min = rememberBadgeHeight()),
+        ) {
             CinemaText(
                 text = subtitle.orEmpty(),
                 role = TextRole.Caption,

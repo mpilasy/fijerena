@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -38,14 +39,14 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -168,14 +169,13 @@ private fun TvLiveChannelCard(
                 }
                 val lastWatched = if (entry.lastWatched) stringResource(R.string.home_live_last_watched) else null
                 val nowLine = now?.let { stringResource(R.string.epg_now_prefix, it.title) }
-                // The source opens the second line (Expert mode, SourceBadge), then the title's badges.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
+                // One line: the source (Expert mode, SourceBadge); Home shows no title tags.
+                CardBadgeLine(
+                    parsed = null,
+                    sourceName = sourceName,
+                    providerId = entry.item.providerId,
+                    modifier = Modifier.heightIn(min = rememberBadgeHeight()),
                 ) {
-                    sourceName?.let { SourceBadge(it, providerId = entry.item.providerId) }
-                    // A card is narrow: the language only, not the formats.
-                    parsedTitle.badge?.let { LanguageBadge(it) }
                     CinemaText(
                         // A line even when empty, so cards in the row line up.
                         text = listOfNotNull(status, lastWatched, nowLine).joinToString(" • "),

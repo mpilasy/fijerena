@@ -257,6 +257,9 @@ private fun stripEnding(text: String): Ending {
     return Ending("$rest $kept".trim(), formats, notes.reversed(), eventsOnly)
 }
 
+/** [tag] is a picture resolution ("4K", "FHD", "HD"): the quality, which a card names first. */
+fun isResolutionTag(tag: String): Boolean = FORMATS[tag]?.kind == FormatKind.RESOLUTION
+
 /** One per kind, the highest ("UHD 8K" is 8K), in kind order. */
 private fun labels(formats: List<Format>): List<String> =
     formats

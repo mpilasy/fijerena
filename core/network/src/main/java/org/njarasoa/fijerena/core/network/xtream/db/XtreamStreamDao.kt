@@ -225,6 +225,21 @@ interface XtreamStreamDao {
         String,
     >
 
+    /** The ratings of the streams among [ids] that have one: a favourite card's rating. */
+    @Query(
+        "SELECT streamId, rating FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids) AND rating IS NOT NULL",
+    )
+    fun getRatingsByIds(
+        providerId: Long,
+        type: String,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "streamId")
+        Int,
+        @MapColumn(columnName = "rating")
+        String,
+    >
+
     /** Archive days of the channels among [ids] that have an archive (`tv_archive` = 1). */
     @Query(
         "SELECT streamId, tvArchiveDuration FROM xtream_streams WHERE providerId = :providerId AND type = 'LIVE' AND streamId IN (:ids) AND tvArchive = 1 AND tvArchiveDuration > 0",

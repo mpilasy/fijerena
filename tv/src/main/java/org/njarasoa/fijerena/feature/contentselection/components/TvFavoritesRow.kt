@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -33,13 +34,13 @@ import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -86,6 +87,8 @@ fun TvFavoritesRow(
     leading: (@Composable (modifier: Modifier) -> Unit)? = null,
     /** See [HomeRow]: said beside [leading] while the row has no card. */
     emptyText: String? = null,
+    /** The title's tags as badges after the rating: an actor's page. Home's rows show none. */
+    titleBadges: Boolean = false,
 ) {
     HomeRow(
         title = title,
@@ -108,6 +111,7 @@ fun TvFavoritesRow(
             onClick = { onItemSelected(item) },
             onOpenActions = onOpenActions?.takeUnless { tmdbOnly }?.let { open -> { open(item) } },
             notAvailable = tmdbOnly,
+            titleBadges = titleBadges,
             modifier = itemModifier(item).then(rowModifier),
         )
     }
@@ -123,6 +127,7 @@ private fun TvFavoriteCard(
     onClick: () -> Unit,
     onOpenActions: (() -> Unit)?,
     notAvailable: Boolean,
+    titleBadges: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -173,14 +178,15 @@ private fun TvFavoriteCard(
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()
                 }
-                // The source opens the second line (Expert mode, SourceBadge), then the title's badges.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
+                // One line: the source (Expert mode, SourceBadge), the rating, then the title's tags
+                // when [titleBadges] ("+N" for those that do not fit).
+                CardBadgeLine(
+                    parsed = parsedTitle.takeIf { titleBadges && listTitle == null },
+                    sourceName = sourceName,
+                    providerId = item.providerId,
+                    rating = item.metadata.rating,
+                    modifier = Modifier.heightIn(min = rememberBadgeHeight()),
                 ) {
-                    sourceName?.let { SourceBadge(it, providerId = item.providerId) }
-                    // A card is narrow: the language only, not the formats.
-                    if (listTitle == null) parsedTitle.badge?.let { LanguageBadge(it) }
                     CinemaText(
                         // A line even when empty, so cards in the row line up.
                         text = listOfNotNull(status, item.metadata.releaseDate?.take(4), note, item.metadata.genre).joinToString(" • "),

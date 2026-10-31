@@ -536,6 +536,8 @@ private fun HomeRowsColumn(
                 sourceName = rows.sourceNames[item.providerId],
                 providerId = item.providerId,
                 onLongClick = { onMenu(HomeMenu.Favorite(item, contentType)) },
+                titleBadges = false,
+                rating = item.metadata.rating,
             ) { onFavorite(item, contentType) }
         }
     }
@@ -578,6 +580,8 @@ private fun HomeRowsColumn(
                             }
                         },
                     notAvailable = tmdbOnly,
+                    titleBadges = false,
+                    rating = item.metadata.rating,
                     tags = item.listTitle == null,
                 ) { onChart(item, contentType) }
             }
@@ -838,7 +842,7 @@ private fun TitleCard(
             // No bar, but its height, so the cards in a row line up.
             Spacer(modifier = Modifier.height(MobileDimensions.resumeBarHeight))
         }
-        CardLines(title, subtitle, sourceName, providerId, width)
+        CardLines(title, subtitle, sourceName, providerId, width, titleBadges = false)
     }
 }
 
@@ -867,7 +871,7 @@ private fun ChannelCard(
             contentType = ThumbnailContentType.LIVE_TV,
             modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
         )
-        CardLines(entry.item.name, subtitle, sourceName, entry.item.providerId, width)
+        CardLines(entry.item.name, subtitle, sourceName, entry.item.providerId, width, titleBadges = false)
     }
 }
 

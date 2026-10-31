@@ -248,6 +248,7 @@ private fun PersonContent(
                         ?: closedShowKey?.takeIf { it.startsWith(prefix) }?.let(returnFocus::requesterOf),
                 listState = rowListState,
                 itemModifier = { item -> Modifier.navReturnFocusTarget(returnFocus, prefix + item.sourceKey) },
+                titleBadges = true,
                 // CT-D5: the release year on each card; a TMDB-only card has only its year.
                 statusOf = { item ->
                     item.metadata.year

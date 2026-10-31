@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -44,14 +45,14 @@ import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
@@ -183,14 +184,13 @@ private fun TvContinueWatchingCard(
                             stringResource(R.string.series_remaining_format, timeLeft)
                         }
                     }
-                // The source opens the second line (Expert mode, SourceBadge), then the title's badges.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
+                // One line: the source (Expert mode, SourceBadge); Home shows no title tags.
+                CardBadgeLine(
+                    parsed = null,
+                    sourceName = sourceName,
+                    providerId = item.providerId,
+                    modifier = Modifier.heightIn(min = rememberBadgeHeight()),
                 ) {
-                    sourceName?.let { SourceBadge(it, providerId = item.providerId) }
-                    // A card is narrow: the language only, not the formats.
-                    parsedTitle.badge?.let { LanguageBadge(it) }
                     CinemaText(text = subtitleLine, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }

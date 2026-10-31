@@ -29,7 +29,13 @@ object TmdbOnlyItem {
             mediaType = mediaType,
             categoryId = "",
             thumbnailUrl = TmdbApiService.posterUrl(result.posterPath, TmdbApiService.POSTER_SIZE_W342),
-            metadata = MediaMetadata(year = result.year, plot = result.overview),
+            // TMDB's vote average, out of 10, for the card's rating; none when 0.
+            metadata =
+                MediaMetadata(
+                    year = result.year,
+                    plot = result.overview,
+                    rating = result.voteAverage?.takeIf { it > 0 }?.toString(),
+                ),
             listTitle = result.listTitle,
             providerData =
                 listOfNotNull(
