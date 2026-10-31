@@ -1,6 +1,6 @@
 # Sports teams
 
-**Status:** Planned 2026-10-31; decisions taken. Not started.
+**Status:** In progress since 2026-10-31: Phases 1–4 run in parallel on their own branches; shared models in `sports/SportsModels.kt`.
 
 ## Goal
 
@@ -172,10 +172,10 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | Not started |
-| 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | Not started |
-| 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Not started |
-| 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Not started |
+| 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | In progress |
+| 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | In progress |
+| 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | In progress |
+| 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | In progress |
 | 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Not started |
 | 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Not started |
 | 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Not started |
