@@ -26,6 +26,7 @@ programme when the guide has it, else a channel whose name has the broadcaster's
 | SP-D11 | The labels? | **Sports** (fr "Sports", mg "Fanatanjahantena"); the search type **Teams** (fr "Équipes", mg "Ekipa"). |
 | SP-D12 | Game reminders? | **In this plan**: a bell on a game sets a reminder (see Reminders). |
 | SP-D13 | UEFA countries? | Ask UEFA only for the countries found in the profile's channel names and categories ("FR:", "UK|"), plus Madagascar; the season table covers the others for UEFA games. |
+| SP-D14 | Updating the season table? | Without a release: the app downloads the table from the public repository (at most once a day, when the sports data is first used) and keeps the bundled copy as the fallback. A change to the JSON on main reaches users within a day. |
 
 ## Data sources
 
@@ -65,7 +66,8 @@ source leaves its countries to the season table.
 `{season, country, competition, broadcasters[]}`, seeded from Wikipedia's "List of … broadcasters"
 pages and rights announcements, for the competitions of the leagues the app lists. It is per
 season, not per game: when two channels share a league in one country, it names both. It needs an
-update each season; `scripts/check-sports-table.sh` flags entries whose season has ended.
+update each season; `scripts/check-sports-table.sh` flags entries whose season has ended. The
+app downloads the table from the repository's main branch (SP-D14), so an update needs no release.
 
 **Risk.** The parsers ignore unknown fields; a parse failure shows "Couldn't load games" with Retry
 (the raw error under it in dev mode); `scripts/check-sports-apis.sh` calls every endpoint so a break
