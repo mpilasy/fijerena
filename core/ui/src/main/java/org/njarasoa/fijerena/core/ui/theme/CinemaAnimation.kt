@@ -18,6 +18,9 @@ object CinemaAnimation {
 
     /** How long an Undo bar stays up after a removal (TV Recent and Favorites). */
     const val undoBarDismissMs = 10_000L
+
+    /** How long the TV game reminder banner stays up while nobody chose an action on it. */
+    const val reminderBannerDismissMs = 30_000L
     const val statsUpdateMs = 1_000L
     const val loadingDebounceMs = 600L
     const val searchDebounceMs = 300L

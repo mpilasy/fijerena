@@ -219,7 +219,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 29
+**Version:** 30
 
 **Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
 pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
@@ -252,7 +252,8 @@ the wanted titles plan; v27 added the ask-once answer and release data to
 `wanted_title`, see the wishlist ux plan; v28 added `facts` to `xtream_streams` and `xtream_series`
 and cleared their `detailFetchedAt` (and `xtream_series.episodesFetchedAt`), so the next open of
 each film or show fetches its facts once; v29 added `followed_sport` (the teams and leagues a
-profile follows), see the sports teams plan.)
+profile follows), see the sports teams plan; v30 added `game_reminder` (game reminders, local
+only), see the same plan.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -513,6 +514,33 @@ teams plan.
 Synced as `followed_sport` (live sync; every column), exported with favourites, deleted with its
 profile. A row whose kind or source the build does not know (written by a newer build) is kept and
 not shown.
+
+### Table: `game_reminder` (added v30)
+A profile's game reminders: an alarm rings 10 minutes before the game (`GameReminders`). Local
+only: not synced (no triggers, no tombstones), not exported; a reminder rings on the device where
+it was set. See the sports teams plan → Reminders.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `profileId` | TEXT (PK) | The owner profile |
+| `source` | TEXT (PK) | The sports source of the game (`SportsSource.id`) |
+| `gameId` | TEXT (PK) | The game id at that source; `team:<teamId>` for a team's standing row (below) |
+| `startEpoch` | INTEGER | The game's start, UTC seconds; 0 for a team's standing row; negative (minus the start) for a muted game |
+| `homeName` | TEXT | The home team's name (the team's name on a standing row) |
+| `awayName` | TEXT? | The away team's name; NULL for an event with one side |
+| `competitionName` | TEXT | The competition, as the source names it |
+| `teamKey` | TEXT? | `<source>:<teamId>` on the rows of "every game of this team"; NULL for a game set on its own |
+| `lookupTeam` | TEXT | The team whose schedule has the game, as JSON (`ReminderTeam`: source, id, name, sport, league): the alarm reads that schedule again when it fires, so a moved game rings at its new time |
+| `createdAt` | INTEGER | When the reminder was first set (ms) |
+
+**Index:** `(startEpoch)`
+
+A team's bell writes a standing row (`gameId` `team:<teamId>`, `startEpoch` 0) that is never
+scheduled and keeps the choice while the team has no coming game, plus one row per coming game. A
+game of that team whose bell is cleared stays as a muted row (start stored negative, no alarm), so
+the team's next refresh does not add it again. A reminder is deleted when it rings, when its game
+is over, cancelled or postponed, and (muted rows too) once its start has passed. Deleted with its
+profile; kept by the backup and restore scripts.
 
 ### Table: `sync_tombstone` (added v21)
 Removed favourites and cleared watch histories, kept so live sync can tell other devices — without

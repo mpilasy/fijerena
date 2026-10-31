@@ -48,6 +48,9 @@ data class SportsSearchResult(
  * read in [background], and a call waits for them [uefaWaitMs] at most. The countries not read by
  * then are left out of that answer and stored for the next. Only [uefaCountries] are read: in the
  * app, the countries of the profile's channels ([ProfileCountries]).
+ *
+ * Every team's and league's games read are handed to [onGames]: the game reminders move to a
+ * game's new time ([GameReminders.onGamesRead]).
  */
 class SportsData(
     private val api: SportsApi,
@@ -58,6 +61,7 @@ class SportsData(
     private val background: CoroutineScope = AppScopes.create("SportsData", Dispatchers.IO),
     private val uefaWaitMs: Long = UEFA_WAIT_MS,
     private val now: () -> Long = System::currentTimeMillis,
+    private val onGames: (List<SportsGame>) -> Unit = {},
 ) {
     // The UEFA broadcaster reads under way, by cache key, so two screens share one read.
     private val uefaReads = ConcurrentHashMap<String, Deferred<Map<String, List<Broadcaster>>>>()
@@ -105,7 +109,7 @@ class SportsData(
                 SportsSource.WORLD_AQUATICS -> worldAquaticsGames().filter { it.home.id == team.id || it.away?.id == team.id }
                 else -> emptyList()
             }
-        return withBroadcasters(coming(games).take(limit))
+        return withBroadcasters(coming(games).take(limit)).also(onGames)
     }
 
     /** [league]'s games of the next [days] days, soonest first, with their broadcasters. */
@@ -122,7 +126,7 @@ class SportsData(
                 else -> emptyList()
             }
         val endSec = now() / 1000 + days * DAY_SEC
-        return withBroadcasters(coming(games).filter { it.startEpochSec <= endSec })
+        return withBroadcasters(coming(games).filter { it.startEpochSec <= endSec }).also(onGames)
     }
 
     /** [league]'s teams: ESPN's list (kept 7 days), else the teams of its coming games. */
@@ -564,6 +568,7 @@ class SportsData(
                         seasonBroadcasters = seasonTable::broadcasters,
                         enabled = { settings.showSports },
                         uefaCountries = ProfileCountries(app)::get,
+                        onGames = { GameReminders.getInstance(app).onGamesRead(it) },
                     )
                 }.also { instance = it }
             }

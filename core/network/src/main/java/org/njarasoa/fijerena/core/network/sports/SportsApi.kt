@@ -285,7 +285,8 @@ class SportsApi(
             val query =
                 parameters
                     .filter { it.second != null }
-                    .joinToString("&") { (name, value) -> "$name=${URLEncoder.encode(value, Charsets.UTF_8).replace("%2C", ",")}" }
+                    // The String charset name: the Charset overload needs API 33 (minSdk is 30).
+                    .joinToString("&") { (name, value) -> "$name=${URLEncoder.encode(value, "UTF-8").replace("%2C", ",")}" }
             return if (query.isEmpty()) base else "$base?$query"
         }
     }

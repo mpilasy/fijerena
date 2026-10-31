@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
+import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
@@ -1270,6 +1271,25 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 addSourceOpened = true
                 navController.navigate(Screen.AddProvider())
             }
+        }
+        // A tapped game reminder notification: the docked mini-player on the game's channel, in
+        // the Live TV tab, as a guide result opens it. Dropped when the profile in use is not the
+        // reminder's, and in safe mode or with a providers.db from a newer build.
+        val pendingTune by GameReminderAlerts.tune.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingTune, currentEntry) {
+            if (pendingTune == null || currentEntry == null || SafeMode.isActive || ProvidersDbGuard.isBlocked) return@LaunchedEffect
+            val tune = GameReminderAlerts.takeTune() ?: return@LaunchedEffect
+            if (tune.profileId != appSettings.activeProfileId) return@LaunchedEffect
+            openInSectionTab(
+                ContentType.LIVE_TV,
+                Screen.CategoryList(
+                    contentType = ContentType.LIVE_TV,
+                    initialCategoryId = tune.channel.categoryId,
+                    initialStreamId = tune.channel.streamId.toString(),
+                    providerId = tune.channel.providerId,
+                ),
+                query = "",
+            )
         }
         if (showBar && currentTab != null) {
             MobileBottomBar(

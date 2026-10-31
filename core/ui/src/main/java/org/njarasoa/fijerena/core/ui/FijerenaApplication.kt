@@ -165,6 +165,16 @@ class FijerenaApplication :
         startupScope.launch {
             ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
         }
+        // Its own coroutine: the game reminders' alarms set again (a restore or a lost alarm), then
+        // the new games of the teams whose games are all reminded, read from the network when their
+        // cached schedule is old. See the sports teams plan → Reminders.
+        startupScope.launch {
+            startupStep("GameReminders.onAppStart") {
+                org.njarasoa.fijerena.core.network.sports.GameReminders
+                    .getInstance(this@FijerenaApplication)
+                    .onAppStart()
+            }
+        }
         // Its own coroutine, so it is done before the first film starts: the player service checks
         // FFmpeg on the main thread, and the first check loads the native library from disk. See
         // the next level rock solid resilience plan → R-28.

@@ -64,4 +64,10 @@
     <string name="epg_error_no_sources">No guide sources to process</string>
     <string name="epg_error_came_back_empty">The guide came back empty (no channels). The next refresh tries again.</string>
     <string name="epg_error_source_not_found">Guide source not found</string>
+
+    <!-- Game reminders (GameReminderNotifications) -->
+    <string name="game_reminder_channel">Game reminders</string>
+    <string name="game_reminder_title_vs">%1$s v %2$s starts at %3$s</string>
+    <string name="game_reminder_title_one">%1$s starts at %2$s</string>
+    <string name="game_reminder_on_channel">On %1$s</string>
 </resources>

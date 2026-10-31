@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         SyncClockEntity::class,
         WantedTitleEntity::class,
         FollowedSportEntity::class,
+        GameReminderEntity::class,
     ],
     version = XtreamDatabase.DB_VERSION,
     exportSchema = true,
@@ -51,6 +52,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun wantedTitleDao(): WantedTitleDao
 
     abstract fun followedSportDao(): FollowedSportDao
+
+    abstract fun gameReminderDao(): GameReminderDao
 
     companion object {
         @Volatile
@@ -483,7 +486,25 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        const val DB_VERSION = 29
+        /**
+         * Migration 29→30: the game reminders (`game_reminder`), local only. See the sports teams
+         * plan → Reminders.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigration29To30Test.
+        internal val MIGRATION_29_30 =
+            object : Migration(29, 30) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `game_reminder` (`profileId` TEXT NOT NULL, `source` TEXT NOT NULL, " +
+                            "`gameId` TEXT NOT NULL, `startEpoch` INTEGER NOT NULL, `homeName` TEXT NOT NULL, `awayName` TEXT, " +
+                            "`competitionName` TEXT NOT NULL, `teamKey` TEXT, `lookupTeam` TEXT NOT NULL, " +
+                            "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `source`, `gameId`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_game_reminder_startEpoch` ON `game_reminder` (`startEpoch`)")
+                }
+            }
+
+        const val DB_VERSION = 30
         private const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
@@ -561,6 +582,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 MIGRATION_26_27,
                 MIGRATION_27_28,
                 MIGRATION_28_29,
+                MIGRATION_29_30,
             )
 
         fun getInstance(context: Context): XtreamDatabase =

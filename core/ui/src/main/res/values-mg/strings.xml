@@ -1529,4 +1529,9 @@
     <string name="tmdb_charts_refresh_done">Voafafa ny laharana. Hovakian\'ny fandraisana indray.</string>
     <string name="sports_switch_title">Fanatanjahantena</string>
     <string name="sports_switch_desc">Mitady ekipa sy ligy, ny lalao manaraka ataony ary ny fantsona mandefa azy. Avy amin\'ny tolotra fanatanjahantena maimaim-poana (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics) ny angona. Ity fitaovana ity ihany.</string>
+
+    <!-- Game reminder banner (TV, TvGameReminderBanner) -->
+    <string name="game_reminder_watch">Hijery</string>
+    <string name="game_reminder_dismiss">Hanilika</string>
+    <string name="game_reminder_banner_hint">Tazony ny OK na tsindrio Menu hisafidianana</string>
 </resources>

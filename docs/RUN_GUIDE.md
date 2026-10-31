@@ -153,9 +153,10 @@ scripts/restore-app-data.sh <serial> backups/<name>.tar.gz   # force-stops the a
 
 A backup holds user data only: `shared_prefs`, `providers.db` (sources, profiles, guide sources,
 live sync) and `xtream_v2_user_data.db` — the `watch_state`, `favorite_state`, `wanted_title`,
-`followed_sport` and `sync_*` tables, copied out of `xtream_v2.db` on the host (`wanted_title` and
-`followed_sport` only when the device has them: they came with v26 and v29; a restore keeps the
-device's own rows when the backup has none) (its `-wal` comes off the device with it, so uncommitted
+`followed_sport`, `game_reminder` and `sync_*` tables, copied out of `xtream_v2.db` on the host
+(`wanted_title`, `followed_sport` and `game_reminder` only when the device has them: they came with
+v26, v29 and v30; a restore keeps the device's own rows when the backup has none; restored
+reminders get their alarms at the next start of the app) (its `-wal` comes off the device with it, so uncommitted
 pages aren't lost). The catalogue is left out; a sync downloads it again. Both scripts use `run-as`,
 so they work with debug builds.
 
@@ -398,6 +399,26 @@ adb -s <device-id> shell am broadcast --include-stopped-packages -a org.njarasoa
 <device name>]` (new account), `invite` (logs an invite QR code's text), `scan --es qr '<qr text>'`,
 `handoff --es url <server>`, `now` (a sync pass), `status`, `unlink`. The full list is in the
 receiver's KDoc.
+
+### Game reminders
+
+A game reminder is an `AlarmManager` alarm 10 minutes before the game (`GameReminders`,
+`core:network` sports package). The permissions come from the `core:network` manifest:
+`SCHEDULE_EXACT_ALARM` (the alarm rings on time only when the user allows "Alarms & reminders" for
+the app, Android 12 and later; else it can ring a few minutes late in Doze), `POST_NOTIFICATIONS`
+(asked when the first bell is set, Android 13 and later) and `RECEIVE_BOOT_COMPLETED`. Two
+receivers: `GameReminderReceiver` (the alarm, not exported) and `GameReminderRescheduleReceiver`
+(boot, app update, clock and time zone changes, exact-alarm permission changes), which is off in the
+manifest and turned on only while a reminder is stored, so the app is not started at every boot for
+nothing. On TV, a reminder shows as a banner at the top while the app is on screen, else as a
+notification (in the notification panel only).
+
+```bash
+# The app's alarms (one per reminder; the intent data is fijerena-reminder://game/<profile>/<source>/<game>)
+adb -s <device-id> shell dumpsys alarm | grep -A 3 '<pkg>'
+# Whether the reschedule receiver is on
+adb -s <device-id> shell pm dump <pkg> | grep -A 2 GameReminderRescheduleReceiver
+```
 
 ### Focus walks
 

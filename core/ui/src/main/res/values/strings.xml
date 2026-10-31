@@ -1535,4 +1535,9 @@
     <string name="tmdb_charts_refresh_done">Charts cleared. Home reads them again.</string>
     <string name="sports_switch_title">Sports</string>
     <string name="sports_switch_desc">Find teams and leagues, their next games and the TV channels that show them. The data comes from free sports services (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). This device only.</string>
+
+    <!-- Game reminder banner (TV, TvGameReminderBanner) -->
+    <string name="game_reminder_watch">Watch</string>
+    <string name="game_reminder_dismiss">Dismiss</string>
+    <string name="game_reminder_banner_hint">Hold OK or press Menu to choose</string>
 </resources>

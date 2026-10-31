@@ -1539,4 +1539,9 @@
     <string name="tmdb_charts_refresh_done">Classements effacés. L\'accueil les relit.</string>
     <string name="sports_switch_title">Sports</string>
     <string name="sports_switch_desc">Trouver des équipes et des ligues, leurs prochains matchs et les chaînes qui les diffusent. Les données viennent de services sportifs gratuits (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). Cet appareil seulement.</string>
+
+    <!-- Game reminder banner (TV, TvGameReminderBanner) -->
+    <string name="game_reminder_watch">Regarder</string>
+    <string name="game_reminder_dismiss">Ignorer</string>
+    <string name="game_reminder_banner_hint">Maintenez OK ou appuyez sur Menu pour choisir</string>
 </resources>

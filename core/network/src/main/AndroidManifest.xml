@@ -4,6 +4,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- EpgSyncWorker waits on ConnectivityManager.activeNetwork before starting a sync. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Game reminders (GameReminders): the alarm rings on time when the user allows exact alarms
+         (Android 12 and later), else a few minutes late in Doze; the notification needs
+         POST_NOTIFICATIONS (Android 13 and later), asked when the first bell is set; the alarms
+         are set again after a reboot. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application>
         <!--
@@ -17,5 +24,23 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+        <!-- A game reminder's alarm: only this app's own PendingIntents reach it. -->
+        <receiver
+            android:name="org.njarasoa.fijerena.core.network.sports.GameReminderReceiver"
+            android:exported="false" />
+        <!-- Sets the reminders' alarms again. Off until a reminder is stored (GameReminders turns
+             it on and off), so the app is not started at every boot for nothing. -->
+        <receiver
+            android:name="org.njarasoa.fijerena.core.network.sports.GameReminderRescheduleReceiver"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

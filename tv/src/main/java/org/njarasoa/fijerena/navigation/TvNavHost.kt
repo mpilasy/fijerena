@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
@@ -49,6 +50,8 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
+import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
+import org.njarasoa.fijerena.core.network.sports.ReminderTune
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -94,11 +97,15 @@ import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
 import org.njarasoa.fijerena.ui.components.TvClockState
+import org.njarasoa.fijerena.ui.components.TvGameReminderBanner
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
+import org.njarasoa.fijerena.ui.components.rememberReminderBannerState
+import org.njarasoa.fijerena.ui.components.reminderBannerContent
+import org.njarasoa.fijerena.ui.components.reminderBannerKeys
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -613,7 +620,14 @@ fun TvNavHost(
                 LocalTvClock provides clock,
                 LocalOpenWanted provides { navController.navigateOnce(it) },
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                val reminderBanner = rememberReminderBannerState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .reminderBannerKeys(reminderBanner)
+                            .reminderBannerContent(reminderBanner),
+                ) {
                     NavHost(
                         navController = navController,
                         startDestination = startDestination,
@@ -1340,6 +1354,31 @@ fun TvNavHost(
                         )
                     }
                 }
+                // A game reminder while the app is on screen, over everything; it takes focus only on
+                // Menu or a held OK. Watch tunes as a tapped reminder notification does (below).
+                TvGameReminderBanner(
+                    state = reminderBanner,
+                    onWatch = { alert -> alert.channel?.let { GameReminderAlerts.requestTune(ReminderTune(alert.profileId, it)) } },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+                // A tapped game reminder notification, or the banner's Watch: the preview pane on the
+                // game's channel, as a guide result opens it. Waits for the profile picker; dropped
+                // when the profile in use is not the reminder's.
+                val pendingTune by GameReminderAlerts.tune.collectAsStateWithLifecycle()
+                val tuneDestination = navController.currentBackStackEntryAsState().value?.destination
+                LaunchedEffect(pendingTune, tuneDestination) {
+                    if (pendingTune == null || tuneDestination == null || !canTuneFrom(tuneDestination)) return@LaunchedEffect
+                    val tune = GameReminderAlerts.takeTune() ?: return@LaunchedEffect
+                    if (tune.profileId != appSettings.activeProfileId) return@LaunchedEffect
+                    navController.navigateOnce(
+                        Screen.CategoryList(
+                            contentType = ContentType.LIVE_TV,
+                            initialCategoryId = tune.channel.categoryId,
+                            initialStreamId = tune.channel.streamId.toString(),
+                            providerId = tune.channel.providerId,
+                        ),
+                    )
+                }
             }
         } else {
             // Provider lookup / credential migration / session restore — used to be a blank
@@ -1390,6 +1429,10 @@ fun TvNavHost(
         }
     }
 }
+
+/** A reminder's channel is not tuned over the profile picker, safe mode or the newer-data screen. */
+private fun canTuneFrom(destination: androidx.navigation.NavDestination): Boolean =
+    !destination.hasRoute<Screen.ProfilePicker>() && !destination.hasRoute<Screen.SafeMode>() && !destination.hasRoute<Screen.NewerData>()
 
 /** Set on Live TV's root entry when a rail pick leaves it: see closeSavedLivePreview in [TvNavHost]. */
 private const val CLOSE_SAVED_LIVE_PREVIEW = "closeSavedLivePreview"
