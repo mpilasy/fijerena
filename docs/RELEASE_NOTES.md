@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261031001505
 
 - **The episode list for one episode too:** on an actor's page, a show card opens the list of their episodes even when there is only one, so you see which episode it is before it opens. TV and phone.
 
