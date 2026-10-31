@@ -65,13 +65,18 @@ enum class MobileTab(
     MOVIES(Screen.MoviesTab, ContentType.MOVIES),
     TV_SHOWS(Screen.TvShowsTab, ContentType.TV_SHOWS),
 
+    // Not a source's section: the followed teams' and leagues' games (the sports teams plan, SP-D7),
+    // between the sections and Settings while the profile follows something. [contentType] matches
+    // no section.
+    SPORTS(Screen.SportsTab, "SPORTS"),
+
     // Not a section: Settings with what it opens (sources, guide sources, Live sync…), last on the
     // bar whenever the bar shows. [contentType] matches no section.
     SETTINGS(Screen.Settings, "SETTINGS"),
     ;
 
-    /** A section of the source (Live TV, Movies, TV Shows), as opposed to Home and Settings. */
-    val isSection: Boolean get() = this != HOME && this != SETTINGS
+    /** A section of the source (Live TV, Movies, TV Shows), as opposed to Home, Sports and Settings. */
+    val isSection: Boolean get() = this == LIVE_TV || this == MOVIES || this == TV_SHOWS
 
     companion object {
         /** The tab [destination] is the root of; null for every other screen, which hides the bar. */
@@ -82,6 +87,7 @@ enum class MobileTab(
                 destination.hasRoute<Screen.LiveTvTab>() -> LIVE_TV
                 destination.hasRoute<Screen.MoviesTab>() -> MOVIES
                 destination.hasRoute<Screen.TvShowsTab>() -> TV_SHOWS
+                destination.hasRoute<Screen.SportsTab>() -> SPORTS
                 destination.hasRoute<Screen.Settings>() -> SETTINGS
                 else -> null
             }
@@ -118,14 +124,34 @@ fun hidesBottomBar(destination: NavDestination?): Boolean =
 
 /**
  * The tabs the bar shows: Home, the profile's merged sections (its Xtream sources', multi-source
- * plan Phase 6), then Settings — none, so no bar, when it has no section (no Xtream source: the tab
- * roots show the sources panel). [supportedTypes] is null until the sources are read. A single
- * section still shows the bar, for Home and Settings.
+ * plan Phase 6), Sports when [sports] (see [showsSportsTab]), then Settings — none, so no bar, when
+ * it has no section (no Xtream source: the tab roots show the sources panel). [supportedTypes] is
+ * null until the sources are read. A single section still shows the bar, for Home and Settings.
  */
-fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> {
+fun visibleTabs(
+    supportedTypes: Collection<String>?,
+    sports: Boolean = false,
+): List<MobileTab> {
     val sections = MobileTab.entries.filter { it.isSection && supportedTypes != null && it.contentType in supportedTypes }
-    return if (sections.isEmpty()) emptyList() else listOf(MobileTab.HOME) + sections + MobileTab.SETTINGS
+    return if (sections.isEmpty()) {
+        emptyList()
+    } else {
+        listOf(MobileTab.HOME) + sections + listOfNotNull(MobileTab.SPORTS.takeIf { sports }) + MobileTab.SETTINGS
+    }
 }
+
+/**
+ * Whether the bar has the Sports tab (the sports teams plan, SP-D7): Admin's Sports switch is on
+ * ([sportsOn], SP-D9), the profile is not a child ([child], SP-D8), and it follows a team or a
+ * league ([follows]) — or the tab is the one open ([inSportsTab]), so unfollowing the last team
+ * from inside it does not take the tab away under the user.
+ */
+fun showsSportsTab(
+    sportsOn: Boolean,
+    child: Boolean,
+    follows: Boolean,
+    inSportsTab: Boolean = false,
+): Boolean = sportsOn && !child && (follows || inSportsTab)
 
 /**
  * The tab the app opens on: [lastTab] (Home or the section the profile last had open) when its
@@ -258,6 +284,7 @@ private fun MobileTab.icon(): ImageVector =
         MobileTab.LIVE_TV -> CinemaIcons.LiveTv
         MobileTab.MOVIES -> CinemaIcons.Movie
         MobileTab.TV_SHOWS -> CinemaIcons.Tv
+        MobileTab.SPORTS -> CinemaIcons.Sports
         MobileTab.SETTINGS -> CinemaIcons.Settings
     }
 
@@ -268,5 +295,6 @@ fun MobileTab.label(): String =
         MobileTab.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
         MobileTab.MOVIES -> stringResource(R.string.provider_movies_label)
         MobileTab.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+        MobileTab.SPORTS -> stringResource(R.string.sports_title)
         MobileTab.SETTINGS -> stringResource(R.string.settings_title)
     }

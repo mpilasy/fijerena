@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -29,7 +30,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
+import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelNote
+import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.isHomeGame
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
@@ -37,12 +42,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import java.time.Instant
+import java.time.ZoneId
 
 // The sports cards on the phone (the sports teams plan → Screens), shared by Search's Teams type,
-// the team and league pages, and the Sports tab and Home row to come.
+// the team and league pages, the Sports tab and Home's Upcoming Games row.
 
 /** The cards' colours, as the search results' cards. */
 @Composable
@@ -116,7 +124,7 @@ fun MobileSportsHeading(
  * A game: the side that matters ([team]'s opponent on a team page, else both teams), home or
  * away, the competition and time, then its best channel ([channels]' first: logo, name, "In the
  * guide" or "On Canal+"; "Looking for channels…" while [channels] is null). [trailing]: a slot at
- * the end for an action of its own (a reminder bell, the sports teams plan → Reminders); none yet.
+ * the end for an action of its own ([MobileGameBell]).
  */
 @Composable
 fun MobileGameCard(
@@ -193,3 +201,106 @@ fun MobileGameCard(
 
 /** A channel logo's frame: wide, drawn whole. */
 internal const val CHANNEL_LOGO_ASPECT = 16f / 9f
+
+/**
+ * A game's reminder bell (the sports teams plan → Reminders): sets or clears its reminder, the
+ * icon and label saying which ([GameBells]); its label in a long-press tooltip. Nothing once the
+ * game has started ([canRemind]).
+ */
+@Composable
+fun MobileGameBell(
+    game: SportsGame,
+    bells: GameBells,
+    nowSec: Long,
+) {
+    if (canRemind(game, nowSec)) {
+        val on = bells.reminded.has(game)
+        IconAction(
+            onClick = { bells.toggle(game) },
+            icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
+            label = stringResource(if (on) R.string.sports_reminder_set else R.string.sports_remind_me),
+            on = on,
+        )
+    }
+}
+
+/** A team's bell for every one of its games, in its page's top bar once the profile follows it. */
+@Composable
+fun MobileTeamBell(
+    team: SportsTeam,
+    bells: GameBells,
+) {
+    val on = bells.reminded.hasTeam(team)
+    IconAction(
+        onClick = { bells.toggleTeam(team) },
+        icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
+        label = stringResource(if (on) R.string.sports_remind_team_set else R.string.sports_remind_team),
+        on = on,
+    )
+}
+
+/**
+ * A game on Home's Upcoming Games row (the sports teams plan → Home row): both teams' logos, the
+ * game, its day and time, and its best channel (logo, name). A tap opens the game's sheet.
+ */
+@Composable
+fun MobileUpcomingGameCard(
+    game: UpcomingGame,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val resources = LocalResources.current
+    val start = game.game.startEpochSec
+    val day = Instant.ofEpochSecond(start).atZone(ZoneId.systemDefault()).toLocalDate()
+    val best = game.bestChannel
+    CinemaCard(onClick = onClick, modifier = modifier.width(MobileDimensions.homeCardWidth)) {
+        Column(modifier = Modifier.padding(CinemaSpacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                listOfNotNull(game.game.home, game.game.away).forEach { team ->
+                    CinemaThumbnail(
+                        url = team.logoUrl,
+                        fallbackLetter = team.name.firstOrNull(Char::isLetterOrDigit),
+                        contentType = ThumbnailContentType.LIVE_TV,
+                        contentDescription = null,
+                        modifier = Modifier.size(MobileDimensions.iconXLarge),
+                    )
+                }
+            }
+            CinemaText(text = gameTitle(resources, game.game), role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            CinemaText(
+                text = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                best?.stream?.let { stream ->
+                    CinemaThumbnail(
+                        url = stream.iconUrl,
+                        fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                        contentType = ThumbnailContentType.LIVE_TV,
+                        contentDescription = null,
+                        modifier = Modifier.height(MobileDimensions.iconDefault).aspectRatio(CHANNEL_LOGO_ASPECT),
+                    )
+                }
+                CinemaText(
+                    // A line even with no channel, so the cards in the row line up.
+                    text =
+                        best?.stream?.name ?: game.channels
+                            .firstOrNull()
+                            ?.let { channelNote(resources, it) }
+                            .orEmpty(),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Accent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}

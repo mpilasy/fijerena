@@ -30,6 +30,34 @@ class TvSectionsTest {
     }
 
     @Test
+    fun `Sports comes after the sections while Admin's Sports switch is on`() {
+        assertEquals(
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.LIVE_TV, RailItem.MOVIES, RailItem.SPORTS, RailItem.SEARCH, RailItem.SETTINGS),
+            railItems(setOf(ContentType.LIVE_TV, ContentType.MOVIES), sports = true),
+        )
+        assertEquals(
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.LIVE_TV, RailItem.SEARCH, RailItem.SETTINGS),
+            railItems(setOf(ContentType.LIVE_TV), sports = false),
+        )
+    }
+
+    @Test
+    fun `a child profile has no Sports, even with the switch on`() {
+        assertEquals(
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH),
+            railItems(setOf(ContentType.LIVE_TV), child = true, sports = true),
+        )
+    }
+
+    @Test
+    fun `Sports is a section of its own, rooted at the Sports tab, for no content type`() {
+        assertEquals(TvSection.SPORTS, TvSection.of(RailItem.SPORTS))
+        assertEquals(Screen.SportsTab, TvSection.SPORTS.route)
+        assertNull(TvSection.of(ContentType.LIVE_TV).takeIf { it == TvSection.SPORTS })
+        assertEquals(RailItem.SPORTS, railCurrent(TopScreen.OTHER, TvSection.SPORTS))
+    }
+
+    @Test
     fun `a child profile has no sections and no Settings but has Search`() {
         assertEquals(
             listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH),

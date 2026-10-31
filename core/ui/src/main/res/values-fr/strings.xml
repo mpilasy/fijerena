@@ -117,6 +117,16 @@
     <string name="sports_away_game">Extérieur</string>
     <string name="sports_game_format">%1$s – %2$s</string>
     <string name="sports_worldwide">Monde entier</string>
+    <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
+    <string name="sports_title">Sports</string>
+    <string name="sports_following_heading">Suivis</string>
+    <string name="sports_nothing_followed">Suivez des équipes et des ligues pour voir ici leurs prochains matchs et les chaînes qui les diffusent.</string>
+    <string name="sports_find_teams">Trouver des équipes</string>
+    <string name="home_upcoming_games">Matchs à venir</string>
+    <string name="sports_remind_me">Rappel</string>
+    <string name="sports_reminder_set">Rappel activé</string>
+    <string name="sports_remind_team">Rappel pour chaque match</string>
+    <string name="sports_remind_team_set">Rappels activés pour chaque match</string>
     <plurals name="sports_countries">
         <item quantity="one">%d pays</item>
         <item quantity="many">%d pays</item>

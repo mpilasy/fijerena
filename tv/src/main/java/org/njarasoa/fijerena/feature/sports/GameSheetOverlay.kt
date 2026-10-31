@@ -71,8 +71,8 @@ import java.time.ZoneId
  * channel's preview, as a guide result); Back calls [onClose], and the page gives focus back to
  * the game. An in-tree overlay: focus stays in it.
  *
- * [actions]: the header's icon actions (a reminder bell, the sports teams plan → Reminders); none
- * yet. Focus: the first row on opening, and again when the channels come; Back from a channel
+ * [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the first row
+ * reaches them. Focus: the first row on opening, and again when the channels come; Back from a channel
  * returns to its row ([returnFocus]).
  */
 @Composable

@@ -117,6 +117,16 @@
     <string name="sports_away_game">Any ivelany</string>
     <string name="sports_game_format">%1$s – %2$s</string>
     <string name="sports_worldwide">Eran-tany</string>
+    <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
+    <string name="sports_title">Fanatanjahantena</string>
+    <string name="sports_following_heading">Arahina</string>
+    <string name="sports_nothing_followed">Araho ny ekipa sy ligy mba hahitana eto ny lalao manaraka ataony sy ny fantsona mandefa azy.</string>
+    <string name="sports_find_teams">Hitady ekipa</string>
+    <string name="home_upcoming_games">Lalao ho avy</string>
+    <string name="sports_remind_me">Ampahatsiahivo aho</string>
+    <string name="sports_reminder_set">Voatendry ny fampahatsiahivana</string>
+    <string name="sports_remind_team">Ampahatsiahivo aho isaky ny lalao</string>
+    <string name="sports_remind_team_set">Voatendry ny fampahatsiahivana isaky ny lalao</string>
     <plurals name="sports_countries">
         <item quantity="one">firenena %d</item>
         <item quantity="other">firenena %d</item>

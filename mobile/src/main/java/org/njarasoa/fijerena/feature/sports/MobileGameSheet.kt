@@ -54,8 +54,7 @@ import java.time.ZoneId
  * known. A tap on a channel calls [onPlay] (the channel's mini-player, as a guide result); the
  * sheet stays, for Back from the channel. Dismissing it calls [onDismiss].
  *
- * [actions]: icon actions beside the title (a reminder bell, the sports teams plan → Reminders);
- * none yet.
+ * [actions]: icon actions beside the title (the reminder bell, [MobileGameBell]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

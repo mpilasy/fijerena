@@ -58,6 +58,8 @@ import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RadioButtonChecked
@@ -69,6 +71,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Subtitles
@@ -112,6 +115,8 @@ import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonChecked
@@ -123,6 +128,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.SportsSoccer
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Subtitles
@@ -166,6 +172,8 @@ import androidx.compose.material.icons.sharp.LiveTv
 import androidx.compose.material.icons.sharp.Lock
 import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material.icons.sharp.Movie
+import androidx.compose.material.icons.sharp.NotificationsActive
+import androidx.compose.material.icons.sharp.NotificationsNone
 import androidx.compose.material.icons.sharp.Pause
 import androidx.compose.material.icons.sharp.PlayArrow
 import androidx.compose.material.icons.sharp.RadioButtonChecked
@@ -177,6 +185,7 @@ import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.SkipNext
 import androidx.compose.material.icons.sharp.SkipPrevious
 import androidx.compose.material.icons.sharp.Smartphone
+import androidx.compose.material.icons.sharp.SportsSoccer
 import androidx.compose.material.icons.sharp.Star
 import androidx.compose.material.icons.sharp.StarBorder
 import androidx.compose.material.icons.sharp.Subtitles
@@ -394,6 +403,21 @@ object CinemaIcons {
     val LiveTv: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.LiveTv, Icons.Outlined.LiveTv, Icons.Sharp.LiveTv)
+
+    /** The Sports section (the sports teams plan). */
+    val Sports: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.SportsSoccer, Icons.Outlined.SportsSoccer, Icons.Sharp.SportsSoccer)
+
+    /** A game's reminder bell, not set (the sports teams plan → Reminders). */
+    val Bell: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.NotificationsNone, Icons.Outlined.NotificationsNone, Icons.Sharp.NotificationsNone)
+
+    /** A game's reminder bell, set. */
+    val BellOn: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.NotificationsActive, Icons.Outlined.NotificationsActive, Icons.Sharp.NotificationsActive)
 
     val ArrowDropDown: ImageVector
         @Composable @ReadOnlyComposable

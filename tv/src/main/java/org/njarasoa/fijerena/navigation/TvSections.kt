@@ -33,7 +33,8 @@ import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 /**
  * The TV's sections (the tv nav rail plan → Sections keep their place): their
  * rail item, their root destination and the content type they browse. The roots are the phone's tab
- * routes: Navigation saves a section's back stack under its root, so each needs its own.
+ * routes: Navigation saves a section's back stack under its root, so each needs its own. Sports
+ * (the sports teams plan) browses no content type: its [contentType] is [SPORTS_SECTION].
  */
 internal enum class TvSection(
     val item: RailItem,
@@ -43,6 +44,7 @@ internal enum class TvSection(
     LIVE_TV(RailItem.LIVE_TV, Screen.LiveTvTab, ContentType.LIVE_TV),
     MOVIES(RailItem.MOVIES, Screen.MoviesTab, ContentType.MOVIES),
     TV_SHOWS(RailItem.TV_SHOWS, Screen.TvShowsTab, ContentType.TV_SHOWS),
+    SPORTS(RailItem.SPORTS, Screen.SportsTab, SPORTS_SECTION),
     ;
 
     companion object {
@@ -52,22 +54,28 @@ internal enum class TvSection(
     }
 }
 
+/** [TvSection.SPORTS]'s content type: no source's, so no source section ever matches it. */
+internal const val SPORTS_SECTION = "SPORTS"
+
 /**
  * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
  * Xtream sources' content types, merged; none while unknown or when it has no Xtream source),
- * Search, Settings. The Browse entries go between the sections and Search (`TvNavRail`). A [child]
- * profile has only the avatar, Home and Search: it watches what is on its Home or what it finds,
- * never browses (docs/plans/20261019_kids-home-plan.md, K-D1, K-D7), and has no Settings.
+ * Sports while Admin's Sports switch is on ([sports], SP-D9), Search, Settings. The Browse entries
+ * go between those and Search (`TvNavRail`). A [child] profile has only the avatar, Home and
+ * Search: it watches what is on its Home or what it finds, never browses
+ * (docs/plans/20261019_kids-home-plan.md, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
  */
 internal fun railItems(
     sections: Set<String>?,
     child: Boolean = false,
+    sports: Boolean = false,
 ): List<RailItem> =
     if (child) {
         listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH)
     } else {
         listOf(RailItem.PROFILE, RailItem.HOME) +
             TvSection.entries.filter { sections != null && it.contentType in sections }.map { it.item } +
+            listOfNotNull(RailItem.SPORTS.takeIf { sports }) +
             listOf(RailItem.SEARCH, RailItem.SETTINGS)
     }
 
@@ -159,6 +167,8 @@ internal fun TvSectionRail(
     var homeOnStack by remember { mutableStateOf(false) }
     var activeProfileId by remember { mutableStateOf<String?>(null) }
     var child by remember { mutableStateOf(false) }
+    val settings = remember { AppSettings(context.applicationContext) }
+    val sports by remember { settings.observeShowSports() }.collectAsStateWithLifecycle(initialValue = settings.showSports)
     val profiles by remember { ProfileRepository(context.applicationContext).observeProfiles() }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -182,7 +192,7 @@ internal fun TvSectionRail(
     rail.profileColorIndex = activeProfile?.colorIndex ?: 0
     TvNavRail(
         state = rail,
-        items = railItems(source?.merged, child),
+        items = railItems(source?.merged, child, sports),
         profileInitial = profileInitial,
         onSelect = onSelect,
         browse = if (child) emptyList() else source?.browse.orEmpty(),

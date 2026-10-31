@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.sports
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.viewModelScope
@@ -24,6 +26,7 @@ import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsSource
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.sports.GameMatcher
+import org.njarasoa.fijerena.core.ui.sports.LocalGameBellStore
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsPageData
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
@@ -31,6 +34,8 @@ import org.njarasoa.fijerena.testing.FocusWalk
 import org.njarasoa.fijerena.testing.back
 import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
+import org.njarasoa.fijerena.testing.left
+import org.njarasoa.fijerena.testing.right
 import org.njarasoa.fijerena.testing.up
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.robolectric.RobolectricTestRunner
@@ -38,7 +43,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The TV team and league pages and the game sheet (the sports teams plan → Screens): focus on
  * the first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to the
- * broadcasters, Back closes the sheet onto the game; a league's teams follow its games. A row with
+ * broadcasters, Back closes the sheet onto the game; a league's teams follow its games. A game's
+ * bell is Right of its row; once the team is followed, its bell for every game is Right of Unfollow. A row with
  * no logo reads its letter first ("C / Chelsea"), as the device walk reads it.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -48,6 +54,13 @@ class SportsPagesFocusTest {
 
     private val walk = FocusWalk(rule)
     private val created = mutableListOf<androidx.lifecycle.ViewModel>()
+    private val bells = SportsSectionFocusTest.FakeBells()
+
+    // The app's theme, with the bells' reminders in memory.
+    @Composable
+    private fun WithBells(content: @Composable () -> Unit) {
+        FirstVideoPlayerTheme { CompositionLocalProvider(LocalGameBellStore provides bells, content = content) }
+    }
 
     @After
     fun tearDown() {
@@ -106,7 +119,7 @@ class SportsPagesFocusTest {
         val played = mutableListOf<Screen.CategoryList>()
         val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
         rule.setContent {
-            FirstVideoPlayerTheme {
+            WithBells {
                 SportsTeamScreen(team = ARSENAL, onPlay = { played += it }, onBack = {}, viewModel = vm)
             }
         }
@@ -135,7 +148,7 @@ class SportsPagesFocusTest {
     fun `the sheet names a broadcaster's countries, OK shows them all`() {
         val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
         rule.setContent {
-            FirstVideoPlayerTheme {
+            WithBells {
                 SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }
@@ -151,7 +164,7 @@ class SportsPagesFocusTest {
     fun `a game with nothing known shows TV not announced yet, and Follow becomes Unfollow`() {
         val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
         rule.setContent {
-            FirstVideoPlayerTheme {
+            WithBells {
                 SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }
@@ -162,11 +175,30 @@ class SportsPagesFocusTest {
     }
 
     @Test
+    fun `a game's bell is Right of its row, and a followed team's bell is Right of Unfollow`() {
+        val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells {
+                SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
+            }
+        }
+        walk.awaitFocused("C / Chelsea")
+        walk.run(right("Remind Me"), down("Remind Me"), left("L / Liverpool"), up("C / Chelsea"), up("Follow"))
+        walk.press(Key.DirectionCenter)
+        walk.awaitFocused("Unfollow")
+        walk.run(right("Remind Me of Every Game"))
+        walk.press(Key.DirectionCenter)
+        walk.awaitFocused("Reminders Set for Every Game")
+        assertEquals(setOf("espn:soccer/359"), bells.reminded.value.teams)
+        walk.run(down("C / Chelsea"))
+    }
+
+    @Test
     fun `league page - its teams come after its games`() {
         val vm = SportsLeagueViewModel(FakeData(), LEAGUE).also { created += it }
         val opened = mutableListOf<Screen.SportsTeam>()
         rule.setContent {
-            FirstVideoPlayerTheme {
+            WithBells {
                 SportsLeagueScreen(league = LEAGUE, onTeamSelected = { opened += it }, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }

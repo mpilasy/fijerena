@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
+import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
@@ -83,6 +84,7 @@ import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.sports.league
 import org.njarasoa.fijerena.core.ui.sports.team
+import org.njarasoa.fijerena.core.ui.sports.teamsSearch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -112,6 +114,7 @@ import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsLeagueScreen
+import org.njarasoa.fijerena.feature.sports.MobileSportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsTeamScreen
 import org.njarasoa.fijerena.feature.wanted.MobileTmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -142,6 +145,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // not that the category is empty.
     val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
     val libraryLoading = profileSections?.xtreamIds.orEmpty().any { it in firstSyncs }
+    // The Sports tab (the sports teams plan, SP-D7): while Admin's Sports switch is on, for a
+    // profile that is not a child and follows a team or a league ([showsSportsTab]).
+    val sportsOn by remember { appSettings.observeShowSports() }.collectAsStateWithLifecycle(initialValue = appSettings.showSports)
+    var sportsProfileId by remember { mutableStateOf(appSettings.activeProfileId) }
+    val follows by remember(sportsProfileId) { FollowedSports.getInstance(context.applicationContext).observe(sportsProfileId) }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val sportsChild = remember(sportsProfileId) { appSettings.isChildProfile(sportsProfileId) }
     // The graph's start destination, decided once at startup.
     var openingTab by remember { mutableStateOf(MobileTab.HOME) }
     // Each Live TV dock as its screen reports it, by back-stack entry — the tab's root and any
@@ -164,6 +174,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         navController.clearBackStack<Screen.LiveTvTab>()
         navController.clearBackStack<Screen.MoviesTab>()
         navController.clearBackStack<Screen.TvShowsTab>()
+        navController.clearBackStack<Screen.SportsTab>()
         navController.clearBackStack<Screen.Settings>()
     }
 
@@ -201,7 +212,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     ) {
         val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
         val current = navController.currentTab()
-        val tabs = visibleTabs(profileSections?.merged)
+        val tabs = visibleTabs(profileSections?.merged, showsSportsTab(sportsOn, sportsChild, follows?.isEmpty == false))
         if (target == null || current == null || target == current || target !in tabs) {
             navController.navigateOnce(screen)
             return
@@ -241,6 +252,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
 
     // The profile whose sources the tabs follow (below); a switch starts over on the new one.
     var sourcesProfileId by remember { mutableStateOf(appSettings.activeProfileId) }
+    LaunchedEffect(sourcesProfileId) { sportsProfileId = sourcesProfileId }
 
     // Back-Stack Rule 4's switches (profile, live sync, Settings' first source): every screen may
     // hold the previous one's repository, so start over on the new profile's last tab, or the first
@@ -405,7 +417,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // keeps its place; not on the player, Settings and its screens, or with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentTab = currentEntry?.let { navController.currentTab() }
-    val tabs = visibleTabs(profileSections?.merged)
+    val tabs =
+        visibleTabs(
+            profileSections?.merged,
+            showsSportsTab(sportsOn, sportsChild, follows?.isEmpty == false, inSportsTab = currentTab == MobileTab.SPORTS),
+        )
 
     // The app opens next time on the tab used last. A tab the profile's sources don't have (one
     // turned off meanwhile) gives way to one they have; with none, the tab roots show the sources
@@ -413,7 +429,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     LaunchedEffect(currentTab, profileSections) {
         val types = profileSections?.merged?.takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
         // Settings is a tab but not a section: never the tab the app opens on.
-        val tab = currentTab?.takeIf { it != MobileTab.SETTINGS } ?: return@LaunchedEffect
+        // Sports neither: it is no source's section, and opens only while something is followed.
+        val tab = currentTab?.takeIf { it != MobileTab.SETTINGS && it != MobileTab.SPORTS } ?: return@LaunchedEffect
         if (tab == MobileTab.HOME || tab.contentType in types) {
             appSettings.lastTab = tab.contentType
         } else {
@@ -703,6 +720,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             supportedTypes = profileSections?.merged.orEmpty(),
                             sourceTopBar = sourceTopBar(MobileTab.HOME),
                             onSearch = { navController.navigateOnce(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL)) },
+                            onGameChannel = { navController.navigateOnce(it) },
                             onContinueWatching = { item ->
                                 navController.navigateOnce(
                                     browseTargetRoute(item.target, item.name, item.categoryId, item.providerId, item.contentType),
@@ -744,6 +762,21 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
                             libraryLoading = libraryLoading,
                             onDockChanged = reportLiveDock(backStackEntry.id),
+                        )
+                    }
+                }
+
+                // The Sports tab's root (the sports teams plan → Sports section): Search in its top bar
+                // and Find Teams open Search on its Teams type.
+                composable<Screen.SportsTab> {
+                    tabRoot(MobileTab.SPORTS) {
+                        val findTeams = { leaveTabRoot { navController.navigateToSearch(teamsSearch(appSettings.activeProfileId)) } }
+                        MobileSportsSectionScreen(
+                            sourceTopBar = { sourceTopBar(MobileTab.SPORTS)(findTeams) },
+                            onTeamSelected = { navController.navigateOnce(it) },
+                            onLeagueSelected = { navController.navigateOnce(it) },
+                            onFindTeams = findTeams,
+                            onPlay = { navController.navigateOnce(it) },
                         )
                     }
                 }

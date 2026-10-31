@@ -108,6 +108,13 @@ sealed interface Screen {
     @Serializable
     data object TvShowsTab : Screen
 
+    /**
+     * The Sports section's root (the sports teams plan → Sports section): the TV rail's Sports and
+     * the phone's Sports tab, its own root so its back stack is saved apart from the others.
+     */
+    @Serializable
+    data object SportsTab : Screen
+
     /** The phone's Home tab: the rows of every section (docs/plans/20261019_phone-home-tab-plan.md). */
     @Serializable
     data object HomeTab : Screen

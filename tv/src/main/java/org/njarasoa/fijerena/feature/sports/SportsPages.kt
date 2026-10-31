@@ -26,6 +26,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -56,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
@@ -75,8 +77,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * A team's page on TV (the sports teams plan → Team page): the logo, the name, the sport and
- * league, a Follow icon action, then the team's coming games (up to 10) by day in the device's
- * time zone. A game opens its sheet ([GameSheetOverlay]); a channel there opens its preview
+ * league, a Follow icon action (and, once followed, a bell for every game of the team), then the
+ * team's coming games (up to 10) by day in the device's time zone, each with its bell. A game opens its sheet ([GameSheetOverlay]); a channel there opens its preview
  * ([onPlay], as a guide result).
  *
  * Focus: the first game once the games come (Follow while they load or when there is none); Up
@@ -109,6 +111,8 @@ fun SportsTeamScreen(
         onRetry = viewModel::retry,
         onPlay = onPlay,
         onBack = onBack,
+        // Every game of the team: once the profile follows it (the sports teams plan → Reminders).
+        teamBell = shown.takeIf { followed },
     )
 }
 
@@ -177,7 +181,8 @@ fun SportsLeagueScreen(
 /**
  * The page both share: the header with Follow, the games by day, [extra] rows after them, and the
  * game sheet over the page while one is open (its game's key saved, so Back from a channel finds
- * it open). [secondFocus]: the entry focus when there is no game.
+ * it open). [secondFocus]: the entry focus when there is no game. [teamBell]: the team whose every
+ * game the header's bell reminds of, after Follow; none on a league page.
  */
 @Composable
 private fun TvSportsPage(
@@ -192,9 +197,12 @@ private fun TvSportsPage(
     onPlay: (Screen.CategoryList) -> Unit,
     onBack: () -> Unit,
     secondFocus: FocusRequester? = null,
+    teamBell: SportsTeam? = null,
     extra: LazyListScope.(NavReturnFocus, LazyListState) -> Unit = { _, _ -> },
 ) {
     val resources = LocalResources.current
+    val bells = rememberGameBells()
+    val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     val returnFocus = rememberNavReturnFocus()
     val followFocus = remember { FocusRequester() }
@@ -248,6 +256,10 @@ private fun TvSportsPage(
             contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // Down from the header's actions: the first game (else the first of the extra rows), not
+            // the bell under them.
+            val headerDown = if (loaded?.games?.isNotEmpty() == true) firstGameFocus else secondFocus
+            val downToRows = Modifier.focusProperties { headerDown?.let { down = it } }
             item(key = "header") {
                 TvScreenHeader(
                     title = title,
@@ -270,8 +282,19 @@ private fun TvSportsPage(
                             Modifier
                                 .focusRequester(followFocus)
                                 .onFocusChanged { followHasFocus = it.hasFocus }
-                                .leftToRail(),
+                                .leftToRail()
+                                .then(downToRows),
                     )
+                    if (teamBell != null) {
+                        val on = bells.reminded.hasTeam(teamBell)
+                        TvIconAction(
+                            onClick = { bells.toggleTeam(teamBell) },
+                            icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
+                            label = stringResource(if (on) R.string.sports_remind_team_set else R.string.sports_remind_team),
+                            on = on,
+                            modifier = downToRows,
+                        )
+                    }
                 }
             }
             when (games) {
@@ -327,6 +350,7 @@ private fun TvSportsPage(
                                     modifier =
                                         (if (isFirst) Modifier.focusRequester(firstGameFocus) else Modifier)
                                             .navReturnFocusTarget(returnFocus, key),
+                                    trailing = { TvGameBell(game, bells, nowSec) },
                                 )
                             }
                         }
@@ -346,6 +370,7 @@ private fun TvSportsPage(
                     closedGame = "game:${sheetGame.key}"
                     openGame = null
                 },
+                actions = { TvGameBell(sheetGame, bells, nowSec) },
             )
         }
     }

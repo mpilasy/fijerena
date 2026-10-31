@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
@@ -63,8 +64,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * A team's page on the phone (the sports teams plan → Team page): the logo, the name, the sport
- * and league, Follow in the top bar (an icon, its label in a long-press tooltip), then the team's
- * coming games (up to 10) by day in the device's time zone. A game opens its sheet
+ * and league, Follow in the top bar (an icon, its label in a long-press tooltip; once followed, a
+ * bell for every game of the team beside it), then the team's coming games (up to 10) by day in
+ * the device's time zone, each with its bell. A game opens its sheet
  * ([MobileGameSheet]); a channel there opens its mini-player ([onPlay], as a guide result).
  */
 @Composable
@@ -93,6 +95,8 @@ fun MobileSportsTeamScreen(
         onRetry = viewModel::retry,
         onPlay = onPlay,
         onBack = onBack,
+        // Every game of the team: once the profile follows it (the sports teams plan → Reminders).
+        teamBell = shown.takeIf { followed },
     )
 }
 
@@ -166,9 +170,12 @@ private fun MobileSportsPage(
     onRetry: () -> Unit,
     onPlay: (Screen.CategoryList) -> Unit,
     onBack: () -> Unit,
+    teamBell: SportsTeam? = null,
     extra: LazyListScope.() -> Unit = {},
 ) {
     val resources = LocalResources.current
+    val bells = rememberGameBells()
+    val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val loaded = games as? GamesState.Loaded
@@ -190,6 +197,7 @@ private fun MobileSportsPage(
                         icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
                         label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
                     )
+                    teamBell?.let { MobileTeamBell(it, bells) }
                 },
             )
         },
@@ -267,6 +275,7 @@ private fun MobileSportsPage(
                                 team = team,
                                 cardColors = cardColors,
                                 onClick = { openGame = game.key },
+                                trailing = { MobileGameBell(game, bells, nowSec) },
                             )
                         }
                     }
@@ -282,6 +291,7 @@ private fun MobileSportsPage(
             channels = loaded?.channelsOf(sheetGame),
             onPlay = { channel -> channel.liveRoute()?.let(onPlay) },
             onDismiss = { openGame = null },
+            actions = { MobileGameBell(sheetGame, bells, nowSec) },
         )
     }
 }

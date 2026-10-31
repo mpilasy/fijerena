@@ -48,7 +48,9 @@ object ReminderChannelFinder {
 
     /**
      * The live channels of the profile in use, of every source that can have channels, hidden as
-     * the guide search hides them (an excluded channel, or one in an excluded live category).
+     * the guide search hides them (an excluded channel, or one in an excluded live category). The
+     * one loader of the channels a game is matched to: the sports pages, the Sports section and
+     * Home's Upcoming Games read it too.
      */
     suspend fun liveChannels(context: Context): List<LiveChannel> {
         val sources = ProviderRepository(context).profileSourcesList()

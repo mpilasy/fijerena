@@ -4,6 +4,9 @@ import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchSession
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchTab
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 
 /** The team's page, with what the team knows, so the page and Follow have it. */
 fun SportsTeam.route(): Screen.SportsTeam = Screen.SportsTeam(source.id, id, name, sport, league, logoUrl)
@@ -30,3 +33,13 @@ fun GameChannel.liveRoute(): Screen.CategoryList? =
             providerId = channel.providerId,
         )
     }
+
+/**
+ * Search on its Teams type, for the Sports section's Find Teams: the app's one search
+ * ([SearchSession]) is set to Teams for [profileId], then this route opens it over everything.
+ */
+fun teamsSearch(profileId: String): Screen.Search {
+    SearchSession.forProfile(profileId)
+    SearchSession.tab = SearchTab.TEAMS
+    return Screen.Search(SearchViewModel.CONTENT_TYPE_ALL)
+}

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.sports
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.isHomeGame
@@ -34,6 +38,8 @@ import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.buttons.TvButtonStyle
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
@@ -41,8 +47,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 // The sports rows on TV (the sports teams plan → Screens), shared by Search's Teams type, the team
-// and league pages, and the Sports section and Home row to come. Each row is one focus stop, Left
-// opens the rail.
+// and league pages and the Sports section. Each row is one focus stop, Left opens the rail; a game
+// row's bell is a fixed slot to its right.
 
 /**
  * A team or a league in a list: its logo (its first letter when it has none), its name, [details]
@@ -120,8 +126,9 @@ fun TvSportsHeading(
  * A game: the logo and name of the side that matters ([team]'s opponent on a team page, else
  * both teams), the competition and time (home or away on a team page), and its best channel
  * ([channels]' first: logo, name, "In the guide" or "On Canal+"; "Looking for channels…" while
- * [channels] is null). [trailing]: a slot after the channel, for an action of its own in a fixed
- * slot (a reminder bell, the sports teams plan → Reminders); none yet.
+ * [channels] is null). [trailing]: a fixed slot after the row, outside it, for an action of its own
+ * ([TvGameBell]): Right from the row reaches it, Left goes back, Up/Down keep the column.
+ * [modifier] is the row's own (its focus requester, its Back target).
  */
 @Composable
 fun TvGameRow(
@@ -144,34 +151,79 @@ fun TvGameRow(
             game.competition.name.takeIf { it.isNotBlank() },
             TimeFormat.formatTime(game.startEpochSec),
         ).joinToString(" · ")
-    TvCard(
-        onClick = onClick,
-        look = TvCardLooks.listRow(),
+    Row(
         modifier =
-            modifier
-                .leftToRail()
+            Modifier
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
+        TvCard(
+            onClick = onClick,
+            look = TvCardLooks.listRow(),
+            modifier =
+                modifier
+                    .leftToRail()
+                    .weight(1f)
+                    .fillMaxHeight(),
         ) {
-            CinemaThumbnail(
-                url = logo,
-                fallbackLetter = title.firstOrNull(Char::isLetterOrDigit),
-                contentType = ThumbnailContentType.LIVE_TV,
-                contentDescription = null,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+            GameRowContent(channels, title, logo, details)
+        }
+        trailing?.invoke(this)
+    }
+}
+
+/** A game row's logo, its two lines and its best channel. */
+@Composable
+private fun GameRowContent(
+    channels: List<GameChannel>?,
+    title: String,
+    logo: String?,
+    details: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxSize().padding(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CinemaThumbnail(
+            url = logo,
+            fallbackLetter = title.firstOrNull(Char::isLetterOrDigit),
+            contentType = ThumbnailContentType.LIVE_TV,
+            contentDescription = null,
+            modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            CinemaText(text = title, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            CinemaText(text = details, role = TextRole.Body, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        TvBestChannel(channels = channels, modifier = Modifier.weight(BEST_CHANNEL_WEIGHT))
+    }
+}
+
+/**
+ * A game's reminder bell (the sports teams plan → Reminders): sets or clears its reminder, the
+ * icon and label saying which ([GameBells]). Nothing once the game has started ([canRemind]); in a
+ * row's trailing slot ([TvGameRow]) the slot keeps its width, so the bells stay in one column.
+ */
+@Composable
+fun TvGameBell(
+    game: SportsGame,
+    bells: GameBells,
+    nowSec: Long,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.widthIn(min = TvButtonStyle.iconButtonSize), contentAlignment = Alignment.Center) {
+        if (canRemind(game, nowSec)) {
+            val on = bells.reminded.has(game)
+            TvIconAction(
+                onClick = { bells.toggle(game) },
+                icon = if (on) CinemaIcons.BellOn else CinemaIcons.Bell,
+                label = stringResource(if (on) R.string.sports_reminder_set else R.string.sports_remind_me),
+                on = on,
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                CinemaText(text = title, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                CinemaText(text = details, role = TextRole.Body, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            TvBestChannel(channels = channels, modifier = Modifier.weight(BEST_CHANNEL_WEIGHT))
-            trailing?.invoke(this)
         }
     }
 }

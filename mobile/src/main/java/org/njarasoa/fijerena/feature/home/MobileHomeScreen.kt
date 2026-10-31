@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +75,11 @@ import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
+import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
+import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
+import org.njarasoa.fijerena.core.ui.sports.key
+import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -85,6 +91,9 @@ import org.njarasoa.fijerena.core.ui.wanted.gone
 import org.njarasoa.fijerena.core.ui.wanted.route
 import org.njarasoa.fijerena.core.ui.wanted.statusLabel
 import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
+import org.njarasoa.fijerena.feature.sports.MobileGameBell
+import org.njarasoa.fijerena.feature.sports.MobileGameSheet
+import org.njarasoa.fijerena.feature.sports.MobileUpcomingGameCard
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CardLines
@@ -133,6 +142,8 @@ fun MobileHomeScreen(
     onFavorite: (item: MediaItem, contentType: String) -> Unit,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWanted: (Screen) -> Unit = {},
+    // A channel of an Upcoming Games card's sheet: its mini-player, as a guide result opens it.
+    onGameChannel: (Screen.CategoryList) -> Unit = {},
 ) {
     val context = LocalContext.current
     var rows by remember { mutableStateOf<HomeRows?>(null) }
@@ -241,6 +252,24 @@ fun MobileHomeScreen(
                     .flatMap { ChartRows.load(context.applicationContext, lists, it) }
             }
     }
+    // The Upcoming Games row (the sports teams plan → Home row): read apart from the other rows,
+    // as it may ask the sports sources; kept in memory and read again at most every 15 minutes
+    // (UpcomingGames). Absent for a child or while Admin's Sports switch is off.
+    val showSports by remember { AppSettings(context.applicationContext).observeShowSports() }
+        .collectAsStateWithLifecycle(initialValue = false)
+    var upcoming by remember { mutableStateOf<List<UpcomingGame>>(emptyList()) }
+    LaunchedEffect(reloads, showSports) {
+        upcoming =
+            if (showSports && UpcomingGames.enabled(context.applicationContext)) {
+                withContext(Dispatchers.IO) { UpcomingGames.load(context.applicationContext) }
+            } else {
+                emptyList()
+            }
+    }
+    // The game whose sheet is open; saved, so Back from its channel finds it open again.
+    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
+    val bells = rememberGameBells()
+    val nowSec = remember { System.currentTimeMillis() / 1000 }
     // The channels' Now lines, each from its own source's guide, again at each minute.
     LaunchedEffect(merged, rows) {
         val lists = merged ?: return@LaunchedEffect
@@ -377,7 +406,7 @@ fun MobileHomeScreen(
             topBar = { sourceTopBar(onSearch) },
         ) { padding ->
             val loaded = rows ?: return@Scaffold
-            if (loaded.isEmpty && wantedCards.isEmpty() && charts.isEmpty()) {
+            if (loaded.isEmpty && wantedCards.isEmpty() && charts.isEmpty() && upcoming.isEmpty()) {
                 MobileEmptyState(
                     message = stringResource(R.string.home_empty),
                     icon = CinemaIcons.Home,
@@ -388,6 +417,8 @@ fun MobileHomeScreen(
             HomeRowsColumn(
                 loaded,
                 charts,
+                upcoming,
+                onUpcoming = { openGame = it.game.key },
                 nowPlaying,
                 padding,
                 onContinueWatching,
@@ -438,12 +469,25 @@ fun MobileHomeScreen(
             )
         }
     }
+    val sheetGame = openGame?.let { key -> upcoming.firstOrNull { it.game.key == key } }
+    if (sheetGame != null) {
+        MobileGameSheet(
+            game = sheetGame.game,
+            channels = sheetGame.channels,
+            onPlay = { channel -> channel.liveRoute()?.let(onGameChannel) },
+            onDismiss = { openGame = null },
+            actions = { MobileGameBell(sheetGame.game, bells, nowSec) },
+        )
+    }
 }
 
 @Composable
 private fun HomeRowsColumn(
     rows: HomeRows,
     charts: List<ChartRows.Row>,
+    // The Upcoming Games row's cards, and a card's tap (its game's sheet).
+    upcoming: List<UpcomingGame>,
+    onUpcoming: (UpcomingGame) -> Unit,
     nowPlaying: Map<String, EpgProgram>,
     padding: PaddingValues,
     onContinueWatching: (ContinueWatchingItem) -> Unit,
@@ -601,7 +645,7 @@ private fun HomeRowsColumn(
         HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
         // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on its
         // section's tint, its favourites first.
-        if (rows.favoriteChannels.isNotEmpty()) {
+        if (rows.favoriteChannels.isNotEmpty() || upcoming.isNotEmpty()) {
             HomeSection(ThumbnailContentType.LIVE_TV) {
                 HomeRow(
                     stringResource(R.string.home_favorite_channels),
@@ -609,6 +653,10 @@ private fun HomeRowsColumn(
                     { it.item.sourceKey },
                     content = channelCard,
                 )
+                // After the favourite channels (the sports teams plan → Home row).
+                HomeRow(stringResource(R.string.home_upcoming_games), upcoming, { it.game.key }) { game ->
+                    MobileUpcomingGameCard(game, onClick = { onUpcoming(game) })
+                }
             }
         }
         sectionRows(ContentType.TV_SHOWS, rows.favoriteShows, R.string.home_favorite_shows)

@@ -150,6 +150,11 @@ import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
 import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
 import org.njarasoa.fijerena.core.ui.home.syncSummary
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
+import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
+import org.njarasoa.fijerena.core.ui.sports.key
+import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -181,8 +186,12 @@ import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatch
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
+import org.njarasoa.fijerena.feature.contentselection.components.TvUpcomingGamesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvWantedBanner
 import org.njarasoa.fijerena.feature.contentselection.components.TvWantedRow
+import org.njarasoa.fijerena.feature.sports.GameSheetOverlay
+import org.njarasoa.fijerena.feature.sports.RETURN_SHEET_PREFIX
+import org.njarasoa.fijerena.feature.sports.TvGameBell
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
@@ -224,6 +233,8 @@ fun ContentTypeSelectionScreen(
     onAddSource: (() -> Unit)? = null,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWantedSelected: (Screen) -> Unit = {},
+    // A channel of an Upcoming Games card's sheet: its preview, as a guide result opens it.
+    onGameChannelSelected: (Screen.CategoryList) -> Unit = {},
     // Opened from the navigation rail: on the first card of the first row, never on the card that
     // was opened last (a pending Back hand-back is dropped).
     openOnFirstCard: Boolean = false,
@@ -286,6 +297,16 @@ fun ContentTypeSelectionScreen(
     var favoriteChannelEntries by remember { mutableStateOf<List<LiveRowEntry>>(emptyList()) }
     var liveRowLoaded by remember { mutableStateOf(false) }
     var liveNowPlaying by remember { mutableStateOf<Map<String, EpgProgram>>(emptyMap()) }
+
+    // The Upcoming Games row (the sports teams plan → Home row): the followed teams' and leagues'
+    // games in the next 48 hours, after the favourite channels. Never on a child's Home (SP-D8).
+    var upcomingGames by remember { mutableStateOf<List<UpcomingGame>>(emptyList()) }
+    val showSports by remember { appSettings.observeShowSports() }.collectAsStateWithLifecycle(initialValue = appSettings.showSports)
+    // The game whose sheet is open over Home; saved, so Back from a channel finds it open.
+    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
+    var closedGame by remember { mutableStateOf<String?>(null) }
+    val upcomingBells = rememberGameBells()
+    val upcomingNowSec = remember { System.currentTimeMillis() / 1000 }
 
     // Favourite movies and shows rows (Phase 5), loaded with the Live row.
     var favoriteMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -377,6 +398,13 @@ fun ContentTypeSelectionScreen(
         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
         liveRowLoaded = true
     }
+    // After the other rows, so the sports calls never hold those up; again when the Admin switch
+    // changes. Kept in memory (UpcomingGames): a return to Home costs nothing.
+    LaunchedEffect(mergedLists, showSports) {
+        if (mergedLists == null) return@LaunchedEffect
+        snapshotFlow { liveRowLoaded }.first { it }
+        upcomingGames = loadUpcomingGames(context.applicationContext, child)
+    }
     // The chart rows after the other rows, so their TMDB calls never hold those up. Again when the
     // Admin switch changes. All six at once: a later second update recomposed the rows under a
     // card focus had just come back to (Back from a chart card), and focus jumped to a first card.
@@ -432,6 +460,8 @@ fun ContentTypeSelectionScreen(
                         favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
                         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
                     }
+                    // Read again at most every 15 minutes, or at once after a follow changed.
+                    coroutineScope.launch { upcomingGames = loadUpcomingGames(context.applicationContext, child) }
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -456,6 +486,8 @@ fun ContentTypeSelectionScreen(
     val liveRowListState = rememberLazyListState()
     val favoriteChannelsFirstFocus = remember { FocusRequester() }
     val favoriteChannelsListState = rememberLazyListState()
+    val upcomingFirstFocus = remember { FocusRequester() }
+    val upcomingListState = rememberLazyListState()
     val favoriteMoviesFirstFocus = remember { FocusRequester() }
     val favoriteMoviesListState = rememberLazyListState()
     val favoriteShowsFirstFocus = remember { FocusRequester() }
@@ -513,6 +545,8 @@ fun ContentTypeSelectionScreen(
                     liveRowEntries.isNotEmpty() -> liveRowFirstFocus
 
                     favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
+
+                    upcomingGames.isNotEmpty() -> upcomingFirstFocus
 
                     else -> sectionFirstFocus(ContentType.TV_SHOWS) ?: sectionFirstFocus(ContentType.MOVIES)
                 }
@@ -593,6 +627,18 @@ fun ContentTypeSelectionScreen(
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
             if (index >= 0) row.showReturnCard(index)
         }
+        // A game card, or a channel of the game sheet opened from one: the row (kept in memory) first.
+        if (key.startsWith(RETURN_UPCOMING_PREFIX) || key.startsWith(RETURN_SHEET_PREFIX)) {
+            val gameKey = if (key.startsWith(RETURN_UPCOMING_PREFIX)) key.removePrefix(RETURN_UPCOMING_PREFIX) else openGame
+            val games =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { upcomingGames }.first { games -> games.any { it.game.key == gameKey } }
+                }
+            val index = games?.indexOfFirst { it.game.key == gameKey } ?: -1
+            if (index >= 0 && key.startsWith(RETURN_UPCOMING_PREFIX)) upcomingListState.showReturnCard(index)
+            // The sheet lays out its rows a frame after it opens.
+            if (key.startsWith(RETURN_SHEET_PREFIX)) withFrameNanos { }
+        }
         for (shelf in chartShelves) {
             val prefix = chartReturnPrefix(shelf)
             if (!key.startsWith(prefix)) continue
@@ -669,6 +715,8 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.sourceKey }
 
+            HomeShelf.UPCOMING_GAMES -> upcomingGames.map { it.game.key }
+
             HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.sourceKey }
 
             HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
@@ -691,6 +739,8 @@ fun ContentTypeSelectionScreen(
             HomeShelf.CHANNELS -> liveRowListState
 
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelsListState
+
+            HomeShelf.UPCOMING_GAMES -> upcomingListState
 
             HomeShelf.FAVORITE_MOVIES -> favoriteMoviesListState
 
@@ -786,7 +836,8 @@ fun ContentTypeSelectionScreen(
                 takeOut(wantedCards, key, { it.key }, { wantedCards }) { wantedCards = it }
             }
 
-            // A chart card is never removed.
+            // A chart card and a game card are never removed.
+            HomeShelf.UPCOMING_GAMES,
             HomeShelf.CHART_TRENDING_MOVIES,
             HomeShelf.CHART_POPULAR_MOVIES,
             HomeShelf.CHART_TOP_RATED_MOVIES,
@@ -1403,7 +1454,7 @@ fun ContentTypeSelectionScreen(
 
                             // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on
                             // its section's tint, its favourites first.
-                            if (favoriteChannelEntries.isNotEmpty()) {
+                            if (favoriteChannelEntries.isNotEmpty() || upcomingGames.isNotEmpty()) {
                                 SectionPanel(
                                     section = ThumbnailContentType.LIVE_TV,
                                     modifier =
@@ -1456,6 +1507,26 @@ fun ContentTypeSelectionScreen(
                                                     .then(artOnFocus(entry.item.thumbnailUrl, false))
                                             },
                                             sourceNames = sourceNames,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
+                                    if (upcomingGames.isNotEmpty()) {
+                                        TvUpcomingGamesRow(
+                                            title = stringResource(R.string.home_upcoming_games),
+                                            games = upcomingGames,
+                                            onGameSelected = { game -> openGame = game.game.key },
+                                            firstItemFocus = upcomingFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_UPCOMING_PREFIX) },
+                                            listState = upcomingListState,
+                                            itemModifier = { game ->
+                                                Modifier
+                                                    .navReturnFocusTarget(returnFocus, RETURN_UPCOMING_PREFIX + game.game.key)
+                                                    .then(cardFocusTarget(HomeShelf.UPCOMING_GAMES, game.game.key))
+                                                    .then(artOnFocus(game.game.home.logoUrl, false))
+                                            },
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
@@ -1606,8 +1677,41 @@ fun ContentTypeSelectionScreen(
                 SourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
             }
         }
+        // A game card's sheet, over Home (the sports teams plan → Game sheet): a channel opens as a
+        // guide result; Back closes it onto the card.
+        val sheetGame = openGame?.let { key -> upcomingGames.firstOrNull { it.game.key == key } }
+        if (sheetGame != null) {
+            GameSheetOverlay(
+                game = sheetGame.game,
+                channels = sheetGame.channels,
+                returnFocus = returnFocus,
+                onPlay = { channel -> channel.liveRoute()?.let { route -> onGameChannelSelected(route) } },
+                onClose = {
+                    closedGame = RETURN_UPCOMING_PREFIX + sheetGame.game.key
+                    openGame = null
+                },
+                actions = { TvGameBell(sheetGame.game, upcomingBells, upcomingNowSec) },
+            )
+        }
+    }
+    LaunchedEffect(closedGame) {
+        closedGame?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = firstRowFocus) }
+        closedGame = null
     }
 }
+
+/** The Upcoming Games row's games: none on a child's Home, nor while Admin's Sports switch is off. */
+private suspend fun loadUpcomingGames(
+    context: android.content.Context,
+    child: Boolean,
+): List<UpcomingGame> =
+    if (child ||
+        !UpcomingGames.enabled(context)
+    ) {
+        emptyList()
+    } else {
+        withContext(Dispatchers.IO) { UpcomingGames.load(context) }
+    }
 
 // Keys for the controls that navigate away from Home — see rememberNavReturnFocus.
 private const val RETURN_EPG_BROWSER = "epgBrowser"
@@ -1617,6 +1721,7 @@ private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
 private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
 private const val RETURN_WANTED_PREFIX = "wanted:"
+private const val RETURN_UPCOMING_PREFIX = "game:"
 
 /** A chart card's key prefix: the chart in it, as a title can be on two charts. */
 private fun chartReturnPrefix(shelf: HomeShelf): String = "chart:${shelf.name}:"

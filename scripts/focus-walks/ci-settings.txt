@@ -25,10 +25,12 @@ LEFT	Admin
 CENTER
 WAIT 5
 LEFT	Home
-# Admin's rail: the avatar, Home, the fake source's three sections, Search, Settings.
+# Admin's rail: the avatar, Home, the fake source's three sections, Sports (Admin's Sports switch
+# is on by default), Search, Settings.
 DOWN	Live TV
 DOWN	Movies
 DOWN	TV Shows
+DOWN	Sports
 DOWN	Search
 DOWN	Settings
 # Admin has no PIN: Settings opens with no prompt, focus on its rail's first group, and Admin does

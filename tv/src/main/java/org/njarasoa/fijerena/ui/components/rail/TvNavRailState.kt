@@ -36,6 +36,9 @@ enum class RailItem {
     LIVE_TV,
     MOVIES,
     TV_SHOWS,
+
+    /** The Sports section (the sports teams plan), after the sections. */
+    SPORTS,
     SEARCH,
     SETTINGS,
 }

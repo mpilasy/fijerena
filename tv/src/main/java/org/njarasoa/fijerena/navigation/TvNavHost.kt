@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.sports.league
 import org.njarasoa.fijerena.core.ui.sports.team
+import org.njarasoa.fijerena.core.ui.sports.teamsSearch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -96,6 +97,7 @@ import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
 import org.njarasoa.fijerena.feature.sports.SportsLeagueScreen
+import org.njarasoa.fijerena.feature.sports.SportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.SportsTeamScreen
 import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.LocalTvClock
@@ -298,7 +300,12 @@ fun TvNavHost(
             // The current section's Search; everything from Home, Settings and the rest.
             item == RailItem.SEARCH -> {
                 if (rail.current != RailItem.SEARCH) {
-                    val contentType = rail.current?.let(TvSection::of)?.contentType ?: SearchViewModel.CONTENT_TYPE_ALL
+                    // Sports searches everything (its Teams type among them).
+                    val contentType =
+                        rail.current
+                            ?.let(TvSection::of)
+                            ?.contentType
+                            ?.takeIf { it != SPORTS_SECTION } ?: SearchViewModel.CONTENT_TYPE_ALL
                     // The only Search: an older one, and what it opened, goes first.
                     navController.navigateToSearch(Screen.Search(contentType))
                 }
@@ -658,6 +665,7 @@ fun TvNavHost(
                             ContentTypeSelectionScreen(
                                 openOnFirstCard = openOnFirstCard,
                                 onWantedSelected = { navController.navigateOnce(it) },
+                                onGameChannelSelected = { navController.navigateOnce(it) },
                                 onCapabilitiesResolved = { mergedTypes ->
                                     // Skip the picker tap entirely when the profile has one section,
                                     // but only on the very first resolve per NavHost lifetime, so
@@ -857,6 +865,24 @@ fun TvNavHost(
                         }
                         composable<Screen.TvShowsTab> { backStackEntry ->
                             SectionBrowse(TvSection.TV_SHOWS, backStackEntry)
+                        }
+                        // The Sports section (the sports teams plan): Back as on a section's start, to
+                        // the rail, then Home. A game's channel opens as a guide result.
+                        composable<Screen.SportsTab> {
+                            BackHandler(enabled = rail.visible) {
+                                if (rail.expanded || !rail.focusRail()) {
+                                    openHomeOnFirstCard()
+                                    navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
+                                }
+                            }
+                            SportsSectionScreen(
+                                onTeamSelected = { navController.navigateOnce(it) },
+                                onLeagueSelected = { navController.navigateOnce(it) },
+                                onFindTeams = {
+                                    navController.navigateToSearch(teamsSearch(AppSettings(context.applicationContext).activeProfileId))
+                                },
+                                onPlay = { navController.navigateOnce(it) },
+                            )
                         }
 
                         composable<Screen.TmdbTitle> { backStackEntry ->

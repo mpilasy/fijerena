@@ -101,6 +101,39 @@ class MobileBottomBarTest {
         assertEquals(emptyList<MobileTab>(), visibleTabs(emptySet()))
     }
 
+    @Test
+    fun `Sports sits between the sections and Settings when shown`() {
+        assertEquals(
+            listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SPORTS, MobileTab.SETTINGS),
+            visibleTabs(ALL, sports = true),
+        )
+        assertEquals(listOf(MobileTab.HOME, MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS), visibleTabs(ALL))
+        // No section, no bar: Sports alone does not bring it.
+        assertEquals(emptyList<MobileTab>(), visibleTabs(emptySet(), sports = true))
+    }
+
+    @Test
+    fun `the Sports tab shows only with the switch on, for a profile that is not a child and follows something`() {
+        assertTrue(showsSportsTab(sportsOn = true, child = false, follows = true))
+        assertFalse(showsSportsTab(sportsOn = true, child = false, follows = false))
+        assertFalse(showsSportsTab(sportsOn = false, child = false, follows = true))
+        assertFalse(showsSportsTab(sportsOn = true, child = true, follows = true))
+    }
+
+    @Test
+    fun `the Sports tab stays while it is open after the last unfollow, but never for a child or with the switch off`() {
+        assertTrue(showsSportsTab(sportsOn = true, child = false, follows = false, inSportsTab = true))
+        assertFalse(showsSportsTab(sportsOn = false, child = false, follows = false, inSportsTab = true))
+        assertFalse(showsSportsTab(sportsOn = true, child = true, follows = false, inSportsTab = true))
+    }
+
+    @Test
+    fun `Sports is not a source section and never the tab the app opens on`() {
+        assertFalse(MobileTab.SPORTS.isSection)
+        assertEquals(MobileTab.HOME, startTab(MobileTab.SPORTS.contentType, ALL))
+        assertEquals(MobileTab.HOME, startTab(MobileTab.SPORTS.contentType, null))
+    }
+
     private companion object {
         val ALL = listOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS)
     }

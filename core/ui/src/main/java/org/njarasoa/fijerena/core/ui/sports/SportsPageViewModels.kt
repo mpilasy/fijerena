@@ -22,17 +22,13 @@ import org.njarasoa.fijerena.core.network.sports.FifaParser
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelMatcher
-import org.njarasoa.fijerena.core.network.sports.LiveChannel
+import org.njarasoa.fijerena.core.network.sports.ReminderChannelFinder
 import org.njarasoa.fijerena.core.network.sports.SportsData
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsSource
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.network.sports.WorldAquaticsParser
-import org.njarasoa.fijerena.core.network.xmltv.GuideScope
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
@@ -101,13 +97,7 @@ abstract class SportsGamesViewModel(
 
     private var job: Job? = null
 
-    /** Whether the profile follows the page's team or league. */
-    abstract val followed: StateFlow<Boolean>
-
     protected abstract suspend fun loadGames(): List<SportsGame>
-
-    /** Follows the page's team or league, or stops following it. */
-    abstract fun toggleFollow()
 
     /** Called with the games once they are read, before their channels are matched. */
     protected open fun onGames(games: List<SportsGame>) = Unit
@@ -188,7 +178,8 @@ class SportsTeamViewModel(
     private val _team = MutableStateFlow(team)
     val team: StateFlow<SportsTeam> = _team.asStateFlow()
 
-    override val followed: StateFlow<Boolean> =
+    /** Whether the profile follows the team. */
+    val followed: StateFlow<Boolean> =
         data
             .followed()
             .map { f -> f.teams.any { it.source == team.source && it.id == team.id } }
@@ -216,7 +207,8 @@ class SportsTeamViewModel(
             )
     }
 
-    override fun toggleFollow() {
+    /** Follows the team, or stops following it. */
+    fun toggleFollow() {
         val current = _team.value
         val on = followed.value
         launchFollow { if (on) data.unfollow(current) else data.follow(current) }
@@ -249,7 +241,8 @@ class SportsLeagueViewModel(
     /** The league's teams, null while they load. */
     val teams: StateFlow<List<SportsTeam>?> = _teams.asStateFlow()
 
-    override val followed: StateFlow<Boolean> =
+    /** Whether the profile follows the league. */
+    val followed: StateFlow<Boolean> =
         data
             .followed()
             .map { f -> f.leagues.any { it.source == league.source && it.id == league.id } }
@@ -272,7 +265,8 @@ class SportsLeagueViewModel(
 
     override suspend fun loadGames(): List<SportsGame> = data.leagueGames(league)
 
-    override fun toggleFollow() {
+    /** Follows the league, or stops following it. */
+    fun toggleFollow() {
         val on = followed.value
         launchFollow { if (on) data.unfollow(league) else data.follow(league) }
     }
@@ -339,9 +333,8 @@ private fun sportOf(
 
 /**
  * The real [SportsPageData]: [SportsData], the profile's [FollowedSports], and a
- * [GameChannelMatcher] on the profile's live channels (every live stream of its sources with
- * channels, a stream excluded or in a hidden live category marked hidden, as Search the guide
- * reads them) and its guide ([EpgGuideLookup]).
+ * [GameChannelMatcher] on the profile's live channels (`ReminderChannelFinder.liveChannels`, the
+ * one loader the reminders use too) and its guide ([EpgGuideLookup]).
  */
 class AppSportsPageData(
     private val context: Context,
@@ -371,24 +364,8 @@ class AppSportsPageData(
 
     override suspend fun matcher(): GameMatcher =
         withContext(Dispatchers.IO) {
-            val channels = liveChannels()
+            val channels = ReminderChannelFinder.liveChannels(context)
             val matcher = GameChannelMatcher(EpgGuideLookup.load(context))
             GameMatcher { game -> matcher.match(game, channels) }
         }
-
-    private suspend fun liveChannels(): List<LiveChannel> {
-        val db = XtreamDatabase.getInstance(context)
-        return GuideScope.load(context).providers.flatMap { provider ->
-            val hiddenCategories =
-                db
-                    .categoryDao()
-                    .getAllCategoriesIncludingExcluded(provider.id, XtreamCategoryEntity.TYPE_LIVE)
-                    .filter { it.excluded }
-                    .mapTo(HashSet()) { it.categoryId }
-            db
-                .streamDao()
-                .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                .map { LiveChannel.of(it, hidden = it.excluded || it.categoryId in hiddenCategories) }
-        }
-    }
 }

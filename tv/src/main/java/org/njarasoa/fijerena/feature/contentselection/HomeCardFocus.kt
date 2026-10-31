@@ -11,7 +11,8 @@ import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 
 /**
  * Home's rows, top to bottom (user, 2026-10-29): Continue Watching alone, then a group per section,
- * Channels, TV Shows, Movies, each with its favourites first.
+ * Channels (with the Upcoming Games after the favourite channels), TV Shows, Movies, each with its
+ * favourites first.
  */
 internal enum class HomeShelf {
     CONTINUE_WATCHING,
@@ -20,6 +21,9 @@ internal enum class HomeShelf {
     CHANNELS,
 
     FAVORITE_CHANNELS,
+
+    /** The games of the followed teams and leagues in the next 48 hours (the sports teams plan → Home row). */
+    UPCOMING_GAMES,
 
     FAVORITE_SHOWS,
 

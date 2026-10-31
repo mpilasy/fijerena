@@ -342,6 +342,7 @@ private fun RailEntry(
             RailItem.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
             RailItem.MOVIES -> stringResource(R.string.provider_movies_label)
             RailItem.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+            RailItem.SPORTS -> stringResource(R.string.sports_title)
             RailItem.SEARCH -> stringResource(R.string.common_search)
             RailItem.SETTINGS -> stringResource(R.string.settings_title)
         }
@@ -477,6 +478,7 @@ private fun RailItem.icon(): ImageVector =
         RailItem.LIVE_TV -> CinemaIcons.LiveTv
         RailItem.MOVIES -> CinemaIcons.Movie
         RailItem.TV_SHOWS -> CinemaIcons.Tv
+        RailItem.SPORTS -> CinemaIcons.Sports
         RailItem.SEARCH -> CinemaIcons.Search
         RailItem.SETTINGS -> CinemaIcons.Settings
     }
