@@ -5,7 +5,7 @@ import java.util.Locale
 /**
  * Matches a broadcaster ("Canal+ Sport", "beIN Sports", "SuperSport") to the profile's live channels
  * by name ("FR: CANAL+ SPORT 360 FHD", "beIN 1", "SS Premier League HD"). A channel's country tag
- * ("FR:", "UK|", "US -", "(FR)") must agree with the broadcaster's country when both are known.
+ * ("FR:", "UK|", "US -", "DE ▎", "(FR)") must agree with the broadcaster's country when both are known.
  */
 internal object BroadcasterChannels {
     /**
@@ -18,7 +18,7 @@ internal object BroadcasterChannels {
         val words: List<String>,
     )
 
-    private val PREFIX = Regex("^[^\\p{L}\\p{N}]*([A-Za-z]{2,4})\\s*(?:[:|\\]\\)]+|\\s[-–]|-)\\s*")
+    private val PREFIX = Regex("^[^\\p{L}\\p{N}]*([A-Za-z]{2,4})\\s*(?:[:|\\]\\)▎│┃]+|\\s[-–]|-)\\s*")
     private val BRACKET = Regex("[\\[(]([A-Za-z]{2,4})[\\])]")
     private val LETTER_DIGIT = Regex("(?<=\\p{L})(?=\\p{N})|(?<=\\p{N})(?=\\p{L})")
 

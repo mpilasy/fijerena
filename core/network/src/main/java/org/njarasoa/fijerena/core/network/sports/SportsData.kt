@@ -46,14 +46,15 @@ data class SportsSearchResult(
  *
  * UEFA's broadcasters take one call per country and week ([SportsApi.uefaBroadcasters]): they are
  * read in [background], and a call waits for them [uefaWaitMs] at most. The countries not read by
- * then are left out of that answer and stored for the next.
+ * then are left out of that answer and stored for the next. Only [uefaCountries] are read: in the
+ * app, the countries of the profile's channels ([ProfileCountries]).
  */
 class SportsData(
     private val api: SportsApi,
     private val cache: SportsCache,
     private val seasonBroadcasters: suspend (SportsGame) -> List<Broadcaster> = { emptyList() },
     private val enabled: () -> Boolean = { true },
-    private val uefaCountries: () -> List<String> = { UEFA_BROADCASTER_COUNTRIES },
+    private val uefaCountries: suspend () -> List<String> = { listOf(ProfileCountries.MADAGASCAR) },
     private val background: CoroutineScope = AppScopes.create("SportsData", Dispatchers.IO),
     private val uefaWaitMs: Long = UEFA_WAIT_MS,
     private val now: () -> Long = System::currentTimeMillis,
@@ -381,7 +382,7 @@ class SportsData(
 
     // Every country's broadcasters of [week], by UEFA match id: what is read within uefaWaitMs.
     private suspend fun uefaWeekBroadcasters(week: LocalDate): Map<String, List<Broadcaster>> {
-        val reads = uefaCountries().map { country -> uefaRead(country, week) }
+        val reads = attempt(mutableListOf(), "UEFA countries") { uefaCountries() }.map { country -> uefaRead(country, week) }
         val done =
             withTimeoutOrNull(uefaWaitMs) {
                 reads.map { read ->
@@ -519,95 +520,6 @@ class SportsData(
         const val LEAGUE_DAYS = 7
 
         /**
-         * The countries whose UEFA broadcasters are read: UEFA's 55 member associations (GB for the
-         * four British ones) and the larger TV markets elsewhere. UEFA takes any ISO code; each is
-         * one call a week, so the list is what the UEFA rate limit allows in a few minutes.
-         */
-        val UEFA_BROADCASTER_COUNTRIES =
-            listOf(
-                "AD",
-                "AL",
-                "AM",
-                "AT",
-                "AZ",
-                "BA",
-                "BE",
-                "BG",
-                "BY",
-                "CH",
-                "CY",
-                "CZ",
-                "DE",
-                "DK",
-                "EE",
-                "ES",
-                "FI",
-                "FO",
-                "FR",
-                "GB",
-                "GE",
-                "GI",
-                "GR",
-                "HR",
-                "HU",
-                "IE",
-                "IL",
-                "IS",
-                "IT",
-                "KZ",
-                "LI",
-                "LT",
-                "LU",
-                "LV",
-                "MC",
-                "MD",
-                "ME",
-                "MK",
-                "MT",
-                "NL",
-                "NO",
-                "PL",
-                "PT",
-                "RO",
-                "RS",
-                "RU",
-                "SE",
-                "SI",
-                "SK",
-                "SM",
-                "TR",
-                "UA",
-                "XK",
-                "US",
-                "CA",
-                "MX",
-                "BR",
-                "AR",
-                "AU",
-                "IN",
-                "JP",
-                "KR",
-                "CN",
-                "ID",
-                "TH",
-                "MY",
-                "SA",
-                "AE",
-                "QA",
-                "EG",
-                "MA",
-                "DZ",
-                "TN",
-                "NG",
-                "KE",
-                "GH",
-                "ZA",
-                "MG",
-                "MU",
-                "RE",
-            )
-
-        /**
          * One list of [byPriority] lists, best source first: for each country, the entries of the
          * first list that has that country; entries with no country from every list. One entry per
          * name and country, grouped by country.
@@ -637,8 +549,8 @@ class SportsData(
         private var instance: SportsData? = null
 
         /**
-         * The app's sports data, stored in `cacheDir/sports`, with the season table's broadcasters,
-         * off while Admin's Sports switch is off.
+         * The app's sports data, stored in `cacheDir/sports`, with the season table's broadcasters
+         * and UEFA's for the countries of the profile's channels, off while Admin's Sports switch is off.
          */
         fun getInstance(context: Context): SportsData =
             instance ?: synchronized(this) {
@@ -651,6 +563,7 @@ class SportsData(
                         SportsCache(File(app.cacheDir, "sports")),
                         seasonBroadcasters = seasonTable::broadcasters,
                         enabled = { settings.showSports },
+                        uefaCountries = ProfileCountries(app)::get,
                     )
                 }.also { instance = it }
             }
