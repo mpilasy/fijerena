@@ -1,8 +1,8 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261031195517
 
-- **Sports teams and their games:** Search has a **Teams** type after People. Find a team or a league that ESPN covers (US sports, football leagues around the world, rugby, cricket, tennis), and follow it. A team's page shows its next games, a league's page its games of the next 7 days and its teams. Your followed teams and leagues are kept per profile and synced to your other devices. Not on a child profile. TV and phone.
+- **Sports teams and their games:** Search has a **Teams** type after People. Find a team or a league that ESPN covers (US sports, football leagues around the world, rugby, cricket, tennis), and follow it. Type a team's name and the best match comes first with its next games and their channels. A team's page shows its next games, a league's page its games of the next 7 days and its teams. Your followed teams and leagues are kept per profile and synced to your other devices. Not on a child profile. TV and phone.
 - **Where to watch a game:** each game shows the best of your channels for it: a guide programme that names the game, a PPV or event channel whose name names it ("UK| PPV 3: Bayern v Ajax"), or a channel of a US network that has it ("On ESPN"); else "Not found on your channels". A game opens a sheet with only your channels for it (one opens as a guide result does). TV and phone.
 - **A Sports section:** the TV side menu has **Sports** after the sections; the phone has a **Sports** tab while you follow a team or a league. It shows your followed teams and leagues, then their games of the next 7 days with their channels. **Find Teams** opens the Teams search. TV and phone.
 - **Upcoming Games on Home:** the next 10 games of your followed teams and leagues in the next 48 hours, after Favourite Channels, each with both logos, the time and its channel. A card opens the game's sheet. TV and phone.
