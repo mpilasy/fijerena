@@ -26,12 +26,20 @@ BACK	Search films, shows and channels
 UP	Catalogue
 DOWN	Search films, shows and channels
 UP	Catalogue
+# People between Catalogue and Guide (the people search plan; a debug build has a TMDB key). OK on
+# it switches type and keeps focus on it; Down → its field, Up → People.
+RIGHT	People
+CENTER	People
+WAIT 1	People
+DOWN	Search actors, films and shows
+UP	People
 # OK on Guide switches tab and keeps focus on the tab; Down → the guide's field, Up → Guide.
 RIGHT	Guide
 CENTER	Guide
 WAIT 1	Guide
 DOWN	Enter programme title…
 UP	Guide
+LEFT	People
 LEFT	Catalogue
 CENTER	Catalogue
 WAIT 1	Catalogue

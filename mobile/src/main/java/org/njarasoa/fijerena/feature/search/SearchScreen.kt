@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.activeSearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.effectiveFacetChoice
 import org.njarasoa.fijerena.core.ui.viewmodels.effectiveSourceFilter
@@ -98,7 +99,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.matches
 import org.njarasoa.fijerena.core.ui.viewmodels.queryToRunOnTabSwitch
 import org.njarasoa.fijerena.core.ui.viewmodels.searchFacets
 import org.njarasoa.fijerena.core.ui.viewmodels.searchSourceCounts
-import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
+import org.njarasoa.fijerena.core.ui.viewmodels.searchTabs
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
@@ -158,6 +159,8 @@ fun MobileSearchScreen(
     initialSource: Long? = null,
     // A Guide tab result: its channel, as Search the guide opens it.
     onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
+    // A person found by the People type: their actor page (the people search plan).
+    onPersonSelected: (tmdbId: String, name: String) -> Unit = { _, _ -> },
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -206,9 +209,14 @@ fun MobileSearchScreen(
     }
     var searchQuery by SearchSession::query
     var selectedTab by SearchSession::tab
-    val showTabs = showsGuideTab(contentType, hasGuide)
-    val guideActive = showTabs && selectedTab == SearchTab.GUIDE
-    val currentGuideActive by rememberUpdatedState(guideActive)
+    // People only with a TMDB key (PS-D1), never for a child.
+    val hasTmdbKey = remember { TmdbApiService.getInstance(context.applicationContext).hasApiKey() }
+    val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
+    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child)
+    val showTabs = tabs.isNotEmpty()
+    val activeTab = activeSearchTab(selectedTab, tabs)
+    val guideActive = activeTab == SearchTab.GUIDE
+    val currentOtherTab by rememberUpdatedState(activeTab != SearchTab.CATALOGUE)
     val snackbarHostState = remember { SnackbarHostState() }
     // Scope filter selection lives here, not inside SearchResults — performSearch() emits a
     // transitional UiState.Loading on every debounced re-search (not just the first), which
@@ -283,12 +291,12 @@ fun MobileSearchScreen(
     // The catalogue only: the Guide tab doesn't run it unseen (D3).
     // Coming back to a screen whose results are already for this term runs nothing again.
     LaunchedEffect(searchQuery) {
-        if (guideActive) return@LaunchedEffect
+        if (activeTab != SearchTab.CATALOGUE) return@LaunchedEffect
         if ((viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query == searchQuery) return@LaunchedEffect
         if (searchQuery.length >= 2) {
             delay(CinemaAnimation.searchDebounceMs)
-            // Switched to the Guide tab while waiting: not run unseen.
-            if (currentGuideActive) return@LaunchedEffect
+            // Switched to another type while waiting: not run unseen.
+            if (currentOtherTab) return@LaunchedEffect
             viewModel.performSearch(searchQuery, asYouType = true)
         } else if (searchQuery.isEmpty()) {
             viewModel.clearSearch()
@@ -333,7 +341,8 @@ fun MobileSearchScreen(
         ) {
             if (showTabs) {
                 MobileSearchTabs(
-                    selected = selectedTab,
+                    tabs = tabs,
+                    selected = activeTab,
                     onSelect = { tab ->
                         selectedTab = tab
                         // The Guide tab reruns on entry (MobileSearchGuideTab): its view model may not exist yet.
@@ -354,6 +363,26 @@ fun MobileSearchScreen(
                         onGuideResult(it)
                     },
                     snackbarHostState = snackbarHostState,
+                )
+                return@Column
+            }
+            if (activeTab == SearchTab.PEOPLE) {
+                MobilePeopleSearchPane(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    wishlistKeys = wishlistKeys,
+                    onPersonSelected = onPersonSelected,
+                    onTitleSelected = { item, type ->
+                        onResultOpening(searchQuery, null)
+                        viewModel.keepTypedSearch()
+                        onStreamSelected(item.id, item.name, item.categoryId, type, item.providerId)
+                    },
+                    onTmdbTitleSelected = { title ->
+                        onResultOpening(searchQuery, null)
+                        viewModel.keepTypedSearch()
+                        onTmdbTitleSelected(title)
+                    },
+                    onTmdbTitleLongPress = { tmdbMenu = it },
                 )
                 return@Column
             }
@@ -551,24 +580,26 @@ fun MobileSearchScreen(
     }
 }
 
-/** "Catalogue | Guide", in the look of the category list's mode tabs (phone UI audit #1). */
+/** "Catalogue | People | Guide" ([tabs]), in the look of the category list's mode tabs (phone UI audit #1). */
 @Composable
 internal fun MobileSearchTabs(
+    tabs: List<SearchTab>,
     selected: SearchTab,
     onSelect: (SearchTab) -> Unit,
 ) {
     CinemaTabRow(
-        selectedIndex = selected.ordinal,
+        selectedIndex = tabs.indexOf(selected).coerceAtLeast(0),
         labels =
-            SearchTab.entries.map { tab ->
+            tabs.map { tab ->
                 stringResource(
                     when (tab) {
                         SearchTab.CATALOGUE -> R.string.search_tab_catalogue
+                        SearchTab.PEOPLE -> R.string.search_tab_people
                         SearchTab.GUIDE -> R.string.search_tab_guide
                     },
                 )
             },
-        onSelect = { onSelect(SearchTab.entries[it]) },
+        onSelect = { onSelect(tabs[it]) },
         transparent = true,
     )
 }
@@ -1218,7 +1249,7 @@ private fun searchCountLabel(
 }
 
 @Composable
-private fun SearchSectionHeader(
+internal fun SearchSectionHeader(
     title: String,
     count: Int,
     hiddenCount: Int,
@@ -1339,7 +1370,7 @@ private fun CategoryResultCard(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun SearchResultCard(
+internal fun SearchResultCard(
     result: SearchViewModel.SearchResult,
     cardColors: CardColors,
     onClick: () -> Unit,
@@ -1421,7 +1452,7 @@ private fun SearchResultCard(
 /** One "Not in your sources" result: TMDB's poster, the title, its year and kind, and the "Not available" mark. */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun TmdbTitleCard(
+internal fun TmdbTitleCard(
     title: TmdbTitle,
     // On the Wishlist: a filled bookmark in place of the "Not available" cloud.
     onWishlist: Boolean,

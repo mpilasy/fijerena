@@ -133,6 +133,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.activeSearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.effectiveFacetChoice
 import org.njarasoa.fijerena.core.ui.viewmodels.effectiveSourceFilter
@@ -142,7 +143,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.matches
 import org.njarasoa.fijerena.core.ui.viewmodels.queryToRunOnTabSwitch
 import org.njarasoa.fijerena.core.ui.viewmodels.searchFacets
 import org.njarasoa.fijerena.core.ui.viewmodels.searchSourceCounts
-import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
+import org.njarasoa.fijerena.core.ui.viewmodels.searchTabs
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
@@ -213,6 +214,8 @@ fun SearchScreen(
     onSearchEverything: ((query: String) -> Unit)? = null,
     // A "Not in your sources" result: its TMDB page (wanted titles plan → Search).
     onTmdbTitleSelected: (TmdbTitle) -> Unit = {},
+    // A person found by the People type: their actor page (the people search plan).
+    onPersonSelected: (tmdbId: String, name: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -244,18 +247,21 @@ fun SearchScreen(
         )
     }
 
-    // Catalogue | Guide (search guide tab plan, D1/O1). Saveable: Back from a guide result's
-    // channel comes back to the Guide tab.
+    // Catalogue | People | Guide (search guide tab plan, D1/O1; people search plan, PS-D1). Back from
+    // a result's page comes back to the type it was found in.
     // The app's one search (SearchSession), shared by both tabs and every Search screen: Back to any
     // of them shows the latest.
     val profileId = remember { AppSettings(context.applicationContext).activeProfileId }
     // A child profile finds films and shows only, each opening its page: no channels (its Live TV
     // is its favourites), categories, Guide tab or menus (docs/plans/20261019_kids-home-plan.md, K-D7).
     val child = remember { AppSettings(context.applicationContext).isChildProfile(profileId) }
-    val showsTabs = !child && showsGuideTab(contentType, hasGuide)
+    // People only with a TMDB key (PS-D1), never for a child.
+    val hasTmdbKey = remember { TmdbApiService.getInstance(context.applicationContext).hasApiKey() }
+    val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child)
+    val showsTabs = tabs.isNotEmpty()
     SearchSession.forProfile(profileId)
     var selectedTab by SearchSession::tab
-    val activeTab = if (showsTabs) selectedTab else SearchTab.CATALOGUE
+    val activeTab = activeSearchTab(selectedTab, tabs)
     // The field's text, shared by both tabs; each tab's own state holds the query it last ran.
     var fieldText by SearchSession::query
     // The source chosen in a multi-source profile (null: every source); kept until Search closes.
@@ -267,15 +273,14 @@ fun SearchScreen(
     // Set by a tab switch: focus stays on the tab, so the tab shown takes no first-open focus,
     // keyboard or jump to its results until its field is reached.
     var holdFocus by remember { mutableStateOf(false) }
-    val catalogueTabFocus = remember { FocusRequester() }
-    val guideTabFocus = remember { FocusRequester() }
+    val tabFocus = remember { SearchTab.entries.associateWith { FocusRequester() } }
     val fieldFocus = remember { FocusRequester() }
     // Up from the field to the selected tab; the field taking focus ends a tab switch's hold.
     val fieldModifier =
         if (showsTabs) {
             Modifier
                 .focusRequester(fieldFocus)
-                .focusProperties { up = if (activeTab == SearchTab.GUIDE) guideTabFocus else catalogueTabFocus }
+                .focusProperties { up = tabFocus.getValue(activeTab) }
                 .onFocusChanged { if (it.hasFocus) holdFocus = false }
         } else {
             Modifier
@@ -396,20 +401,33 @@ fun SearchScreen(
 
             if (showsTabs) {
                 SearchTabRow(
+                    tabs = tabs,
                     selected = activeTab,
                     onSelect = { tab ->
-                        if (tab != selectedTab) {
+                        if (tab != activeTab) {
                             holdFocus = true
                             selectedTab = tab
                         }
                     },
-                    catalogueFocus = catalogueTabFocus,
-                    guideFocus = guideTabFocus,
+                    tabFocus = tabFocus,
                     fieldFocus = fieldFocus,
                 )
             }
 
-            if (activeTab == SearchTab.GUIDE) {
+            if (activeTab == SearchTab.PEOPLE) {
+                PeopleSearchPane(
+                    query = fieldText,
+                    onQueryChange = { fieldText = it },
+                    holdFocus = holdFocus,
+                    fieldModifier = fieldModifier,
+                    returnFocus = returnFocus,
+                    wishlistKeys = wishlistKeys,
+                    onPersonSelected = onPersonSelected,
+                    onTitleSelected = { item, type -> onStreamSelected(item.id, item.name, item.categoryId, type, item.providerId) },
+                    onTmdbTitleSelected = onTmdbTitleSelected,
+                    onTmdbTitleActions = { tmdbMenu = it },
+                )
+            } else if (activeTab == SearchTab.GUIDE) {
                 GuideTab(
                     query = fieldText,
                     onQueryChange = { fieldText = it },
@@ -560,13 +578,13 @@ fun SearchScreen(
     }
 }
 
-/** Catalogue | Guide under the header: OK selects, Left from the first opens the rail, Down goes to the field. */
+/** Catalogue | People | Guide under the header: OK selects, Left from the first opens the rail, Down goes to the field. */
 @Composable
 private fun SearchTabRow(
+    tabs: List<SearchTab>,
     selected: SearchTab,
     onSelect: (SearchTab) -> Unit,
-    catalogueFocus: FocusRequester,
-    guideFocus: FocusRequester,
+    tabFocus: Map<SearchTab, FocusRequester>,
     fieldFocus: FocusRequester,
 ) {
     val toField = Modifier.focusProperties { down = fieldFocus }
@@ -574,18 +592,25 @@ private fun SearchTabRow(
         modifier = Modifier.padding(bottom = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        TvSelectableButton(
-            selected = selected == SearchTab.CATALOGUE,
-            onSelect = { onSelect(SearchTab.CATALOGUE) },
-            text = stringResource(R.string.search_tab_catalogue),
-            modifier = Modifier.focusRequester(catalogueFocus).then(toField).leftToRail(),
-        )
-        TvSelectableButton(
-            selected = selected == SearchTab.GUIDE,
-            onSelect = { onSelect(SearchTab.GUIDE) },
-            text = stringResource(R.string.search_tab_guide),
-            modifier = Modifier.focusRequester(guideFocus).then(toField),
-        )
+        tabs.forEachIndexed { index, tab ->
+            TvSelectableButton(
+                selected = selected == tab,
+                onSelect = { onSelect(tab) },
+                text =
+                    stringResource(
+                        when (tab) {
+                            SearchTab.CATALOGUE -> R.string.search_tab_catalogue
+                            SearchTab.PEOPLE -> R.string.search_tab_people
+                            SearchTab.GUIDE -> R.string.search_tab_guide
+                        },
+                    ),
+                modifier =
+                    Modifier
+                        .focusRequester(tabFocus.getValue(tab))
+                        .then(toField)
+                        .then(if (index == 0) Modifier.leftToRail() else Modifier),
+            )
+        }
     }
 }
 
@@ -1389,7 +1414,7 @@ private fun searchCountLabel(
 }
 
 @Composable
-private fun SearchSectionHeader(
+internal fun SearchSectionHeader(
     title: String,
     count: Int,
     hiddenCount: Int,
@@ -1494,7 +1519,7 @@ private fun CategoryResultItem(
 }
 
 @Composable
-private fun SearchResultItem(
+internal fun SearchResultItem(
     result: SearchResult,
     rowStyle: TvCardLook,
     onClick: () -> Unit,
@@ -1659,7 +1684,7 @@ private fun LazyListScope.notInSourcesSection(
 
 /** One "Not in your sources" result: TMDB's poster, the title, its year and kind, and the "Not available" mark. */
 @Composable
-private fun TmdbTitleRow(
+internal fun TmdbTitleRow(
     title: TmdbTitle,
     // On the Wishlist: a filled bookmark in place of the "Not available" cloud.
     onWishlist: Boolean,

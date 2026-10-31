@@ -96,6 +96,9 @@
     <string name="common_search">Search</string>
     <string name="search_tab_catalogue">Catalogue</string>
     <string name="search_tab_guide">Guide</string>
+    <string name="search_tab_people">People</string>
+    <string name="search_people_unreachable">Couldn\'t reach TMDB</string>
+    <string name="search_people_placeholder">Search actors, films and shows</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">All sources</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->

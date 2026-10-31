@@ -945,6 +945,7 @@ fun TvNavHost(
                             SearchScreen(
                                 contentType = searchScreen.contentType,
                                 onTmdbTitleSelected = { navController.navigateOnce(it.route()) },
+                                onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
                                 onSearchEverything =
                                     { query: String ->
                                         navController.navigateToSearch(

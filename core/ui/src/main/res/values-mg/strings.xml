@@ -93,6 +93,9 @@
     <string name="common_search">Tadiavo</string>
     <string name="search_tab_catalogue">Katalaogy</string>
     <string name="search_tab_guide">Fandaharana</string>
+    <string name="search_tab_people">Olona</string>
+    <string name="search_people_unreachable">Tsy tratra ny TMDB</string>
+    <string name="search_people_placeholder">Tadiavo mpilalao, sarimihetsika ary andian-tantara</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Ny loharano rehetra</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->

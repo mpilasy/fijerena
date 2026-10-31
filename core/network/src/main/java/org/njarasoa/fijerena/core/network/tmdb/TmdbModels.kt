@@ -207,6 +207,14 @@ data class TmdbRecommendation(
     val numberOfSeasons: Int? = null,
     @SerialName("number_of_episodes")
     val numberOfEpisodes: Int? = null,
+    // The rest only on a `search/multi` person (People search): the photo, the department the
+    // person is known for (`Acting`, `Directing`…) and the titles the person is known for.
+    @SerialName("profile_path")
+    val profilePath: String? = null,
+    @SerialName("known_for_department")
+    val knownForDepartment: String? = null,
+    @SerialName("known_for")
+    val knownFor: List<TmdbRecommendation> = emptyList(),
 ) {
     /** `title` for movies, `name` for TV; null when TMDB sent neither. */
     val displayTitle: String?

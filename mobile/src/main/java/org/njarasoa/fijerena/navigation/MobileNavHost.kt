@@ -501,6 +501,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         var openingSource by remember { mutableStateOf<Long?>(null) }
         MobileSearchScreen(
             onTmdbTitleSelected = { navController.navigateOnce(it.route()) },
+            onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
             onResultOpening = { query, source ->
                 openingQuery = query
                 openingSource = source

@@ -219,7 +219,8 @@ class TmdbApiService(
 
     /**
      * Films and shows whose title matches [query], ranked by TMDB (`search/multi`, in the app
-     * language, no adult titles). People come back too: callers keep `mediaType` `movie` and `tv`.
+     * language, no adult titles). People come back too: Search's People type keeps them
+     * (`peopleSearchResults`), the other callers keep `mediaType` `movie` and `tv`.
      * The query is text the user typed — see `PRIVACY.md` (wanted titles plan, Phase 3).
      */
     suspend fun searchMulti(query: String): TmdbRecommendationsResponse =
