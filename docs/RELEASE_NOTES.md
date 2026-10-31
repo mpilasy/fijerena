@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261031223823
 
 - **Profile avatar at the top right:** on the phone, your profile's avatar moves from the bottom bar to the top right of each tab, after the Search icons, as in other TV apps. It opens the same menu (switch profile, Settings). Back from Settings returns to the tab you came from. Phone.
 
