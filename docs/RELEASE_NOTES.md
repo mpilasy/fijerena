@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261031035343
 
 - **Search by actor or actress:** with a TMDB key, Search has a new **People** type between Catalogue and Guide. It searches TMDB for people, films and shows: a person opens their page, a title your sources have opens there, and one they lack opens its TMDB page (Add to Wishlist). Not on a child profile. TV and phone.
 
