@@ -58,10 +58,6 @@ interface XtreamCategoryDao {
         type: String,
     ): List<String>
 
-    /** The names of the live categories the profile in use sees on this source. */
-    @Query("SELECT categoryName FROM xtream_categories WHERE providerId = :providerId AND type = 'LIVE' AND excluded = 0")
-    fun getVisibleLiveCategoryNames(providerId: Long): List<String>
-
     /** The categories of [type] the profile in use sees on this source: those its filters do not hide. */
     @Query("SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 0")
     fun getVisibleCategoryIds(

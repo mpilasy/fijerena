@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
  * no source. The Sports section, the Home row and the reminders fetch games only for these. See
  * the sports teams plan → Followed teams and leagues.
  *
- * [kind] is `FollowKind.id` (`TEAM` or `LEAGUE`), [source] is `SportsSource.id` (`espn`, `fifa`…)
+ * [kind] is `FollowKind.id` (`TEAM` or `LEAGUE`), [source] is `SportsSource.id` (`espn`, `nhl`, `mlb`)
  * and [itemId] the team or league id at that source. [league] is the source's league key of a team
  * (null for a league). [altNames] is a JSON list of the other names the source gives (location,
  * nickname, abbreviation), stored as text like `xtream_streams.facts`. [name], [shortName],

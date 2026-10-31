@@ -8,12 +8,8 @@ enum class SportsSource(
     val id: String,
 ) {
     ESPN("espn"),
-    FIFA("fifa"),
-    UEFA("uefa"),
     NHL("nhl"),
     MLB("mlb"),
-    EHF("ehf"),
-    WORLD_AQUATICS("worldaquatics"),
     ;
 
     companion object {
@@ -35,9 +31,9 @@ enum class FollowKind(
 }
 
 /**
- * A team as one source names it. [league] is the source's league key (ESPN `soccer/eng.1`, a FIFA
- * competition id…); [altNames] are the other names the source gives (location, nickname,
- * abbreviation), used to find the team in guide titles and in other sources.
+ * A team as one source names it. [league] is the source's league key (ESPN `soccer/eng.1`…);
+ * [altNames] are the other names the source gives (location, nickname, abbreviation), used to find
+ * the team in guide titles, in channel names and in other sources.
  */
 data class SportsTeam(
     val source: SportsSource,
@@ -65,9 +61,9 @@ data class SportsLeague(
 )
 
 /**
- * A TV channel or service that shows a game in one country. [country] is an ISO 3166-1 alpha-2
- * code in upper case ("US", "GB", "MG"), null when the source does not say. [from] is where the
- * entry comes from: a live source or the season table.
+ * A TV network that shows a game, as ESPN, the NHL or MLB name it. [country] is an ISO 3166-1
+ * alpha-2 code in upper case ("US", "CA"), null when the source does not say. Used only to find the
+ * profile's channels with that name ([GameChannelMatcher]); never shown as a list.
  */
 data class Broadcaster(
     val name: String,
@@ -77,7 +73,7 @@ data class Broadcaster(
 )
 
 /** Where a [Broadcaster] entry comes from. */
-enum class BroadcasterOrigin { ESPN, UEFA, NHL, MLB, SEASON_TABLE }
+enum class BroadcasterOrigin { ESPN, NHL, MLB }
 
 /**
  * A game between two teams (or an event such as a race, where [away] is null). [startEpochSec] is

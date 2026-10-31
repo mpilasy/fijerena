@@ -54,7 +54,7 @@ class FollowedGamesTest {
 
         override suspend fun leagueGames(league: SportsLeague): List<SportsGame> {
             reads++
-            if (league.id in failing) error("FIFA down")
+            if (league.id in failing) error("ESPN down")
             return leagueGames[league.id].orEmpty()
         }
 
@@ -95,11 +95,11 @@ class FollowedGamesTest {
     }
 
     @Test
-    fun `the same game from two sources shows once, the sooner read kept`() {
+    fun `the same game with two ids shows once, the sooner kept`() {
         val espn = game("espn-1", hours = 5)
-        val fifa = espn.copy(source = SportsSource.FIFA, id = "fifa-1", startEpochSec = espn.startEpochSec + 30 * 60)
+        val other = espn.copy(id = "league-1", startEpochSec = espn.startEpochSec + 30 * 60)
 
-        val merged = mergeFollowedGames(listOf(listOf(fifa), listOf(espn)), NOW_SEC, SECTION_WINDOW_SEC)
+        val merged = mergeFollowedGames(listOf(listOf(other), listOf(espn)), NOW_SEC, SECTION_WINDOW_SEC)
 
         assertEquals(listOf("espn-1"), merged.map { it.id })
     }

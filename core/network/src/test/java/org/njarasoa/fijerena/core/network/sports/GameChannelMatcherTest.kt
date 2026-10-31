@@ -11,8 +11,6 @@ import org.njarasoa.fijerena.core.network.sports.GameChannelFixtures.game
 import org.njarasoa.fijerena.core.network.sports.GameChannelFixtures.programme
 import org.njarasoa.fijerena.core.network.sports.GameChannelFixtures.team
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow.BROADCASTER_CHANNEL
-import org.njarasoa.fijerena.core.network.sports.GameChannelHow.BROADCASTER_ONLY
-import org.njarasoa.fijerena.core.network.sports.GameChannelHow.NOT_ANNOUNCED
 
 /** The game matcher on guide samples (see [GameChannelFixtures]). */
 class GameChannelMatcherTest {
@@ -20,7 +18,7 @@ class GameChannelMatcherTest {
     private val chelsea = team("Chelsea", "CHE")
     private val liverpool = team("Liverpool", "LIV")
 
-    private fun List<GameChannel>.summary() = map { "${it.stream?.name ?: it.broadcaster?.name}: ${it.how}" }
+    private fun List<GameChannel>.summary() = map { "${it.stream.name}: ${it.how}" }
 
     private suspend fun match(
         game: SportsGame,
@@ -203,7 +201,7 @@ class GameChannelMatcherTest {
                         "Enjoy highlights from ten memorable home wins over Arsenal in the Premier League era.",
                     ),
                 )
-            assertEquals(listOf("null: NOT_ANNOUNCED"), result.summary())
+            assertEquals(emptyList<String>(), result.summary())
         }
 
     @Test
@@ -291,7 +289,7 @@ class GameChannelMatcherTest {
 
             // The talk show alone, at the time of another Inter game, matches nothing.
             val other = game("2026-10-31T19:30:00Z", inter, team("Hellas Verona", "VER"), "Italian Serie A")
-            assertEquals(listOf("null: NOT_ANNOUNCED"), match(other, channels, talkShow).summary())
+            assertEquals(emptyList<String>(), match(other, channels, talkShow).summary())
         }
 
     @Test
@@ -528,7 +526,7 @@ class GameChannelMatcherTest {
                     channels,
                     programme("TNTSports1.uk", "TNT Sports 1 HD", "Arsenal v Chelsea", "2026-11-07T17:00:00Z", "2026-11-07T20:00:00Z"),
                 )
-            assertEquals(listOf("null: NOT_ANNOUNCED"), result.summary())
+            assertEquals(emptyList<String>(), result.summary())
         }
 
     @Test
@@ -551,26 +549,20 @@ class GameChannelMatcherTest {
                     ),
                 )
             assertEquals(1, result.size)
-            assertEquals(2L, result[0].stream?.providerId)
+            assertEquals(2L, result[0].stream.providerId)
         }
 
     @Test
-    fun `nothing known says not announced, broadcasters without a channel are listed as text`() =
+    fun `nothing found is an empty list, and a broadcaster without a channel is not listed`() =
         runTest {
             val game = game("2026-11-07T17:30:00Z", arsenal, chelsea, "English Premier League")
-            assertEquals(listOf(GameChannel(null, null, null, NOT_ANNOUNCED)), match(game, emptyList()))
+            assertEquals(emptyList<GameChannel>(), match(game, emptyList()))
 
             val canal = broadcaster("Canal+", "FR")
             val dazn = broadcaster("DAZN", "DE")
             val withTv = game("2026-11-07T17:30:00Z", arsenal, chelsea, "English Premier League", canal, dazn)
             val result = match(withTv, listOf(channel(1, "FR: CANAL+ FOOT", "CANAL+FOOT.fr")))
-            assertEquals(
-                listOf(
-                    GameChannel(channel(1, "FR: CANAL+ FOOT", "CANAL+FOOT.fr"), null, canal, BROADCASTER_CHANNEL),
-                    GameChannel(null, null, dazn, BROADCASTER_ONLY),
-                ),
-                result,
-            )
+            assertEquals(listOf(GameChannel(channel(1, "FR: CANAL+ FOOT", "CANAL+FOOT.fr"), null, canal, BROADCASTER_CHANNEL)), result)
         }
 
     @Test

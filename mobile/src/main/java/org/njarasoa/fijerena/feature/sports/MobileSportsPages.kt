@@ -289,7 +289,7 @@ private fun MobileSportsPage(
         MobileGameSheet(
             game = sheetGame,
             channels = loaded?.channelsOf(sheetGame),
-            onPlay = { channel -> channel.liveRoute()?.let(onPlay) },
+            onPlay = { channel -> onPlay(channel.liveRoute()) },
             onDismiss = { openGame = null },
             actions = { MobileGameBell(sheetGame, bells, nowSec) },
         )

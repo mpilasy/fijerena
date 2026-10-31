@@ -171,13 +171,13 @@ class SportsPageViewModelTest {
     }
 
     @Test
-    fun `channels that can't be read leave each game's broadcasters as text`() {
+    fun `channels that can't be read find no channel for any game`() {
         val vm = teamPage(FakeData(matchFailure = IllegalStateException("db")))
 
         val loaded = vm.awaitMatched()
 
-        assertEquals(listOf(GameChannelHow.BROADCASTER_ONLY), loaded.channelsOf(GAMES[0])?.map { it.how })
-        assertEquals(listOf(GameChannelHow.NOT_ANNOUNCED), loaded.channelsOf(GAMES[1])?.map { it.how })
+        assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[0]))
+        assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[1]))
     }
 
     @Test
@@ -207,7 +207,7 @@ class SportsPageViewModelTest {
     @Test
     fun `a route names its team, a source this build does not know names none`() {
         assertEquals("soccer", sportsTeamOf("espn", "soccer/359", "Arsenal")?.sport)
-        assertEquals("water-polo", sportsLeagueOf("worldaquatics", "123", "World Cup")?.sport)
+        assertEquals("hockey", sportsLeagueOf("espn", "hockey/nhl", "NHL")?.sport)
         assertNull(sportsTeamOf("newsource", "1", "X"))
         assertEquals(ROUTE_TEAM.copy(sport = "soccer"), ROUTE_TEAM.copy(sport = "soccer").route().team())
     }
@@ -231,7 +231,7 @@ class SportsPageViewModelTest {
                     ARSENAL,
                     CHELSEA,
                     LEAGUE,
-                    broadcasters = listOf(Broadcaster("Sky Sports", "GB", from = BroadcasterOrigin.SEASON_TABLE)),
+                    broadcasters = listOf(Broadcaster("ESPN", "US", from = BroadcasterOrigin.ESPN)),
                 ),
                 SportsGame(SportsSource.ESPN, "2", 1_800_600_000, CHELSEA, ARSENAL, LEAGUE),
             )

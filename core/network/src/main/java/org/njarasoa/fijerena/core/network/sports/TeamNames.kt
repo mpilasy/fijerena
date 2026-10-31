@@ -4,9 +4,9 @@ import java.text.Normalizer
 import kotlin.math.abs
 
 /**
- * Team names across sources (the sports teams plan → Teams across sources): ESPN says "Slavia
- * Prague", UEFA "Slavia Praha", FIFA "SK Slavia Praha". [normalize] makes one form of a name, and
- * [ALIASES] joins the forms that still differ. [sameGame] finds one game in two sources.
+ * Team names across sources (the sports teams plan → Data sources): [normalize] makes one form of
+ * a name, and [sameGame] finds one game in two sources (an ESPN game in the NHL's or MLB's
+ * schedule) or in two of ESPN's lists (a followed team's and a followed league's games).
  */
 object TeamNames {
     /** Two sources' start times of one game differ by this much at most: 2 hours. */
@@ -56,59 +56,11 @@ object TeamNames {
     private val NOT_WORD = Regex("[^a-z0-9]+")
 
     /**
-     * Normalized name → the form used for all of them, for the misses found in tests. Keys and
-     * values are normalized ([normalize] without aliases).
-     */
-    private val ALIASES: Map<String, String> =
-        listOf(
-            "manchester united" to listOf("man utd", "man united", "manchester utd"),
-            "manchester city" to listOf("man city"),
-            "tottenham hotspur" to listOf("tottenham", "spurs"),
-            "wolverhampton wanderers" to listOf("wolves", "wolverhampton"),
-            "brighton and hove albion" to listOf("brighton", "brighton hove albion"),
-            "newcastle united" to listOf("newcastle"),
-            "west ham united" to listOf("west ham"),
-            "nottingham forest" to listOf("nottm forest", "nott m forest"),
-            "sheffield united" to listOf("sheffield utd", "sheff utd"),
-            "leeds united" to listOf("leeds"),
-            "inter" to listOf("internazionale", "inter milan", "inter milano"),
-            "paris saint germain" to listOf("psg", "paris sg", "paris st germain"),
-            "bayern munchen" to listOf("bayern", "bayern munich"),
-            "borussia dortmund" to listOf("b dortmund", "dortmund", "bvb"),
-            "borussia monchengladbach" to listOf("b monchengladbach", "monchengladbach", "gladbach"),
-            "bayer leverkusen" to listOf("leverkusen"),
-            "rb leipzig" to listOf("leipzig", "rasenballsport leipzig"),
-            "atletico madrid" to listOf("atletico", "atl madrid", "club atletico madrid"),
-            "real betis" to listOf("betis", "real betis balompie"),
-            "athletic club" to listOf("athletic bilbao"),
-            "sporting cp" to listOf("sporting", "sporting lisbon", "sporting clube portugal"),
-            "slavia praha" to listOf("slavia prague"),
-            "sparta praha" to listOf("sparta prague"),
-            "shakhtar donetsk" to listOf("shakhtar"),
-            "lyon" to listOf("olympique lyonnais", "olympique lyon"),
-            "marseille" to listOf("olympique marseille"),
-            "psv eindhoven" to listOf("psv"),
-            "brugge" to listOf("bruges"),
-            "crvena zvezda" to listOf("red star belgrade", "red star"),
-            "salzburg" to listOf("red bull salzburg", "rb salzburg"),
-            "copenhagen" to listOf("kobenhavn"),
-            "aek athens" to listOf("aek"),
-            "olympiacos" to listOf("olympiakos", "olympiacos piraeus"),
-            "union saint gilloise" to listOf("union sg", "royale union saint gilloise", "union st gilloise"),
-            "young boys" to listOf("bern young boys"),
-        ).flatMap { (canonical, others) -> (others + canonical).map { it to canonical } }.toMap()
-
-    /**
      * One form of a team name: no accents, lower case, words only, without club-form words
      * ([NOISE]) and numbers ("1. FC Köln" → "koln", "Brighton & Hove Albion" → "brighton and hove
-     * albion"), then the alias form when there is one.
+     * albion").
      */
     fun normalize(name: String): String {
-        val plain = words(name)
-        return ALIASES[plain] ?: plain
-    }
-
-    private fun words(name: String): String {
         val lower = name.lowercase().replace("&", " and ")
         val folded = buildString { lower.forEach { append(LETTERS[it] ?: it) } }
         val noMarks = MARKS.replace(Normalizer.normalize(folded, Normalizer.Form.NFD), "")

@@ -365,7 +365,7 @@ private fun TvSportsPage(
                 game = sheetGame,
                 channels = loaded?.channelsOf(sheetGame),
                 returnFocus = returnFocus,
-                onPlay = { channel: GameChannel -> channel.liveRoute()?.let(onPlay) },
+                onPlay = { channel: GameChannel -> onPlay(channel.liveRoute()) },
                 onClose = {
                     closedGame = "game:${sheetGame.key}"
                     openGame = null

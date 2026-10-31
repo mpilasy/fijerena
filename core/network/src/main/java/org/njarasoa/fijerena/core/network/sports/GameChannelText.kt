@@ -161,6 +161,33 @@ internal class GameText(
     /** Every team name, for the guide search. */
     fun searchTerms(): Set<String> = home.all + away?.all.orEmpty()
 
+    /** Every word of the team names: a date word such as "Sun" in one is not read as a date ([ChannelNameDates]). */
+    val nameWords: Set<String> by lazy { searchTerms().flatMap { it.split(' ') }.toSet() }
+
+    /**
+     * How a channel name names the game, for a PPV or event channel ("UK| PPV 3: Bayern v Ajax",
+     * "DAZN EVENT 2 - Real Madrid vs Barcelona"): 0 for names of both teams, 1 for a distinctive
+     * name of one team and the competition, null for neither or a replay. [padded] is [name] as
+     * [SportsText.padded] gives it. A club's own channel ("FC Bayern TV") names one team only, so it
+     * does not match by name; its guide programme can (steps 1 and 2).
+     */
+    fun channelNameRank(
+        name: String,
+        padded: String,
+    ): Int? {
+        val h = home.hit(padded, " ")
+        val a = away?.hit(padded, " ") ?: TeamNameForms.Hit.NONE
+        if (h == TeamNameForms.Hit.NONE && a == TeamNameForms.Hit.NONE) return null
+        val oneTeam = h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE
+        val rank =
+            when {
+                bothTeams(h, a) -> 0
+                oneTeam && competition.any { SportsText.has(padded, it) } -> 1
+                else -> return null
+            }
+        return rank.takeUnless { isReplay(name, seasons = false) }
+    }
+
     /** On a broadcaster's channel: a distinctive name of either team, or names of both. */
     fun isGameOnBroadcaster(p: GuideProgramme): Boolean {
         if (isReplay(p.title)) return false
@@ -210,15 +237,23 @@ internal class GameText(
         return SportsAliases.REPLAY_WORDS.any { SportsText.has(padded, it) }
     }
 
-    /** Highlights, a replay, a classic, or a season or year that is not the game's. */
-    fun isReplay(title: String): Boolean {
+    /**
+     * Highlights, a replay, a classic, or a season or year that is not the game's. A channel name
+     * ([seasons] false) is not read for seasons: its "10/11" is a date.
+     */
+    fun isReplay(
+        title: String,
+        seasons: Boolean = true,
+    ): Boolean {
         if (hasReplayWord(title)) return true
-        SEASON.findAll(title).forEach { m ->
-            val first = m.groupValues[1].toInt()
-            val second = m.groupValues[2].toInt()
-            if ((first + 1) % 100 == second % 100) {
-                val startYear = if (first < 100) 2000 + first else first
-                if (startYear != year && startYear != year - 1) return true
+        if (seasons) {
+            SEASON.findAll(title).forEach { m ->
+                val first = m.groupValues[1].toInt()
+                val second = m.groupValues[2].toInt()
+                if ((first + 1) % 100 == second % 100) {
+                    val startYear = if (first < 100) 2000 + first else first
+                    if (startYear != year && startYear != year - 1) return true
+                }
             }
         }
         YEAR.findAll(title).forEach { m ->

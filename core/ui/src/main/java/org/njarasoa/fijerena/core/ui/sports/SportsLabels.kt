@@ -9,12 +9,11 @@ import org.njarasoa.fijerena.core.ui.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.IllformedLocaleException
 import java.util.Locale
 
 // The words of the sports screens, the same on TV and phone (the sports teams plan → Screens).
 
-/** A sport's name in the app language, from the source's sport key ("soccer", "water-polo"); null for one the app does not name. */
+/** A sport's name in the app language, from the source's sport key ("soccer", "hockey"); null for one the app does not name. */
 fun sportLabel(
     resources: Resources,
     sport: String?,
@@ -35,7 +34,6 @@ fun sportLabel(
         "australian-football" -> R.string.sport_australian_football
         "lacrosse" -> R.string.sport_lacrosse
         "volleyball" -> R.string.sport_volleyball
-        "water-polo" -> R.string.sport_water_polo
         else -> null
     }?.let(resources::getString)
 
@@ -95,9 +93,8 @@ fun opponentIn(
 ): SportsTeam? = if (isHomeGame(game, team)) game.away else game.home
 
 /**
- * What a channel row says under the channel's name: "In the guide" for a guide programme,
- * "On Canal+" for a broadcaster's channel or a broadcaster with no channel, "TV not announced
- * yet" when nothing is known.
+ * What a channel row says under the channel's name: "In the guide" for a guide programme, "Event
+ * channel" for a channel whose name names the game, "On ESPN" for a network's channel.
  */
 fun channelNote(
     resources: Resources,
@@ -108,66 +105,23 @@ fun channelNote(
             resources.getString(R.string.sports_in_guide)
         }
 
-        GameChannelHow.BROADCASTER_CHANNEL, GameChannelHow.BROADCASTER_ONLY -> {
-            channel.broadcaster?.let { resources.getString(R.string.sports_on_broadcaster, it.name) }
-                ?: resources.getString(R.string.sports_not_announced)
+        GameChannelHow.CHANNEL_NAME -> {
+            resources.getString(R.string.sports_event_channel)
         }
 
-        GameChannelHow.NOT_ANNOUNCED -> {
-            resources.getString(R.string.sports_not_announced)
+        GameChannelHow.BROADCASTER_CHANNEL -> {
+            channel.broadcaster?.let { resources.getString(R.string.sports_on_broadcaster, it.name) }.orEmpty()
         }
     }
 
-/** A country's name in the app language, from its ISO code. */
-fun countryName(
-    code: String,
-    locale: Locale = Locale.getDefault(),
-): String =
-    try {
-        Locale
-            .Builder()
-            .setRegion(code)
-            .build()
-            .getDisplayCountry(locale)
-    } catch (_: IllformedLocaleException) {
-        ""
-    }.ifBlank { code }
-
 /**
- * Where a broadcaster shows the game: its countries by name when they are few or [expanded],
- * else their number ("48 countries"); "Worldwide" first for a service with no country.
+ * What a game row says for its channels: [channels] null while they are matched ("Looking for
+ * channels…"), empty when none of the profile's channels has the game ("Not found on your channels").
  */
-fun broadcasterCountries(
+fun noChannelNote(
     resources: Resources,
-    group: BroadcasterGroup,
-    expanded: Boolean,
-    locale: Locale = Locale.getDefault(),
-): String {
-    val countries =
-        when {
-            group.countries.isEmpty() -> {
-                null
-            }
-
-            expanded || group.countries.size <= FEW_COUNTRIES -> {
-                group.countries
-                    .map { countryName(it, locale) }
-                    .sorted()
-                    .joinToString(", ")
-            }
-
-            else -> {
-                resources.getQuantityString(R.plurals.sports_countries, group.countries.size, group.countries.size)
-            }
-        }
-    return listOfNotNull(resources.getString(R.string.sports_worldwide).takeIf { group.worldwide }, countries).joinToString(" · ")
-}
-
-/** Whether [group]'s country list is shortened, so OK or a tap shows all of it. */
-fun hasMoreCountries(group: BroadcasterGroup): Boolean = group.countries.size > FEW_COUNTRIES
-
-/** Up to this many countries are named; more are counted. */
-private const val FEW_COUNTRIES = 3
+    channels: List<GameChannel>?,
+): String = resources.getString(if (channels == null) R.string.sports_matching else R.string.sports_not_found)
 
 private val MALAGASY_DAYS = listOf("Alatsinainy", "Talata", "Alarobia", "Alakamisy", "Zoma", "Asabotsy", "Alahady")
 

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,8 +41,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The TV team and league pages and the game sheet (the sports teams plan → Screens): focus on
- * the first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to the
- * broadcasters, Back closes the sheet onto the game; a league's teams follow its games. A game's
+ * the first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to its
+ * next channel, Back closes the sheet onto the game; a league's teams follow its games. A game's
  * bell is Right of its row; once the team is followed, its bell for every game is Right of Unfollow. A row with
  * no logo reads its letter first ("C / Chelsea"), as the device walk reads it.
  */
@@ -99,17 +98,12 @@ class SportsPagesFocusTest {
         override suspend fun matcher(): GameMatcher =
             GameMatcher { game ->
                 if (game.id == "1") {
-                    listOf(GameChannel(CHANNEL, null, SKY, GameChannelHow.BROADCASTER_CHANNEL)) +
-                        listOf("ZA", "NG", "KE", "MG").map {
-                            GameChannel(
-                                null,
-                                null,
-                                Broadcaster("SuperSport", it, from = BroadcasterOrigin.SEASON_TABLE),
-                                GameChannelHow.BROADCASTER_ONLY,
-                            )
-                        }
+                    listOf(
+                        GameChannel(CHANNEL, null, ESPN, GameChannelHow.BROADCASTER_CHANNEL),
+                        GameChannel(PPV, null, null, GameChannelHow.CHANNEL_NAME),
+                    )
                 } else {
-                    listOf(GameChannel(null, null, null, GameChannelHow.NOT_ANNOUNCED))
+                    emptyList()
                 }
             }
     }
@@ -130,7 +124,7 @@ class SportsPagesFocusTest {
             down("L / Liverpool"),
             up("C / Chelsea"),
             center("U / UK: Sky Sports Main Event"),
-            down("SuperSport"),
+            down("U / UK| PPV 3: Arsenal v Chelsea"),
             up("U / UK: Sky Sports Main Event"),
             back("C / Chelsea"),
         )
@@ -145,7 +139,7 @@ class SportsPagesFocusTest {
     }
 
     @Test
-    fun `the sheet names a broadcaster's countries, OK shows them all`() {
+    fun `a game on none of the channels says so, and Follow becomes Unfollow`() {
         val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
         rule.setContent {
             WithBells {
@@ -153,23 +147,7 @@ class SportsPagesFocusTest {
             }
         }
         walk.awaitFocused("C / Chelsea")
-        walk.run(center("U / UK: Sky Sports Main Event"), down("SuperSport"))
-        assertTrue(walk.focusedText(), walk.focusedText().contains("4 countries"))
-
-        walk.press(Key.DirectionCenter)
-        assertTrue(walk.focusedText(), walk.focusedText().contains("Madagascar"))
-    }
-
-    @Test
-    fun `a game with nothing known shows TV not announced yet, and Follow becomes Unfollow`() {
-        val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
-        rule.setContent {
-            WithBells {
-                SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
-            }
-        }
-        walk.awaitFocused("C / Chelsea")
-        walk.run(down("L / Liverpool"), center("TV not announced yet"), back("L / Liverpool"), up("C / Chelsea"), up("Follow"))
+        walk.run(down("L / Liverpool"), center("Not found on your channels"), back("L / Liverpool"), up("C / Chelsea"), up("Follow"))
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Unfollow")
     }
@@ -213,13 +191,14 @@ class SportsPagesFocusTest {
         val CHELSEA = SportsTeam(SportsSource.ESPN, "soccer/363", "Chelsea", sport = "soccer")
         val LIVERPOOL = SportsTeam(SportsSource.ESPN, "soccer/364", "Liverpool", sport = "soccer")
         val LEAGUE = SportsLeague(SportsSource.ESPN, "soccer/eng.1", "Premier League", "soccer")
-        val SKY = Broadcaster("Sky Sports", "GB", from = BroadcasterOrigin.SEASON_TABLE)
+        val ESPN = Broadcaster("ESPN", "US", from = BroadcasterOrigin.ESPN)
         val CHANNEL = LiveChannel(1, 7, "UK: Sky Sports Main Event", "skysports.uk", "sport")
+        val PPV = LiveChannel(1, 8, "UK| PPV 3: Arsenal v Chelsea", null, "ppv")
 
         // In the future, so both stay coming games whatever day the test runs.
         val GAMES =
             listOf(
-                SportsGame(SportsSource.ESPN, "1", 4_000_000_000, ARSENAL, CHELSEA, LEAGUE, broadcasters = listOf(SKY)),
+                SportsGame(SportsSource.ESPN, "1", 4_000_000_000, ARSENAL, CHELSEA, LEAGUE, broadcasters = listOf(ESPN)),
                 SportsGame(SportsSource.ESPN, "2", 4_000_090_000, LIVERPOOL, ARSENAL, LEAGUE),
             )
     }

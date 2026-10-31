@@ -102,21 +102,20 @@
     <string name="sports_leagues_heading">Ligy</string>
     <string name="sports_next_games_heading">Lalao manaraka</string>
     <string name="sports_channels_heading">Ny fantsonao</string>
-    <string name="sports_broadcasters_heading">Mpandefa hafa</string>
     <string name="sports_follow">Araho</string>
     <string name="sports_unfollow">Aza arahina intsony</string>
     <string name="sports_followed">Arahina</string>
     <string name="sports_load_error">Tsy voaangona ny lalao</string>
     <string name="sports_no_games">Tsy misy lalao amin\'ny andro ho avy</string>
-    <string name="sports_not_announced">Mbola tsy fantatra ny fantsona mandefa</string>
+    <string name="sports_not_found">Tsy hita amin\'ny fantsonao</string>
     <string name="sports_on_broadcaster">Ao amin\'ny %1$s</string>
     <string name="sports_in_guide">Ao amin\'ny fandaharana</string>
+    <string name="sports_event_channel">Fantsona hetsika</string>
     <string name="sports_starts_at">Manomboka amin\'ny %1$s</string>
     <string name="sports_matching">Mitady fantsona…</string>
     <string name="sports_home_game">An-tokotany</string>
     <string name="sports_away_game">Any ivelany</string>
     <string name="sports_game_format">%1$s – %2$s</string>
-    <string name="sports_worldwide">Eran-tany</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Fanatanjahantena</string>
     <string name="sports_following_heading">Arahina</string>
@@ -127,10 +126,6 @@
     <string name="sports_reminder_set">Voatendry ny fampahatsiahivana</string>
     <string name="sports_remind_team">Ampahatsiahivo aho isaky ny lalao</string>
     <string name="sports_remind_team_set">Voatendry ny fampahatsiahivana isaky ny lalao</string>
-    <plurals name="sports_countries">
-        <item quantity="one">firenena %d</item>
-        <item quantity="other">firenena %d</item>
-    </plurals>
     <string name="sport_soccer">Baolina kitra</string>
     <string name="sport_american_football">Baolina kitra amerikanina</string>
     <string name="sport_basketball">Basikety</string>
@@ -146,7 +141,6 @@
     <string name="sport_australian_football">Baolina kitra aostraliana</string>
     <string name="sport_lacrosse">Lacrosse</string>
     <string name="sport_volleyball">Volley</string>
-    <string name="sport_water_polo">Water-polo</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Ny loharano rehetra</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->
@@ -1579,7 +1573,7 @@
     <string name="tmdb_charts_refresh_desc">Vakiana indray avy amin\'ny TMDB izao ny laharana, tsy miandry iray andro.</string>
     <string name="tmdb_charts_refresh_done">Voafafa ny laharana. Hovakian\'ny fandraisana indray.</string>
     <string name="sports_switch_title">Fanatanjahantena</string>
-    <string name="sports_switch_desc">Mitady ekipa sy ligy, ny lalao manaraka ataony ary ny fantsona mandefa azy. Avy amin\'ny tolotra fanatanjahantena maimaim-poana (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics) ny angona. Ity fitaovana ity ihany.</string>
+    <string name="sports_switch_desc">Mitady ekipa sy ligy, ny lalao manaraka ataony ary ireo fantsonao mandefa azy. Avy amin\'ny tolotra fanatanjahantena maimaim-poana (ESPN, NHL, MLB) ny angona. Ity fitaovana ity ihany.</string>
 
     <!-- Game reminder banner (TV, TvGameReminderBanner) -->
     <string name="game_reminder_watch">Hijery</string>

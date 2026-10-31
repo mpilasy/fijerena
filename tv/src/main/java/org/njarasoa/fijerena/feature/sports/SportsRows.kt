@@ -34,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.isHomeGame
+import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -125,8 +126,8 @@ fun TvSportsHeading(
 /**
  * A game: the logo and name of the side that matters ([team]'s opponent on a team page, else
  * both teams), the competition and time (home or away on a team page), and its best channel
- * ([channels]' first: logo, name, "In the guide" or "On Canal+"; "Looking for channels…" while
- * [channels] is null). [trailing]: a fixed slot after the row, outside it, for an action of its own
+ * ([channels]' first: logo, name, "In the guide", "Event channel" or "On ESPN"; "Looking for
+ * channels…" while [channels] is null, "Not found on your channels" when it is empty). [trailing]: a fixed slot after the row, outside it, for an action of its own
  * ([TvGameBell]): Right from the row reaches it, Left goes back, Up/Down keep the column.
  * [modifier] is the row's own (its focus requester, its Back target).
  */
@@ -228,7 +229,7 @@ fun TvGameBell(
     }
 }
 
-/** A game's best channel in its row; "Looking for channels…" while the channels are matched. */
+/** A game's best channel in its row; "Looking for channels…" while the channels are matched, "Not found on your channels" for none. */
 @Composable
 private fun TvBestChannel(
     channels: List<GameChannel>?,
@@ -255,7 +256,7 @@ private fun TvBestChannel(
                 CinemaText(text = stream.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CinemaText(
-                text = best?.let { channelNote(resources, it) } ?: stringResource(R.string.sports_matching),
+                text = best?.let { channelNote(resources, it) } ?: noChannelNote(resources, channels),
                 role = TextRole.Body,
                 tone = TextTone.Secondary,
                 maxLines = 1,

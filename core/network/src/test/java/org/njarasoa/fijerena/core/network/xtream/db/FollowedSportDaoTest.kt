@@ -93,7 +93,7 @@ class FollowedSportDaoTest {
             assertEquals(2, followed.getAll(PROFILE).size)
             assertTrue(followed.isFollowed(PROFILE, "TEAM", "espn", "359"))
             assertTrue(followed.isFollowed(PROFILE, "LEAGUE", "espn", "359"))
-            assertFalse(followed.isFollowed(PROFILE, "TEAM", "fifa", "359"))
+            assertFalse(followed.isFollowed(PROFILE, "TEAM", "nhl", "359"))
         }
 
     @Test

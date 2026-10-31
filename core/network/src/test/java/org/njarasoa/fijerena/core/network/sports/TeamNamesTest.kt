@@ -18,18 +18,13 @@ class TeamNamesTest {
     ) = SportsGame(SportsSource.ESPN, "$home-$away", start, team(home), team(away), SportsLeague(SportsSource.ESPN, "x", "x", "soccer"))
 
     @Test
-    fun `normalize removes accents, club words, numbers and joins aliases`() {
+    fun `normalize removes accents, club words and numbers`() {
         assertEquals("koln", TeamNames.normalize("1. FC Köln"))
         assertEquals("barcelona", TeamNames.normalize("FC Barcelona"))
         assertEquals("brighton and hove albion", TeamNames.normalize("Brighton & Hove Albion"))
         assertEquals("atletico madrid", TeamNames.normalize("Club Atlético de Madrid"))
         assertEquals("montreal canadiens", TeamNames.normalize("Montréal Canadiens"))
         assertEquals("bodo glimt", TeamNames.normalize("FK Bodø/Glimt"))
-        assertEquals(TeamNames.normalize("Slavia Prague"), TeamNames.normalize("SK Slavia Praha"))
-        assertEquals(TeamNames.normalize("Borussia Dortmund"), TeamNames.normalize("B. Dortmund"))
-        assertEquals(TeamNames.normalize("Manchester City"), TeamNames.normalize("Man City"))
-        assertEquals(TeamNames.normalize("Internazionale"), TeamNames.normalize("Inter"))
-        assertEquals(TeamNames.normalize("Paris Saint-Germain"), TeamNames.normalize("PSG"))
     }
 
     @Test
@@ -46,21 +41,11 @@ class TeamNamesTest {
     @Test
     fun `same game within 2 hours, either way round`() {
         val start = epoch("2026-11-04T20:00:00Z")
-        val a = game("Slavia Prague", "Arsenal", start)
-        assertTrue(TeamNames.sameGame(a, game("Slavia Praha", "Arsenal", start + 3600)))
-        assertTrue(TeamNames.sameGame(a, game("Arsenal", "Slavia Praha", start)))
-        assertFalse(TeamNames.sameGame(a, game("Slavia Praha", "Arsenal", start + 3 * 3600)))
-        assertFalse(TeamNames.sameGame(a, game("Slavia Praha", "Chelsea", start)))
-    }
-
-    @Test
-    fun `ESPN and UEFA name the same Champions League games`() {
-        val espn = EspnParser.schedule(sportsFixture("espn_schedule_soccer_all.json"), "soccer", null)
-        val uefa = UefaParser.matches(sportsFixture("uefa_matches.json"))
-        val slavia = espn.first { it.id == "401915381" }
-        assertEquals(listOf("2049621"), uefa.filter { TeamNames.sameGame(slavia, it) }.map { it.id })
-        val league = espn.first { it.id == "401879246" }
-        assertTrue(uefa.none { TeamNames.sameGame(league, it) })
+        val a = game("Boston Bruins", "Montréal Canadiens", start)
+        assertTrue(TeamNames.sameGame(a, game("Boston Bruins", "Montreal Canadiens", start + 3600)))
+        assertTrue(TeamNames.sameGame(a, game("Montreal Canadiens", "Boston Bruins", start)))
+        assertFalse(TeamNames.sameGame(a, game("Boston Bruins", "Montreal Canadiens", start + 3 * 3600)))
+        assertFalse(TeamNames.sameGame(a, game("Boston Bruins", "Toronto Maple Leafs", start)))
     }
 
     @Test

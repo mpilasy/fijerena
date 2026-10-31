@@ -75,19 +75,16 @@ enum class GameChannelHow {
     /** A guide programme of the game on any channel of the profile. */
     GUIDE,
 
+    /** A channel whose name names the game (a PPV or event channel: "UK| PPV 3: Bayern v Ajax"). */
+    CHANNEL_NAME,
+
     /** A channel of a broadcaster, with no guide programme for the game ("On <broadcaster>"). */
     BROADCASTER_CHANNEL,
-
-    /** A broadcaster the profile has no channel for: its name as text. */
-    BROADCASTER_ONLY,
-
-    /** No broadcaster is known and the guide has nothing: "TV not announced yet". */
-    NOT_ANNOUNCED,
 }
 
-/** One way to watch a game. [stream] is null for [GameChannelHow.BROADCASTER_ONLY] and [GameChannelHow.NOT_ANNOUNCED]. */
+/** One way to watch a game: a channel of the profile, its guide programme of the game when known. */
 data class GameChannel(
-    val stream: LiveChannel?,
+    val stream: LiveChannel,
     val programme: GuideProgramme?,
     val broadcaster: Broadcaster?,
     val how: GameChannelHow,
@@ -98,8 +95,10 @@ data class GameChannel(
  * to the profile's channels"):
  * 1. a guide programme of the game on a broadcaster's channel;
  * 2. a guide programme of the game on any channel (found by the team names);
- * 3. a broadcaster's channel with no programme;
- * 4. the broadcasters with no channel, as text, or "not announced" when nothing is known.
+ * 3. a channel whose name names the game (PPV and event channels; see [GameText.channelNameRank]);
+ * 4. a broadcaster's channel with no programme.
+ * An empty list: the profile's channels and guide do not have the game. The broadcasters (ESPN's,
+ * the NHL's, MLB's networks) are used only to find channels with their names.
  *
  * A programme is of the game when it starts from [BEFORE_SEC] before to [AFTER_SEC] after the
  * game, or is on at the start after starting at most [ON_AIR_BEFORE_SEC] before (a build-up show
@@ -129,6 +128,7 @@ class GameChannelMatcher(
     ) {
         val visible = channels.filter { !it.hidden && !it.name.trimStart().startsWith("#") }
         val parsed = visible.associateWith { BroadcasterChannels.parse(it.name) }
+        val folded by lazy { visible.map { it to SportsText.padded(it.name) } }
         val resolver by lazy { GuideChannelResolver(channels) }
     }
 
@@ -205,16 +205,20 @@ class GameChannelMatcher(
             }
         }
 
-        // 3. The broadcasters' channels without a programme.
+        // 3. The channels whose names name the game: both teams first.
+        prepared.folded
+            .mapNotNull { (channel, name) ->
+                text
+                    .channelNameRank(channel.name, name)
+                    ?.takeIf { ChannelNameDates.agrees(channel.name, game.startEpochSec, text.nameWords) }
+                    ?.let { channel to it }
+            }.sortedWith(compareBy<Pair<LiveChannel, Int>> { it.second }.thenBy { it.first.name })
+            .forEach { (channel, _) -> add(channel, null, GameChannelHow.CHANNEL_NAME) }
+
+        // 4. The broadcasters' channels without a programme.
         for ((b, list) in channelsOf) {
             BroadcasterChannels.likelyChannels(b, list, parsed).forEach { add(it, null, GameChannelHow.BROADCASTER_CHANNEL) }
         }
-
-        // 4. The broadcasters the profile has no channel for, or nothing known at all.
-        channelsOf.filter { it.second.isEmpty() }.forEach { (b, _) ->
-            result += GameChannel(null, null, b, GameChannelHow.BROADCASTER_ONLY)
-        }
-        if (result.isEmpty()) result += GameChannel(null, null, null, GameChannelHow.NOT_ANNOUNCED)
         return result
     }
 }

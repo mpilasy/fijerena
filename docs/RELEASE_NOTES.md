@@ -2,12 +2,12 @@
 
 ## Unreleased
 
-- **Sports teams and their games:** Search has a **Teams** type after People. Find a team or a league in any sport and country (US sports, football leagues around the world, rugby, cricket, tennis, water polo), and follow it. A team's page shows its next games, a league's page its games of the next 7 days and its teams. Your followed teams and leagues are kept per profile and synced to your other devices. Not on a child profile. TV and phone.
-- **Where to watch a game:** each game shows the best of your channels for it: a guide programme that names the game, or a channel of a broadcaster that has it ("On Canal+"). A game opens a sheet with all your channels for it (one opens as a guide result does) and the other broadcasters by country. TV and phone.
+- **Sports teams and their games:** Search has a **Teams** type after People. Find a team or a league that ESPN covers (US sports, football leagues around the world, rugby, cricket, tennis), and follow it. A team's page shows its next games, a league's page its games of the next 7 days and its teams. Your followed teams and leagues are kept per profile and synced to your other devices. Not on a child profile. TV and phone.
+- **Where to watch a game:** each game shows the best of your channels for it: a guide programme that names the game, a PPV or event channel whose name names it ("UK| PPV 3: Bayern v Ajax"), or a channel of a US network that has it ("On ESPN"); else "Not found on your channels". A game opens a sheet with only your channels for it (one opens as a guide result does). TV and phone.
 - **A Sports section:** the TV side menu has **Sports** after the sections; the phone has a **Sports** tab while you follow a team or a league. It shows your followed teams and leagues, then their games of the next 7 days with their channels. **Find Teams** opens the Teams search. TV and phone.
 - **Upcoming Games on Home:** the next 10 games of your followed teams and leagues in the next 48 hours, after Favourite Channels, each with both logos, the time and its channel. A card opens the game's sheet. TV and phone.
 - **Game reminders:** a bell on a game reminds you 10 minutes before it starts; on a followed team's page, one bell reminds you of every game of the team. The phone shows a notification with the channel (a tap tunes it); the TV shows a banner with Watch while the app is open, else a notification. TV and phone.
-- **Admin switch:** Admin → Sources & Guide → **Sports** turns all of it off (on by default). The game data comes from free sports services (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics), and only for what you follow. TV and phone.
+- **Admin switch:** Admin → Sources & Guide → **Sports** turns all of it off (on by default). The game data comes from free sports services (ESPN, NHL, MLB), and only for what you follow. TV and phone.
 
 ## Version: 0.8.20261031035343
 

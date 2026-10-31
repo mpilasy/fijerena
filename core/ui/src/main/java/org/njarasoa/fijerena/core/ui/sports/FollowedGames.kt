@@ -45,7 +45,7 @@ fun FollowedSports.Followed.keys(): Set<String> =
 /**
  * The games of the followed teams and leagues ([lists], one per team or league), merged: the ones
  * not over that start before [nowSec] + [windowSec], soonest first, each once — a game of a
- * followed team in a followed league is in both lists, from one source or from two
+ * followed team in a followed league is in both lists, by the same key or the same teams and time
  * ([TeamNames.sameGame]) — [limit] at most.
  */
 fun mergeFollowedGames(
@@ -145,8 +145,8 @@ data class UpcomingGame(
     val game: SportsGame,
     val channels: List<GameChannel>,
 ) {
-    /** The channel the card shows: the best one with a stream, if any. */
-    val bestChannel: GameChannel? get() = channels.firstOrNull { it.stream != null }
+    /** The channel the card shows: the best one, if any. */
+    val bestChannel: GameChannel? get() = channels.firstOrNull()
 }
 
 /**
@@ -220,7 +220,7 @@ class UpcomingGamesLoader(
             } catch (e: Exception) {
                 // The channels or the guide could not be read: the cards show no channel.
                 Log.w(TAG, "Channels failed: ${e.javaClass.simpleName}")
-                GameMatcher { unmatchedChannels(it) }
+                GameMatcher { emptyList() }
             }
         return games.map { game ->
             val channels =
@@ -230,7 +230,7 @@ class UpcomingGamesLoader(
                     throw e
                 } catch (e: Exception) {
                     Log.w(TAG, "Match failed: ${e.javaClass.simpleName}")
-                    unmatchedChannels(game)
+                    emptyList()
                 }
             UpcomingGame(game, channels)
         }

@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.isHomeGame
+import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -123,7 +124,8 @@ fun MobileSportsHeading(
 /**
  * A game: the side that matters ([team]'s opponent on a team page, else both teams), home or
  * away, the competition and time, then its best channel ([channels]' first: logo, name, "In the
- * guide" or "On Canal+"; "Looking for channels…" while [channels] is null). [trailing]: a slot at
+ * guide", "Event channel" or "On ESPN"; "Looking for channels…" while [channels] is null, "Not
+ * found on your channels" when it is empty). [trailing]: a slot at
  * the end for an action of its own ([MobileGameBell]).
  */
 @Composable
@@ -185,7 +187,7 @@ fun MobileGameCard(
                         text =
                             listOfNotNull(
                                 best?.stream?.name,
-                                best?.let { channelNote(resources, it) } ?: stringResource(R.string.sports_matching),
+                                best?.let { channelNote(resources, it) } ?: noChannelNote(resources, channels),
                             ).joinToString(" · "),
                         role = TextRole.BodySmall,
                         tone = TextTone.Accent,
@@ -290,11 +292,7 @@ fun MobileUpcomingGameCard(
                 }
                 CinemaText(
                     // A line even with no channel, so the cards in the row line up.
-                    text =
-                        best?.stream?.name ?: game.channels
-                            .firstOrNull()
-                            ?.let { channelNote(resources, it) }
-                            .orEmpty(),
+                    text = best?.stream?.name ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Accent,
                     maxLines = 1,

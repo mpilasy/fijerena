@@ -85,7 +85,7 @@ class GameChannelNamesTest {
         val forms = CompetitionForms.of(SportsLeague(SportsSource.ESPN, "eng.1", "English Premier League", "soccer"))
         assertTrue("premier league" in forms)
         assertTrue("pl" in forms)
-        val ucl = CompetitionForms.of(SportsLeague(SportsSource.UEFA, "1", "UEFA Champions League", "soccer"))
+        val ucl = CompetitionForms.of(SportsLeague(SportsSource.ESPN, "soccer/uefa.champions", "UEFA Champions League", "soccer"))
         assertTrue("ligue des champions" in ucl)
         val bundesliga = CompetitionForms.of(SportsLeague(SportsSource.ESPN, "ger.1", "German Bundesliga", "soccer"))
         assertTrue("bundesliga" in bundesliga)

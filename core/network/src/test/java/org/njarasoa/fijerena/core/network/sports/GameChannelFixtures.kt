@@ -55,7 +55,7 @@ internal object GameChannelFixtures {
     fun broadcaster(
         name: String,
         country: String?,
-    ) = Broadcaster(name, country, from = BroadcasterOrigin.SEASON_TABLE)
+    ) = Broadcaster(name, country, from = BroadcasterOrigin.ESPN)
 
     /**
      * A guide that answers as the index does: programmes that start in the window, on the asked

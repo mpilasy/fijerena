@@ -152,12 +152,6 @@ interface XtreamStreamDao {
         type: String,
     ): Boolean
 
-    /** The names of the live channels the profile in use sees on this source (its filters do not hide them). */
-    @Query(
-        "SELECT name FROM xtream_streams WHERE providerId = :providerId AND type = 'LIVE' AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'LIVE' AND excluded = 1)",
-    )
-    fun getVisibleLiveNames(providerId: Long): List<String>
-
     @Query("SELECT streamId FROM xtream_streams WHERE providerId = :providerId AND type = :type")
     fun getStreamIds(
         providerId: Long,

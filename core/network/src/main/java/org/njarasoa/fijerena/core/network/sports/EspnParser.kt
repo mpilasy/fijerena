@@ -69,14 +69,6 @@ object EspnParser {
                 SportsLeague(SportsSource.ESPN, "$sport/$slug", name, sport, item.image?.default)
             }.distinctBy { it.id }
 
-    /** `leagues/dropdown?sport=soccer`: every soccer league ESPN lists. */
-    fun soccerLeagues(body: String): List<SportsLeague> =
-        sportsJson.decodeFromString<Dropdown>(body).leagues.mapNotNull { league ->
-            val slug = league.slug.clean() ?: return@mapNotNull null
-            val name = league.name.clean() ?: return@mapNotNull null
-            SportsLeague(SportsSource.ESPN, "$SOCCER/$slug", name, SOCCER, leagueLogo(league))
-        }
-
     /** `{sport}/{league}/teams`: the league's teams. */
     fun leagueTeams(
         body: String,
@@ -255,11 +247,6 @@ object EspnParser {
     @Serializable
     private data class SearchV2Image(
         val default: String? = null,
-    )
-
-    @Serializable
-    private data class Dropdown(
-        val leagues: List<LeagueRef> = emptyList(),
     )
 
     @Serializable

@@ -31,16 +31,6 @@ class SportsParsersTest {
     }
 
     @Test
-    fun `ESPN soccer leagues list names and slugs`() {
-        val leagues = EspnParser.soccerLeagues(sportsFixture("espn_soccer_leagues.json"))
-        assertEquals(
-            SportsLeague(SportsSource.ESPN, "soccer/fifa.world", "FIFA World Cup", "soccer", leagues.first().logoUrl),
-            leagues.first(),
-        )
-        assertTrue(leagues.size >= 30)
-    }
-
-    @Test
     fun `ESPN league teams carry the league`() {
         val teams = EspnParser.leagueTeams(sportsFixture("espn_nhl_teams.json"), "hockey", "nhl")
         assertEquals(32, teams.size)
@@ -97,53 +87,6 @@ class SportsParsersTest {
     }
 
     @Test
-    fun `FIFA matches, teams and competitions`() {
-        val games = FifaParser.matches(sportsFixture("fifa_matches.json"))
-        val first = games.first()
-        assertEquals("8d6fncz9l51nk9bzppqjh49hw", first.id)
-        assertEquals("Cruzeiro", first.home.name)
-        assertEquals("Corinthians", first.away?.name)
-        assertEquals("CONMEBOL Libertadores Femenina", first.competition.name)
-        assertEquals(epoch("2026-11-01T00:00:00Z"), first.startEpochSec)
-        assertEquals(GameState.SCHEDULED, first.state)
-        assertTrue(first.broadcasters.isEmpty())
-
-        val teams = FifaParser.teams(sportsFixture("fifa_teams_search.json"))
-        assertTrue(teams.any { it.id == "9ne49trfop8q6vhb1zlasx016" && it.name == "Cruzeiro" && it.shortName == "CRU" })
-
-        val leagues = FifaParser.competitions(sportsFixture("fifa_competitions_search.json"))
-        assertTrue(leagues.any { it.id == "2000000026" && it.name == "Serie A (ITA)" })
-        assertTrue(leagues.any { it.id == "2000000078" && it.name == "Serie A (BRA)" })
-    }
-
-    @Test
-    fun `UEFA matches and one country's broadcasters`() {
-        val games = UefaParser.matches(sportsFixture("uefa_matches.json"))
-        val slavia = games.first { it.id == "2049621" }
-        assertEquals("Slavia Praha", slavia.home.name)
-        assertEquals("Arsenal", slavia.away?.name)
-        assertEquals("UEFA Champions League", slavia.competition.name)
-        assertEquals(epoch("2026-11-04T20:00:00Z"), slavia.startEpochSec)
-
-        val page = UefaParser.broadcasters(sportsFixture("uefa_broadcasters_fr.json"), "FR")
-        assertEquals(36, page.total)
-        assertEquals(
-            listOf(
-                Broadcaster(
-                    "CANAL+ SPORT",
-                    "FR",
-                    page.byMatch
-                        .getValue("2049621")
-                        .first()
-                        .logoUrl,
-                    BroadcasterOrigin.UEFA,
-                ),
-            ),
-            page.byMatch["2049621"],
-        )
-    }
-
-    @Test
     fun `NHL club schedule gives US and Canadian TV per game`() {
         val games = NhlParser.clubSchedule(sportsFixture("nhl_club_schedule.json"))
         val chicago = games.first { it.id == "2026020217" }
@@ -167,22 +110,6 @@ class SportsParsersTest {
         assertEquals(GameState.FINISHED, first.state)
         assertEquals("CA", MlbParser.country("Sportsnet"))
         assertEquals("US", MlbParser.country("NESN"))
-    }
-
-    @Test
-    fun `World Aquatics competitions and their national team games`() {
-        val competitions = WorldAquaticsParser.competitions(sportsFixture("worldaquatics_competitions.json"))
-        val worldCup = competitions.first { it.league.id == "5134" }
-        assertEquals("Men's Water Polo World Cup 2026, Division 1", worldCup.league.name)
-        assertEquals("water-polo", worldCup.league.sport)
-
-        val games = WorldAquaticsParser.schedule(sportsFixture("worldaquatics_schedule.json"), worldCup.league)
-        val first = games.first()
-        assertEquals("SRB/men", first.home.id)
-        assertEquals("Serbia", first.home.name)
-        assertEquals("Netherlands", first.away?.name)
-        assertEquals(epoch("2026-04-06T10:30:00Z"), first.startEpochSec)
-        assertEquals(GameState.FINISHED, first.state)
     }
 
     @Test

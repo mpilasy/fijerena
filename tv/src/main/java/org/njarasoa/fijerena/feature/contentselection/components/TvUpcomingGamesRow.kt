@@ -15,15 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
-import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -103,11 +104,7 @@ private fun TvUpcomingGameCard(
                 }
                 CinemaText(
                     // A line even with no channel, so the cards in the row line up.
-                    text =
-                        best?.stream?.name ?: game.channels
-                            .firstOrNull()
-                            ?.let { channelNote(resources, it) }
-                            .orEmpty(),
+                    text = best?.stream?.name ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,
                     maxLines = 1,

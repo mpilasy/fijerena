@@ -501,9 +501,9 @@ teams plan.
 |--------|------|-------------|
 | `profileId` | TEXT (PK) | The owner profile |
 | `kind` | TEXT (PK) | `TEAM` or `LEAGUE` (`FollowKind.id`) |
-| `source` | TEXT (PK) | The sports source the item comes from: `espn`, `fifa`, `uefa`, `nhl`, `mlb`, `ehf` or `worldaquatics` (`SportsSource.id`) |
+| `source` | TEXT (PK) | The sports source the item comes from: `espn`, `nhl` or `mlb` (`SportsSource.id`) |
 | `itemId` | TEXT (PK) | The team or league id at that source |
-| `league` | TEXT? | A team's league key at its source (ESPN `soccer/eng.1`, a FIFA competition id…); NULL for a league |
+| `league` | TEXT? | A team's league key at its source (ESPN `soccer/eng.1`…); NULL for a league |
 | `name` | TEXT | The name the source gives |
 | `shortName` | TEXT? | The short name or abbreviation |
 | `altNames` | TEXT | The other names the source gives (location, nickname…), as a JSON list of strings; `[]` when none. Used to find the team in guide titles and in other sources |

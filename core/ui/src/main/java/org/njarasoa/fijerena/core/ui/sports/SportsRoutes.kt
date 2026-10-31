@@ -22,17 +22,15 @@ fun Screen.SportsLeague.league(): SportsLeague? = sportsLeagueOf(source, leagueI
 
 /**
  * The channel of a game sheet row, opened as a guide result opens its channel: the preview on that
- * channel in its category, on its source. Null for a row with no channel.
+ * channel in its category, on its source.
  */
-fun GameChannel.liveRoute(): Screen.CategoryList? =
-    stream?.let { channel ->
-        Screen.CategoryList(
-            contentType = org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV,
-            initialCategoryId = channel.categoryId,
-            initialStreamId = channel.streamId.toString(),
-            providerId = channel.providerId,
-        )
-    }
+fun GameChannel.liveRoute(): Screen.CategoryList =
+    Screen.CategoryList(
+        contentType = org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV,
+        initialCategoryId = stream.categoryId,
+        initialStreamId = stream.streamId.toString(),
+        providerId = stream.providerId,
+    )
 
 /**
  * Search on its Teams type, for the Sports section's Find Teams: the app's one search

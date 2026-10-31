@@ -105,21 +105,20 @@
     <string name="sports_leagues_heading">Leagues</string>
     <string name="sports_next_games_heading">Next Games</string>
     <string name="sports_channels_heading">Your Channels</string>
-    <string name="sports_broadcasters_heading">Other Broadcasters</string>
     <string name="sports_follow">Follow</string>
     <string name="sports_unfollow">Unfollow</string>
     <string name="sports_followed">Followed</string>
     <string name="sports_load_error">Couldn\'t load games</string>
     <string name="sports_no_games">No games in the coming days</string>
-    <string name="sports_not_announced">TV not announced yet</string>
+    <string name="sports_not_found">Not found on your channels</string>
     <string name="sports_on_broadcaster">On %1$s</string>
     <string name="sports_in_guide">In the guide</string>
+    <string name="sports_event_channel">Event channel</string>
     <string name="sports_starts_at">Starts at %1$s</string>
     <string name="sports_matching">Looking for channels…</string>
     <string name="sports_home_game">Home</string>
     <string name="sports_away_game">Away</string>
     <string name="sports_game_format">%1$s v %2$s</string>
-    <string name="sports_worldwide">Worldwide</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Sports</string>
     <string name="sports_following_heading">Following</string>
@@ -130,10 +129,6 @@
     <string name="sports_reminder_set">Reminder Set</string>
     <string name="sports_remind_team">Remind Me of Every Game</string>
     <string name="sports_remind_team_set">Reminders Set for Every Game</string>
-    <plurals name="sports_countries">
-        <item quantity="one">%d country</item>
-        <item quantity="other">%d countries</item>
-    </plurals>
     <string name="sport_soccer">Football</string>
     <string name="sport_american_football">American football</string>
     <string name="sport_basketball">Basketball</string>
@@ -149,7 +144,6 @@
     <string name="sport_australian_football">Australian football</string>
     <string name="sport_lacrosse">Lacrosse</string>
     <string name="sport_volleyball">Volleyball</string>
-    <string name="sport_water_polo">Water polo</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">All sources</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->
@@ -1585,7 +1579,7 @@
     <string name="tmdb_charts_refresh_desc">Reads the charts from TMDB again now, not after a day.</string>
     <string name="tmdb_charts_refresh_done">Charts cleared. Home reads them again.</string>
     <string name="sports_switch_title">Sports</string>
-    <string name="sports_switch_desc">Find teams and leagues, their next games and the TV channels that show them. The data comes from free sports services (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). This device only.</string>
+    <string name="sports_switch_desc">Find teams and leagues, their next games and the channels of yours that show them. The data comes from free sports services (ESPN, NHL, MLB). This device only.</string>
 
     <!-- Game reminder banner (TV, TvGameReminderBanner) -->
     <string name="game_reminder_watch">Watch</string>

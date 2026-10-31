@@ -41,7 +41,3 @@ jobs:
       # docs/plans/20261016_design-system-plan.md.
       - name: Looks come from the theme and Look and Feel
         run: scripts/check-design-system.sh
-
-      # docs/plans/20261031_sports-teams-plan.md → The season table.
-      - name: The sports season table is valid
-        run: scripts/check-sports-table.sh

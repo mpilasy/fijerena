@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.EpgGuideLookup
-import org.njarasoa.fijerena.core.network.sports.FifaParser
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelMatcher
@@ -28,7 +27,6 @@ import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsSource
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
-import org.njarasoa.fijerena.core.network.sports.WorldAquaticsParser
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
@@ -134,9 +132,9 @@ abstract class SportsGamesViewModel(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        // The channels or the guide could not be read: the broadcasters stay as text.
+                        // The channels or the guide could not be read: no game is found on them.
                         android.util.Log.w(TAG, "Channels failed: ${e.javaClass.simpleName}")
-                        GameMatcher { unmatchedChannels(it) }
+                        GameMatcher { emptyList() }
                     }
                 for (game in games) {
                     val channels =
@@ -146,7 +144,7 @@ abstract class SportsGamesViewModel(
                             throw e
                         } catch (e: Exception) {
                             android.util.Log.w(TAG, "Match failed: ${e.javaClass.simpleName}")
-                            unmatchedChannels(game)
+                            emptyList()
                         }
                     _games.update { state ->
                         (state as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: state
@@ -302,7 +300,7 @@ fun sportsTeamOf(
         source = src,
         id = teamId,
         name = name,
-        sport = sport ?: sportOf(src, teamId),
+        sport = sport ?: sportOf(teamId),
         league = league,
         logoUrl = logoUrl,
     )
@@ -317,19 +315,11 @@ fun sportsLeagueOf(
     logoUrl: String? = null,
 ): SportsLeague? {
     val src = SportsSource.byId(source) ?: return null
-    return SportsLeague(src, leagueId, name, sport ?: sportOf(src, leagueId), logoUrl)
+    return SportsLeague(src, leagueId, name, sport ?: sportOf(leagueId), logoUrl)
 }
 
-// The sport of an id with none given: FIFA's and World Aquatics' are one sport, ESPN's id starts with it.
-private fun sportOf(
-    source: SportsSource,
-    id: String,
-): String =
-    when (source) {
-        SportsSource.FIFA, SportsSource.UEFA -> FifaParser.SPORT
-        SportsSource.WORLD_AQUATICS -> WorldAquaticsParser.SPORT
-        else -> id.substringBefore('/', "")
-    }
+// The sport of an id with none given: ESPN's id starts with it.
+private fun sportOf(id: String): String = id.substringBefore('/', "")
 
 /**
  * The real [SportsPageData]: [SportsData], the profile's [FollowedSports], and a

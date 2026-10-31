@@ -1685,7 +1685,7 @@ fun ContentTypeSelectionScreen(
                 game = sheetGame.game,
                 channels = sheetGame.channels,
                 returnFocus = returnFocus,
-                onPlay = { channel -> channel.liveRoute()?.let { route -> onGameChannelSelected(route) } },
+                onPlay = { channel -> onGameChannelSelected(channel.liveRoute()) },
                 onClose = {
                     closedGame = RETURN_UPCOMING_PREFIX + sheetGame.game.key
                     openGame = null

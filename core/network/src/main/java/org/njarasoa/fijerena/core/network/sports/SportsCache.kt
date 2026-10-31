@@ -124,9 +124,6 @@ class SportsCache(
         /** As [SCHEDULE_MAX_AGE_MS] with a game in the next 2 days: 1 hour (TV is often named late). */
         const val SCHEDULE_SOON_MAX_AGE_MS = HOUR_MS
 
-        /** UEFA's broadcasters of a week: 6 hours. */
-        const val BROADCASTERS_MAX_AGE_MS = 6 * HOUR_MS
-
         /** League and team lists: 7 days. */
         const val LIST_MAX_AGE_MS = 7 * DAY_MS
 

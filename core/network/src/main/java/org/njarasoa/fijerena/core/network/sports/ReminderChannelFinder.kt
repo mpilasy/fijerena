@@ -35,7 +35,8 @@ object ReminderChannelFinder {
                 if (channels.isEmpty()) return@withTimeoutOrNull null
                 GameChannelMatcher(EpgGuideLookup.load(context))
                     .match(game, channels)
-                    .firstNotNullOfOrNull { it.stream }
+                    .firstOrNull()
+                    ?.stream
                     ?.let { ReminderChannel(it.providerId, it.streamId, it.categoryId, it.name) }
             }
         } catch (e: CancellationException) {

@@ -102,21 +102,20 @@
     <string name="sports_leagues_heading">Ligues</string>
     <string name="sports_next_games_heading">Prochains matchs</string>
     <string name="sports_channels_heading">Vos chaînes</string>
-    <string name="sports_broadcasters_heading">Autres diffuseurs</string>
     <string name="sports_follow">Suivre</string>
     <string name="sports_unfollow">Ne plus suivre</string>
     <string name="sports_followed">Suivi</string>
     <string name="sports_load_error">Impossible de charger les matchs</string>
     <string name="sports_no_games">Aucun match dans les prochains jours</string>
-    <string name="sports_not_announced">Diffusion pas encore annoncée</string>
+    <string name="sports_not_found">Introuvable sur vos chaînes</string>
     <string name="sports_on_broadcaster">Sur %1$s</string>
     <string name="sports_in_guide">Dans le guide</string>
+    <string name="sports_event_channel">Chaîne événement</string>
     <string name="sports_starts_at">Commence à %1$s</string>
     <string name="sports_matching">Recherche des chaînes…</string>
     <string name="sports_home_game">Domicile</string>
     <string name="sports_away_game">Extérieur</string>
     <string name="sports_game_format">%1$s – %2$s</string>
-    <string name="sports_worldwide">Monde entier</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Sports</string>
     <string name="sports_following_heading">Suivis</string>
@@ -127,11 +126,6 @@
     <string name="sports_reminder_set">Rappel activé</string>
     <string name="sports_remind_team">Rappel pour chaque match</string>
     <string name="sports_remind_team_set">Rappels activés pour chaque match</string>
-    <plurals name="sports_countries">
-        <item quantity="one">%d pays</item>
-        <item quantity="many">%d pays</item>
-        <item quantity="other">%d pays</item>
-    </plurals>
     <string name="sport_soccer">Football</string>
     <string name="sport_american_football">Football américain</string>
     <string name="sport_basketball">Basket-ball</string>
@@ -147,7 +141,6 @@
     <string name="sport_australian_football">Football australien</string>
     <string name="sport_lacrosse">Crosse</string>
     <string name="sport_volleyball">Volley-ball</string>
-    <string name="sport_water_polo">Water-polo</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Toutes les sources</string>
     <!-- Phone Search: the filter icon in the field that opens the source menu -->
@@ -1590,7 +1583,7 @@
     <string name="tmdb_charts_refresh_desc">Relit les classements depuis TMDB maintenant, sans attendre un jour.</string>
     <string name="tmdb_charts_refresh_done">Classements effacés. L\'accueil les relit.</string>
     <string name="sports_switch_title">Sports</string>
-    <string name="sports_switch_desc">Trouver des équipes et des ligues, leurs prochains matchs et les chaînes qui les diffusent. Les données viennent de services sportifs gratuits (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). Cet appareil seulement.</string>
+    <string name="sports_switch_desc">Trouver des équipes et des ligues, leurs prochains matchs et celles de vos chaînes qui les diffusent. Les données viennent de services sportifs gratuits (ESPN, NHL, MLB). Cet appareil seulement.</string>
 
     <!-- Game reminder banner (TV, TvGameReminderBanner) -->
     <string name="game_reminder_watch">Regarder</string>

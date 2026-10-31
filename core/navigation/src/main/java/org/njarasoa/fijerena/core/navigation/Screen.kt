@@ -175,7 +175,7 @@ sealed interface Screen {
      * A sports team's page: its coming games with the channels that show them, and Follow. Opened
      * from Search's Teams type and from a league page (the sports teams plan → Screens).
      *
-     * @param source The sports source's id (`SportsSource.id`: "espn", "fifa"…).
+     * @param source The sports source's id (`SportsSource.id`: "espn", "nhl", "mlb").
      * @param teamId The team's id in that source.
      * @param name The name to show until the games come.
      * @param sport The source's sport key, when known ("soccer").
