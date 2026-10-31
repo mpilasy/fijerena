@@ -74,6 +74,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
+        private const val KEY_SHOW_SPORTS = "show_sports"
         const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
@@ -893,6 +894,23 @@ class AppSettings(
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showTmdbCharts) }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             send(showTmdbCharts)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    /**
+     * The sports teams, leagues and games (docs/plans/20261031_sports-teams-plan.md, SP-D9): the
+     * data comes from sports APIs the project does not control. This device's, set in Admin: not
+     * per profile, not synced, not exported. On by default. Off, no sports API is called.
+     */
+    var showSports: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_SPORTS, true)
+        set(value) = prefs.edit { putBoolean(KEY_SHOW_SPORTS, value) }
+
+    fun observeShowSports(): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showSports) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(showSports)
             awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
 

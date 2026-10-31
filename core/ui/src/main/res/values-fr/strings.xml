@@ -1537,4 +1537,6 @@
     <string name="tmdb_charts_refresh_title">Actualiser les classements</string>
     <string name="tmdb_charts_refresh_desc">Relit les classements depuis TMDB maintenant, sans attendre un jour.</string>
     <string name="tmdb_charts_refresh_done">Classements effacés. L\'accueil les relit.</string>
+    <string name="sports_switch_title">Sports</string>
+    <string name="sports_switch_desc">Trouver des équipes et des ligues, leurs prochains matchs et les chaînes qui les diffusent. Les données viennent de services sportifs gratuits (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). Cet appareil seulement.</string>
 </resources>

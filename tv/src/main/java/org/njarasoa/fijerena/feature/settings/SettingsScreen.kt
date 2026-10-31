@@ -751,6 +751,12 @@ fun SettingsScreen(
                                                                         },
                                                                     )
                                                                 }
+                                                                TvSwitchRow(
+                                                                    checked = uiState.showSports,
+                                                                    onCheckedChange = viewModel::updateShowSports,
+                                                                    label = stringResource(R.string.sports_switch_title),
+                                                                    description = stringResource(R.string.sports_switch_desc),
+                                                                )
                                                             }
 
                                                             AdminPart.SYNC_BACKUP -> {

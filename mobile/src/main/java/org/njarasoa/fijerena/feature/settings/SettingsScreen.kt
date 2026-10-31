@@ -527,6 +527,17 @@ fun MobileSettingsScreen(
                                         },
                                     )
                                 }
+                                SettingsListRow(
+                                    title = stringResource(R.string.sports_switch_title),
+                                    summary = stringResource(R.string.sports_switch_desc),
+                                    trailing = {
+                                        CinemaSwitch(
+                                            checked = uiState.showSports,
+                                            onCheckedChange = viewModel::updateShowSports,
+                                        )
+                                    },
+                                    onClick = { viewModel.updateShowSports(!uiState.showSports) },
+                                )
                             }
                         }
 

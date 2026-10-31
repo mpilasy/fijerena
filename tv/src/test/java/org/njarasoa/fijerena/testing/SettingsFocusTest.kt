@@ -108,6 +108,7 @@ abstract class SettingsFocusTest {
                 "Film and Series Details (TMDB)",
                 "TMDB Charts",
                 "Refresh Charts",
+                "Sports",
                 "Live Sync",
                 "Back Up to a File",
                 "Restore from a File",

@@ -44,6 +44,7 @@ data class SettingsUiState(
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val showClock: Boolean = false,
     val showTmdbCharts: Boolean = true,
+    val showSports: Boolean = true,
     val recentRowSize: Int = AppSettings.DEFAULT_WATCH_HISTORY_SIZE,
     /** TV's Text & grid size as picked; null: Auto. */
     val uiScale: Float? = null,
@@ -77,6 +78,7 @@ class SettingsViewModel(
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 showClock = appSettings.showClock,
                 showTmdbCharts = appSettings.showTmdbCharts,
+                showSports = appSettings.showSports,
                 recentRowSize = appSettings.recentRowSize,
                 uiScale = appSettings.uiScaleChoice,
                 lastShrinkAtMs = appSettings.lastShrinkAtMs,
@@ -186,6 +188,12 @@ class SettingsViewModel(
         if (!appSettings.isDevMode) return
         appSettings.showTmdbCharts = show
         _uiState.value = _uiState.value.copy(showTmdbCharts = show)
+    }
+
+    fun updateShowSports(show: Boolean) {
+        if (!appSettings.isDevMode) return
+        appSettings.showSports = show
+        _uiState.value = _uiState.value.copy(showSports = show)
     }
 
     fun updateRecentRowSize(size: Int) {

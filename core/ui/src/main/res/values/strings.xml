@@ -1533,4 +1533,6 @@
     <string name="tmdb_charts_refresh_title">Refresh Charts</string>
     <string name="tmdb_charts_refresh_desc">Reads the charts from TMDB again now, not after a day.</string>
     <string name="tmdb_charts_refresh_done">Charts cleared. Home reads them again.</string>
+    <string name="sports_switch_title">Sports</string>
+    <string name="sports_switch_desc">Find teams and leagues, their next games and the TV channels that show them. The data comes from free sports services (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics). This device only.</string>
 </resources>

@@ -35,13 +35,21 @@ each can change or close (see Risk).
 |--------|-------|----------|
 | ESPN `site.api.espn.com`, `site.web.api.espn.com` | Team search; teams and games in US sports, NCAA, rugby, cricket, tennis and 220 soccer leagues (`sports.core.api.espn.com/v2/sports/soccer/leagues`); US networks only | Search, team pages, games, US TV |
 | FIFA `api.fifa.com/api/v3` | Games of hundreds of soccer leagues worldwide (`calendar/matches?from=..&to=..&count=500`, paged by `ContinuationToken`); no TV data | Soccer leagues ESPN does not list |
-| UEFA `match.uefa.com/v5/matches`, `broadcaster.uefa.com/v1/broadcasters` | UEFA competitions' games; broadcasters per match per country (no `countryCode` for every country, `countryCode`, `startDate`, `endDate`, `competitionId`, `offset`, `limit` → `{matchId, broadcasters[{name, logo, url}]}`); spec at `/v3/api-docs` | Per-country TV for UCL, UEL, UECL, Nations League, qualifiers |
+| UEFA `match.uefa.com/v5/matches`, `broadcaster.uefa.com/v1/broadcasters` | UEFA competitions' games; broadcasters per match for one country per call (`countryCode` required, any ISO code; `startDate`, `endDate`, `competitionId`, `offset`, `limit` → `{matchId, broadcasters[{name, logo, url}]}`); spec at `/v3/api-docs` | Per-country TV for UCL, UEL, UECL, Nations League, qualifiers: one call per country per week, read in the background for a list of countries (`uefaCountries`, 85 by default), games of the next 14 days |
 | NHL `api-web.nhle.com/v1` | `club-schedule-season/{TRI}/now`: `tvBroadcasts[].{network,countryCode,market}`, US and Canada | NHL TV |
 | MLB `statsapi.mlb.com/api/v1` | `schedule?...&hydrate=broadcasts`: national and local US TV | MLB TV |
-| EHF, World Aquatics (`api.worldaquatics.com`) | Handball and water polo games, if Phase 1 finds usable team schedules; no TV data | Handball, water polo (SP-D6) |
+| World Aquatics (`api.worldaquatics.com/fina/competitions?disciplines=WP`, `/competitions/{id}/schedule`) | Water polo games of national teams (no clubs); empty until the draw; no TV data | Water polo (SP-D6) |
 | Season table (in the app) | Country → competition → broadcasters, per season | TV for every other league and sport outside the US (SP-D5) |
 
-**Teams across sources.** A team is found on ESPN (or FIFA, EHF, World Aquatics where ESPN does
+**Handball (SP-D6):** no usable source (Phase 1): EHF has no public API, only a home-page
+widget that ignores filters. Handball stays out, since without a schedule there is no game to match.
+
+**Ids.** ESPN league ids are `sport/league`; ESPN team ids are `soccer/{id}`, or
+`sport/league/{id}` for other sports (ESPN gives one id to a college's teams in several sports).
+A soccer team's games come from `soccer/all/teams/{id}/schedule?fixture=true` (every
+competition). ESPN scoreboards are read one day at a time.
+
+**Teams across sources.** A team is found on ESPN (or FIFA, World Aquatics where ESPN does
 not have it) and stored with its source and id. A game from one source gets TV from another by
 matching the date (± 2 h) and both team names, normalized (accents, "FC", "SC", "CF"… removed),
 with a per-source alias table for the misses found in tests. NHL and MLB teams are mapped from ESPN
@@ -180,7 +188,7 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | In progress |
+| 1 | `SportsApi` for ESPN, FIFA, UEFA, NHL, MLB; models, cache, team-name matching across sources, NHL and MLB id tables, Admin switch, `check-sports-apis.sh`; parser tests on saved responses. Check EHF and World Aquatics for team schedules and record the result here (SP-D6) | Done 2026-10-31: `SportsApi`, `SportsCache`, `SportsData`, `TeamNames`, `SportsTeamIds`, Admin switch; World Aquatics built (national teams); EHF has no usable source, handball out; season table wired into `SportsData` |
 | 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | Done 2026-10-31: 26 competitions, 743 rows, 214 countries; rows name ISO codes, regions (`SUB_SAHARAN_AFRICA`…) or `WORLD`; lookups are suspend; thin: Bundesliga, Argentine LPF, South African PSL, Top 14, EHF Champions League |
 | 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |

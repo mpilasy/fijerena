@@ -43,8 +43,10 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Film and Series Details (TMDB)"),
             down("TMDB Charts"),
             down("Refresh Charts"),
+            down("Sports"),
             // Sync & Backup follows on the same page.
             down("Live Sync"),
+            up("Sports"),
             up("Refresh Charts"),
             up("TMDB Charts"),
             up("Film and Series Details (TMDB)"),

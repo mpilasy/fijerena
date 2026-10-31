@@ -1527,4 +1527,6 @@
     <string name="tmdb_charts_refresh_title">Havaozina ny laharana</string>
     <string name="tmdb_charts_refresh_desc">Vakiana indray avy amin\'ny TMDB izao ny laharana, tsy miandry iray andro.</string>
     <string name="tmdb_charts_refresh_done">Voafafa ny laharana. Hovakian\'ny fandraisana indray.</string>
+    <string name="sports_switch_title">Fanatanjahantena</string>
+    <string name="sports_switch_desc">Mitady ekipa sy ligy, ny lalao manaraka ataony ary ny fantsona mandefa azy. Avy amin\'ny tolotra fanatanjahantena maimaim-poana (ESPN, FIFA, UEFA, NHL, MLB, World Aquatics) ny angona. Ity fitaovana ity ihany.</string>
 </resources>
