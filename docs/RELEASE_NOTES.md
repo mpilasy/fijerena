@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: 0.8.20261031021156
+
+- **An actor's episode opens its page on the phone:** picking an episode from an actor's list now opens that episode's own page (plot, cast, Play). Back shows the show's list on it. Phone.
+
 ## Version: 0.8.20261031014449
 
 - **Continue Watching on the phone:** a show card always opens its page at the top, with Play on the episode to resume, one tap away. Before, the list sometimes scrolled away from Play. Phone.
