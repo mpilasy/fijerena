@@ -346,6 +346,37 @@ val GraphitePalette =
         groundEnd = Color(0xFF18191B),
     )
 
+/** Neutral dark greys, white text, a light blue accent: a plain ground with no glow. */
+val SlatePalette =
+    CinemaThemePalette(
+        id = "slate",
+        nameRes = R.string.theme_slate,
+        isLight = false,
+        accent = Color(0xFFA8C7FA),
+        accentDark = Color(0xFF7CACF8),
+        accentLight = Color(0xFFD3E3FD),
+        orange = Color(0xFFFFB27A),
+        orangeDark = Color(0xFFE8894A),
+        orangeLight = Color(0xFFFFD2B0),
+        background = Color(0xFF131314),
+        surface = Color(0xFF1E1F20),
+        surfaceVariant = Color(0xFF282A2C),
+        surfaceLight = Color(0xFF333537),
+        glassBackground = Color(0xBF131314),
+        glassBorder = Color(0x14A8C7FA),
+        success = Color(0xFF6DD58C),
+        warning = Color(0xFFFDD663),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFE3E3E3),
+        textSecondary = Color(0xFFC4C7C5),
+        textTertiary = Color(0xFF8E918F),
+        textDisabled = Color(0xFF5E5F60),
+        scrim = Color(0x80000000),
+        // The luminance rule gives black; a dark blue on the light blue accent.
+        onAccentOverride = Color(0xFF062E6F),
+    )
+
 /** A starship-console look: a flat black ground, orange and lavender blocks, pale blue text (docs/plans/20261020_lcars-look-plan.md). */
 val ConsolePalette =
     CinemaThemePalette(
@@ -463,6 +494,7 @@ val AllPalettes: List<CinemaThemePalette> =
         EmberPalette,
         AuroraPalette,
         GraphitePalette,
+        SlatePalette,
         AmoledBlackPalette,
         AmethystPalette,
         ForestPalette,

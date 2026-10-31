@@ -28,11 +28,13 @@ object UiThemes {
 
     /**
      * The packaged UI themes. The first four pair each platform-inspired Look and Feel with a colour
-     * theme, under the Look's name (user, 2026-10-21); then Console, Meadow dusk and Meadow.
+     * theme, under the Look's name (user, 2026-10-21), with Slate after Standard; then Console, Meadow dusk and Meadow.
      */
     val packaged: List<PackagedUiTheme> =
         listOf(
             PackagedUiTheme("standard", themeId = "deep_night", uiStyleId = "material"),
+            // Standard's system font and round corners over neutral greys with a light blue accent.
+            PackagedUiTheme("slate", themeId = "slate", uiStyleId = "material"),
             PackagedUiTheme("rounded", themeId = "midnight", uiStyleId = "cupertino"),
             PackagedUiTheme("sharp", themeId = "amethyst", uiStyleId = "roku"),
             PackagedUiTheme("balanced", themeId = "amoled_black", uiStyleId = "bravia"),

@@ -5,9 +5,9 @@ import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Console, Meadow and Meadow dusk: text reads on every surface and on the painted sky (4.5:1). */
+/** Console, Meadow, Meadow dusk and Slate: text reads on every surface and on the painted sky (4.5:1). */
 class NewPaletteContrastTest {
-    private val palettes = listOf(ConsolePalette, MeadowPalette, MeadowDuskPalette)
+    private val palettes = listOf(ConsolePalette, MeadowPalette, MeadowDuskPalette, SlatePalette)
 
     private fun contrast(
         a: Color,

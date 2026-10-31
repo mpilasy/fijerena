@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Slate:** a new colour theme and UI theme: a neutral dark grey with white text, a light blue accent, the system font and large round corners. Pick it on a profile's page (Look). TV and phone.
+
 ## Version: 0.9.20261031195517
 
 - **Sports teams and their games:** Search has a **Teams** type after People. Find a team or a league that ESPN covers (US sports, football leagues around the world, rugby, cricket, tennis), and follow it. Type a team's name and the best match comes first with its next games and their channels. A team's page shows its next games, a league's page its games of the next 7 days and its teams. Your followed teams and leagues are kept per profile and synced to your other devices. Not on a child profile. TV and phone.

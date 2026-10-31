@@ -24,6 +24,7 @@ class PackagedUiThemesTest {
     fun `a packaged UI theme takes its colour theme's or its Look's name, Custom its own`() {
         assertEquals(R.string.ui_style_sharp, uiThemeNameRes("sharp"))
         assertEquals(R.string.theme_meadow_dusk, uiThemeNameRes("meadow_dusk"))
+        assertEquals(R.string.theme_slate, uiThemeNameRes("slate"))
         assertEquals(R.string.ui_theme_custom, uiThemeNameRes(UiThemes.CUSTOM))
     }
 }

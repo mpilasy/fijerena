@@ -1477,6 +1477,7 @@
     <string name="theme_console">Konsoly</string>
     <string name="theme_meadow">Saha</string>
     <string name="theme_meadow_dusk">Saha hariva</string>
+    <string name="theme_slate">Ardoazy</string>
     <string name="parental_controls_title">Fanaraha-maso ny ray aman-dreny</string>
     <string name="parental_controls_desc">Izay hitan\'ny mombamomba ankizy, amin\'ny loharano rehetra. Mitovy ho an\'ny ankohonana iray manontolo: tonga amin\'ny fitaovana rehetra ny fanovana.</string>
     <string name="parental_list_kids_categories">Sokajy ho an\'ny ankizy</string>

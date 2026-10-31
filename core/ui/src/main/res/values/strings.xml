@@ -1483,6 +1483,7 @@
     <string name="theme_console">Console</string>
     <string name="theme_meadow">Meadow</string>
     <string name="theme_meadow_dusk">Meadow dusk</string>
+    <string name="theme_slate">Slate</string>
     <string name="parental_controls_title">Parental Controls</string>
     <string name="parental_controls_desc">What child profiles see, on every source. The same for the whole household: a change reaches every device.</string>
     <string name="parental_list_kids_categories">Kids\' Categories</string>

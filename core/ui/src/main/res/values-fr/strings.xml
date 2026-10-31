@@ -1486,6 +1486,7 @@
     <string name="theme_console">Console</string>
     <string name="theme_meadow">Prairie</string>
     <string name="theme_meadow_dusk">Prairie au crépuscule</string>
+    <string name="theme_slate">Ardoise</string>
     <string name="parental_controls_title">Contrôle parental</string>
     <string name="parental_controls_desc">Ce que voient les profils enfants, sur chaque source. Le même pour tout le foyer : un changement arrive sur chaque appareil.</string>
     <string name="parental_list_kids_categories">Catégories pour enfants</string>
