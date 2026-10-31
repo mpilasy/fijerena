@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,16 +29,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
@@ -228,7 +235,9 @@ fun MobileEpisodeSelectionScreen(
 
     // The episode list opens on the backdrop under a clear top bar (TV visual refresh, Phase 5);
     // the bar turns solid with the title once the backdrop has scrolled up under it, and stays
-    // solid on an episode's own page and while there is no list to show (loading, error).
+    // solid on an episode's own page and while there is no list to show (loading, error). The
+    // list also reports it covered once it has scrolled past the backdrop, as when the page opens
+    // on an episode and the backdrop is never drawn.
     var heroCovered by remember { mutableStateOf(false) }
     val showsList = displaySeriesDetail != null && selectedEpisode == null
     val solidBar = heroCovered || !showsList
@@ -361,6 +370,7 @@ fun MobileEpisodeSelectionScreen(
                             categoryName = lastSuccess?.categoryName,
                             logoUrl = logoUrl,
                             backdropUrl = backdropUrl,
+                            topBarHeight = paddingValues.calculateTopPadding(),
                             onHeroCovered = { heroCovered = it },
                             isFavorite = isFavorite,
                             onToggleFavorite = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
@@ -413,6 +423,8 @@ private fun EpisodeListContent(
     categoryName: String?,
     logoUrl: String?,
     backdropUrl: String?,
+    // The list draws under the top bar (for the backdrop); the pinned season row sits below it.
+    topBarHeight: Dp,
     onHeroCovered: (Boolean) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
@@ -450,6 +462,29 @@ private fun EpisodeListContent(
         }
 
     val listState = rememberLazyListState()
+    val topBarPx = with(LocalDensity.current) { topBarHeight.roundToPx() }
+
+    // The bar turns solid once the backdrop is under it, or once the list has scrolled past it
+    // (the backdrop item is then not composed, so it reports nothing).
+    var heroItemCovered by remember { mutableStateOf(false) }
+    val scrolledPastHero by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    val heroCovered = heroItemCovered || scrolledPastHero
+    LaunchedEffect(heroCovered) { onHeroCovered(heroCovered) }
+
+    // How far the season row moves down so that, pinned, it sits below the top bar and not under
+    // it: none while it is lower than the bar, then as much as keeps it at the bar's bottom edge,
+    // so it never jumps. Read at layout time, so scrolling does not recompose.
+    val seasonRowShift: () -> Int = {
+        if (listState.firstVisibleItemIndex > 0) {
+            topBarPx
+        } else {
+            val rowTop =
+                listState.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.key == SEASON_TABS_KEY }
+                    ?.offset
+            if (rowTop == null) 0 else (topBarPx - rowTop).coerceIn(0, topBarPx)
+        }
+    }
 
     // The anchor a season or show mark just moved Play to (markEpisodesWatched below): the list
     // doesn't scroll to it, staying where the user pressed the mark.
@@ -466,7 +501,16 @@ private fun EpisodeListContent(
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
         if (episodeIndex < 0) return@LaunchedEffect
         val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
-        listState.animateScrollToItem(headerItemCount + episodeIndex)
+
+        // The episode stops below the top bar and the pinned season row, not under them.
+        fun seasonRowHeight() =
+            listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == SEASON_TABS_KEY }
+                ?.size
+        val knownRowHeight = seasonRowHeight()
+        listState.animateScrollToItem(headerItemCount + episodeIndex, -(topBarPx + (knownRowHeight ?: 0)))
+        // The row was not laid out before the scroll: it is pinned now, so its height is known.
+        if (knownRowHeight == null) seasonRowHeight()?.let { listState.animateScrollBy(-it.toFloat()) }
     }
 
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
@@ -744,7 +788,7 @@ private fun EpisodeListContent(
                     logoUrl = logoUrl,
                     thumbnailContentType = ThumbnailContentType.TV_SHOW,
                     bleed = CinemaSpacing.md,
-                    onCovered = onHeroCovered,
+                    onCovered = { heroItemCovered = it },
                 )
 
                 if (seriesDetail.isSavedCopy) SavedCopyNote(onRetry = onRetry)
@@ -961,8 +1005,9 @@ private fun EpisodeListContent(
         // pointerInput above) does the same thing as tapping a tab.
         if (selectedTab == SeriesDetailTab.EPISODES) {
             if (hasMultipleSeasons) {
-                stickyHeader(key = "season_tabs", contentType = "header") {
+                stickyHeader(key = SEASON_TABS_KEY, contentType = "header") {
                     SeasonTabs(
+                        pinShift = seasonRowShift,
                         seasons = sortedSeasons,
                         selectedSeason = resumeState.selectedSeason,
                         onSeasonSelected = { resumeState.selectSeason(it) },
@@ -1509,6 +1554,8 @@ private fun EpisodeDetailContent(
  */
 @Composable
 private fun SeasonTabs(
+    // How far down to draw the row (pixels), so that pinned it sits below the top bar.
+    pinShift: () -> Int,
     seasons: List<SeasonInfo>,
     selectedSeason: Int?,
     onSeasonSelected: (Int) -> Unit,
@@ -1528,11 +1575,13 @@ private fun SeasonTabs(
                 shown.offset + shown.size <= layout.viewportEndOffset
         if (!fullyShown) rowState.animateScrollToItem(selectedIndex)
     }
+    val background = CinemaTheme.colors.background
     LazyRow(
         state = rowState,
         contentPadding = PaddingValues(horizontal = CinemaSpacing.md),
         modifier =
             Modifier
+                .offset { IntOffset(0, pinShift()) }
                 .fillMaxWidth()
                 .layout { measurable, constraints ->
                     // Out through the LazyColumn's side padding to the screen's edges.
@@ -1546,9 +1595,15 @@ private fun SeasonTabs(
                         )
                     layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
                 }
+                // The space the row moved down is filled too, so no episode card shows between
+                // the top bar and the pinned row.
+                .drawBehind {
+                    val shift = pinShift().toFloat()
+                    if (shift > 0f) drawRect(background, topLeft = Offset(0f, -shift), size = Size(size.width, shift))
+                }
                 // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
                 // underneath it and need to actually be hidden, not show through.
-                .background(CinemaTheme.colors.background)
+                .background(background)
                 .padding(vertical = CinemaSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
@@ -1775,6 +1830,8 @@ private fun ErrorScreen(
 }
 
 private const val EPISODE_SWIPE_THRESHOLD_PX = 80f
+
+private const val SEASON_TABS_KEY = "season_tabs"
 
 /** How long the episode's page waits for its cast before it goes back to the place left for a person. */
 private const val PERSON_RETURN_WAIT_MS = 2_000L
