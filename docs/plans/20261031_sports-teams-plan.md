@@ -26,7 +26,7 @@ programme when the guide has it, else a channel whose name has the broadcaster's
 | SP-D11 | The labels? | **Sports** (fr "Sports", mg "Fanatanjahantena"); the search type **Teams** (fr "Équipes", mg "Ekipa"). |
 | SP-D12 | Game reminders? | **In this plan**: a bell on a game sets a reminder (see Reminders). |
 | SP-D13 | UEFA countries? | Ask UEFA only for the countries found in the profile's channel names and categories ("FR:", "UK|"), plus Madagascar; the season table covers the others for UEFA games. |
-| SP-D14 | Updating the season table? | Without a release: the app downloads the table from the public repository (at most once a day, when the sports data is first used) and keeps the bundled copy as the fallback. A change to the JSON on main reaches users within a day. |
+| SP-D14 | TV rights outside the live APIs? | Read **directly from Wikipedia** by the app (its broadcaster list pages, or the broadcasting section of a league's article), only for followed competitions, at most once a week, the last good result kept on failure. No bundled or hand-edited table. Wikipedia tables are written by hand, not structured data: the parser is loose and some pages will have gaps. |
 
 ## Data sources
 
