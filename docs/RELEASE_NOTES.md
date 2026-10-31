@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261031225716
 
 - **Profile before the title:** on the phone, the profile avatar now leads each tab's title, with the guide and search icons on the same line, and the clock keeps its top-right corner as on every screen. Neither moves from tab to tab. Phone.
 
