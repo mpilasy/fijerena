@@ -113,8 +113,6 @@
     <string name="sports_event_channel">Chaîne événement</string>
     <string name="sports_starts_at">Commence à %1$s</string>
     <string name="sports_matching">Recherche des chaînes…</string>
-    <string name="sports_home_game">Domicile</string>
-    <string name="sports_away_game">Extérieur</string>
     <string name="sports_game_format">%1$s – %2$s</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Sports</string>

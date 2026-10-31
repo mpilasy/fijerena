@@ -469,7 +469,9 @@ fun MobileHomeScreen(
             )
         }
     }
-    val sheetGame = openGame?.let { key -> upcoming.firstOrNull { it.game.key == key } }
+    // The sheet keeps the channels it opened with: a later read of the row (a return to Home) does not reorder them.
+    val liveSheetGame = openGame?.let { key -> upcoming.firstOrNull { it.game.key == key } }
+    val sheetGame = remember(openGame, liveSheetGame != null) { liveSheetGame }
     if (sheetGame != null) {
         MobileGameSheet(
             game = sheetGame.game,

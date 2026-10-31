@@ -37,7 +37,12 @@ class SportsData(
     private val now: () -> Long = System::currentTimeMillis,
     private val onGames: (List<SportsGame>) -> Unit = {},
 ) {
-    /** ESPN's teams and leagues whose names match [query] (2 letters at least). */
+    /**
+     * ESPN's teams and leagues whose names match [query] (2 letters at least). A soccer team gets
+     * its league's name ("German Bundesliga", "UEFA Women's Champions League"), which also tells a
+     * club's men's and women's teams apart (ESPN names both "Bayern München"). A short name ESPN
+     * ranks low ("euro") also asks for its full name ([LEAGUE_QUERY_ALIASES]), whose leagues come first.
+     */
     suspend fun search(query: String): SportsSearchResult {
         val text = query.trim()
         if (!enabled() || text.length < MIN_QUERY) return SportsSearchResult(emptyList(), emptyList())
@@ -45,10 +50,36 @@ class SportsData(
         return coroutineScope {
             val espnTeams = async { attempt(failures, "ESPN teams") { EspnParser.teamSearch(api.espnTeamSearch(text)) } }
             val espnLeagues = async { attempt(failures, "ESPN leagues") { EspnParser.leagueSearch(api.espnLeagueSearch(text)) } }
+            val alias = LEAGUE_QUERY_ALIASES[text.lowercase()]
+            val aliasLeagues =
+                alias?.let { full ->
+                    async { attempt(mutableListOf(), "ESPN leagues") { EspnParser.leagueSearch(api.espnLeagueSearch(full)) } }
+                }
             val teams = espnTeams.await()
-            val leagues = espnLeagues.await()
-            if (teams.isEmpty() && leagues.isEmpty() && failures.size == SEARCH_SOURCES) throw failures.first()
-            SportsSearchResult(teams, leagues)
+            val found = espnLeagues.await()
+            if (teams.isEmpty() && found.isEmpty() && failures.size == SEARCH_SOURCES) throw failures.first()
+            val leagues = (aliasLeagues?.await().orEmpty().filter { it.name.equals(alias, ignoreCase = true) } + found).distinctBy { it.id }
+            SportsSearchResult(withLeagueNames(teams), leagues)
+        }
+    }
+
+    /** [teams] with the league name of those that have only a league slug (soccer); as they are when the list can't be read. */
+    private suspend fun withLeagueNames(teams: List<SportsTeam>): List<SportsTeam> {
+        val sports = teams.filter { it.leagueName == null && it.league != null }.map { it.sport }.distinct()
+        if (sports.isEmpty()) return teams
+        val names =
+            sports.associateWith { sport ->
+                attempt(mutableListOf(), "ESPN $sport leagues") {
+                    cache
+                        .get("leagues_espn_$sport", { EspnParser.leagueNames(it).toList() }, { SportsCache.LIST_MAX_AGE_MS }) {
+                            api.espnLeagueList(sport)
+                        }
+                }.toMap()
+            }
+        return teams.map { team ->
+            val slug = EspnParser.splitLeague(team.league)?.second
+            val name = slug?.let { names[team.sport]?.get(it) }
+            if (team.leagueName == null && name != null) team.copy(leagueName = name) else team
         }
     }
 
@@ -214,6 +245,16 @@ class SportsData(
         private const val SEARCH_SOURCES = 2
         private const val DAY_SEC = 24 * 60 * 60L
         private const val LIVE_SEC = 3 * 60 * 60L
+
+        /**
+         * Short league queries and the full name searched with them: ESPN finds the European
+         * Championship for "euro" only after nine other leagues.
+         */
+        val LEAGUE_QUERY_ALIASES =
+            mapOf(
+                "euro" to "UEFA European Championship",
+                "euros" to "UEFA European Championship",
+            )
 
         /** A team page's games at most. */
         const val TEAM_GAMES = 10

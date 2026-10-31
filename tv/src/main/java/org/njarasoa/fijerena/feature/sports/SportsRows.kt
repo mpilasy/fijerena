@@ -33,7 +33,6 @@ import org.njarasoa.fijerena.core.ui.sports.GameBells
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
-import org.njarasoa.fijerena.core.ui.sports.isHomeGame
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -124,8 +123,8 @@ fun TvSportsHeading(
 }
 
 /**
- * A game: the logo and name of the side that matters ([team]'s opponent on a team page, else
- * both teams), the competition and time (home or away on a team page), and its best channel
+ * A game: both teams, the home team first (on a team page, the opponent's logo), the competition
+ * and time, and its best channel
  * ([channels]' first: logo, name, "In the guide", "Event channel" or "On ESPN"; "Looking for
  * channels…" while [channels] is null, "Not found on your channels" when it is empty). [trailing]: a fixed slot after the row, outside it, for an action of its own
  * ([TvGameBell]): Right from the row reaches it, Left goes back, Up/Down keep the column.
@@ -141,14 +140,10 @@ fun TvGameRow(
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val resources = LocalResources.current
-    val opponent = team?.let { opponentIn(game, it) }
-    val title = if (team != null) opponent?.name ?: game.home.name else gameTitle(resources, game)
-    val logo = if (team != null) opponent?.logoUrl else game.home.logoUrl
+    val title = gameTitle(resources, game)
+    val logoTeam = team?.let { opponentIn(game, it) } ?: game.home
     val details =
         listOfNotNull(
-            team?.takeIf { opponent != null }?.let {
-                stringResource(if (isHomeGame(game, it)) R.string.sports_home_game else R.string.sports_away_game)
-            },
             game.competition.name.takeIf { it.isNotBlank() },
             TimeFormat.formatTime(game.startEpochSec),
         ).joinToString(" · ")
@@ -170,18 +165,19 @@ fun TvGameRow(
                     .weight(1f)
                     .fillMaxHeight(),
         ) {
-            GameRowContent(channels, title, logo, details)
+            GameRowContent(channels, title, logoTeam.logoUrl, logoTeam.name, details)
         }
         trailing?.invoke(this)
     }
 }
 
-/** A game row's logo, its two lines and its best channel. */
+/** A game row's logo ([logoName]'s first letter when it has none), its two lines and its best channel. */
 @Composable
 private fun GameRowContent(
     channels: List<GameChannel>?,
     title: String,
     logo: String?,
+    logoName: String,
     details: String,
 ) {
     Row(
@@ -191,7 +187,7 @@ private fun GameRowContent(
     ) {
         CinemaThumbnail(
             url = logo,
-            fallbackLetter = title.firstOrNull(Char::isLetterOrDigit),
+            fallbackLetter = logoName.firstOrNull(Char::isLetterOrDigit),
             contentType = ThumbnailContentType.LIVE_TV,
             contentDescription = null,
             modifier = Modifier.fillMaxHeight().aspectRatio(1f),
@@ -266,8 +262,8 @@ private fun TvBestChannel(
     }
 }
 
-// The best channel's share of a game row's width, beside the game's own text (1).
-private const val BEST_CHANNEL_WEIGHT = 0.8f
+// The best channel's share of a game row's width, beside the game's own text (1): the text holds both team names.
+private const val BEST_CHANNEL_WEIGHT = 0.6f
 
 /** A channel logo's frame: wide, drawn whole. */
 internal const val CHANNEL_LOGO_ASPECT = 16f / 9f

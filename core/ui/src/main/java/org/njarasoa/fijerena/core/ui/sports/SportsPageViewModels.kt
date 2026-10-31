@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.EpgGuideLookup
@@ -34,6 +36,20 @@ import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 fun interface GameMatcher {
     suspend fun match(game: SportsGame): List<GameChannel>
 }
+
+/** [game]'s channels; none when the match fails (a guide read error). */
+internal suspend fun matchOrEmpty(
+    matcher: GameMatcher,
+    game: SportsGame,
+): List<GameChannel> =
+    try {
+        matcher.match(game)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        android.util.Log.w("GameMatcher", "Match failed: ${e.javaClass.simpleName}")
+        emptyList()
+    }
 
 /** What the team and league pages read: the sports sources, the profile's follows and channels. A fake in the tests. */
 interface SportsPageData {
@@ -136,18 +152,15 @@ abstract class SportsGamesViewModel(
                         android.util.Log.w(TAG, "Channels failed: ${e.javaClass.simpleName}")
                         GameMatcher { emptyList() }
                     }
-                for (game in games) {
-                    val channels =
-                        try {
-                            matcher.match(game)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            android.util.Log.w(TAG, "Match failed: ${e.javaClass.simpleName}")
-                            emptyList()
+                // Every game at once: each game's guide reads run beside the others'.
+                coroutineScope {
+                    games.forEach { game ->
+                        launch {
+                            val channels = matchOrEmpty(matcher, game)
+                            _games.update { state ->
+                                (state as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: state
+                            }
                         }
-                    _games.update { state ->
-                        (state as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: state
                     }
                 }
             }
@@ -166,8 +179,9 @@ abstract class SportsGamesViewModel(
 
 /**
  * The team page (`Screen.SportsTeam`): the team's coming games (up to 10) and Follow. [team] is
- * what the route knows; once the games come, the team's own entry in them adds what the route
- * lacks (its logo, its other names), so a team followed from here is stored whole.
+ * what the route knows; once the games come, the team's own entry in them gives its name (the one
+ * the game titles use) and adds what the route lacks (its logo, its other names, the route's name
+ * among them), so a team followed from here is stored whole.
  */
 class SportsTeamViewModel(
     data: SportsPageData,
@@ -195,10 +209,12 @@ class SportsTeamViewModel(
             games.firstNotNullOfOrNull { game ->
                 listOfNotNull(game.home, game.away).firstOrNull { it.source == route.source && it.id == route.id }
             } ?: return
+        // The name the games give ("Bayern Munich", not search's "Bayern München"), so the page and its game titles agree.
         _team.value =
             route.copy(
+                name = found.name,
                 shortName = route.shortName ?: found.shortName,
-                altNames = (route.altNames + found.allNames).filter { it != route.name }.distinct(),
+                altNames = (route.altNames + route.name + found.allNames).filter { it != found.name }.distinct(),
                 league = route.league ?: found.league,
                 leagueName = route.leagueName ?: found.leagueName,
                 logoUrl = route.logoUrl ?: found.logoUrl,

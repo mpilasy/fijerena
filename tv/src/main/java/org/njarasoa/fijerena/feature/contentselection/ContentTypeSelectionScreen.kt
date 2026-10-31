@@ -1679,7 +1679,9 @@ fun ContentTypeSelectionScreen(
         }
         // A game card's sheet, over Home (the sports teams plan → Game sheet): a channel opens as a
         // guide result; Back closes it onto the card.
-        val sheetGame = openGame?.let { key -> upcomingGames.firstOrNull { it.game.key == key } }
+        // The sheet keeps the channels it opened with: a later read of the row (a return to Home) does not reorder them.
+        val liveSheetGame = openGame?.let { key -> upcomingGames.firstOrNull { it.game.key == key } }
+        val sheetGame = remember(openGame, liveSheetGame != null) { liveSheetGame }
         if (sheetGame != null) {
             GameSheetOverlay(
                 game = sheetGame.game,

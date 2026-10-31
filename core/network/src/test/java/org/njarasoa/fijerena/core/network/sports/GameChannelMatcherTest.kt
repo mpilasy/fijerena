@@ -355,8 +355,9 @@ class GameChannelMatcherTest {
                     channels,
                     programme("WCBS.us", "WCBS", "NFL Football: Chiefs at Bills", "2026-11-15T18:00:00Z", "2026-11-15T21:30:00Z"),
                 )
+            // CBS Sports Network is another network: not a channel of CBS.
             assertEquals(
-                listOf("US - CBS (WCBS) New York HD: GUIDE_ON_BROADCASTER", "US - CBS Sports Network: BROADCASTER_CHANNEL"),
+                listOf("US - CBS (WCBS) New York HD: GUIDE_ON_BROADCASTER"),
                 result.summary(),
             )
         }

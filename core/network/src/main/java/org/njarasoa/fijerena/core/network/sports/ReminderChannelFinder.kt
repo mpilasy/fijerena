@@ -3,15 +3,8 @@ package org.njarasoa.fijerena.core.network.sports
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.xmltv.GuideScope
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 /**
  * The best channel of a ringing reminder's game: the first channel [GameChannelMatcher] gives, on
@@ -48,26 +41,9 @@ object ReminderChannelFinder {
     }
 
     /**
-     * The live channels of the profile in use, of every source that can have channels, hidden as
-     * the guide search hides them (an excluded channel, or one in an excluded live category). The
-     * one loader of the channels a game is matched to: the sports pages, the Sports section and
-     * Home's Upcoming Games read it too.
+     * The live channels of the profile in use ([SportsChannels]: one list per profile and
+     * catalogue, kept for the process). The one loader of the channels a game is matched to: the
+     * sports pages, the Sports section and Home's Upcoming Games read it too.
      */
-    suspend fun liveChannels(context: Context): List<LiveChannel> {
-        val sources = ProviderRepository(context).profileSourcesList()
-        val db = XtreamDatabase.getInstance(context)
-        return withContext(Dispatchers.IO) {
-            GuideScope.searchedProviders(sources).flatMap { provider ->
-                val hidden =
-                    db
-                        .categoryDao()
-                        .getAllCategoriesIncludingExcluded(provider.id, XtreamCategoryEntity.TYPE_LIVE)
-                        .filter { it.excluded }
-                        .mapTo(HashSet()) { it.categoryId }
-                db.streamDao().getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE).map {
-                    LiveChannel.of(it, hidden = it.excluded || it.categoryId in hidden)
-                }
-            }
-        }
-    }
+    suspend fun liveChannels(context: Context): List<LiveChannel> = SportsChannels.get(context)
 }

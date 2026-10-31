@@ -45,7 +45,7 @@ class GameChannelNameMatchTest {
                     bayernAjax,
                     channels(
                         "UK| PPV 3: Bayern v Ajax",
-                        "PPV | Bundesliga 04: FC Bayern - Ajax (Sat 01/11 20:30)",
+                        "PPV | Bundesliga 04: FC Bayern - Ajax (Sat 31/10 20:30)",
                         "DE: FC Bayern TV HD",
                         "NL: Ajax TV",
                         "NL: AJAX1 HD",
@@ -56,7 +56,7 @@ class GameChannelNameMatchTest {
                 )
             assertEquals(
                 listOf(
-                    "PPV | Bundesliga 04: FC Bayern - Ajax (Sat 01/11 20:30): CHANNEL_NAME",
+                    "PPV | Bundesliga 04: FC Bayern - Ajax (Sat 31/10 20:30): CHANNEL_NAME",
                     "UK| PPV 3: Bayern v Ajax: CHANNEL_NAME",
                 ),
                 result.summary(),
@@ -64,13 +64,10 @@ class GameChannelNameMatchTest {
         }
 
     @Test
-    fun `one distinctive team name and the competition match, after the channels that name both teams`() =
+    fun `a channel name must name both teams, one team and the competition is not enough`() =
         runTest {
             val result = match(bayernAjax, channels("PPV: Bundesliga - FC Bayern Live", "UK| PPV 3: Bayern v Ajax", "DE: Bayern 1 Radio"))
-            assertEquals(
-                listOf("UK| PPV 3: Bayern v Ajax: CHANNEL_NAME", "PPV: Bundesliga - FC Bayern Live: CHANNEL_NAME"),
-                result.summary(),
-            )
+            assertEquals(listOf("UK| PPV 3: Bayern v Ajax: CHANNEL_NAME"), result.summary())
         }
 
     @Test
@@ -150,7 +147,7 @@ class GameChannelNameMatchTest {
     @Test
     fun `dates in channel names agree within one day, either day-month order`() {
         val start = epoch("2026-10-31T19:30:00Z")
-        assertTrue(ChannelNameDates.agrees("PPV | Bundesliga 04: FC Bayern - Ajax (Sat 01/11 20:30)", start))
+        assertTrue(ChannelNameDates.agrees("PPV | Bundesliga 04: FC Bayern - Ajax (Sat 31/10 20:30)", start))
         assertTrue(ChannelNameDates.agrees("PPV 2: Bayern v Ajax 10/31", start))
         assertTrue(ChannelNameDates.agrees("PPV 2: Bayern v Ajax 31/10/2026", start))
         assertFalse(ChannelNameDates.agrees("PPV 7: Bayern v Ajax (12/03)", start))

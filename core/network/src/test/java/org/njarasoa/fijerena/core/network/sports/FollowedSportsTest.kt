@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
+import org.njarasoa.fijerena.core.network.xtream.db.GameReminderEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -47,7 +48,7 @@ class FollowedSportsTest {
                 .inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, XtreamDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
-        followed = FollowedSports(db) { clock }
+        followed = FollowedSports(db, now = { clock })
     }
 
     @After
@@ -106,6 +107,57 @@ class FollowedSportsTest {
             assertEquals(listOf(arsenal), state.teams)
             assertTrue(state.leagues.isEmpty())
             assertEquals(3, db.followedSportDao().getAll(PROFILE).size)
+        }
+
+    @Test
+    fun `unfollowing a team clears its bell and the reminders it set, bells set by hand on other teams' games stay`() =
+        runBlocking {
+            val alarms =
+                object : ReminderAlarms {
+                    val set = HashSet<String>()
+
+                    override fun schedule(
+                        reminder: GameReminderEntity,
+                        atMs: Long,
+                    ) {
+                        set += reminder.gameId
+                    }
+
+                    override fun cancel(reminder: GameReminderEntity) {
+                        set -= reminder.gameId
+                    }
+
+                    override fun setRescheduleReceiverOn(on: Boolean) = Unit
+                }
+            val nowMs = 1_800_000_000_000L
+            val chelsea = SportsTeam(SportsSource.ESPN, "363", "Chelsea", sport = "soccer")
+            val spurs = SportsTeam(SportsSource.ESPN, "367", "Tottenham Hotspur", sport = "soccer")
+
+            fun game(
+                id: String,
+                home: SportsTeam,
+                away: SportsTeam,
+            ) = SportsGame(SportsSource.ESPN, id, nowMs / 1000 + 86_400, home, away, premierLeague)
+            val arsenalGames = listOf(game("a1", arsenal, chelsea), game("a2", chelsea, arsenal))
+            val reminders =
+                GameReminders(db, alarms, { team -> if (team.id == arsenal.id) arsenalGames else emptyList() }, now = { nowMs })
+            val withReminders = FollowedSports(db, { clock }) { p, s, id -> reminders.clearForTeam(p, s, id) }
+
+            withReminders.follow(PROFILE, arsenal)
+            withReminders.follow(PROFILE, chelsea)
+            reminders.setForTeam(PROFILE, arsenal)
+            reminders.set(PROFILE, game("c1", chelsea, spurs))
+            assertEquals(setOf("a1", "a2", "c1"), alarms.set)
+
+            withReminders.unfollow(PROFILE, arsenal)
+
+            assertEquals(setOf("c1"), alarms.set)
+            assertFalse(reminders.isSetForTeam(PROFILE, arsenal))
+            assertEquals(setOf("espn/c1"), reminders.observe(PROFILE).first().games)
+            // A league is not a team: unfollowing it touches no reminder.
+            withReminders.follow(PROFILE, premierLeague)
+            withReminders.unfollow(PROFILE, premierLeague)
+            assertEquals(setOf("c1"), alarms.set)
         }
 
     @Test

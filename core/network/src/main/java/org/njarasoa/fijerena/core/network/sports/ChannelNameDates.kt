@@ -1,33 +1,68 @@
 package org.njarasoa.fijerena.core.network.sports
 
+import java.text.Normalizer
 import java.time.DateTimeException
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.math.abs
 
 /**
- * The date and time in a PPV or event channel's name ("PPV | Bundesliga 04: FC Bayern - Ajax (Sat
- * 01/11 20:30)", "NFL 05 | Chiefs @ Bills Nov 2 8:30pm ET"), checked against the game, so that a
- * channel still named for an older game of the same teams does not match.
+ * The date and time in a PPV or event channel's name ("US (Peacock 022) | Liverpool v. Arsenal
+ * (2026-11-01 10:30:00)", "Bayern München vs Dortmund @ Oct 31 6:20 PM :Viaplay DK", "NEXT |
+ * BUNDESLIGA BAYERN MÜNCHEN - DORTMUND | Sat 31 Oct 18:20 CET (DK)"), checked against the game, so
+ * that a channel named for another game of the same teams, or for a replay, does not match.
  *
- * The channel's time zone is not known, so a date may be one day off the game's date (UTC), and a
- * time counts only with a zone ("8:30pm ET", "20:00 CET"). A name with no date or time agrees.
+ * The time zone of the name is not known: it can be the game's, GMT, or the channel's country (an
+ * AU channel gives the next day). So:
+ * - a date and a time with no zone agree when the time of the name, read as UTC, is from
+ *   [LOOSE_BEFORE_SEC] before to [LOOSE_AFTER_SEC] after the start of the game (every real zone,
+ *   and a pre-show of up to 1 hour);
+ * - a date and a time with a zone ("GMT", "CET", "8:30pm ET") agree from [ZONED_BEFORE_SEC] before
+ *   to [ZONED_AFTER_SEC] after the start;
+ * - a date with no time agrees within 1 day of the date of the game (UTC);
+ * - a time with no date counts only with a zone, on the nearest day;
+ * - with no date, a day name ("Sat") must be the day of the game or next to it.
+ * A name with no date and no time agrees.
  */
 internal object ChannelNameDates {
     private const val DATE_SLACK_DAYS = 1L
-    private const val TIME_SLACK_MIN = 120
-    private const val DAY_MIN = 24 * 60
+    private const val HOUR_SEC = 60 * 60L
+    private const val DAY_SEC = 24 * HOUR_SEC
+    const val LOOSE_BEFORE_SEC = 15 * HOUR_SEC
+    const val LOOSE_AFTER_SEC = 15 * HOUR_SEC
+    const val ZONED_BEFORE_SEC = 3 * HOUR_SEC
+    const val ZONED_AFTER_SEC = HOUR_SEC
 
-    // "01/11", "1/11/2026", "11/01/26": day and month either way round. Not "24/7"-style parts of a longer number.
-    private val NUMERIC_DATE = Regex("(?<![\\d/])(\\d{1,2})/(\\d{1,2})(?:/(\\d{4}|\\d{2}))?(?![\\d/])")
+    // "2026-11-01", "2026-11-01 10:30:00", "2026/11/01".
+    private val ISO_DATE =
+        Regex("(?<!\\d)(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})(?:[ t](\\d{1,2}):(\\d{2})(?::\\d{2})?)?(?!\\d)")
 
-    // "8:30pm ET", "20:15 CET", "8pm ET": a time with its zone.
-    private val ZONED_TIME = Regex("(?<![\\d:])(\\d{1,2})(?:[:h](\\d{2}))?\\s*(am|pm)?\\s*([a-z]{2,4})\\b")
+    // "31-10-2026", "31/10/26", "31.10.2026": day and month either way round, with a year.
+    private val NUMERIC_YEAR_DATE = Regex("(?<![\\d/.-])(\\d{1,2})([-/.])(\\d{1,2})\\2(\\d{4}|\\d{2})(?![\\d/.-])")
 
-    private val ORDINAL = Regex("^(\\d{1,2})(?:st|nd|rd|th|er|e)?$")
+    // "31/10", "10/31": day and month either way round. Not part of a longer number ("2026/2027").
+    private val NUMERIC_DATE = Regex("(?<![\\d/])(\\d{1,2})/(\\d{1,2})(?![\\d/])")
+
+    // "31 Oct", "1st November", "1er novembre".
+    private val DAY_MONTH = Regex("(?<![\\p{L}\\d])(\\d{1,2})(?:st|nd|rd|th|er|e)?\\.?\\s+(\\p{L}{3,9})\\.?(?!\\p{L})")
+
+    // "Oct 31", "Nov 1st"; not "Oct 18:20", where the number is a time.
+    private val MONTH_DAY = Regex("(?<!\\p{L})(\\p{L}{3,9})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?![\\d:h.])")
+
+    // "18:20", "6:20 PM", "20h30", "17:30:00".
+    private val CLOCK = Regex("(?<![\\d:])(\\d{1,2})[:h](\\d{2})(?::\\d{2})?(?!\\d)(?:\\s*([ap])\\.?m\\b\\.?)?")
+
+    // "8pm", "8 pm".
+    private val HOUR_ONLY = Regex("(?<![\\d:])(\\d{1,2})\\s*([ap])\\.?m\\b\\.?")
+
+    // A zone after a time: "18:20 CET", "17:30 (GMT)", "8:30pm ET".
+    private val ZONE_AFTER = Regex("^\\s*\\(?\\s*([a-z]{2,5})\\b")
+
+    private val MARKS = Regex("\\p{Mn}+")
 
     private val MONTHS =
         mapOf(
@@ -102,83 +137,188 @@ internal object ChannelNameDates {
             "dimanche" to DayOfWeek.SUNDAY,
         )
 
-    private val ZONES =
+    // Zones named after a time. A summer or a winter name is its fixed offset; a short US or UK name follows the season.
+    private val ZONES: Map<String, ZoneId> =
         mapOf(
-            "et" to "America/New_York",
-            "est" to "America/New_York",
-            "edt" to "America/New_York",
-            "ct" to "America/Chicago",
-            "cst" to "America/Chicago",
-            "cdt" to "America/Chicago",
-            "mt" to "America/Denver",
-            "mst" to "America/Denver",
-            "mdt" to "America/Denver",
-            "pt" to "America/Los_Angeles",
-            "pst" to "America/Los_Angeles",
-            "pdt" to "America/Los_Angeles",
-            "gmt" to "UTC",
-            "utc" to "UTC",
-            "uk" to "Europe/London",
-            "bst" to "Europe/London",
-            "cet" to "Europe/Paris",
-            "cest" to "Europe/Paris",
+            "et" to ZoneId.of("America/New_York"),
+            "ct" to ZoneId.of("America/Chicago"),
+            "mt" to ZoneId.of("America/Denver"),
+            "pt" to ZoneId.of("America/Los_Angeles"),
+            "est" to ZoneOffset.ofHours(-5),
+            "edt" to ZoneOffset.ofHours(-4),
+            "cst" to ZoneOffset.ofHours(-6),
+            "cdt" to ZoneOffset.ofHours(-5),
+            "mst" to ZoneOffset.ofHours(-7),
+            "mdt" to ZoneOffset.ofHours(-6),
+            "pst" to ZoneOffset.ofHours(-8),
+            "pdt" to ZoneOffset.ofHours(-7),
+            "gmt" to ZoneOffset.UTC,
+            "utc" to ZoneOffset.UTC,
+            "wet" to ZoneOffset.UTC,
+            "uk" to ZoneId.of("Europe/London"),
+            "bst" to ZoneOffset.ofHours(1),
+            "west" to ZoneOffset.ofHours(1),
+            "cet" to ZoneOffset.ofHours(1),
+            "cest" to ZoneOffset.ofHours(2),
+            "eet" to ZoneOffset.ofHours(2),
+            "eest" to ZoneOffset.ofHours(3),
+            "sast" to ZoneOffset.ofHours(2),
+            "msk" to ZoneOffset.ofHours(3),
+            "awst" to ZoneOffset.ofHours(8),
+            "aest" to ZoneOffset.ofHours(10),
+            "aedt" to ZoneOffset.ofHours(11),
+            "brt" to ZoneOffset.ofHours(-3),
         )
+
+    /** A date the name can mean, with the time written in the same date-time (ISO), if any. */
+    private data class NameDate(
+        val date: LocalDate,
+        val time: LocalTime? = null,
+    )
+
+    /** A time in the name, and its zone when one follows it. */
+    private data class NameTime(
+        val time: LocalTime,
+        val zone: ZoneId?,
+    )
 
     /**
      * Whether the date and time in channel [name] agree with a game that starts at [startSec] (UTC).
-     * [ignore]: words of the team names, never read as a day ("Sun" of the Connecticut Sun).
+     * [ignore]: words of the team names, never read as a day or a month ("Sun" of the Connecticut Sun).
      */
     fun agrees(
         name: String,
         startSec: Long,
         ignore: Set<String> = emptySet(),
     ): Boolean {
-        val start = Instant.ofEpochSecond(startSec)
-        val gameDate = start.atZone(ZoneOffset.UTC).toLocalDate()
-        val dates = dates(name, gameDate, ignore)
-        if (dates.isNotEmpty() && dates.none { abs(it.toEpochDay() - gameDate.toEpochDay()) <= DATE_SLACK_DAYS }) return false
-        if (dates.isEmpty()) {
-            val days = weekdays(name, ignore)
-            val near = (-DATE_SLACK_DAYS..DATE_SLACK_DAYS).map { gameDate.plusDays(it).dayOfWeek }
-            if (days.isNotEmpty() && days.none { it in near }) return false
-        }
-        return timeAgrees(name.lowercase(), start)
+        val gameDate = Instant.ofEpochSecond(startSec).atZone(ZoneOffset.UTC).toLocalDate()
+        val text = StringBuilder(fold(name))
+        val dates = dates(text, gameDate, ignore)
+        val time = time(text)
+        if (dates.isNotEmpty()) return dates.any { dateAgrees(it, time, gameDate, startSec) }
+        val days = weekdays(text.toString(), ignore)
+        val near = (-DATE_SLACK_DAYS..DATE_SLACK_DAYS).map { gameDate.plusDays(it).dayOfWeek }
+        if (days.isNotEmpty() && days.none { it in near }) return false
+        val zone = time?.zone ?: return true
+        // A time with a zone and no date: on the day nearest the game.
+        val offset = gameDate.atTime(time.time).atZone(zone).toEpochSecond() - startSec
+        val diff = Math.floorMod(offset + DAY_SEC / 2, DAY_SEC) - DAY_SEC / 2
+        return diff in -ZONED_BEFORE_SEC..ZONED_AFTER_SEC
     }
 
-    /** Every date [name] can mean; a date with no year is taken in the year nearest [near]. */
+    private fun dateAgrees(
+        date: NameDate,
+        time: NameTime?,
+        gameDate: LocalDate,
+        startSec: Long,
+    ): Boolean {
+        val zone = if (date.time == null) time?.zone else null
+        val clock = date.time ?: time?.time
+        return when {
+            clock == null -> {
+                abs(date.date.toEpochDay() - gameDate.toEpochDay()) <= DATE_SLACK_DAYS
+            }
+
+            zone != null -> {
+                (
+                    date.date
+                        .atTime(clock)
+                        .atZone(zone)
+                        .toEpochSecond() - startSec
+                ) in -ZONED_BEFORE_SEC..ZONED_AFTER_SEC
+            }
+
+            else -> {
+                (date.date.atTime(clock).toEpochSecond(ZoneOffset.UTC) - startSec) in -LOOSE_BEFORE_SEC..LOOSE_AFTER_SEC
+            }
+        }
+    }
+
+    /** [name] in lower case without accents, its punctuation kept. */
+    private fun fold(name: String): String = Normalizer.normalize(name.lowercase(), Normalizer.Form.NFD).replace(MARKS, "")
+
+    /**
+     * Every date [text] can mean; a date with no year is taken in the year nearest [near]. Each
+     * date found is blanked out of [text], so that its numbers are not read again as a time.
+     */
     private fun dates(
-        name: String,
+        text: StringBuilder,
         near: LocalDate,
         ignore: Set<String>,
-    ): List<LocalDate> {
-        val found = ArrayList<LocalDate>()
-        for (m in NUMERIC_DATE.findAll(name)) {
+    ): List<NameDate> {
+        val found = ArrayList<NameDate>()
+        for (m in ISO_DATE.findAll(text.toString()).toList()) {
+            val time = m.groupValues[4].takeIf { it.isNotEmpty() }?.let { clock(it.toInt(), m.groupValues[5].toInt(), null) }
+            date(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt(), near).forEach {
+                found += NameDate(it, time)
+            }
+            blank(text, m.range)
+        }
+        for (m in NUMERIC_YEAR_DATE.findAll(text.toString()).toList()) {
+            val a = m.groupValues[1].toInt()
+            val b = m.groupValues[3].toInt()
+            val year = m.groupValues[4].toInt().let { if (it < 100) 2000 + it else it }
+            (date(year, b, a, near) + date(year, a, b, near)).forEach { found += NameDate(it) }
+            blank(text, m.range)
+        }
+        for (m in NUMERIC_DATE.findAll(text.toString()).toList()) {
             val a = m.groupValues[1].toInt()
             val b = m.groupValues[2].toInt()
-            val year =
-                m.groupValues[3]
-                    .takeIf { it.isNotEmpty() }
-                    ?.toInt()
-                    ?.let { if (it < 100) 2000 + it else it }
-            found += date(year, b, a, near) + date(year, a, b, near)
+            (date(null, b, a, near) + date(null, a, b, near)).forEach { found += NameDate(it) }
+            blank(text, m.range)
         }
-        val words = SportsText.fold(name).split(' ')
-        for ((i, word) in words.withIndex()) {
-            val month = MONTHS[word] ?: continue
-            if (word in ignore) continue
-            // "Nov 1", "1 Nov", "1st November", "1er novembre".
-            val day =
-                listOfNotNull(words.getOrNull(i + 1), words.getOrNull(i - 1))
-                    .firstNotNullOfOrNull {
-                        ORDINAL
-                            .matchEntire(it)
-                            ?.groupValues
-                            ?.get(1)
-                            ?.toInt()
-                    }
-            if (day != null) found += date(null, month, day, near)
+        for (m in DAY_MONTH.findAll(text.toString()).toList()) {
+            val word = m.groupValues[2]
+            val month = MONTHS[word]?.takeIf { word !in ignore } ?: continue
+            date(null, month, m.groupValues[1].toInt(), near).forEach { found += NameDate(it) }
+            blank(text, m.range)
+        }
+        for (m in MONTH_DAY.findAll(text.toString()).toList()) {
+            val word = m.groupValues[1]
+            val month = MONTHS[word]?.takeIf { word !in ignore } ?: continue
+            date(null, month, m.groupValues[2].toInt(), near).forEach { found += NameDate(it) }
+            blank(text, m.range)
         }
         return found
+    }
+
+    private fun blank(
+        text: StringBuilder,
+        range: IntRange,
+    ) {
+        for (i in range) text.setCharAt(i, ' ')
+    }
+
+    /** The first time in [text] ("18:20", "6:20 PM", "8pm") and the zone after it, if any. */
+    private fun time(text: StringBuilder): NameTime? {
+        val s = text.toString()
+        val clockMatch = CLOCK.find(s)
+        val hourMatch = HOUR_ONLY.find(s)
+        val m = listOfNotNull(clockMatch, hourMatch).minByOrNull { it.range.first } ?: return null
+        val time =
+            if (m === clockMatch) {
+                clock(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].ifEmpty { null })
+            } else {
+                clock(m.groupValues[1].toInt(), 0, m.groupValues[2])
+            } ?: return null
+        val zone = ZONE_AFTER.find(s.substring(m.range.last + 1))?.let { ZONES[it.groupValues[1]] }
+        return NameTime(time, zone)
+    }
+
+    /** A clock time; [half] "a" or "p" for am or pm. Null for a time that cannot be. */
+    private fun clock(
+        hour: Int,
+        minute: Int,
+        half: String?,
+    ): LocalTime? {
+        if (minute > 59) return null
+        val h =
+            when (half) {
+                null -> hour.takeIf { it <= 23 }
+                "p" -> hour.takeIf { it in 1..12 }?.let { if (it == 12) 12 else it + 12 }
+                else -> hour.takeIf { it in 1..12 }?.let { if (it == 12) 0 else it }
+            } ?: return null
+        return LocalTime.of(h, minute)
     }
 
     private fun date(
@@ -197,33 +337,12 @@ internal object ChannelNameDates {
             }.let { all -> if (year != null) all else listOfNotNull(all.minByOrNull { abs(it.toEpochDay() - near.toEpochDay()) }) }
 
     private fun weekdays(
-        name: String,
+        text: String,
         ignore: Set<String>,
     ): List<DayOfWeek> =
         SportsText
-            .fold(name)
+            .fold(text)
             .split(' ')
             .filter { it !in ignore }
             .mapNotNull { WEEKDAYS[it] }
-
-    /** Whether each time with a zone in [lower] is within 2 hours of the game's start in that zone. */
-    private fun timeAgrees(
-        lower: String,
-        start: Instant,
-    ): Boolean =
-        ZONED_TIME.findAll(lower).all { m ->
-            val zone = ZONES[m.groupValues[4]] ?: return@all true
-            val minutesText = m.groupValues[2]
-            val half = m.groupValues[3]
-            // "3 uk" in "PPV 3 UK" is not a time: a time has minutes or am/pm.
-            if (minutesText.isEmpty() && half.isEmpty()) return@all true
-            var hour = m.groupValues[1].toInt()
-            val minute = minutesText.ifEmpty { "0" }.toInt()
-            if (hour > 23 || minute > 59 || (half.isNotEmpty() && hour !in 1..12)) return@all true
-            if (half == "pm" && hour < 12) hour += 12
-            if (half == "am" && hour == 12) hour = 0
-            val local = start.atZone(ZoneId.of(zone))
-            val diff = abs(hour * 60 + minute - (local.hour * 60 + local.minute))
-            minOf(diff, DAY_MIN - diff) <= TIME_SLACK_MIN
-        }
 }

@@ -618,6 +618,8 @@ internal fun MobileSearchTabs(
             },
         onSelect = { onSelect(tabs[it]) },
         transparent = true,
+        // Four types do not fit the phone's width at equal widths ("FANDAHARA…" in Malagasy): the row scrolls.
+        scrollable = tabs.size > 3,
     )
 }
 

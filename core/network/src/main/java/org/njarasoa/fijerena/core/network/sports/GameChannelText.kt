@@ -19,11 +19,16 @@ internal object SportsText {
     /** [text] folded to words joined by one space ("Paris Saint-Germain" → "paris saint germain"). */
     fun fold(text: String): String {
         val lower = text.lowercase()
-        val sb = StringBuilder(lower.length)
-        for (c in lower) sb.append(SPECIAL[c] ?: c)
-        return Normalizer
-            .normalize(sb, Normalizer.Form.NFD)
-            .replace(MARKS, "")
+        // Most channel names are plain ASCII: no letter to fold or accent to strip.
+        val noMarks =
+            if (lower.all { it.code < 128 }) {
+                lower
+            } else {
+                val sb = StringBuilder(lower.length)
+                for (c in lower) sb.append(SPECIAL[c] ?: c)
+                Normalizer.normalize(sb, Normalizer.Form.NFD).replace(MARKS, "")
+            }
+        return noMarks
             .replace(APOSTROPHES, "")
             .replace("&", " and ")
             .replace("+", " plus ")
@@ -158,6 +163,12 @@ internal class GameText(
     private val competition = CompetitionForms.of(game.competition)
     private val year = Instant.ofEpochSecond(game.startEpochSec).atOffset(ZoneOffset.UTC).year
 
+    // The first year of the game's season when a league plays from autumn to spring: 2026 for November 2026.
+    private val seasonYear =
+        Instant.ofEpochSecond(game.startEpochSec).atOffset(ZoneOffset.UTC).let { date ->
+            if (date.monthValue >= SEASON_START_MONTH) date.year else date.year - 1
+        }
+
     /** Every team name, for the guide search. */
     fun searchTerms(): Set<String> = home.all + away?.all.orEmpty()
 
@@ -165,44 +176,93 @@ internal class GameText(
     val nameWords: Set<String> by lazy { searchTerms().flatMap { it.split(' ') }.toSet() }
 
     /**
-     * How a channel name names the game, for a PPV or event channel ("UK| PPV 3: Bayern v Ajax",
-     * "DAZN EVENT 2 - Real Madrid vs Barcelona"): 0 for names of both teams, 1 for a distinctive
-     * name of one team and the competition, null for neither or a replay. [padded] is [name] as
-     * [SportsText.padded] gives it. A club's own channel ("FC Bayern TV") names one team only, so it
-     * does not match by name; its guide programme can (steps 1 and 2).
+     * The first word of every name of each team: a channel name that names the game has one word of
+     * each list. The matcher looks these up in its word index before the full check ([namesGame]).
      */
-    fun channelNameRank(
+    val homeFirstWords: Set<String> get() = home.all.mapTo(HashSet()) { it.substringBefore(' ') }
+
+    /** See [homeFirstWords]; null for an event with no second team. */
+    val awayFirstWords: Set<String>? get() = away?.all?.mapTo(HashSet()) { it.substringBefore(' ') }
+
+    /**
+     * Whether a channel name names the game, for a PPV or event channel ("UK| PPV 3: Bayern v Ajax",
+     * "DAZN EVENT 2 - Real Madrid vs Barcelona"): names of both teams, a weak name ("Inter", "KC")
+     * only next to the other team, and not a replay. [padded] is [name] as [SportsText.padded] gives
+     * it. A club's own channel ("FC Bayern TV") or a competition's ("UK: EPL ARSENAL") names one
+     * team only, so it does not match by name; its guide programme can (steps 1 and 2).
+     */
+    fun namesGame(
         name: String,
         padded: String,
-    ): Int? {
+    ): Boolean {
+        val away = away ?: return false
         val h = home.hit(padded, " ")
-        val a = away?.hit(padded, " ") ?: TeamNameForms.Hit.NONE
-        if (h == TeamNameForms.Hit.NONE && a == TeamNameForms.Hit.NONE) return null
-        val oneTeam = h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE
-        val rank =
-            when {
-                bothTeams(h, a) -> 0
-                oneTeam && competition.any { SportsText.has(padded, it) } -> 1
-                else -> return null
-            }
-        return rank.takeUnless { isReplay(name, seasons = false) }
+        if (h == TeamNameForms.Hit.NONE) return false
+        val a = away.hit(padded, " ")
+        if (a == TeamNameForms.Hit.NONE) return false
+        if (h == TeamNameForms.Hit.WEAK && !nextTo(padded, home.weak, away.all)) return false
+        if (a == TeamNameForms.Hit.WEAK && !nextTo(padded, away.weak, home.all)) return false
+        return !isReplay(name, seasons = false)
     }
 
-    /** On a broadcaster's channel: a distinctive name of either team, or names of both. */
+    /** On a broadcaster's channel: a distinctive name of either team, or names of both; not one team against another side. */
     fun isGameOnBroadcaster(p: GuideProgramme): Boolean {
         if (isReplay(p.title)) return false
         val (h, a) = hits(p)
-        return h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE || bothTeams(h, a)
+        if (bothTeams(h, a)) return true
+        return (h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE) && !facesAnother(p.title)
     }
 
-    /** On any channel: names of both teams, or a distinctive name of one team and the competition. */
+    /**
+     * On any channel: names of both teams, or a distinctive name of one team and the competition,
+     * when the title does not set that team against another side ("Arsenal v Hull City").
+     */
     fun isGameAnywhere(p: GuideProgramme): Boolean {
         if (isReplay(p.title)) return false
         val (h, a) = hits(p)
         if (bothTeams(h, a)) return true
         val oneTeam = h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE
         // One team is weaker evidence: a highlights show says so in its description ("Kop 10").
-        return oneTeam && hasCompetition(p) && !hasReplayWord(p.description)
+        return oneTeam && hasCompetition(p) && !hasReplayWord(p.description) && !facesAnother(p.title)
+    }
+
+    // Whether a name of [weak] is next to a name of [other] ("inter milan", "kc v buf", "kc at buf").
+    private fun nextTo(
+        padded: String,
+        weak: Set<String>,
+        other: Set<String>,
+    ): Boolean =
+        weak.any { w ->
+            SportsText.has(padded, w) &&
+                other.any { o -> PAIR_WORDS.any { sep -> padded.contains(" $w$sep$o ") || padded.contains(" $o$sep$w ") } }
+        }
+
+    /**
+     * Whether [title] names one of the teams against a side that is not the other team: a pair
+     * "X v Y", "X vs Y", "X - Y", "X @ Y" or "X at Y" where one side names a team of the game and
+     * the other side names neither the other team nor the competition.
+     */
+    private fun facesAnother(title: String): Boolean {
+        val away = away ?: return false
+        for (segment in title.split(SEGMENT)) {
+            val m = PAIR.find(segment) ?: continue
+            val left = SportsText.padded(segment.substring(0, m.range.first))
+            val right = SportsText.padded(segment.substring(m.range.last + 1))
+            for ((ours, theirs) in listOf(left to right, right to left)) {
+                val team =
+                    when {
+                        home.all.any { SportsText.has(ours, it) } -> away
+                        away.all.any { SportsText.has(ours, it) } -> home
+                        else -> continue
+                    }
+                val other = theirs.trim()
+                if (other.isEmpty() || team.all.any { SportsText.has(theirs, it) }) continue
+                if (competition.any { SportsText.has(theirs, it) }) continue
+                if (other.split(' ').all { it in SportsAliases.LIVE_WORDS }) continue
+                return true
+            }
+        }
+        return false
     }
 
     /** Higher is better: close to the start, live, not a "coming up" filler, both teams named. */
@@ -238,22 +298,22 @@ internal class GameText(
     }
 
     /**
-     * Highlights, a replay, a classic, or a season or year that is not the game's. A channel name
-     * ([seasons] false) is not read for seasons: its "10/11" is a date.
+     * Highlights, a replay ("Replay", "Re-air", "Rediffusion", "(R)"), a classic, or a season or
+     * year that is not the game's. A channel name ([seasons] false) is read only for long seasons
+     * ("2026/2027"): its "10/11" is a date.
      */
     fun isReplay(
         title: String,
         seasons: Boolean = true,
     ): Boolean {
-        if (hasReplayWord(title)) return true
-        if (seasons) {
-            SEASON.findAll(title).forEach { m ->
-                val first = m.groupValues[1].toInt()
-                val second = m.groupValues[2].toInt()
-                if ((first + 1) % 100 == second % 100) {
-                    val startYear = if (first < 100) 2000 + first else first
-                    if (startYear != year && startYear != year - 1) return true
-                }
+        if (hasReplayWord(title) || RERUN_MARK.containsMatchIn(title)) return true
+        (if (seasons) SEASON else LONG_SEASON).findAll(title).forEach { m ->
+            val first = m.groupValues[1].toInt()
+            val second = m.groupValues[2].toInt()
+            if ((first + 1) % 100 == second % 100) {
+                val startYear = if (first < 100) 2000 + first else first
+                // A channel name is named for one game: its season must be the game's.
+                if (if (seasons) startYear != year && startYear != year - 1 else startYear != seasonYear) return true
             }
         }
         YEAR.findAll(title).forEach { m ->
@@ -263,8 +323,26 @@ internal class GameText(
     }
 
     private companion object {
+        // July: an autumn-to-spring season starts then.
+        const val SEASON_START_MONTH = 7
+
         // "17/18", "2008/09": a season.
         val SEASON = Regex("(?<![\\d/])(\\d{2}|\\d{4})\\s?/\\s?(\\d{2}|\\d{4})(?![\\d/])")
+
+        // "2026/2027", "2025/26": a season, as a channel name writes it.
+        val LONG_SEASON = Regex("(?<![\\d/])(\\d{4})\\s?/\\s?(\\d{2}|\\d{4})(?![\\d/])")
+
+        // "(R)": a rerun.
+        val RERUN_MARK = Regex("\\(\\s*[rR]\\s*\\)")
+
+        // The words that set two sides against each other in a title.
+        val PAIR = Regex("\\s(?:v|vs|v\\.|vs\\.|at|@|-|–|—)\\s", RegexOption.IGNORE_CASE)
+
+        // The parts of a title that each hold one thing ("Premier League: Arsenal v Hull City | Live").
+        val SEGMENT = Regex("[|:()\\[\\]]")
+
+        // What may join two team names in a folded name: nothing, "v" ("vs" folds to "v") or "at".
+        val PAIR_WORDS = listOf(" ", " v ", " at ")
 
         // "2008 UCL Final": a year on its own.
         val YEAR = Regex("(?<![\\d/])(19|20)\\d{2}(?![\\d/])")

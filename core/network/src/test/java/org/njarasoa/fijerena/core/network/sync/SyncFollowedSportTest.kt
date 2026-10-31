@@ -122,7 +122,7 @@ class SyncFollowedSportTest {
     @Test
     fun `a follow and an unfollow reach the other device`() =
         runBlocking {
-            FollowedSports(sender) { 5 }.follow(ProfileEntity.DEFAULT_ID, arsenal)
+            FollowedSports(sender, now = { 5 }).follow(ProfileEntity.DEFAULT_ID, arsenal)
             val follow = sent().single()
             assertEquals(key, follow.key)
             assertEquals(1, applier().apply(listOf(follow)).applied)

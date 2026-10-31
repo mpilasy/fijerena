@@ -13,11 +13,13 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  *
  * Following an item again refreshes its names and logo and keeps when it was first followed.
  * A row whose kind or source this build does not know (written by a newer build) is kept but left
- * out of [observe].
+ * out of [observe]. Unfollowing a team clears that team's reminders ([onTeamUnfollowed]: its bell
+ * and the game reminders the bell set; bells set game by game stay).
  */
 class FollowedSports internal constructor(
     private val db: XtreamDatabase,
     private val now: () -> Long = System::currentTimeMillis,
+    private val onTeamUnfollowed: suspend (profileId: String, source: SportsSource, teamId: String) -> Unit = { _, _, _ -> },
 ) {
     /** What a profile follows, each list in the order it was followed. */
     data class Followed(
@@ -75,13 +77,16 @@ class FollowedSports internal constructor(
         dao.upsertClearingTombstone(entity.copy(createdAt = createdAt))
     }
 
-    /** Stops following an item, recording it for live sync. */
+    /** Stops following an item, recording it for live sync; a team's reminders are cleared too. */
     suspend fun unfollow(
         profileId: String,
         kind: FollowKind,
         source: SportsSource,
         itemId: String,
-    ) = dao.deleteRecordingTombstone(profileId, kind.id, source.id, itemId)
+    ) {
+        dao.deleteRecordingTombstone(profileId, kind.id, source.id, itemId)
+        if (kind == FollowKind.TEAM) onTeamUnfollowed(profileId, source, itemId)
+    }
 
     suspend fun unfollow(
         profileId: String,
@@ -116,7 +121,19 @@ class FollowedSports internal constructor(
 
         fun getInstance(context: Context): FollowedSports =
             instance ?: synchronized(this) {
-                instance ?: FollowedSports(XtreamDatabase.getInstance(context.applicationContext)).also { instance = it }
+                instance ?: run {
+                    val app = context.applicationContext
+                    FollowedSports(
+                        XtreamDatabase.getInstance(app),
+                        onTeamUnfollowed = {
+                            profileId,
+                            source,
+                            teamId,
+                            ->
+                            GameReminders.getInstance(app).clearForTeam(profileId, source, teamId)
+                        },
+                    )
+                }.also { instance = it }
             }
 
         internal fun toFollowed(rows: List<FollowedSportEntity>): Followed {

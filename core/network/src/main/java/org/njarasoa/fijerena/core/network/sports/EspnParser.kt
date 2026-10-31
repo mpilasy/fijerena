@@ -33,27 +33,30 @@ object EspnParser {
 
     /** `common/v3/search?type=team`: the teams found. */
     fun teamSearch(body: String): List<SportsTeam> =
-        sportsJson.decodeFromString<SearchTeams>(body).items.mapNotNull { item ->
-            val id = item.id.clean() ?: return@mapNotNull null
-            val sport = item.sport.clean() ?: return@mapNotNull null
-            val name = item.displayName.clean() ?: item.name.clean() ?: return@mapNotNull null
-            val league = item.league.clean() ?: item.defaultLeagueSlug.clean()
-            SportsTeam(
-                source = SportsSource.ESPN,
-                id = teamId(sport, league, id),
-                name = name,
-                shortName = item.abbreviation.clean(),
-                altNames = listOfNotNull(item.location.clean(), item.name.clean()).filter { it != name },
-                sport = sport,
-                league = league?.let { "$sport/$it" },
-                leagueName =
-                    item.label
-                        .clean()
-                        ?.removeSuffix(" Team")
-                        ?.takeIf { it != "Soccer" },
-                logoUrl = item.logos.firstOrNull()?.href,
-            )
-        }
+        sportsJson
+            .decodeFromString<SearchTeams>(body)
+            .items
+            .mapNotNull { item ->
+                val id = item.id.clean() ?: return@mapNotNull null
+                val sport = item.sport.clean() ?: return@mapNotNull null
+                val name = item.displayName.clean() ?: item.name.clean() ?: return@mapNotNull null
+                val league = item.league.clean() ?: item.defaultLeagueSlug.clean()
+                SportsTeam(
+                    source = SportsSource.ESPN,
+                    id = teamId(sport, league, id),
+                    name = name,
+                    shortName = item.abbreviation.clean(),
+                    altNames = listOfNotNull(item.location.clean(), item.name.clean()).filter { it != name },
+                    sport = sport,
+                    league = league?.let { "$sport/$it" },
+                    leagueName =
+                        item.label
+                            .clean()
+                            ?.removeSuffix(" Team")
+                            ?.takeIf { it != "Soccer" },
+                    logoUrl = item.logos.firstOrNull()?.href,
+                )
+            }.distinctBy { it.id }
 
     /** `search/v2?type=league`: the leagues found. */
     fun leagueSearch(body: String): List<SportsLeague> =
@@ -68,6 +71,31 @@ object EspnParser {
                 val name = item.displayName.clean() ?: return@mapNotNull null
                 SportsLeague(SportsSource.ESPN, "$sport/$slug", name, sport, item.image?.default)
             }.distinctBy { it.id }
+
+    /** `leagues/dropdown?sport=..`: each league's slug and name ("ger.1" → "German Bundesliga"). */
+    fun leagueNames(body: String): Map<String, String> =
+        sportsJson
+            .decodeFromString<LeagueList>(body)
+            .leagues
+            .mapNotNull { league -> league.slug.clean()?.let { slug -> league.name.clean()?.let { slug to it } } }
+            .toMap()
+
+    /**
+     * A league's name when ESPN gives only its slug (an NFL team's schedule names no league):
+     * the known US leagues by their usual names, a short slug in capitals, else the slug.
+     */
+    fun leagueNameOfSlug(slug: String): String =
+        US_LEAGUES[slug] ?: if (slug.length <= SHORT_SLUG && slug.all(Char::isLetter)) slug.uppercase() else slug
+
+    private const val SHORT_SLUG = 5
+
+    private val US_LEAGUES =
+        mapOf(
+            "college-football" to "NCAA Football",
+            "mens-college-basketball" to "NCAA Men's Basketball",
+            "womens-college-basketball" to "NCAA Women's Basketball",
+            "college-baseball" to "NCAA Baseball",
+        )
 
     /** `{sport}/{league}/teams`: the league's teams. */
     fun leagueTeams(
@@ -103,7 +131,7 @@ object EspnParser {
                 SportsLeague(
                     SportsSource.ESPN,
                     "$sport/$slug",
-                    event.league?.name.clean() ?: event.league?.abbreviation.clean() ?: slug,
+                    event.league?.name.clean() ?: event.league?.abbreviation.clean() ?: leagueNameOfSlug(slug),
                     sport,
                 )
             event.toGame(sport, slug, competition)
@@ -122,7 +150,7 @@ object EspnParser {
             SportsLeague(
                 SportsSource.ESPN,
                 "$sport/$league",
-                espnLeague?.name.clean() ?: espnLeague?.abbreviation.clean() ?: league,
+                espnLeague?.name.clean() ?: espnLeague?.abbreviation.clean() ?: leagueNameOfSlug(league),
                 sport,
                 espnLeague?.let(::leagueLogo),
             )
@@ -262,6 +290,11 @@ object EspnParser {
     @Serializable
     private data class TeamsAnswer(
         val sports: List<TeamsSport> = emptyList(),
+    )
+
+    @Serializable
+    private data class LeagueList(
+        val leagues: List<LeagueRef> = emptyList(),
     )
 
     @Serializable

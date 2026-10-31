@@ -26,7 +26,6 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
-import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.cards.TvCard
@@ -64,7 +63,7 @@ fun TvUpcomingGamesRow(
     }
 }
 
-/** A game: both teams' logos, the game, its day and time, and its best channel (logo, name). */
+/** A game: both teams' logos, each team's name on its own line (home first), its day and time, and its best channel (logo, name). */
 @Composable
 private fun TvUpcomingGameCard(
     game: UpcomingGame,
@@ -84,7 +83,10 @@ private fun TvUpcomingGameCard(
             ) {
                 listOfNotNull(game.game.home, game.game.away).forEach { team -> TeamLogo(team) }
             }
-            CinemaText(text = gameTitle(resources, game.game), role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Each team on its own line, home first: one line of both was cut before the second team.
+            listOfNotNull(game.game.home, game.game.away).forEach { team ->
+                CinemaText(text = team.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             CinemaText(
                 text = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
                 role = TextRole.BodySmall,

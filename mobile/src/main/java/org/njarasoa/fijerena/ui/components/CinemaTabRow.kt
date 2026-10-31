@@ -23,7 +23,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * The phone's tab row (docs/plans/20261016_design-system-plan.md): one tab per entry of [labels],
  * the one at [selectedIndex] in the theme's accent, the others in secondary text, set in the label
  * role. [transparent] lets the screen behind show through (a row inside a list or a sheet); without
- * it the row sits on the theme's surface, as Material's tab row does.
+ * it the row sits on the theme's surface, as Material's tab row does. [scrollable]: each tab as
+ * wide as its label, the row scrolling when they do not fit (four or more tabs, whose labels
+ * equal widths would cut).
  */
 @Composable
 fun CinemaTabRow(
@@ -32,14 +34,10 @@ fun CinemaTabRow(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     transparent: Boolean = false,
+    scrollable: Boolean = false,
 ) {
     val c = CinemaTheme.colors
-    PrimaryTabRow(
-        selectedTabIndex = selectedIndex,
-        modifier = modifier,
-        containerColor = if (transparent) c.clear else c.surface,
-        contentColor = c.accent,
-    ) {
+    val tabs: @Composable () -> Unit = {
         labels.forEachIndexed { index, label ->
             Tab(
                 selected = index == selectedIndex,
@@ -49,6 +47,24 @@ fun CinemaTabRow(
                 unselectedContentColor = c.textSecondary,
             )
         }
+    }
+    if (scrollable) {
+        PrimaryScrollableTabRow(
+            selectedTabIndex = selectedIndex,
+            modifier = modifier,
+            containerColor = if (transparent) c.clear else c.surface,
+            contentColor = c.accent,
+            edgePadding = CinemaSpacing.xxs,
+            tabs = tabs,
+        )
+    } else {
+        PrimaryTabRow(
+            selectedTabIndex = selectedIndex,
+            modifier = modifier,
+            containerColor = if (transparent) c.clear else c.surface,
+            contentColor = c.accent,
+            tabs = tabs,
+        )
     }
 }
 

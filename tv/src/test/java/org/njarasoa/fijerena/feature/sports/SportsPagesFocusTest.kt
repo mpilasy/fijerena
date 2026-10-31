@@ -44,7 +44,7 @@ import org.robolectric.RobolectricTestRunner
  * the first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to its
  * next channel, Back closes the sheet onto the game; a league's teams follow its games. A game's
  * bell is Right of its row; once the team is followed, its bell for every game is Right of Unfollow. A row with
- * no logo reads its letter first ("C / Chelsea"), as the device walk reads it.
+ * no logo reads its letter first ("C / Arsenal v Chelsea": the opponent's letter, then both teams), as the device walk reads it.
  */
 @RunWith(RobolectricTestRunner::class)
 class SportsPagesFocusTest {
@@ -117,16 +117,16 @@ class SportsPagesFocusTest {
                 SportsTeamScreen(team = ARSENAL, onPlay = { played += it }, onBack = {}, viewModel = vm)
             }
         }
-        walk.awaitFocused("C / Chelsea")
+        walk.awaitFocused("C / Arsenal v Chelsea")
         walk.run(
             up("Follow"),
-            down("C / Chelsea"),
-            down("L / Liverpool"),
-            up("C / Chelsea"),
+            down("C / Arsenal v Chelsea"),
+            down("L / Liverpool v Arsenal"),
+            up("C / Arsenal v Chelsea"),
             center("U / UK: Sky Sports Main Event"),
             down("U / UK| PPV 3: Arsenal v Chelsea"),
             up("U / UK: Sky Sports Main Event"),
-            back("C / Chelsea"),
+            back("C / Arsenal v Chelsea"),
         )
 
         // A channel in the sheet opens its preview, as a guide result.
@@ -146,8 +146,14 @@ class SportsPagesFocusTest {
                 SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }
-        walk.awaitFocused("C / Chelsea")
-        walk.run(down("L / Liverpool"), center("Not found on your channels"), back("L / Liverpool"), up("C / Chelsea"), up("Follow"))
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        walk.run(
+            down("L / Liverpool v Arsenal"),
+            center("Not found on your channels"),
+            back("L / Liverpool v Arsenal"),
+            up("C / Arsenal v Chelsea"),
+            up("Follow"),
+        )
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Unfollow")
     }
@@ -160,15 +166,15 @@ class SportsPagesFocusTest {
                 SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }
-        walk.awaitFocused("C / Chelsea")
-        walk.run(right("Remind Me"), down("Remind Me"), left("L / Liverpool"), up("C / Chelsea"), up("Follow"))
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        walk.run(right("Remind Me"), down("Remind Me"), left("L / Liverpool v Arsenal"), up("C / Arsenal v Chelsea"), up("Follow"))
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Unfollow")
         walk.run(right("Remind Me of Every Game"))
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Reminders Set for Every Game")
         assertEquals(setOf("espn:soccer/359"), bells.reminded.value.teams)
-        walk.run(down("C / Chelsea"))
+        walk.run(down("C / Arsenal v Chelsea"))
     }
 
     @Test

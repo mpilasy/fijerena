@@ -16,7 +16,10 @@ internal object BroadcasterChannels {
     data class ParsedChannel(
         val country: String?,
         val words: List<String>,
-    )
+    ) {
+        /** [words] joined with no space ("bbcone"), to match "BBCOne" to "BBC One". */
+        val joined: String = words.joinToString("")
+    }
 
     private val PREFIX = Regex("^[^\\p{L}\\p{N}]*([A-Za-z]{2,4})\\s*(?:[:|\\]\\)▎│┃]+|\\s[-–]|-)\\s*")
     private val BRACKET = Regex("[\\[(]([A-Za-z]{2,4})[\\])]")
@@ -126,6 +129,9 @@ internal object BroadcasterChannels {
             "f1",
         )
 
+    // Words that make another network of a network's name: "CBS Sports Network" is not "CBS", "ESPN Deportes" is not "ESPN".
+    private val OTHER_NETWORK_WORDS = setOf("sport", "network", "news", "deportes", "college", "extra", "xtra", "classic")
+
     /** The country code of a channel tag, or null for no tag, an unknown tag or a language tag. */
     private fun country(tag: String): String? {
         val upper = tag.uppercase()
@@ -203,7 +209,10 @@ internal object BroadcasterChannels {
         val joined = tokens.joinToString("")
         if (joined.length < 2) return false
         // "BBCOne" is "BBC One".
-        return channel.words.startsWith(tokens, 0) || channel.words.joinToString("") == joined
+        if (channel.joined == joined) return true
+        if (!channel.words.startsWith(tokens, 0)) return false
+        val next = channel.words.getOrNull(tokens.size) ?: return true
+        return next in tokens || next !in OTHER_NETWORK_WORDS
     }
 
     /**

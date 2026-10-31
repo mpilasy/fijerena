@@ -36,7 +36,6 @@ import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
-import org.njarasoa.fijerena.core.ui.sports.isHomeGame
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -122,8 +121,8 @@ fun MobileSportsHeading(
 }
 
 /**
- * A game: the side that matters ([team]'s opponent on a team page, else both teams), home or
- * away, the competition and time, then its best channel ([channels]' first: logo, name, "In the
+ * A game: both teams, the home team first (on a team page, the opponent's logo), the time and the
+ * competition, then its best channel ([channels]' first: logo, name, "In the
  * guide", "Event channel" or "On ESPN"; "Looking for channels…" while [channels] is null, "Not
  * found on your channels" when it is empty). [trailing]: a slot at
  * the end for an action of its own ([MobileGameBell]).
@@ -139,15 +138,11 @@ fun MobileGameCard(
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val resources = LocalResources.current
-    val opponent = team?.let { opponentIn(game, it) }
-    val title = if (team != null) opponent?.name ?: game.home.name else gameTitle(resources, game)
-    val logo = if (team != null) opponent?.logoUrl else game.home.logoUrl
+    val title = gameTitle(resources, game)
+    val logoTeam = team?.let { opponentIn(game, it) } ?: game.home
     val details =
         listOfNotNull(
             TimeFormat.formatTime(game.startEpochSec),
-            team?.takeIf { opponent != null }?.let {
-                stringResource(if (isHomeGame(game, it)) R.string.sports_home_game else R.string.sports_away_game)
-            },
             game.competition.name.takeIf { it.isNotBlank() },
         ).joinToString(" · ")
     val best = channels?.firstOrNull()
@@ -158,19 +153,20 @@ fun MobileGameCard(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             CinemaThumbnail(
-                url = logo,
-                fallbackLetter = title.firstOrNull(Char::isLetterOrDigit),
+                url = logoTeam.logoUrl,
+                fallbackLetter = logoTeam.name.firstOrNull(Char::isLetterOrDigit),
                 contentType = ThumbnailContentType.LIVE_TV,
                 contentDescription = null,
                 modifier = Modifier.size(MobileDimensions.iconXLarge),
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                CinemaText(text = title, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // Long team and competition names wrap to a second line rather than being cut.
+                CinemaText(text = title, role = TextRole.Heading, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 CinemaText(
                     text = details,
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
@@ -191,7 +187,7 @@ fun MobileGameCard(
                             ).joinToString(" · "),
                         role = TextRole.BodySmall,
                         tone = TextTone.Accent,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -242,8 +238,9 @@ fun MobileTeamBell(
 }
 
 /**
- * A game on Home's Upcoming Games row (the sports teams plan → Home row): both teams' logos, the
- * game, its day and time, and its best channel (logo, name). A tap opens the game's sheet.
+ * A game on Home's Upcoming Games row (the sports teams plan → Home row): both teams' logos, each
+ * team's name on its own line (home first), the day and time, and its best channel (logo, name on
+ * up to 2 lines). A tap opens the game's sheet.
  */
 @Composable
 fun MobileUpcomingGameCard(
@@ -272,7 +269,9 @@ fun MobileUpcomingGameCard(
                     )
                 }
             }
-            CinemaText(text = gameTitle(resources, game.game), role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            listOfNotNull(game.game.home, game.game.away).forEach { team ->
+                CinemaText(text = team.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             CinemaText(
                 text = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
                 role = TextRole.BodySmall,
@@ -295,7 +294,7 @@ fun MobileUpcomingGameCard(
                     text = best?.stream?.name ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Accent,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

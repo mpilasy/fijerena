@@ -79,6 +79,10 @@ class SportsApi(
     suspend fun espnLeagueSearch(query: String): String =
         call(SportsSource.ESPN, url("$ESPN_WEB/search/v2", "query" to query, "type" to "league", "limit" to "10"))
 
+    /** Every ESPN league of [sport], with its name: the team search gives a soccer team's league only as a slug ("ger.1"). */
+    suspend fun espnLeagueList(sport: String): String =
+        call(SportsSource.ESPN, url("$ESPN_SITE/leagues/dropdown", "sport" to sport, "limit" to "500"))
+
     /** The teams of ESPN league `{sport}/{league}`. */
     suspend fun espnLeagueTeams(
         sport: String,

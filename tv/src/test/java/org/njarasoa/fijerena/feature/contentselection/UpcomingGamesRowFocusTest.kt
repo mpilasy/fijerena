@@ -100,18 +100,18 @@ class UpcomingGamesRowFocusTest {
             }
         }
 
-        walk.awaitFocused("A / C / Arsenal v Chelsea")
+        walk.awaitFocused("A / C / Arsenal / Chelsea")
         walk.run(
-            right("L / A / Liverpool v Arsenal"),
-            right("L / A / Liverpool v Arsenal"),
-            left("A / C / Arsenal v Chelsea"),
+            right("L / A / Liverpool / Arsenal"),
+            right("L / A / Liverpool / Arsenal"),
+            left("A / C / Arsenal / Chelsea"),
             center("U / UK: Sky Sports Main Event"),
             up("Remind Me"),
         )
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Reminder Set")
         assertEquals(setOf("espn/1"), bells.reminded.value.games)
-        walk.run(down("U / UK: Sky Sports Main Event"), back("A / C / Arsenal v Chelsea"))
+        walk.run(down("U / UK: Sky Sports Main Event"), back("A / C / Arsenal / Chelsea"))
     }
 
     private companion object {

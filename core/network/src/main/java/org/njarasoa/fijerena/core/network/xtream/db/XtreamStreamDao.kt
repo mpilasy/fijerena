@@ -331,6 +331,13 @@ interface XtreamStreamDao {
         type: String,
     ): Int
 
+    /** The streams of [type] and the excluded ones among them: the sports channel list is read again when either changes. */
+    @Query("SELECT COUNT(*) || ':' || COALESCE(SUM(excluded), 0) FROM xtream_streams WHERE providerId = :providerId AND type = :type")
+    fun streamAndExcludedCounts(
+        providerId: Long,
+        type: String,
+    ): String
+
     @Query("UPDATE xtream_streams SET description = :description WHERE streamId = :streamId AND providerId = :providerId AND type = :type")
     fun updateDescription(
         providerId: Long,

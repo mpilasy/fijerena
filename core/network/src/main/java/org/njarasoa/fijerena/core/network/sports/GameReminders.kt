@@ -154,8 +154,15 @@ class GameReminders internal constructor(
     suspend fun clearForTeam(
         profileId: String,
         team: SportsTeam,
+    ) = clearForTeam(profileId, team.source, team.id)
+
+    /** See [clearForTeam]; for the team [teamId] of [source] (an unfollowed team, [FollowedSports.unfollow]). */
+    suspend fun clearForTeam(
+        profileId: String,
+        source: SportsSource,
+        teamId: String,
     ) = lock.withLock {
-        val teamKey = GameReminderEntity.teamKey(team.source.id, team.id)
+        val teamKey = GameReminderEntity.teamKey(source.id, teamId)
         dao.forTeam(profileId, teamKey).forEach { if (it.startEpoch > 0) alarms.cancel(it) }
         dao.deleteTeam(profileId, teamKey)
         updateRescheduleReceiver()

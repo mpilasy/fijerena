@@ -253,7 +253,7 @@ internal object SportsAliases {
 
     fun competitionGroup(name: String): Set<String>? = COMPETITION_INDEX[name]
 
-    /** Title words of a programme that is not the live game. */
+    /** Title words of a programme or a channel name that is not the live game. "(R)" is read apart ([GameText.isReplay]). */
     val REPLAY_WORDS =
         setOf(
             "highlights",
@@ -271,6 +271,13 @@ internal object SportsAliases {
             "resume",
             "resumen",
             "rediffusion",
+            "rediff",
+            "re air",
+            "reair",
+            "wiederholung",
+            "delayed",
+            "encore",
+            "reprise",
             "repeticion",
             "debrief",
             "termine",

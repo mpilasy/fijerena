@@ -101,7 +101,10 @@ class SportsPageViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun teamPage(data: FakeData) = SportsTeamViewModel(data, ROUTE_TEAM).also { created += it }
+    private fun teamPage(
+        data: FakeData,
+        route: SportsTeam = ROUTE_TEAM,
+    ) = SportsTeamViewModel(data, route).also { created += it }
 
     private fun leaguePage(data: FakeData) = SportsLeagueViewModel(data, LEAGUE).also { created += it }
 
@@ -128,6 +131,16 @@ class SportsPageViewModelTest {
         val team = vm.team.value
         assertEquals(LOGO, team.logoUrl)
         assertTrue("Gunners" in team.altNames)
+    }
+
+    @Test
+    fun `the team page shows the name the game titles use, the search's name kept as another name`() {
+        val vm = teamPage(FakeData(), route = ROUTE_TEAM.copy(name = "Arsenal London"))
+        vm.awaitMatched()
+
+        val team = vm.team.value
+        assertEquals("Arsenal", team.name)
+        assertTrue("Arsenal London" in team.altNames)
     }
 
     @Test

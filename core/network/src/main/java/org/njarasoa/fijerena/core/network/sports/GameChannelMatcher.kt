@@ -95,15 +95,21 @@ data class GameChannel(
  * to the profile's channels"):
  * 1. a guide programme of the game on a broadcaster's channel;
  * 2. a guide programme of the game on any channel (found by the team names);
- * 3. a channel whose name names the game (PPV and event channels; see [GameText.channelNameRank]);
+ * 3. a channel whose name names the game (PPV and event channels; see [GameText.namesGame] and
+ *    [ChannelNameDates]);
  * 4. a broadcaster's channel with no programme.
  * An empty list: the profile's channels and guide do not have the game. The broadcasters (ESPN's,
- * the NHL's, MLB's networks) are used only to find channels with their names.
+ * the NHL's, MLB's networks) are used only to find channels with their names. A channel name shows
+ * once: the same name in two categories or sources gives only its first channel (the profile's
+ * source order).
  *
  * A programme is of the game when it starts from [BEFORE_SEC] before to [AFTER_SEC] after the
  * game, or is on at the start after starting at most [ON_AIR_BEFORE_SEC] before (a build-up show
  * that runs into the game, as Sky's "Live PL" from 90 minutes before), is not a replay or
  * highlights, and names the teams (see [TeamNameForms]).
+ *
+ * What is built from a channel list (folded names, a word index) is kept for the whole process
+ * while the same list object is passed ([SportsChannels] keeps one list per profile and catalogue).
  */
 class GameChannelMatcher(
     private val guide: GuideLookup,
@@ -120,24 +126,72 @@ class GameChannelMatcher(
         ): Boolean =
             p.startSec in (startSec - BEFORE_SEC)..(startSec + AFTER_SEC) ||
                 (p.startSec in (startSec - ON_AIR_BEFORE_SEC)..startSec && p.endSec > startSec)
+
+        // The last channel list prepared, for every matcher of the process.
+        @Volatile private var prepared: Prepared? = null
+
+        private fun prepare(channels: List<LiveChannel>): Prepared =
+            prepared?.takeIf { it.channels === channels } ?: synchronized(this) {
+                prepared?.takeIf { it.channels === channels } ?: Prepared(channels).also { prepared = it }
+            }
+
+        /** The same channel name in two categories or sources: one key. */
+        private fun nameKey(name: String): String = name.trim().replace(SPACES, " ").lowercase()
+
+        private val SPACES = Regex("\\s+")
     }
 
-    /** What is built from one channel list, kept while the next game is matched on the same list. */
+    /**
+     * What is built from one channel list: the visible channels, their names as broadcaster words
+     * and as folded text, and indexes from a word to the channels that have it.
+     */
     private class Prepared(
         val channels: List<LiveChannel>,
     ) {
-        val visible = channels.filter { !it.hidden && !it.name.trimStart().startsWith("#") }
-        val parsed = visible.associateWith { BroadcasterChannels.parse(it.name) }
-        val folded by lazy { visible.map { it to SportsText.padded(it.name) } }
+        val visible: List<LiveChannel> = channels.filter { !it.hidden && !it.name.trimStart().startsWith("#") }
+        val parsed: Array<BroadcasterChannels.ParsedChannel> = Array(visible.size) { BroadcasterChannels.parse(visible[it].name) }
+        val padded: Array<String> = Array(visible.size) { SportsText.padded(visible[it].name) }
+
+        // Broadcaster words: the first word of a channel, and all its words joined.
+        val byFirstWord: Map<String, IntArray> = index { i -> listOfNotNull(parsed[i].words.firstOrNull()) }
+        val byJoined: Map<String, IntArray> = index { i -> listOf(parsed[i].joined) }
+
+        // Every word of a channel's folded name.
+        val byWord: Map<String, IntArray> = index { i -> padded[i].split(' ').filter { it.isNotEmpty() }.distinct() }
+
         val resolver by lazy { GuideChannelResolver(channels) }
+
+        private fun index(words: (Int) -> List<String>): Map<String, IntArray> {
+            val lists = HashMap<String, IntList>()
+            for (i in visible.indices) for (w in words(i)) lists.getOrPut(w) { IntList() }.add(i)
+            return lists.mapValues { it.value.toArray() }
+        }
+
+        /** The channels with any of [words], in list order. */
+        fun withAnyWord(words: Collection<String>): IntArray {
+            val hits = words.mapNotNull { byWord[it] }
+            if (hits.size == 1) return hits[0]
+            return hits
+                .flatMap { it.asIterable() }
+                .toSortedSet()
+                .toIntArray()
+        }
     }
 
-    @Volatile private var prepared: Prepared? = null
+    /** A growing list of ints, for the indexes. */
+    private class IntList {
+        private var items = IntArray(4)
+        private var size = 0
 
-    private fun prepare(channels: List<LiveChannel>): Prepared =
-        prepared?.takeIf { it.channels === channels } ?: Prepared(channels).also { prepared = it }
+        fun add(value: Int) {
+            if (size == items.size) items = items.copyOf(size * 2)
+            items[size++] = value
+        }
 
-    /** The ways to watch [game] on [channels] (the profile's live channels), best first. Pass the same list for each game of a screen. */
+        fun toArray(): IntArray = items.copyOf(size)
+    }
+
+    /** The ways to watch [game] on [channels] (the profile's live channels), best first. Pass the same list for each game. */
     suspend fun match(
         game: SportsGame,
         channels: List<LiveChannel>,
@@ -148,25 +202,30 @@ class GameChannelMatcher(
 
         val prepared = prepare(channels)
         val visible = prepared.visible
-        val parsed = prepared.parsed
         val broadcasters = game.broadcasters.distinctBy { it.name.lowercase() to it.country }
-        val channelsOf: List<Pair<Broadcaster, List<LiveChannel>>> =
+        val channelsOf: List<Pair<Broadcaster, List<Int>>> =
             broadcasters.map { b ->
                 val tokens = BroadcasterChannels.broadcasterTokens(b.name)
-                b to visible.filter { BroadcasterChannels.matches(b, tokens, parsed.getValue(it)) }
+                val candidates =
+                    listOfNotNull(prepared.byFirstWord[tokens.firstOrNull()], prepared.byJoined[tokens.joinToString("")])
+                        .flatMap { it.asIterable() }
+                        .distinct()
+                        .sorted()
+                b to candidates.filter { BroadcasterChannels.matches(b, tokens, prepared.parsed[it]) }
             }
         val broadcasterOf = HashMap<LiveChannel, Broadcaster>()
-        channelsOf.forEach { (b, list) -> list.forEach { broadcasterOf.putIfAbsent(it, b) } }
+        channelsOf.forEach { (b, list) -> list.forEach { broadcasterOf.putIfAbsent(visible[it], b) } }
 
         val result = ArrayList<GameChannel>()
         val used = HashSet<Pair<Long, Int>>()
+        val usedNames = HashSet<String>()
 
         fun add(
             channel: LiveChannel,
             programme: GuideProgramme?,
             how: GameChannelHow,
         ) {
-            if (used.add(channel.providerId to channel.streamId)) {
+            if (used.add(channel.providerId to channel.streamId) && usedNames.add(nameKey(channel.name))) {
                 result += GameChannel(channel, programme, broadcasterOf[channel], how)
             }
         }
@@ -196,28 +255,39 @@ class GameChannelMatcher(
                 guide
                     .searchTitles(terms, fromSec, toSec)
                     .filter { isAround(it, game.startEpochSec) && text.isGameAnywhere(it) }
-                    .sortedByDescending { text.score(it) }
-            if (found.isNotEmpty()) {
-                for (programme in found) {
-                    val channel = prepared.resolver.resolve(programme) ?: continue
-                    add(channel, programme, GameChannelHow.GUIDE)
-                }
+                    // Ties in a fixed order, so that a second read gives the same list.
+                    .sortedWith(
+                        compareByDescending<GuideProgramme> { text.score(it) }
+                            .thenBy { it.channelName }
+                            .thenBy { it.providerId }
+                            .thenBy { it.channelId },
+                    )
+            for (programme in found) {
+                val channel = prepared.resolver.resolve(programme) ?: continue
+                add(channel, programme, GameChannelHow.GUIDE)
             }
         }
 
-        // 3. The channels whose names name the game: both teams first.
-        prepared.folded
-            .mapNotNull { (channel, name) ->
-                text
-                    .channelNameRank(channel.name, name)
-                    ?.takeIf { ChannelNameDates.agrees(channel.name, game.startEpochSec, text.nameWords) }
-                    ?.let { channel to it }
-            }.sortedWith(compareBy<Pair<LiveChannel, Int>> { it.second }.thenBy { it.first.name })
-            .forEach { (channel, _) -> add(channel, null, GameChannelHow.CHANNEL_NAME) }
+        // 3. The channels whose names name both teams: first the channels with a word of each team (the index), then the full check.
+        val awayWords = text.awayFirstWords
+        if (awayWords != null) {
+            val withAway = prepared.withAnyWord(awayWords).toHashSet()
+            prepared
+                .withAnyWord(text.homeFirstWords)
+                .filter { it in withAway }
+                .map { visible[it] to prepared.padded[it] }
+                .filter { (channel, padded) ->
+                    text.namesGame(channel.name, padded) && ChannelNameDates.agrees(channel.name, game.startEpochSec, text.nameWords)
+                }.sortedBy { it.first.name }
+                .forEach { (channel, _) -> add(channel, null, GameChannelHow.CHANNEL_NAME) }
+        }
 
         // 4. The broadcasters' channels without a programme.
         for ((b, list) in channelsOf) {
-            BroadcasterChannels.likelyChannels(b, list, parsed).forEach { add(it, null, GameChannelHow.BROADCASTER_CHANNEL) }
+            val listed = list.map { visible[it] }
+            BroadcasterChannels.likelyChannels(b, listed, listed.indices.associate { listed[it] to prepared.parsed[list[it]] }).forEach {
+                add(it, null, GameChannelHow.BROADCASTER_CHANNEL)
+            }
         }
         return result
     }

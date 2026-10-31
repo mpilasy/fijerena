@@ -20,8 +20,12 @@ class SportsDataTest {
         SportsTransport { url ->
             synchronized(calls) { calls += url }
             when {
+                "common/v3/search" in url && "query=ajax" in url -> sportsFixture("espn_search_team_ajax.json")
                 "common/v3/search" in url -> sportsFixture("espn_search_team.json")
+                "search/v2" in url && "query=euro&" in url -> sportsFixture("espn_search_league_euro.json")
+                "search/v2" in url && "European" in url -> sportsFixture("espn_search_league_european_championship.json")
                 "search/v2" in url -> sportsFixture("espn_search_league.json")
+                "leagues/dropdown?sport=soccer" in url -> sportsFixture("espn_leagues_soccer.json")
                 "soccer/all/teams/359/schedule" in url -> sportsFixture("espn_schedule_soccer_all.json")
                 "hockey/nhl/teams/1/schedule" in url -> sportsFixture("espn_schedule_nhl.json")
                 "club-schedule-season/BOS" in url -> sportsFixture("nhl_club_schedule.json")
@@ -73,6 +77,34 @@ class SportsDataTest {
             assertTrue(found.teams.isNotEmpty() && found.teams.all { it.source == SportsSource.ESPN })
             assertTrue(found.leagues.isNotEmpty() && found.leagues.all { it.source == SportsSource.ESPN })
         }
+
+    @Test
+    fun `a soccer team found by search shows its league, so the men's and the women's team differ`() =
+        runBlocking<Unit> {
+            // ESPN's answer for "ajax" (2026-10-31): two "Ajax Amsterdam" and two "Jong Ajax", each a men's and a women's team.
+            val teams = data("2026-11-01T12:00:00Z").search("ajax").teams
+            val ajax = teams.filter { it.name == "Ajax Amsterdam" }
+            assertEquals(listOf("soccer/139", "soccer/20796"), ajax.map { it.id })
+            assertEquals(listOf("Dutch Eredivisie", "Dutch Vrouwen Eredivisie"), ajax.map { it.leagueName })
+            assertEquals(2, teams.count { it.name == "Jong Ajax" && it.leagueName != null })
+            assertEquals(teams.size, teams.distinctBy { it.id }.size)
+        }
+
+    @Test
+    fun `euro finds the European Championship first`() =
+        runBlocking<Unit> {
+            val leagues = data("2026-11-01T12:00:00Z").search("euro").leagues
+            assertEquals("soccer/uefa.euro", leagues.first().id)
+            assertEquals(leagues.size, leagues.distinctBy { it.id }.size)
+            assertTrue(leagues.any { it.id == "soccer/uefa.europa" })
+        }
+
+    @Test
+    fun `an NFL game names its league NFL, not the slug`() {
+        assertEquals("NFL", EspnParser.leagueNameOfSlug("nfl"))
+        assertEquals("NCAA Football", EspnParser.leagueNameOfSlug("college-football"))
+        assertEquals("ger.1", EspnParser.leagueNameOfSlug("ger.1"))
+    }
 
     @Test
     fun `with the switch off nothing is called`() =

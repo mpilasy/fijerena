@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.sports
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,14 +20,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -84,9 +88,11 @@ private data class FollowedItem(
  * ([onPlay]). Nothing followed: a short text and Find Teams ([onFindTeams], Search on its Teams
  * type), which has focus.
  *
- * Focus: the first logo on opening; Down to the games, Up to the header's Find Teams; Left from the
- * first logo, a game row or Find Teams opens the rail. Back from a page, a channel or Search returns
- * to the control that opened it; Back on the section goes to the rail (the nav host).
+ * Focus: the first logo on opening, and whenever focus comes in from outside (Right from the rail
+ * before the follows were read); Down to the games, Up from the games to the logo last focused (the
+ * first one at first), Up from the logos to the header's Find Teams, which Right leaves alone; Left
+ * from the first logo, a game row or Find Teams opens the rail. Back from a page, a channel or Search
+ * returns to the control that opened it; Back on the section goes to the rail (the nav host).
  */
 @Composable
 fun SportsSectionScreen(
@@ -117,6 +123,9 @@ fun SportsSectionScreen(
                     f.leagues.map { FollowedItem("followed:league:${it.source.id}:${it.id}", it.name, it.logoUrl, it.route()) }
             }
         }
+    // The effects below wait for the follows: they read this state, not [items] as it was when they started
+    // (null on a first open, when the follows come from the database after the first frame).
+    val itemsState = rememberUpdatedState(items)
     val leave: (String, () -> Unit) -> Unit = { key, go ->
         returnFocus.leaveFrom(key, listState)
         go()
@@ -125,7 +134,7 @@ fun SportsSectionScreen(
     // The first logo once the follows are read; Find Teams when there is none.
     LaunchedEffect(Unit) {
         if (returnFocus.isReturn) return@LaunchedEffect
-        val read = snapshotFlow { items }.first { it != null }.orEmpty()
+        val read = snapshotFlow { itemsState.value }.first { it != null }.orEmpty()
         (if (read.isEmpty()) findTeamsFocus else firstItemFocus).requestFocusWithRetry()
     }
     NavReturnFocusEffect(
@@ -134,8 +143,8 @@ fun SportsSectionScreen(
         fallback = firstItemFocus,
         // The logos come with the follows, the game rows with the games.
         prepare = { key ->
-            snapshotFlow { items }.first { it != null }
-            if (key.startsWith("game") && items?.isNotEmpty() == true) {
+            snapshotFlow { itemsState.value }.first { it != null }
+            if (key.startsWith("game") && itemsState.value?.isNotEmpty() == true) {
                 snapshotFlow { games is GamesState.Loaded }.first { it }
             }
         },
@@ -148,7 +157,19 @@ fun SportsSectionScreen(
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    // Focus coming in from outside (the rail's Right) lands on the entry item, not on whatever is nearest.
+                    .focusProperties {
+                        onEnter = {
+                            val list = items
+                            // A focus request on a row (Back to it) is left alone; only a D-pad move from outside is sent on.
+                            if (requestedFocusDirection != FocusDirection.Enter && list != null) {
+                                (if (list.isEmpty()) findTeamsFocus else firstItemFocus).requestFocus()
+                            }
+                        }
+                    }.focusGroup(),
             contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
@@ -159,11 +180,14 @@ fun SportsSectionScreen(
                             onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
                             icon = CinemaIcons.Search,
                             label = stringResource(R.string.sports_find_teams),
-                            // Down: the first logo, not a game's bell under the header's end.
+                            // Down: the first logo, not a game's bell under the header's end; Right: nothing (no bell).
                             modifier =
                                 Modifier
                                     .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
-                                    .focusProperties { down = firstItemFocus },
+                                    .focusProperties {
+                                        down = firstItemFocus
+                                        right = FocusRequester.Cancel
+                                    },
                         )
                     }
                 }
@@ -202,7 +226,9 @@ fun SportsSectionScreen(
                 else -> {
                     item(key = "followed_heading") { TvSportsHeading(stringResource(R.string.sports_following_heading)) }
                     item(key = "followed") {
+                        // Up from the games comes back to the logo last focused, the first one at first.
                         LazyRow(
+                            modifier = Modifier.focusRestorer(firstItemFocus),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                             contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
                         ) {

@@ -222,18 +222,8 @@ class UpcomingGamesLoader(
                 Log.w(TAG, "Channels failed: ${e.javaClass.simpleName}")
                 GameMatcher { emptyList() }
             }
-        return games.map { game ->
-            val channels =
-                try {
-                    matcher.match(game)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Match failed: ${e.javaClass.simpleName}")
-                    emptyList()
-                }
-            UpcomingGame(game, channels)
-        }
+        // Every game at once: each game's guide reads run beside the others'.
+        return coroutineScope { games.map { game -> async { UpcomingGame(game, matchOrEmpty(matcher, game)) } }.awaitAll() }
     }
 
     // A kept row without the games that have ended since it was read.

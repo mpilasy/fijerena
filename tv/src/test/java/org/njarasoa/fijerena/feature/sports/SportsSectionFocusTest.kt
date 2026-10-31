@@ -1,12 +1,21 @@
 package org.njarasoa.fijerena.feature.sports
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -172,6 +181,60 @@ class SportsSectionFocusTest {
             down("U / UK: Sky Sports Main Event"),
             back("A / Arsenal v Chelsea"),
         )
+    }
+
+    @Test
+    fun `Right from Find Teams goes nowhere, not to a game's bell`() {
+        setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)))
+
+        walk.awaitFocused("A / Arsenal")
+        walk.run(up("Find Teams"), right("Find Teams"), down("A / Arsenal"))
+    }
+
+    @Test
+    fun `Up from the games lands on the logo last focused, the first one at first`() {
+        setSection(FollowedSports.Followed(teams = listOf(ARSENAL, CHELSEA, LIVERPOOL), leagues = listOf(LEAGUE)))
+
+        walk.awaitFocused("A / Arsenal")
+        walk.run(
+            down("A / Arsenal v Chelsea"),
+            up("A / Arsenal"),
+            right("C / Chelsea"),
+            right("L / Liverpool"),
+            down("A / Arsenal v Chelsea"),
+            up("L / Liverpool"),
+        )
+    }
+
+    @Test
+    fun `Right from outside the section, the follows read late, lands on the first logo`() {
+        val data = FakeData(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)))
+        val ready = MutableStateFlow(false)
+        val late =
+            object : SportsPageData by data {
+                override fun followed(): Flow<FollowedSports.Followed> = combine(ready.filter { it }, data.follows) { _, f -> f }
+            }
+        val vm = SportsSectionViewModel(late, now = { NOW_MS }).also { created += it }
+        val outside = FocusRequester()
+        rule.setContent {
+            FirstVideoPlayerTheme {
+                CompositionLocalProvider(LocalGameBellStore provides FakeBells()) {
+                    Row {
+                        Box(modifier = Modifier.focusRequester(outside).focusable()) { BasicText("Rail") }
+                        SportsSectionScreen(onTeamSelected = {}, onLeagueSelected = {}, onFindTeams = {}, onPlay = {}, viewModel = vm)
+                    }
+                }
+            }
+        }
+        rule.runOnIdle { outside.requestFocus() }
+        walk.awaitFocused("Rail")
+        rule.runOnIdle { ready.value = true }
+        // The section's own first focus.
+        walk.awaitFocused("A / Arsenal")
+        walk.run(down("A / Arsenal v Chelsea"))
+        rule.runOnIdle { outside.requestFocus() }
+        walk.awaitFocused("Rail")
+        walk.run(right("A / Arsenal"))
     }
 
     @Test
