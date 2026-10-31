@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: 0.8.20261031014449
+
+- **Continue Watching on the phone:** a show card always opens its page at the top, with Play on the episode to resume, one tap away. Before, the list sometimes scrolled away from Play. Phone.
+
 ## Version: 0.8.20261031013314
 
 - **Season row on a phone show page:** when you scroll the episodes, the season row now stays just below a solid top bar, with the episodes hidden under it. Before, it slid under the status bar and the back arrow, also when the page opened on an episode. Phone.
