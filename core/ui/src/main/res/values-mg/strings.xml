@@ -113,8 +113,8 @@
     <string name="sports_event_channel">Fantsona hetsika</string>
     <string name="sports_starts_at">Manomboka amin\'ny %1$s</string>
     <string name="sports_matching">Mitady fantsona…</string>
-    <string name="sports_home_game">An-tokotany</string>
-    <string name="sports_away_game">Any ivelany</string>
+    <string name="sports_home_game">An-trano</string>
+    <string name="sports_away_game">Ivelany</string>
     <string name="sports_game_format">%1$s – %2$s</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Fanatanjahantena</string>
