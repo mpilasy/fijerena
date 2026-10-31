@@ -1,6 +1,6 @@
 # Sports teams
 
-**Status:** In progress since 2026-10-31: Phases 1–4 done; Phases 5 and 7 run in parallel.
+**Status:** In progress since 2026-10-31: Phases 1–4 done; Phase 5 and the core of Phase 7 built; Phase 6 in progress.
 
 ## Goal
 
@@ -194,7 +194,7 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 | 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |
 | 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Built 2026-10-31: Teams type (switch on, not a child, ALL or Live TV search), `Screen.SportsTeam`, `Screen.SportsLeague`, game sheet (TV overlay, phone bottom sheet); broadcasters without a channel grouped by name ("48 countries"). Left: emulator walks with Phase 6 |
-| 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Not started |
+| 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | In progress |
 | 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Core done 2026-10-31: `game_reminder` (v30, not synced), `GameReminders`, alarms, reschedule receiver (on only while a reminder exists), phone notification, TV banner (never takes focus by itself; Menu moves to it; closes after 30 s). Left: the bells (Phase 6) and emulator walks |
 | 8 | Android Lint, docs (FEATURES, NAVIGATION_GUIDE, RUN_GUIDE with the season table update steps, RELEASE_NOTES, a CONTRIBUTING rule for the sports sources), release | Not started |
 
