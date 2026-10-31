@@ -38,6 +38,7 @@ class GameReminders internal constructor(
     private val alarms: ReminderAlarms,
     private val teamGames: suspend (SportsTeam) -> List<SportsGame>,
     private val enabled: () -> Boolean = { true },
+    private val teamFollowed: suspend (profileId: String, source: SportsSource, teamId: String) -> Boolean = { _, _, _ -> true },
     private val background: CoroutineScope = AppScopes.create("GameReminders", Dispatchers.IO),
     private val now: () -> Long = System::currentTimeMillis,
 ) {
@@ -194,8 +195,13 @@ class GameReminders internal constructor(
             .groupBy { it.lookupTeam }
             .forEach { (lookup, rows) ->
                 val team = ReminderTeam.decode(lookup)?.toTeam() ?: return@forEach
+                // A team bell lives only while the team is followed: an unfollow received by sync
+                // does not pass through FollowedSports.unfollow on this device.
+                val (followed, unfollowed) = rows.partition { teamFollowed(it.profileId, team.source, team.id) }
+                unfollowed.forEach { clearForTeam(it.profileId, team.source, team.id) }
+                if (followed.isEmpty()) return@forEach
                 val games = readOrEmpty(team)
-                rows.forEach { addTeamGames(it.profileId, team, games) }
+                followed.forEach { addTeamGames(it.profileId, team, games) }
             }
     }
 
@@ -258,6 +264,10 @@ class GameReminders internal constructor(
             lock.withLock { remove(reminder) }
             return AlarmOutcome.Dropped
         }
+        if (reminder.teamKey != null && !teamOfReminderFollowed(reminder)) {
+            ReminderTeam.decode(reminder.lookupTeam)?.toTeam()?.let { clearForTeam(profileId, it.source, it.id) }
+            return AlarmOutcome.Dropped
+        }
         val game = reread(reminder)
         return lock.withLock {
             when (val decision = ReminderSchedule.decide(reminder.startEpoch, game, now())) {
@@ -279,6 +289,12 @@ class GameReminders internal constructor(
                 }
             }.also { updateRescheduleReceiver() }
         }
+    }
+
+    /** Whether the team whose bell set [reminder] is still followed by its profile. */
+    private suspend fun teamOfReminderFollowed(reminder: GameReminderEntity): Boolean {
+        val team = ReminderTeam.decode(reminder.lookupTeam)?.toTeam() ?: return true
+        return teamFollowed(reminder.profileId, team.source, team.id)
     }
 
     /** The game read again from its team's schedule; null when it can't be read in time or is not there. */
@@ -376,6 +392,9 @@ class GameReminders internal constructor(
                         alarms = AndroidReminderAlarms(app),
                         teamGames = { team -> SportsData.getInstance(app).teamGames(team) },
                         enabled = { settings.showSports },
+                        teamFollowed = { profileId, source, teamId ->
+                            FollowedSports.getInstance(app).isFollowed(profileId, FollowKind.TEAM, source, teamId)
+                        },
                     )
                 }.also { instance = it }
             }

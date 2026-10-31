@@ -53,6 +53,7 @@ class GameRemindersTest {
     private var nowMs = 1_800_000_000_000L
     private var schedule: List<SportsGame> = emptyList()
     private var enabled = true
+    private var followed = true
     private lateinit var reminders: GameReminders
 
     private val arsenal = SportsTeam(SportsSource.ESPN, "soccer/359", "Arsenal", sport = "soccer", league = "soccer/eng.1")
@@ -72,7 +73,16 @@ class GameRemindersTest {
                 .inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, XtreamDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
-        reminders = GameReminders(db, alarms, { schedule }, { enabled }, background) { nowMs }
+        reminders =
+            GameReminders(
+                db,
+                alarms,
+                teamGames = { schedule },
+                enabled = { enabled },
+                teamFollowed = { _, _, _ -> followed },
+                background = background,
+                now = { nowMs },
+            )
     }
 
     @After
@@ -143,6 +153,26 @@ class GameRemindersTest {
             reminders.clearForTeam(P1, arsenal)
             assertEquals(setOf("$P1/g9"), alarms.set.keys)
             assertFalse(reminders.isSetForTeam(P1, arsenal))
+        }
+
+    @Test
+    fun `a team unfollowed elsewhere loses its bell on refresh and at its alarms`() =
+        runBlocking {
+            reminders.set(P1, game("g9"))
+            schedule = listOf(game("g1"), game("g2", inSec = 172_800))
+            reminders.setForTeam(P1, arsenal)
+            // The unfollow arrived by sync, so FollowedSports.unfollow did not run here.
+            followed = false
+            assertEquals(GameReminders.AlarmOutcome.Dropped, reminders.onAlarm(P1, SportsSource.ESPN.id, "g1"))
+            assertFalse(reminders.isSetForTeam(P1, arsenal))
+            assertEquals(setOf("$P1/g9"), alarms.set.keys)
+
+            followed = true
+            reminders.setForTeam(P1, arsenal)
+            followed = false
+            reminders.refreshTeams()
+            assertFalse(reminders.isSetForTeam(P1, arsenal))
+            assertEquals(setOf("$P1/g9"), alarms.set.keys)
         }
 
     @Test
