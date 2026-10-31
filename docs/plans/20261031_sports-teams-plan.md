@@ -1,6 +1,6 @@
 # Sports teams
 
-**Status:** In progress since 2026-10-31: Phases 1–4 run in parallel on their own branches; shared models in `sports/SportsModels.kt`.
+**Status:** In progress since 2026-10-31: Phases 1–4 done; Phases 5 and 7 run in parallel.
 
 ## Goal
 
@@ -25,6 +25,7 @@ programme when the guide has it, else a channel whose name has the broadcaster's
 | SP-D10 | What is watched? | Only what the user **follows**: they search teams and leagues and mark them as favourites, and the app fetches games and TV only for those. For those games, the broadcasters of every country are shown, grouped by country. No country setting. |
 | SP-D11 | The labels? | **Sports** (fr "Sports", mg "Fanatanjahantena"); the search type **Teams** (fr "Équipes", mg "Ekipa"). |
 | SP-D12 | Game reminders? | **In this plan**: a bell on a game sets a reminder (see Reminders). |
+| SP-D13 | UEFA countries? | Ask UEFA only for the countries found in the profile's channel names and categories ("FR:", "UK|"), plus Madagascar; the season table covers the others for UEFA games. |
 
 ## Data sources
 
@@ -35,7 +36,7 @@ each can change or close (see Risk).
 |--------|-------|----------|
 | ESPN `site.api.espn.com`, `site.web.api.espn.com` | Team search; teams and games in US sports, NCAA, rugby, cricket, tennis and 220 soccer leagues (`sports.core.api.espn.com/v2/sports/soccer/leagues`); US networks only | Search, team pages, games, US TV |
 | FIFA `api.fifa.com/api/v3` | Games of hundreds of soccer leagues worldwide (`calendar/matches?from=..&to=..&count=500`, paged by `ContinuationToken`); no TV data | Soccer leagues ESPN does not list |
-| UEFA `match.uefa.com/v5/matches`, `broadcaster.uefa.com/v1/broadcasters` | UEFA competitions' games; broadcasters per match for one country per call (`countryCode` required, any ISO code; `startDate`, `endDate`, `competitionId`, `offset`, `limit` → `{matchId, broadcasters[{name, logo, url}]}`); spec at `/v3/api-docs` | Per-country TV for UCL, UEL, UECL, Nations League, qualifiers: one call per country per week, read in the background for a list of countries (`uefaCountries`, 85 by default), games of the next 14 days |
+| UEFA `match.uefa.com/v5/matches`, `broadcaster.uefa.com/v1/broadcasters` | UEFA competitions' games; broadcasters per match for one country per call (`countryCode` required, any ISO code; `startDate`, `endDate`, `competitionId`, `offset`, `limit` → `{matchId, broadcasters[{name, logo, url}]}`); spec at `/v3/api-docs` | Per-country TV for UCL, UEL, UECL, Nations League, qualifiers: one call per country per week, read in the background for the countries of the profile's channels (SP-D13), games of the next 14 days |
 | NHL `api-web.nhle.com/v1` | `club-schedule-season/{TRI}/now`: `tvBroadcasts[].{network,countryCode,market}`, US and Canada | NHL TV |
 | MLB `statsapi.mlb.com/api/v1` | `schedule?...&hydrate=broadcasts`: national and local US TV | MLB TV |
 | World Aquatics (`api.worldaquatics.com/fina/competitions?disciplines=WP`, `/competitions/{id}/schedule`) | Water polo games of national teams (no clubs); empty until the draw; no TV data | Water polo (SP-D6) |
@@ -192,9 +193,9 @@ first version; misses are recorded in Phase 6 and a parser change is its own dec
 | 2 | Season table: format, loader, first seeding (the leagues listed by the app, for the countries of the test sources first, then the rest), `check-sports-table.sh` | Done 2026-10-31: 26 competitions, 743 rows, 214 countries; rows name ISO codes, regions (`SUB_SAHARAN_AFRICA`…) or `WORLD`; lookups are suspend; thin: Bundesliga, Argentine LPF, South African PSL, Top 14, EHF Champions League |
 | 3 | `followed_sport` table, migration, sync kind, schema doc, migration test helpers | Done 2026-10-31: `xtream_v2.db` v29; sync key `<kind>:<source>` in the content type; export version 7 |
 | 4 | `GameChannelMatcher` with its alias tables and unit tests on real guide samples | Done 2026-10-31: `GameChannelMatcher`, `EpgGuideLookup`, `SportsAliases`; tested on UK, FR, DE, ZA and US guide samples |
-| 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | Not started |
+| 5 | Teams search type, team and league pages, game sheet on TV and phone; focus walks | In progress |
 | 6 | Sports section, Home row; emulator walks on both emulators (live guide from the iptv test source); record match misses | Not started |
-| 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | Not started |
+| 7 | Reminders: `game_reminder` table (migration, schema doc, migration test helpers), alarms, boot receiver, phone notification, TV banner; tests and emulator walks | In progress |
 | 8 | Android Lint, docs (FEATURES, NAVIGATION_GUIDE, RUN_GUIDE with the season table update steps, RELEASE_NOTES, a CONTRIBUTING rule for the sports sources), release | Not started |
 
 ## Not in this plan
