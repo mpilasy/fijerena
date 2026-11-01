@@ -183,7 +183,8 @@ fun CinemaAlertDialog(
                             modifier = Modifier.fillMaxSize().padding(CinemaSpacing.lg),
                             verticalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Column {
+                            // A long body yields, so the buttons stay on screen.
+                            Column(Modifier.weight(1f, fill = false)) {
                                 icon?.let {
                                     CompositionLocalProvider(LocalContentColor provides iconContentColor, content = it)
                                     Spacer(Modifier.height(CinemaSpacing.xs))
@@ -215,7 +216,8 @@ fun CinemaAlertDialog(
             ModalBottomSheet(
                 onDismissRequest = onDismissRequest,
                 modifier = modifier,
-                sheetState = rememberModalBottomSheetState(),
+                // Fully open: a half-open sheet leaves its buttons below the screen edge.
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 shape = shape,
                 containerColor = containerColor,
                 scrimColor = CinemaTheme.colors.mediaScrim.copy(alpha = tokens.scrimAlpha),
@@ -233,8 +235,11 @@ fun CinemaAlertDialog(
                             Spacer(Modifier.height(CinemaSpacing.xs))
                         }
                         text?.let {
-                            CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                ProvideTextStyle(textStyleOf(TextRole.Body), it)
+                            // A long body (a long picker list) yields, so the buttons stay on screen.
+                            Box(Modifier.weight(1f, fill = false)) {
+                                CompositionLocalProvider(LocalContentColor provides textContentColor) {
+                                    ProvideTextStyle(textStyleOf(TextRole.Body), it)
+                                }
                             }
                             Spacer(Modifier.height(CinemaSpacing.md))
                         }

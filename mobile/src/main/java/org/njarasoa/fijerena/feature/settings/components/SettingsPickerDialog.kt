@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +35,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * Radio-list picker behind a value row: one option per `label to value` pair, [selected] checked.
  * [footer] is drawn under the list (the watch delay's custom field); [preview] is a small static
  * sample at an option's end (a colour theme's colours); [inLook] wraps an option's row (a Look's
- * row drawn in that Look).
+ * row drawn in that Look). With [previewIn], a tap only marks an option: the dialog is drawn in
+ * that option's theme, and OK saves it ([onSelect]); Cancel keeps the old one.
  */
 @Composable
 fun <T> SettingsPickerDialog(
@@ -43,49 +48,69 @@ fun <T> SettingsPickerDialog(
     footer: (@Composable ColumnScope.() -> Unit)? = null,
     preview: (@Composable (T) -> Unit)? = null,
     inLook: (@Composable (T, @Composable () -> Unit) -> Unit)? = null,
+    previewIn: (@Composable (T, @Composable () -> Unit) -> Unit)? = null,
 ) {
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = { CinemaText(title, role = TextRole.Title) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                options.forEach { (label, value) ->
-                    val row: @Composable () -> Unit = {
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .then(if (inLook != null) Modifier.lookOutline(value == selected) else Modifier)
-                                    .clickable { onSelect(value) }
-                                    .padding(vertical = Spacing.sm)
-                                    .then(if (inLook != null) Modifier.padding(horizontal = Spacing.sm) else Modifier),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CinemaRadioButton(
-                                selected = value == selected,
-                                onClick = null, // handled by Row clickable
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.sm))
-                            // A Look's name as a heading, where its title font shows (Cinema's serif).
-                            CinemaText(
-                                text = label,
-                                modifier = Modifier.weight(1f),
-                                role = if (inLook != null) TextRole.Heading else TextRole.Body,
-                            )
-                            preview?.invoke(value)
+    var marked by remember { mutableStateOf(selected) }
+    val checked = if (previewIn != null) marked else selected
+    val dialog: @Composable () -> Unit = {
+        CinemaAlertDialog(
+            onDismissRequest = onDismiss,
+            title = { CinemaText(title, role = TextRole.Title) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    options.forEach { (label, value) ->
+                        val row: @Composable () -> Unit = {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .then(if (inLook != null) Modifier.lookOutline(value == checked) else Modifier)
+                                        .clickable { if (previewIn != null) marked = value else onSelect(value) }
+                                        .padding(vertical = Spacing.sm)
+                                        .then(if (inLook != null) Modifier.padding(horizontal = Spacing.sm) else Modifier),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CinemaRadioButton(
+                                    selected = value == checked,
+                                    onClick = null, // handled by Row clickable
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.sm))
+                                // A Look's name as a heading, where its title font shows (Cinema's serif).
+                                CinemaText(
+                                    text = label,
+                                    modifier = Modifier.weight(1f),
+                                    role = if (inLook != null) TextRole.Heading else TextRole.Body,
+                                )
+                                preview?.invoke(value)
+                            }
                         }
+                        inLook?.invoke(value, row) ?: row()
                     }
-                    inLook?.invoke(value, row) ?: row()
+                    footer?.invoke(this)
                 }
-                footer?.invoke(this)
-            }
-        },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
-    )
+            },
+            confirmButton = {
+                val pick = marked
+                if (previewIn != null && pick != null) {
+                    CinemaDialogActionButton(onClick = { onSelect(pick) }, kind = ButtonKind.Main) {
+                        CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
+                    }
+                } else {
+                    CancelButton(onDismiss)
+                }
+            },
+            dismissButton = if (previewIn != null) ({ CancelButton(onDismiss) }) else null,
+        )
+    }
+    val pick = marked
+    if (previewIn != null && pick != null) previewIn(pick, dialog) else dialog()
+}
+
+@Composable
+private fun CancelButton(onDismiss: () -> Unit) {
+    CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+        CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+    }
 }
 
 /**

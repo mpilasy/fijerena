@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
+import org.njarasoa.fijerena.ui.theme.PreviewTheme
 import org.njarasoa.fijerena.ui.theme.ProvideLook
 import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -415,7 +416,7 @@ internal fun ProfileOwnRows(
     val adminView = remember { viewModel.viewerIsAdmin }
     // A child's own page has no Name and no PIN.
     val showsNameAndPin = stored.showsNameAndPin(adminView)
-    // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
+    // The profile's colour theme and Look and Feel: saved on OK in their pickers.
     var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
     var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
     var posterBackdrop by remember(profileId) { mutableStateOf(viewModel.posterBackdropOf(profileId)) }
@@ -435,6 +436,8 @@ internal fun ProfileOwnRows(
             // Each row in its theme's font and accent, with its colours beside it.
             preview = { id -> looks[id]?.let { PaletteSwatches(paletteById(it.first)) } },
             inLook = { id, row -> looks[id]?.let { ProvideLookAndAccent(it.first, it.second, row) } ?: row() },
+            // The dialog takes the marked theme; OK saves it.
+            previewIn = { id, dialog -> looks[id]?.let { PreviewTheme(it.first, it.second, dialog) } ?: dialog() },
             onSelect = { id ->
                 uiThemeId = id
                 viewModel.setUiTheme(profileId, id)
@@ -458,6 +461,7 @@ internal fun ProfileOwnRows(
                     }.sortedWith(compareBy(Collator.getInstance()) { it.first }),
             selected = themeId,
             preview = { id -> PaletteSwatches(paletteById(id)) },
+            previewIn = { id, dialog -> PreviewTheme(id, uiStyleId, dialog) },
             onSelect = { id ->
                 themeId = id
                 viewModel.setTheme(profileId, id)
@@ -479,6 +483,7 @@ internal fun ProfileOwnRows(
             selected = uiStyleId,
             // Each row drawn in its own Look: font, corners, focus.
             inLook = { id, row -> ProvideLook(styleById(id), row) },
+            previewIn = { id, dialog -> PreviewTheme(themeId, id, dialog) },
             onSelect = { id ->
                 uiStyleId = id
                 viewModel.setUiStyle(profileId, id)

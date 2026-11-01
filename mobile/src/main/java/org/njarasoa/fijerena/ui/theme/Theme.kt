@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaShapeRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaBorders
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaColors
@@ -117,6 +118,28 @@ fun FirstVideoPlayerTheme(
         }
     }
 
+    ProvideFullTheme(palette, style, content)
+}
+
+/**
+ * [content] in the colour theme [themeId] and the Look and Feel [styleId], with no change to the app's
+ * theme: a theme picker shows the chosen theme on itself before the user taps OK.
+ */
+@Composable
+fun PreviewTheme(
+    themeId: String,
+    styleId: String,
+    content: @Composable () -> Unit,
+) {
+    ProvideFullTheme(remember(themeId) { paletteById(themeId) }, remember(styleId) { styleById(styleId) }, content)
+}
+
+@Composable
+private fun ProvideFullTheme(
+    palette: CinemaThemePalette,
+    style: UiStyle,
+    content: @Composable () -> Unit,
+) {
     val typography = remember(style) { cinemaTypography(style.type) }
     ProvideCinemaTheme(palette, style, remember(typography) { cinemaTypeRoles(typography) }) {
         MaterialTheme(

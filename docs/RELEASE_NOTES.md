@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **See a theme before you keep it:** on the phone, a tap in the UI Theme, Theme or Look and Feel picker now only marks the option and shows the picker in it. **OK** saves it; **Cancel** keeps the old one. Phone.
+- **Dialog buttons stay on screen:** a dialog that opens from the bottom (Groove and Rounded) now opens fully, and a long list in it scrolls above its buttons. Before, the buttons of a long picker were below the screen edge. Phone.
+
 ## Version: 0.9.20261101054935
 
 - **Four streaming-style UI themes:** pick them on a profile's page (Look → UI Theme). TV and phone.
