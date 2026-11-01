@@ -4,6 +4,7 @@
 
 - **See a theme before you keep it:** on the phone, a tap in the UI Theme, Theme or Look and Feel picker now only marks the option and shows the picker in it. **OK** saves it; **Cancel** keeps the old one. Phone.
 - **Dialog buttons stay on screen:** a dialog that opens from the bottom (Groove and Rounded) now opens fully, and a long list in it scrolls above its buttons. Before, the buttons of a long picker were below the screen edge. Phone.
+- **Channel letter fits its frame:** when a channel logo does not load, the channel's first letter shows in its place. In a small frame (the channel beside a game on Sports) the letter was cut off; it is now sized to the frame. TV and phone.
 
 ## Version: 0.9.20261101054935
 

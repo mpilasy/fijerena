@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -192,21 +194,24 @@ fun TypographyFallback(
             }
         }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier.background(gradient),
         contentAlignment = Alignment.Center,
     ) {
+        // 28 sp on a poster; a small frame (a channel logo beside a game) gets a letter that fits it.
+        val fitted = if (constraints.hasBoundedHeight) with(LocalDensity.current) { (maxHeight * LETTER_HEIGHT_SHARE).toSp() } else null
+        val letterSize = if (fitted != null && fitted.value < LETTER_MAX_SP) fitted else LETTER_MAX_SP.sp
         if (letter != null) {
             val uiStyle = LocalUiStyle.current
             val display = CinemaTheme.type.display
             val textStyle =
-                remember(palette, uiStyle, contentType, display) {
+                remember(palette, uiStyle, contentType, display, letterSize) {
                     // The Look's title font, in a colour that reads on the letter's own fill (the
                     // middle of the gradient): cream text on an amber fill could not be read.
                     val fill = palette.sectionColor(contentType)
                     display.copy(
                         color = fill?.let { contentOn(it) } ?: palette.textPrimary,
-                        fontSize = 28.sp, // look-ok: the placeholder letter is sized to the poster
+                        fontSize = letterSize, // look-ok: the placeholder letter is sized to its frame
                         fontWeight = FontWeight(uiStyle.type.weightEmphasis), // look-ok: same letter
                         textAlign = TextAlign.Center,
                     )
@@ -218,6 +223,10 @@ fun TypographyFallback(
         }
     }
 }
+
+/** The placeholder letter's size on a poster, and its share of a smaller frame's height. */
+private const val LETTER_MAX_SP = 28f
+private const val LETTER_HEIGHT_SHARE = 0.6f
 
 /**
  * Shimmer placeholder effect while images load.
