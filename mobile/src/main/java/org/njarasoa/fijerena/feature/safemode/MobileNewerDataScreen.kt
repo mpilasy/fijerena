@@ -10,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,10 +27,10 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Shown instead of home when `providers.db` was written by a newer build ([ProvidersDbGuard]).
@@ -47,10 +46,7 @@ fun MobileNewerDataScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = { CinemaText(stringResource(R.string.newer_data_title), role = TextRole.Title) },
-            )
+            MobileScreenHeader(title = stringResource(R.string.newer_data_title))
         },
     ) { paddingValues ->
         Column(

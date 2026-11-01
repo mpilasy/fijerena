@@ -44,10 +44,10 @@ import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,20 +77,11 @@ fun MobileProviderSelectionScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = { CinemaText(stringResource(R.string.provider_selection_title), role = TextRole.Title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onAddProvider) {
-                        Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.provider_add_title))
-                    }
-                },
-            )
+            MobileScreenHeader(title = stringResource(R.string.provider_selection_title), onBack = onBack) {
+                IconButton(onClick = onAddProvider) {
+                    Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.provider_add_title))
+                }
+            }
         },
     ) { paddingValues ->
         Column(

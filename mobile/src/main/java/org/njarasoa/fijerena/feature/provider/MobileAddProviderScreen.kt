@@ -25,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,10 +83,10 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.feature.provider.components.SourceAdvancedSection
 import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -343,19 +342,9 @@ fun MobileAddProviderScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    CinemaText(
-                        if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),
-                        role = TextRole.Title,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = requestBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                    }
-                },
+            MobileScreenHeader(
+                title = if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),
+                onBack = requestBack,
             )
         },
     ) { paddingValues ->

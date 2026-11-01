@@ -78,7 +78,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -226,6 +225,7 @@ import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -235,7 +235,6 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -869,32 +868,15 @@ fun MobileCategoryListScreen(
                         // The nav host gives a section tab its Search.
                         sourceTopBar(null)
                     } else {
-                        TopAppBar(
-                            windowInsets = mobileClockTopBarInsets(),
-                            title = {
-                                CinemaText(
-                                    when (contentType) {
-                                        ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
-                                        ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
-                                        ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
-                                        else -> contentType.replace("_", " ")
-                                    },
-                                    role = TextRole.Title,
-                                    tone = TextTone.Inherit,
-                                )
-                            },
-                            navigationIcon = {
-                                CinemaIconButton(
-                                    onClick = { stopDockThen(onBack) },
-                                    icon = {
-                                        Icon(
-                                            CinemaIcons.ArrowBack,
-                                            stringResource(R.string.player_back),
-                                            tint = CinemaTheme.colors.textPrimary,
-                                        )
-                                    },
-                                )
-                            },
+                        MobileScreenHeader(
+                            title =
+                                when (contentType) {
+                                    ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                    ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                    ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                    else -> contentType.replace("_", " ")
+                                },
+                            onBack = { stopDockThen(onBack) },
                             actions = sectionActions,
                         )
                     }

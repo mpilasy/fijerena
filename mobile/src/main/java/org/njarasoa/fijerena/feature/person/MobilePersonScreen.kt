@@ -16,7 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,8 +55,8 @@ import org.njarasoa.fijerena.feature.home.MissingTitlesSwitch
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PosterCard
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -116,15 +115,7 @@ fun MobilePersonScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = { CinemaText(shownName, role = TextRole.Title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
-                    }
-                },
-            )
+            MobileScreenHeader(title = shownName, onBack = onBack)
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background).padding(padding)) {

@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -69,10 +68,10 @@ import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
 import java.time.LocalDate
@@ -165,49 +164,25 @@ fun MobileEpgGuideScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    Column {
-                        CinemaText(
-                            text = stringResource(R.string.epg_guide_header_title_format, categoryName),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            role = TextRole.Title,
-                            tone = TextTone.Inherit,
-                        )
-                        if (state is EpgViewModel.UiState.Ready) {
-                            CinemaText(
-                                text = statusLine(state),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
-                        }
+            MobileScreenHeader(
+                title = stringResource(R.string.epg_guide_header_title_format, categoryName),
+                subtitle = (state as? EpgViewModel.UiState.Ready)?.let { statusLine(it) },
+                onBack = onBack,
+            ) {
+                IconButton(onClick = onSearch) {
+                    Icon(CinemaIcons.Search, stringResource(R.string.common_search))
+                }
+                IconButton(
+                    onClick = { viewModel.forceRefresh() },
+                    enabled = !isRefreshing,
+                ) {
+                    if (isRefreshing) {
+                        CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+                    } else {
+                        Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSearch) {
-                        Icon(CinemaIcons.Search, stringResource(R.string.common_search))
-                    }
-                    IconButton(
-                        onClick = { viewModel.forceRefresh() },
-                        enabled = !isRefreshing,
-                    ) {
-                        if (isRefreshing) {
-                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                        } else {
-                            Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
-                        }
-                    }
-                },
-            )
+                }
+            }
         },
     ) { paddingValues ->
         Column(

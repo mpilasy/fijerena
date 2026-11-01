@@ -16,7 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -34,8 +33,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Settings → About → Device info on mobile, shareable as plain text. See
@@ -53,30 +52,24 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = { CinemaText(stringResource(R.string.device_info_title), role = TextRole.Title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
-                    }
-                },
-                actions = {
-                    IconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
-                    IconAction(
-                        onClick = {
-                            val send =
-                                Intent(Intent.ACTION_SEND)
-                                    .setType("text/plain")
-                                    .putExtra(Intent.EXTRA_TEXT, DeviceInfoViewModel.asText(sections.orEmpty(), context))
-                            context.startActivity(Intent.createChooser(send, shareTitle))
-                        },
-                        icon = Icons.Rounded.Share,
-                        label = shareTitle,
-                        enabled = !sections.isNullOrEmpty(),
-                    )
-                },
-            )
+            MobileScreenHeader(
+                title = stringResource(R.string.device_info_title),
+                onBack = onBack,
+            ) {
+                IconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
+                IconAction(
+                    onClick = {
+                        val send =
+                            Intent(Intent.ACTION_SEND)
+                                .setType("text/plain")
+                                .putExtra(Intent.EXTRA_TEXT, DeviceInfoViewModel.asText(sections.orEmpty(), context))
+                        context.startActivity(Intent.createChooser(send, shareTitle))
+                    },
+                    icon = Icons.Rounded.Share,
+                    label = shareTitle,
+                    enabled = !sections.isNullOrEmpty(),
+                )
+            }
         },
     ) { paddingValues ->
         LazyColumn(
