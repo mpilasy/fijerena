@@ -30,6 +30,16 @@ emulators (findings of the walks are added as they come).
 | 8 | Text roles differ for the same element (dialog titles, Search section headers, filter group headings, in-dialog section labels, stats header) | 73 Title vs 9 Heading dialog titles; `SearchScreen.kt:1228` vs TV `:1419` |
 | 9 | Spacing: dialog body gaps (5 values on the phone, 3 on TV); sheet callers add their own side and bottom padding | `CinemaSheet` callers, `ProfileSheet.kt:61`, `MobileEpgGuideScreen.kt:475` |
 | 10 | Raw Material the gate misses: `Icon(` (37), `DropdownMenu` (8 files), `Slider` (1), `PullToRefreshBox` (4), `TooltipBox` (3); hand-made clickable rows (38 phone, 5 TV) | |
+| 11 | Phone walk: in one Look, dialogs lay out two or more buttons differently (Delete source: a row; Leave sync group: full-width stack; TMDB key: label-width stack) | `src_del`, `leave`, `tmdb` shots |
+| 12 | Delete icons red in some lists (sync devices, guide sources, source menu), white in others (parental keywords, Logs) | |
+| 13 | Row actions differ per list: Sources a ⋮ menu; guide sources an icon row; sync devices pencil and bin; keywords bin only | |
+| 14 | Search field: outline only on the Guide tab, filled on the other tabs | phone Search |
+| 15 | Sync page buttons: a 2×2 grid of unequal buttons; guide sources page: two big Main buttons, unlike every other Settings page, and two refresh icons per card | phone Settings |
+| 16 | Settings: "Fitantanana" row without a summary; Admin repeats "Parental controls" as heading and row | phone Settings |
+| 17 | Text not in the app language: Search the Guide status line ("0 programs (0 airings) — 3.1s [indexed]"), Device Info labels, "(Settings › API)" in the TMDB dialog | |
+| 18 | Phone Search filter pop-up ends on an empty "Type" heading and covers the header | phone Search |
+| 19 | Guide source card: one stat wraps to five lines in a narrow column | phone guide sources |
+| 20 | Lists end under the bottom bar on some pages (Parental controls, Search's "Not in your sources") | |
 
 ## Design
 
@@ -57,5 +67,5 @@ emulators (findings of the walks are added as they come).
 | 1 | Menus and dialog bodies (findings 1, 2, 3, 8 for dialogs, 9 for dialogs): action menu components, every menu and drop-down of actions moved, PIN options and guide maintenance as dialog actions or a page, dialog titles and colours from the component, gate | In progress |
 | 2 | Choice and toggle rows (finding 4): row components, every picker and filter moved (phone Search filter as a dialog with radio and check rows, as on TV), gate | Not started |
 | 3 | Feedback and empty states (findings 5, 6, 7): one undo host per app, no Toast, favourite Undo on the phone, empty states through the components, gate | In progress |
-| 4 | Leftovers (findings 8, 9, 10): text roles, sheet and dialog spacing, raw `Icon(`/`Slider`/`PullToRefreshBox`/`TooltipBox`, clickable rows, gate; then the walks' remaining findings | Not started |
+| 4 | Leftovers (findings 8, 9, 10 to 20): text roles, sheet and dialog spacing, one dialog button layout per Look, raw `Icon(`/`Slider`/`PullToRefreshBox`/`TooltipBox`, clickable rows, row actions and delete icons, search field, Settings pages, text not in the app language, lists under the bar, gate; then the TV walk's findings | Not started |
 | 5 | Walk every screen, dialog, menu, sheet and picker on both emulators again; docs | Not started |
