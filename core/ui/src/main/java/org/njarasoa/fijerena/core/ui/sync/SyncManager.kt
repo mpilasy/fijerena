@@ -311,7 +311,8 @@ class SyncManager internal constructor(
             // the rock solid stability resilience plan → F-23.
             Log.e(TAG, "Sync pass crashed", e)
             CrashLog.record("live sync failed", e)
-            store.lastError = "${e.javaClass.simpleName}: ${e.message}"
+            // Masked before it is stored: a raw message can hold a URL with a login and a password.
+            store.lastError = Redact.text("${e.javaClass.simpleName}: ${e.message}")
             retryLater()
         } finally {
             refreshStatus()

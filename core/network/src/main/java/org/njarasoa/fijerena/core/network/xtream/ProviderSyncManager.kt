@@ -6,6 +6,8 @@ import androidx.work.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgSyncWorker
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
@@ -249,10 +251,11 @@ class ProviderSyncManager private constructor(
                 val providerRepo = ProviderRepository(context)
                 val provider =
                     providerRepo.getProviderById(providerId)
-                        ?: return@async SyncResult.Failed("Provider no longer exists")
+                        ?: return@async SyncResult.Failed(context.getString(R.string.error_generic))
+                // No password: the same words as XtreamSessionManager, shown as a lost or wrong login.
                 val password =
                     withContext(Dispatchers.IO) { providerRepo.getPassword(providerId) }
-                        ?: return@async SyncResult.Failed("Stored credentials could not be read")
+                        ?: return@async SyncResult.Failed(friendlyErrorMessage(Exception("Password not stored"), context))
 
                 val startTime = System.currentTimeMillis()
                 val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
@@ -273,13 +276,13 @@ class ProviderSyncManager private constructor(
                 if (outcome is ProviderSyncRunner.Outcome.Success) {
                     SyncResult.Success
                 } else {
-                    SyncResult.Failed(outcome.errorOrNull() ?: "Sync failed")
+                    SyncResult.Failed(outcome.errorOrNull() ?: context.getString(R.string.error_generic))
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Manual sync threw for provider: $providerId", e)
-                SyncResult.Failed(e.message ?: "Sync failed")
+                SyncResult.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
             }
         }
 }

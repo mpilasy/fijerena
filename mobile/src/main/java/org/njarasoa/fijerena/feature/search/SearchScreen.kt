@@ -61,7 +61,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -110,6 +109,7 @@ import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -486,8 +486,7 @@ fun MobileSearchScreen(
                     }
 
                     is SearchViewModel.UiState.Error -> {
-                        RetryWhenOnline { viewModel.performSearch(searchQuery) }
-                        ErrorView(message = state.message)
+                        MobileErrorState(message = state.message, onRetry = { viewModel.performSearch(searchQuery) })
                     }
 
                     is SearchViewModel.UiState.Success -> {
@@ -773,31 +772,6 @@ private fun LoadingView(message: String? = null) {
             tone = TextTone.Accent,
             overrideText = message,
         )
-    }
-}
-
-@Composable
-private fun ErrorView(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            modifier = Modifier.padding(Spacing.xl),
-        ) {
-            CinemaText(
-                text = stringResource(R.string.common_error),
-                role = TextRole.Display,
-                tone = TextTone.Danger,
-            )
-            CinemaText(
-                text = message,
-                role = TextRole.Body,
-                tone = TextTone.Inherit,
-            )
-        }
     }
 }
 

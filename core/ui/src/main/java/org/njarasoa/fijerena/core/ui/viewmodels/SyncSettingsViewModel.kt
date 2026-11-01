@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.sync.VolatileRecords
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
@@ -422,7 +423,8 @@ class SyncSettingsViewModel(
                 e is SyncApiException && (e.status == 403 || e.status == 410) -> app.getString(R.string.sync_error_code_expired)
                 else -> app.getString(org.njarasoa.fijerena.core.network.R.string.error_generic)
             }
-        val raw = e.message
+        // Masked: a raw message can hold the server URL with a secret.
+        val raw = e.message?.let(Redact::text)
         return if (AppSettings(app).isDevMode && !raw.isNullOrBlank() && raw != message) "$message\n\n[dev] $raw" else message
     }
 }

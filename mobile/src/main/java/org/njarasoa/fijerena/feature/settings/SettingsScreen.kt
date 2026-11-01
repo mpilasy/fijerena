@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
@@ -200,7 +201,9 @@ fun MobileSettingsScreen(
                             pendingImportOptions = SettingsExportManager.ImportOptions()
                             showImportOptionsDialog = true
                         }.onFailure { e ->
-                            viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message ?: ""))
+                            viewModel.setExportImportMessage(
+                                resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                            )
                         }
                 }
             }
@@ -563,7 +566,10 @@ fun MobileSettingsScreen(
                                                             showImportOptionsDialog = true
                                                         }.onFailure { e ->
                                                             viewModel.setExportImportMessage(
-                                                                resources.getString(R.string.settings_import_failed, e.message ?: ""),
+                                                                resources.getString(
+                                                                    R.string.settings_import_failed,
+                                                                    friendlyErrorMessage(e, context, uiState.isDevMode),
+                                                                ),
                                                             )
                                                         }
                                                 }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Retry on every error, plain words for everyone:** Search, Search the Guide and the Sources list now have a **Retry** button when they fail, as the other screens do, and retry by themselves when the network comes back. A category with no channels on the phone guide now says "No channels to show a guide for" with Back, as on TV, not a red error. A settings file that can't be imported, and a failed source sync, now give a plain reason; the raw error shows only in dev mode, with logins masked. TV and phone.
 - **A clearer question before watching:** the question on a game's channel and on a guide programme that is not on yet is shorter. Its title gives the start ("Starts Thu 5 Nov · 11:45"), then the channel's name on one line and, on a device with more than one source, the source it is on. **Watch now** is the main button in the theme's colour, and the buttons stand one under the other, all the same width, Cancel last. Malagasy "kalandrie" is now "alimanaka". TV and phone.
 
 ## Version: 0.9.20261101162711

@@ -143,8 +143,10 @@ class EpgBrowserViewModel(
             val searchPath: EpgSearchPath = EpgSearchPath.NONE,
         ) : UiState
 
+        // [query]: the search that failed, for Retry.
         data class Error(
             val message: String,
+            val query: String = "",
         ) : UiState
     }
 
@@ -549,14 +551,14 @@ class EpgBrowserViewModel(
                     initPagedSearch(query)
                 } catch (e: OutOfMemoryError) {
                     System.gc()
-                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_file_too_large))
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_file_too_large), query)
                 } catch (e: EpgIndexBusyException) {
                     // Index is being rebuilt — not "no results": say so, and rerun the query when
                     // the index state reaches Indexed (see init).
                     _uiState.value = UiState.IndexBusy(query, isRefreshInProgress())
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode), query)
                 }
             }
     }

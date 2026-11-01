@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 
 /**
  * One sync pass with the server this device is linked to: pull everything new and apply it, then
@@ -77,7 +78,7 @@ class SyncEngine(
                 store.lastError = null
                 Outcome(pull.applied, pushed, pull.deferred, pull.activeProfileDeleted)
             } catch (e: SyncApiException) {
-                store.lastError = e.message
+                store.lastError = e.message?.let(Redact::text)
                 if (e.status == 401) Log.w(TAG, "Device token refused — revoked from another device?")
                 throw e
             }

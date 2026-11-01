@@ -717,7 +717,6 @@
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fantsona: %1$s</string>
-    <string name="epg_error_no_channels_in_category">Tsy nisy fantsona hita amin\'ity sokajy ity</string>
     <string name="epg_error_load_data_format">Tsy azo ny fandaharana: %1$s</string>
     <string name="stream_error_initialization_failed">Tsy nahomby ny fanombohana</string>
     <string name="stream_error_resolve_failed">Tsy nahomby ny fikarohana ny fantsakana</string>

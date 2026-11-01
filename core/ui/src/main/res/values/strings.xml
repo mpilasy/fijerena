@@ -874,7 +874,6 @@
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Failed to load channels: %1$s</string>
-    <string name="epg_error_no_channels_in_category">No channels found in this category</string>
     <string name="epg_error_load_data_format">Couldn\'t load the guide: %1$s</string>
     <string name="stream_error_initialization_failed">Initialisation failed</string>
     <string name="stream_error_resolve_failed">Failed to resolve stream</string>

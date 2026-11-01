@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -109,7 +110,7 @@ fun MobileProviderSelectionScreen(
                 }
 
                 is ProviderUiState.Error -> {
-                    CinemaText(state.message, tone = TextTone.Danger)
+                    MobileErrorState(message = state.message, onRetry = { viewModel.loadProviders() })
                 }
 
                 is ProviderUiState.SingleProvider -> {

@@ -150,6 +150,7 @@ import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDial
 import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
@@ -466,7 +467,7 @@ fun SearchScreen(
                     }
 
                     is SearchViewModel.UiState.Error -> {
-                        ErrorView(state.message)
+                        TvErrorState(message = state.message, onRetry = { viewModel.performSearch(fieldText) })
                     }
 
                     is SearchViewModel.UiState.Success -> {
@@ -762,23 +763,6 @@ private fun LoadingView(message: String? = null) {
                 role = TextRole.Title,
                 tone = TextTone.Secondary,
             )
-        }
-    }
-}
-
-@Composable
-private fun ErrorView(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            modifier = Modifier.padding(Spacing.xl),
-        ) {
-            CinemaText(text = stringResource(R.string.common_error), role = TextRole.Display, tone = TextTone.Danger)
-            CinemaText(text = message, tone = TextTone.Secondary)
         }
     }
 }
