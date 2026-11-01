@@ -781,7 +781,6 @@
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Impossible de charger les chaînes : %1$s</string>
-    <string name="epg_error_no_channels_in_category">Aucune chaîne trouvée dans cette catégorie.</string>
     <string name="epg_error_load_data_format">Impossible de charger le guide : %1$s</string>
 
     <!-- ViewModel error-fallback audit fixes -->

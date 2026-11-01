@@ -131,6 +131,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
@@ -354,16 +355,7 @@ internal fun TvGuideSearchPane(
             }
 
             is EpgBrowserViewModel.UiState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = state.message,
-                        role = TextRole.Body,
-                        tone = TextTone.Danger,
-                    )
-                }
+                TvErrorState(message = state.message, onRetry = { viewModel.performSearch(state.query) })
             }
 
             else -> {

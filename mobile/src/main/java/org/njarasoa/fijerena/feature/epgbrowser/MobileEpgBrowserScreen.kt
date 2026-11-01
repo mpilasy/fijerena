@@ -84,7 +84,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -111,6 +110,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -502,17 +502,7 @@ internal fun MobileGuideSearchPane(
             }
 
             is EpgBrowserViewModel.UiState.Error -> {
-                RetryWhenOnline { viewModel.performSearch(query) }
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = state.message,
-                        role = TextRole.Body,
-                        tone = TextTone.Danger,
-                    )
-                }
+                MobileErrorState(message = state.message, onRetry = { viewModel.performSearch(query) })
             }
         }
     }

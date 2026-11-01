@@ -55,7 +55,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
@@ -69,6 +68,8 @@ import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
@@ -282,42 +283,22 @@ fun MobileEpgGuideScreen(
                         )
                     }
 
-                    // NoChannels shares the error layout: a message and Retry.
-                    is EpgViewModel.UiState.Error, EpgViewModel.UiState.NoChannels -> {
-                        RetryWhenOnline { viewModel.loadEpgData() }
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(CinemaSpacing.xl),
-                            ) {
-                                CinemaText(
-                                    text = stringResource(R.string.epg_error_loading),
-                                    role = TextRole.Display,
-                                    tone = TextTone.Danger,
-                                )
-                                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                CinemaText(
-                                    text =
-                                        (state as? EpgViewModel.UiState.Error)?.message
-                                            ?: stringResource(R.string.epg_error_no_channels_in_category),
-                                    role = TextRole.Body,
-                                    tone = TextTone.Secondary,
-                                )
-                                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                                CinemaButton(
-                                    onClick = { viewModel.loadEpgData() },
-                                ) {
-                                    CinemaText(
-                                        stringResource(R.string.common_retry),
-                                        role = TextRole.Label,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                        }
+                    // Not a failure: the category has no channels, as on TV.
+                    is EpgViewModel.UiState.NoChannels -> {
+                        MobileEmptyState(
+                            message = stringResource(R.string.epg_guide_no_channels),
+                            icon = CinemaIcons.LiveTv,
+                            actionLabel = stringResource(R.string.common_back),
+                            onAction = onBack,
+                        )
+                    }
+
+                    is EpgViewModel.UiState.Error -> {
+                        MobileErrorState(
+                            message = state.message,
+                            onRetry = { viewModel.loadEpgData() },
+                            title = stringResource(R.string.epg_error_loading),
+                        )
                     }
                 }
             }

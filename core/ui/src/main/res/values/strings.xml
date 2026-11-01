@@ -811,7 +811,6 @@
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Couldn\'t load the channels: %1$s</string>
-    <string name="epg_error_no_channels_in_category">No channels found in this category.</string>
     <string name="epg_error_load_data_format">Couldn\'t load the guide: %1$s</string>
 
     <!-- ViewModel error-fallback audit fixes -->

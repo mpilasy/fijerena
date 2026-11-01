@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDial
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -177,11 +178,7 @@ fun TvProviderSelectionScreen(
             }
 
             is ProviderUiState.Error -> {
-                CinemaText(
-                    state.message,
-                    role = TextRole.Body,
-                    tone = TextTone.Danger,
-                )
+                TvErrorState(message = state.message, onRetry = { viewModel.loadProviders() })
             }
 
             is ProviderUiState.SingleProvider, is ProviderUiState.MultipleProviders -> {

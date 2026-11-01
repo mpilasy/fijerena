@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.*
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
@@ -181,7 +182,9 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message))
+                viewModel.setExportImportMessage(
+                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                )
             }
         pendingImportUri = null
     }
@@ -196,7 +199,9 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message))
+                viewModel.setExportImportMessage(
+                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                )
             }
         pendingImportPath = null
     }
