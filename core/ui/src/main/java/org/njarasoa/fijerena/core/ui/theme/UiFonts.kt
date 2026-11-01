@@ -56,6 +56,6 @@ object UiFonts {
             Font(R.font.zen_maru_gothic_bold, FontWeight(700)),
         )
 
-    /** One weight only: a Look using it for titles sets [UiTypeTokens.titleWeight] to 400, so nothing is faux-bolded. */
-    val DmSerifDisplay = FontFamily(Font(R.font.dm_serif_display, FontWeight.Normal))
+    /** Cinema's and Calm's titles: a calm, readable serif (user, 2026-11-01, in place of DM Serif Display). */
+    val SourceSerif4 = variable(R.font.source_serif_4_variable)
 }

@@ -187,7 +187,7 @@ val ModernStyle =
         icon = UiIconTokens(style = IconStyle.OUTLINED),
     )
 
-/** DM Serif Display titles over Inter, sharp 4 dp corners: a film-poster feel. */
+/** Source Serif 4 titles over Inter, sharp 4 dp corners: a film-poster feel. */
 val CinemaStyle =
     UiStyle(
         id = "cinema",
@@ -200,8 +200,8 @@ val CinemaStyle =
                 weightEmphasis = 600,
                 trackingTitleSp = 0f,
                 trackingBodySp = 0f,
-                titleFontFamily = UiFonts.DmSerifDisplay,
-                titleWeight = 400,
+                titleFontFamily = UiFonts.SourceSerif4,
+                titleWeight = 600,
             ),
         dialog = UiDialogTokens(cornerRadius = 6.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.06f, focusUsesOutline = false, focusUsesShadow = true),
@@ -356,7 +356,7 @@ val SpotlightStyle =
         icon = UiIconTokens(style = IconStyle.OUTLINED),
     )
 
-/** DM Serif Display titles over Inter, soft 10 dp corners, a quiet outline on focus with little zoom: a calm, paper-like look. */
+/** Source Serif 4 titles over Inter, soft 10 dp corners, a quiet outline on focus with little zoom: a calm, paper-like look. */
 val CalmStyle =
     UiStyle(
         id = "calm",
@@ -369,8 +369,8 @@ val CalmStyle =
                 weightEmphasis = 500,
                 trackingTitleSp = 0f,
                 trackingBodySp = 0.1f,
-                titleFontFamily = UiFonts.DmSerifDisplay,
-                titleWeight = 400,
+                titleFontFamily = UiFonts.SourceSerif4,
+                titleWeight = 600,
             ),
         dialog = UiDialogTokens(cornerRadius = 14.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.03f, focusUsesOutline = true, focusUsesShadow = false),

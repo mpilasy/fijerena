@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A better serif for titles:** the Cinema and Calm Look and Feel (and the Clay UI theme) set their titles in Source Serif 4, a calm, readable serif, in place of DM Serif Display, which the app no longer includes. TV and phone.
 - **Both teams' logos on a game:** a game on the Sports tab and in Teams search shows both teams' logos, one above the other, home team on top as in the title. A team's own page still shows the opponent's logo alone. TV and phone.
 - **A show's regulars apart from its guest stars:** a show's Cast tab shows its regular cast under **Series Cast**, then the guest stars of all seasons under **Guest Stars**, each row with its own "+N more" card. An actor who left before the last season stays a regular. An episode's page is unchanged. TV and phone.
 
