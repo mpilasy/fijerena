@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.category
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,13 +18,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.expiringSources
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -44,7 +44,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             modifier =
                 modifier
                     .fillMaxWidth()
-                    .background(CinemaTheme.colors.danger)
+                    .panel(PanelFill.Danger)
                     .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),

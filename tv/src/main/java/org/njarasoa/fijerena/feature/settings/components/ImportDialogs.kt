@@ -2,11 +2,8 @@ package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -14,29 +11,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.TvContentText
-import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.components.input.TvCheckRow
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /** Which parts of a settings file to import: one row per part the file has, then Import or Cancel. Focus opens on the first row. */
 @Composable
@@ -106,7 +93,6 @@ fun ImportOptionsDialog(
     )
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun OptionRow(
     label: String,
@@ -114,43 +100,12 @@ private fun OptionRow(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    androidx.tv.material3.Surface(
-        onClick = {
-            onToggle()
-        },
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .onFocusChanged { isFocused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
-        colors =
-            ClickableSurfaceDefaults.colors(
-                containerColor = CinemaTheme.colors.clear,
-                focusedContainerColor = CinemaTheme.colors.surfaceRaised,
-                contentColor = CinemaTheme.colors.textPrimary,
-                focusedContentColor = CinemaTheme.colors.textPrimary,
-            ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        border =
-            ClickableSurfaceDefaults.border(
-                focusedBorder =
-                    androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(TvDimensions.borderFocused, CinemaTheme.colors.accentSoft),
-                        shape = cornerShape(CornerRadius.small),
-                    ),
-            ),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(Spacing.sm),
-        ) {
-            // Not a control of its own: the row toggles it (onCheckedChange = null).
-            CinemaCheckbox(checked = checked, onCheckedChange = null)
-            Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-            TvContentText(label)
-        }
-    }
+    TvCheckRow(
+        checked = checked,
+        onCheckedChange = { onToggle() },
+        label = label,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 /**

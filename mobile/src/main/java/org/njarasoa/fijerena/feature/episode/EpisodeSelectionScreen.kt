@@ -87,18 +87,20 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -279,7 +281,7 @@ fun MobileEpisodeSelectionScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(CinemaTheme.colors.background)
+                    .panel(PanelFill.Ground)
                     .padding(
                         top = if (showsList) CinemaSpacing.none else paddingValues.calculateTopPadding(),
                         bottom = paddingValues.calculateBottomPadding(),
@@ -1607,7 +1609,7 @@ private fun SeasonTabs(
                 }
                 // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
                 // underneath it and need to actually be hidden, not show through.
-                .background(background)
+                .panel(PanelFill.Ground)
                 .padding(vertical = CinemaSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
@@ -1622,10 +1624,8 @@ private fun SeasonTabs(
                     tone = if (isSelected) TextTone.Accent else TextTone.Secondary,
                     modifier =
                         Modifier
-                            .background(
-                                if (isSelected) CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.textLow) else CinemaTheme.colors.clear,
-                                CinemaTheme.shapes.card,
-                            ).combinedClickable(
+                            .panel(if (isSelected) PanelFill.Selected else PanelFill.Clear, PanelCorner.Card)
+                            .combinedClickable(
                                 role = Role.Button,
                                 onLongClick = onSeasonLongPress?.let { { it(season.seasonNumber) } },
                             ) { onSeasonSelected(season.seasonNumber) }

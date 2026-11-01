@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.sports
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,8 +47,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
@@ -64,7 +65,6 @@ import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -246,7 +246,7 @@ private fun TvSportsPage(
         closedGame = null
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         LazyColumn(
             state = listState,
             // Back on the root, before the focused control: see NAVIGATION_GUIDE → TV Back on Detail Screens.

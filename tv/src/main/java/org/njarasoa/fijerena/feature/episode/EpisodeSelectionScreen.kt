@@ -7,7 +7,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -139,19 +138,20 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -197,6 +197,8 @@ import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.pickerFocus
+import org.njarasoa.fijerena.ui.components.modifiers.tabChipFill
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -1031,7 +1033,7 @@ internal fun EpisodeListContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.background)
+                .panel(PanelFill.Ground)
                 // Same Back interception as the list below, for the detail panel: its focused
                 // Buttons swallow the first Back before the BackHandler sees it, so close here,
                 // top-down, before any descendant gets the key.
@@ -1330,7 +1332,7 @@ internal fun EpisodeListContent(
                                         Modifier
                                             .fillMaxWidth()
                                             // Opaque, top padding included: cards scroll in underneath.
-                                            .background(CinemaTheme.colors.background)
+                                            .panel(PanelFill.Ground)
                                             .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                                             .padding(top = Spacing.md.scaled(scale))
                                             .onFocusChanged { if (it.hasFocus) focusInSection = true },
@@ -1841,20 +1843,8 @@ private fun StreamNamePicker(
             modifier =
                 Modifier
                     .testTag("stream_name_picker")
-                    .background(
-                        color = if (isFocused) CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.tint) else CinemaTheme.colors.clear,
-                        shape = CinemaTheme.shapes.card,
-                    ).then(
-                        if (isFocused) {
-                            Modifier.border(
-                                width = TvFocusTokens.focusBorderWidth,
-                                color = CinemaTheme.colors.accentSoft,
-                                shape = CinemaTheme.shapes.card,
-                            )
-                        } else {
-                            Modifier
-                        },
-                    ).focusRequester(focusRequester)
+                    .pickerFocus(isFocused)
+                    .focusRequester(focusRequester)
                     .onFocusChanged {
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
@@ -2247,7 +2237,7 @@ private fun SeasonTabs(
                 .fillMaxWidth()
                 // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
                 // underneath it and need to actually be hidden, not show through.
-                .background(CinemaTheme.colors.background)
+                .panel(PanelFill.Ground)
                 .padding(vertical = Spacing.sm.scaled(scale))
                 .horizontalScroll(tabScroll)
                 // Entering this row from outside (D-pad down from above, up from below) always
@@ -2320,10 +2310,6 @@ private fun SeasonTab(
         if (isFocused) onSelected()
     }
 
-    // P5: the selected chip keeps the resting look and is marked by a bottom accent bar plus
-    // accent text; only focus lifts the container.
-    val containerColor = if (isFocused) TvFocusTokens.focusFill else TvFocusTokens.restingContainer
-
     // The selected season's text is the "current" colour (TvFocusTokens.currentText: the soft
     // accent); focused, the chip is white and its text dark.
     val textTone =
@@ -2348,10 +2334,7 @@ private fun SeasonTab(
                     active = isSelected,
                     shape = seasonChipShape,
                     edge = CurrentIndicatorEdge.Bottom,
-                ).background(
-                    color = containerColor,
-                    shape = seasonChipShape,
-                )
+                ).tabChipFill(isFocused)
                 // No separate .focusable(): .clickable() below already creates a focus target,
                 // and stacking a second one on the same node was the actual cause of tabs being
                 // unreachable by D-pad Up/Down from outside the row (Left/Right worked because

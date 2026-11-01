@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -57,15 +58,19 @@ import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
+import org.njarasoa.fijerena.core.ui.components.CinemaPanel
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.panelShape
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
@@ -1254,14 +1259,15 @@ private fun MobileCollapsibleHeader(
     isExpanded: Boolean,
     onToggle: () -> Unit,
 ) {
-    Surface(
-        onClick = onToggle,
+    CinemaPanel(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = Spacing.xxs),
-        color = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.tint),
-        shape = CinemaTheme.shapes.chip,
+                .padding(vertical = Spacing.xxs)
+                .clip(panelShape(PanelCorner.Chip))
+                .clickable(onClick = onToggle),
+        fill = PanelFill.RaisedFaint,
+        corner = PanelCorner.Chip,
     ) {
         Row(
             modifier =

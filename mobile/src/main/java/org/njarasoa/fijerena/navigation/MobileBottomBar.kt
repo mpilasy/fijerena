@@ -1,7 +1,5 @@
 package org.njarasoa.fijerena.navigation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,7 +41,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * The phone's bottom bar tabs (docs/plans/20261019_phone-home-tab-plan.md), in bar order. [route] is
@@ -201,9 +197,7 @@ fun MobileBottomBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(MobileDockStyle.barShape)
-                    .background(MobileDockStyle.barContainer)
-                    .border(MobileDockStyle.barOutlineWidth, MobileDockStyle.barOutline, MobileDockStyle.barShape)
+                    .dockBar()
                     .padding(MobileDockStyle.barPadding)
                     .selectableGroup(),
         ) {
@@ -220,8 +214,7 @@ fun MobileBottomBar(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .clip(MobileDockStyle.tabShape)
-                            .background(if (isSelected) MobileDockStyle.selectedTabContainer else CinemaTheme.colors.clear)
+                            .dockTab(isSelected)
                             .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(tab) })
                             .padding(vertical = MobileDockStyle.tabVerticalPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,

@@ -12,7 +12,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -130,6 +129,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.SectionPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -203,6 +203,7 @@ import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.accentFocusOutline
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
@@ -1265,16 +1266,8 @@ fun ContentTypeSelectionScreen(
                                         Modifier
                                             .weight(1f, fill = false)
                                             .scale(summaryScale)
-                                            .border(
-                                                width = TvFocusTokens.focusBorderWidth,
-                                                color =
-                                                    if (summaryFocused) {
-                                                        CinemaTheme.colors.accentSoft
-                                                    } else {
-                                                        CinemaTheme.colors.clear
-                                                    },
-                                                shape = CinemaTheme.shapes.dialog,
-                                            ).leftToRail()
+                                            .accentFocusOutline(summaryFocused, PanelCorner.Dialog)
+                                            .leftToRail()
                                             .onFocusChanged { summaryFocused = it.isFocused }
                                             .clickable(role = Role.Button) { showSourcesSheet = true }
                                             .semantics { contentDescription = summaryDescription },

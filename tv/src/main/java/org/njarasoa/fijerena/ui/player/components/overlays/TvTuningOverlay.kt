@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.ui.player.components.overlays
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,12 +16,13 @@ import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -46,16 +46,12 @@ fun TvTuningOverlay(
     compact: Boolean = false,
     unavailable: Boolean = false,
 ) {
-    val background = CinemaTheme.colors.background
-    val scrim = remember(background) { background.copy(alpha = CinemaAlpha.scrim) }
-    val pill = remember(background) { background.copy(alpha = CinemaAlpha.glass) }
-    val pillShape = CinemaTheme.shapes.card
     val context = LocalContext.current
     val showDetails = remember { !compact && AppSettings(context.applicationContext).isDevMode }
     // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
     val name = parseDisplayTitle(channelName).title.ifBlank { channelName }
     Box(
-        modifier = modifier.fillMaxSize().background(scrim),
+        modifier = modifier.fillMaxSize().panel(PanelFill.Dim),
         contentAlignment = Alignment.Center,
     ) {
         if (unavailable) {
@@ -64,7 +60,7 @@ fun TvTuningOverlay(
                 modifier =
                     Modifier
                         .padding(Spacing.md)
-                        .background(pill, pillShape)
+                        .panel(PanelFill.Notice, PanelCorner.Card)
                         .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 role = if (compact) TextRole.Heading else TextRole.Title,
                 tone = TextTone.Primary,

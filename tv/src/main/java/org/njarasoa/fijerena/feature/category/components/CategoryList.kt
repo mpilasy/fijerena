@@ -1,8 +1,6 @@
 package org.njarasoa.fijerena.feature.category.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,10 +56,8 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -71,6 +67,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLook
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
+import org.njarasoa.fijerena.ui.components.glassPane
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.pageKeys
@@ -79,7 +76,6 @@ import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -180,16 +176,6 @@ internal fun CategoryList(
     // unbounded for the composable's whole lifetime.
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
-    val panelShape = CinemaTheme.shapes.chip
-    val borderEdge = CinemaTheme.colors.glassBorder
-    val borderShine = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.ghost)
-    val borderBrush =
-        remember(borderEdge, borderShine) {
-            androidx.compose.ui.graphics.Brush.verticalGradient(
-                colors = listOf(borderEdge, borderShine, borderEdge),
-            )
-        }
-
     Column(modifier = modifier) {
         // The pane's title; the screen's one Refresh is in the header (TV UI audit #5).
         CinemaText(
@@ -202,14 +188,7 @@ internal fun CategoryList(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        color = CinemaTheme.colors.glass,
-                        shape = panelShape,
-                    ).border(
-                        width = TvDimensions.borderDefault,
-                        brush = borderBrush,
-                        shape = panelShape,
-                    )
+                    .glassPane()
                     // The screen header above stays outside the pane: Up from the first category
                     // reaches it. Left from a row goes to the rail, whose Right comes back to it.
                     .tvPane(paneFocus, exitRight = itemsPane, leftToRail = true)

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.wanted
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,12 +39,13 @@ import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
@@ -117,7 +117,7 @@ fun MobileTmdbTitleScreen(
         },
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background),
+            modifier = Modifier.fillMaxSize().panel(PanelFill.Ground),
             contentPadding =
                 PaddingValues(
                     start = CinemaSpacing.md,

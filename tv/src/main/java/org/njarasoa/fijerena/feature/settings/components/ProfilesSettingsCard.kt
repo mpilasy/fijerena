@@ -3,7 +3,6 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,12 +43,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
@@ -99,6 +95,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -106,7 +104,6 @@ import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.ThemePreview
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
@@ -1044,7 +1041,7 @@ private fun ColorSwatch(
 ) {
     val color = CinemaProfileColors.forIndex(index)
     val label = stringResource(R.string.profile_color_option_format, index + 1)
-    Surface(
+    TvCard(
         onClick = onClick,
         modifier =
             Modifier
@@ -1053,28 +1050,6 @@ private fun ColorSwatch(
                     contentDescription = label
                     this.selected = selected
                 },
-        shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
-        colors =
-            ClickableSurfaceDefaults.colors(
-                containerColor = color,
-                focusedContainerColor = color,
-                pressedContainerColor = color,
-            ),
-        scale =
-            ClickableSurfaceDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-            ),
-        border =
-            ClickableSurfaceDefaults.border(
-                border =
-                    if (selected) {
-                        Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.textPrimary))
-                    } else {
-                        Border.None
-                    },
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.accentSoft)),
-            ),
+        look = TvCardLooks.swatch(color, selected, scale),
     ) {}
 }

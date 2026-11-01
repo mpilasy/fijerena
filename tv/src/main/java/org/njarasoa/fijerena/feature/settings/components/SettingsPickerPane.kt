@@ -37,11 +37,13 @@ import androidx.tv.material3.RadioButtonDefaults
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvRadioRow
@@ -92,7 +94,7 @@ fun <T> SettingsPickerPane(
                 selectedValue,
                 onPick,
                 onBack,
-                modifier.background(CinemaTheme.colors.background, CinemaTheme.shapes.card).padding(Spacing.sm),
+                modifier.panel(PanelFill.Ground, PanelCorner.Card).padding(Spacing.sm),
             ) { focusedValue = it }
         }
     }

@@ -83,8 +83,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -194,7 +197,7 @@ fun MobileControlsOverlay(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.osdScrim))
+                .panel(PanelFill.Osd)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -381,7 +384,7 @@ fun MobileControlsOverlay(
                                     modifier =
                                         Modifier
                                             .size(MobileDimensions.liveDotSize)
-                                            .background(CinemaTheme.colors.live, shape = CinemaTheme.shapes.identity),
+                                            .panel(PanelFill.Live, PanelCorner.Identity),
                                 )
                                 CinemaText(
                                     text = stringResource(R.string.player_live),
@@ -700,7 +703,7 @@ fun MobileControlsOverlay(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(CinemaTheme.colors.scrim)
+                        .panel(PanelFill.Scrim)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -712,10 +715,8 @@ fun MobileControlsOverlay(
                         Modifier
                             .widthIn(max = MobileDimensions.statsOverlayMaxWidth * 1.5f)
                             .padding(CinemaSpacing.xl)
-                            .background(
-                                color = CinemaTheme.colors.surface.copy(alpha = CinemaAlpha.scrim),
-                                shape = CinemaTheme.shapes.card,
-                            ).padding(CinemaSpacing.lg),
+                            .panel(PanelFill.MediaCard, PanelCorner.Card)
+                            .padding(CinemaSpacing.lg),
                 ) {
                     Column {
                         BadgedTitle(

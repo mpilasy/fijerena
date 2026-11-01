@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -21,7 +22,10 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
+import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * A TV card's whole look: colours, outline, focus scale, glow and shape. `CardDefaults` calls are
@@ -162,6 +166,98 @@ object TvCardLooks {
             glow = CardDefaults.glow(focusedGlow = accentShadow()),
             shape = CardDefaults.shape(shape = CinemaTheme.shapes.card),
         )
+
+    /**
+     * A block of text that takes focus only so the list scrolls to it (Device Info's sections,
+     * Diagnostics' entries, Licences): the resting container, a lighter one and a white outline on
+     * focus, no scale, the large corner.
+     */
+    @Composable
+    fun infoBlock(): TvCardLook {
+        val focused = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline))
+        return TvCardLook(
+            colors =
+                CardDefaults.colors(
+                    containerColor = TvFocusTokens.restingContainer,
+                    contentColor = CinemaTheme.colors.textPrimary,
+                    focusedContainerColor = TvFocusTokens.focusedContainer,
+                    focusedContentColor = CinemaTheme.colors.textPrimary,
+                    pressedContainerColor = TvFocusTokens.focusedContainer,
+                    pressedContentColor = CinemaTheme.colors.textPrimary,
+                ),
+            border = CardDefaults.border(border = Border.None, focusedBorder = focused, pressedBorder = focused),
+            scale = CardDefaults.scale(scale = TvFocusTokens.defaultScale, focusedScale = TvFocusTokens.defaultScale),
+            glow = CardDefaults.glow(),
+            shape = CardDefaults.shape(shape = cornerShape(CornerRadius.large)),
+        )
+    }
+
+    /**
+     * A profile's avatar on the picker: round (the identity shape), the style's focus scale, and a
+     * white ring hugging its edge on focus (F-PP-1, TV UI audit #1): drawn just outside the edge, with
+     * no gap, so it reads as the avatar's own outline; white, the rows' focus colour, never blends
+     * into a coloured avatar the way the accent did.
+     */
+    @Composable
+    fun avatar(): TvCardLook {
+        val shape = CinemaTheme.shapes.identity
+        val ring =
+            Border(
+                border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth, TvFocusTokens.focusedRowOutline),
+                inset = TvFocusTokens.avatarFocusBorderWidth / 2,
+                shape = shape,
+            )
+        return TvCardLook(
+            colors =
+                CardDefaults.colors(
+                    containerColor = TvFocusTokens.restingContainer,
+                    focusedContainerColor = TvFocusTokens.focusedContainer,
+                    pressedContainerColor = TvFocusTokens.focusedContainer,
+                ),
+            border = CardDefaults.border(border = Border.None, focusedBorder = ring, pressedBorder = ring),
+            scale =
+                CardDefaults.scale(
+                    scale = TvFocusTokens.defaultScale,
+                    focusedScale = TvFocusTokens.focusedScale,
+                    pressedScale = TvFocusTokens.pressedScale,
+                ),
+            glow = CardDefaults.glow(),
+            shape = CardDefaults.shape(shape = shape),
+        )
+    }
+
+    /**
+     * A colour swatch (a profile's colour): round, filled with [color] in every state, the style's
+     * focus scale; the text colour outlines the chosen one, the soft accent the focused one.
+     * [uiScale] scales the outline as the swatch.
+     */
+    @Composable
+    fun swatch(
+        color: Color,
+        selected: Boolean,
+        uiScale: Float,
+    ): TvCardLook {
+        val shape = CinemaTheme.shapes.identity
+        val width = TvFocusTokens.focusBorderWidth.scaled(uiScale)
+        val focused = Border(BorderStroke(width, CinemaTheme.colors.accentSoft))
+        return TvCardLook(
+            colors = CardDefaults.colors(containerColor = color, focusedContainerColor = color, pressedContainerColor = color),
+            border =
+                CardDefaults.border(
+                    border = if (selected) Border(BorderStroke(width, CinemaTheme.colors.textPrimary)) else Border.None,
+                    focusedBorder = focused,
+                    pressedBorder = focused,
+                ),
+            scale =
+                CardDefaults.scale(
+                    scale = TvFocusTokens.defaultScale,
+                    focusedScale = TvFocusTokens.focusedScale,
+                    pressedScale = TvFocusTokens.pressedScale,
+                ),
+            glow = CardDefaults.glow(),
+            shape = CardDefaults.shape(shape = shape),
+        )
+    }
 
     @Composable
     private fun accentShadow(): Glow =

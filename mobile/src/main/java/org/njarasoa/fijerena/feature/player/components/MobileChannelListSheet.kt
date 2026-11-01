@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.player.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -20,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,12 +34,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -71,7 +69,7 @@ fun MobileChannelListSheet(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.tint))
+                .panel(PanelFill.Veil)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -127,16 +125,11 @@ fun MobileChannelListSheet(
                     ) {
                         items(streams, key = { it.id }, contentType = { "channel" }) { stream ->
                             val isCurrentStream = stream.id == currentStreamId
-                            Surface(
+                            CinemaChoiceRow(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier.fillMaxWidth(),
-                                color =
-                                    if (isCurrentStream) {
-                                        CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.glass)
-                                    } else {
-                                        CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.glass)
-                                    },
-                                shape = MaterialTheme.shapes.small,
+                                selected = isCurrentStream,
+                                overMedia = true,
                             ) {
                                 Row(
                                     modifier =

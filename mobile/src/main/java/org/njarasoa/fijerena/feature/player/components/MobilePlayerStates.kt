@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,14 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaPanel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -98,10 +97,10 @@ fun ErrorOverlay(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
-    Surface(
+    CinemaPanel(
         modifier = Modifier.padding(Spacing.xl),
-        color = CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayMedium),
-        shape = MaterialTheme.shapes.medium,
+        fill = PanelFill.Notice,
+        corner = PanelCorner.Card,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -159,10 +158,10 @@ fun SlowConnectionBanner(text: String) {
         modifier = Modifier.fillMaxSize().padding(top = Spacing.xl),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Surface(
+        CinemaPanel(
             modifier = Modifier.padding(horizontal = Spacing.md),
-            color = CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayMedium),
-            shape = MaterialTheme.shapes.medium,
+            fill = PanelFill.Notice,
+            corner = PanelCorner.Card,
         ) {
             CinemaText(
                 text = text,

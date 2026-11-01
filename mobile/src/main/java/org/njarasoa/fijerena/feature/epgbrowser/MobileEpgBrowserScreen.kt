@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.epgbrowser
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,10 +83,12 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
@@ -98,7 +99,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
@@ -595,7 +595,7 @@ private fun MobileDateHeader(dateLabel: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(CinemaTheme.colors.surface)
+                .panel(PanelFill.Surface)
                 .padding(vertical = CinemaSpacing.sm),
         role = TextRole.Label,
         tone = TextTone.Primary,

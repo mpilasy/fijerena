@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.ui.wanted
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -12,8 +11,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -31,7 +31,7 @@ fun NotAvailableMark(
         modifier =
             modifier
                 .clip(CinemaTheme.shapes.chip)
-                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.scrim))
+                .panel(PanelFill.Dim)
                 .padding(CinemaSpacing.xxs),
     ) {
         CinemaIcon(

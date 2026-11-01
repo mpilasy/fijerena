@@ -76,8 +76,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.catchup.guideChannelRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.PinSession
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -622,7 +624,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             selectTab(MobileTab.HOME)
         }
     }
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Surface)) {
         CompositionLocalProvider(
             LocalDockInset provides dockInset,
             LocalOpenWanted provides { navController.navigateOnce(it) },
@@ -1404,7 +1406,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             profilesViewModel.needsPin(profile.id)
         ) {
             // Nothing of Settings shows behind the prompt.
-            Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
+            Box(Modifier.fillMaxSize().panel(PanelFill.Ground))
             PinDialog(
                 state =
                     rememberPinPromptState(

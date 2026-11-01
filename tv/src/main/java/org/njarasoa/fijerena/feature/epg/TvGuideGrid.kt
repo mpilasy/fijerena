@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -120,11 +119,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.components.rememberTextHeight
@@ -1440,7 +1441,7 @@ private fun TimeRuler(
                                     Modifier
                                         .width(TvDimensions.borderDefault)
                                         .fillMaxHeight()
-                                        .background(CinemaTheme.colors.textTertiary),
+                                        .panel(PanelFill.Rule),
                             )
                             CinemaText(
                                 text = TimeFormat.formatTime(tick.epochSec),
@@ -1784,7 +1785,7 @@ private fun ProgramCell(
                         Modifier
                             .width(Spacing.xxs.scaled(scale))
                             .fillMaxHeight()
-                            .background(CinemaTheme.colors.accent),
+                            .panel(PanelFill.Accent),
                 )
             }
             if (cell.labelFits && timeOnly) {

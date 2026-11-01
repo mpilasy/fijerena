@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,13 +18,15 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.expiringSources
 import org.njarasoa.fijerena.ui.components.TvIcon
@@ -47,7 +48,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             modifier =
                 modifier
                     .fillMaxWidth()
-                    .background(CinemaTheme.colors.danger, CinemaTheme.shapes.chip)
+                    .panel(PanelFill.Danger, PanelCorner.Chip)
                     .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),

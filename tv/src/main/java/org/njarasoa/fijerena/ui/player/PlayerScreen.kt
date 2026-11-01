@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -60,9 +59,11 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
@@ -71,7 +72,6 @@ import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.HideTvClock
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
@@ -275,7 +275,7 @@ fun PlayerScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(CinemaTheme.colors.mediaScrim)
+                    .panel(PanelFill.Media)
                     .then(
                         // Only make the player box focusable when controls and menus are NOT visible.
                         // This allows focus to pass to the active overlay (e.g. the channel panel).
@@ -626,7 +626,7 @@ fun PlayerScreen(
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.tint))
+                                .panel(PanelFill.Veil)
                                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
                     ) {
                         TvGlassPanel(
