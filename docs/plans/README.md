@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-11-01 | [Home row order](./20261101_home-row-order-plan.md) | Each profile orders (and may hide) its Home rows on TV and phone; the order syncs to every device of the profile | Planned 2026-11-01; open questions HO-Q1 to HO-Q3 |
 | 2026-10-31 | [Jellyfin in the merged lists](./20261031_jellyfin-merge-plan.md) | A Jellyfin source's films and shows in the merged lists, Search and Home rows from a local copy of its library; watch history and favourites kept current with the Jellyfin server both ways | Planned 2026-10-31; open questions JM-Q1 (storage) and JM-Q2 (shared login) |
 | 2026-10-31 | [Sports teams](./20261031_sports-teams-plan.md) | Find any team ESPN covers, see its next games and which of the profile's channels, guide programmes or PPV/event channels carry each; Teams search (best team's games first), Sports section, Upcoming Games row, followed teams synced per profile, game reminders | Done 2026-10-31, walked on both emulators |
 | 2026-10-31 | [People search](./20261031_people-search-plan.md) | A People search type between Catalogue and Guide (with a TMDB key): TMDB's people, films and shows; a person opens their actor page | Done 2026-10-31, walked on both emulators |
