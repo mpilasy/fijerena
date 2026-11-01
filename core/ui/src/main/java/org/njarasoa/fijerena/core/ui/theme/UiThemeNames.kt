@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import org.njarasoa.fijerena.core.network.PackagedUiTheme
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.ui.R
+import java.text.Collator
 
 /** A UI theme's name: Custom, its colour theme's when they share the id (Console, Meadow, Meadow dusk), else its Look and Feel's. */
 @StringRes
@@ -17,3 +18,23 @@ fun packagedUiThemesFor(
     admin: Boolean,
     current: String,
 ): List<PackagedUiTheme> = UiThemes.packaged.filter { admin || !it.expertOnly || it.id == current }
+
+/**
+ * The UI theme picker's order (user, 2026-11-01): Custom, then Standard, then the rest by [label]
+ * in the app's language, as the Theme and Look and Feel pickers are.
+ */
+fun <T> List<T>.sortedAsUiThemes(
+    id: (T) -> String,
+    label: (T) -> String,
+): List<T> {
+    val collator = Collator.getInstance()
+    return sortedWith(
+        compareBy<T> {
+            when (id(it)) {
+                UiThemes.CUSTOM -> 0
+                UiThemes.STANDARD -> 1
+                else -> 2
+            }
+        }.thenComparing({ label(it) }, collator),
+    )
+}

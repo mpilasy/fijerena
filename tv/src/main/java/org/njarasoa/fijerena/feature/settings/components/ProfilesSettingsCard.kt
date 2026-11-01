@@ -82,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.packagedUiThemesFor
 import org.njarasoa.fijerena.core.ui.theme.paletteById
+import org.njarasoa.fijerena.core.ui.theme.sortedAsUiThemes
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
@@ -383,15 +384,16 @@ fun ProfileEditPane(
         SettingsPickerPane(
             title = stringResource(R.string.ui_theme_title),
             options =
-                looks.map { (id, look) ->
-                    // Each row in its theme's font and accent, with its colours beside it.
-                    PickerOption(
-                        stringResource(uiThemeNameRes(id)),
-                        id,
-                        preview = { PaletteSwatches(paletteById(look.first)) },
-                        inLook = { ProvideLookAndAccent(look.first, look.second, it) },
-                    )
-                },
+                looks
+                    .map { (id, look) ->
+                        // Each row in its theme's font and accent, with its colours beside it.
+                        PickerOption(
+                            stringResource(uiThemeNameRes(id)),
+                            id,
+                            preview = { PaletteSwatches(paletteById(look.first)) },
+                            inLook = { ProvideLookAndAccent(look.first, look.second, it) },
+                        )
+                    }.sortedAsUiThemes({ it.value }, { it.label }),
             selectedValue = uiThemeId,
             // The pane previews the focused UI theme; the app's theme changes only on OK.
             paneLook = { id, content -> looks[id]?.let { ThemePreview(it.first, it.second, content) } ?: content() },

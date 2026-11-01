@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.packagedUiThemesFor
 import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.palettesFor
+import org.njarasoa.fijerena.core.ui.theme.sortedAsUiThemes
 import org.njarasoa.fijerena.core.ui.theme.styleById
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
@@ -431,7 +432,7 @@ internal fun ProfileOwnRows(
                 packagedUiThemesFor(adminView, uiThemeId).associate { it.id to (it.themeId to it.uiStyleId) }
         SettingsPickerDialog(
             title = stringResource(R.string.ui_theme_title),
-            options = looks.keys.map { stringResource(uiThemeNameRes(it)) to it },
+            options = looks.keys.map { stringResource(uiThemeNameRes(it)) to it }.sortedAsUiThemes({ it.second }, { it.first }),
             selected = uiThemeId,
             // Each row in its theme's font and accent, with its colours beside it.
             preview = { id -> looks[id]?.let { PaletteSwatches(paletteById(it.first)) } },

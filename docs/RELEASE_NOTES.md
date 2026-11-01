@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **UI themes in alphabetical order:** the UI Theme picker lists Custom, then Standard, then the other themes alphabetically in the app's language, as the Theme and Look and Feel pickers do. TV and phone.
+
 ## Version: 0.9.20261101101306
 
 - **Upcoming Games first:** on Home, the Upcoming Games row now comes before Favourite channels. TV and phone.

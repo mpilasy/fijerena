@@ -26,13 +26,16 @@ object UiThemes {
     /** No packaged UI theme: the colour theme and the Look and Feel are picked one by one. */
     const val CUSTOM = "custom"
 
+    /** The first packaged theme, listed right after Custom. */
+    const val STANDARD = "standard"
+
     /**
      * The packaged UI themes. The first four pair each platform-inspired Look and Feel with a colour
      * theme, under the Look's name (user, 2026-10-21), with Slate after Standard and the streaming-service looks after it; then Console, Meadow dusk and Meadow.
      */
     val packaged: List<PackagedUiTheme> =
         listOf(
-            PackagedUiTheme("standard", themeId = "deep_night", uiStyleId = "material"),
+            PackagedUiTheme(STANDARD, themeId = "deep_night", uiStyleId = "material"),
             // Standard's system font and round corners over neutral greys with a light blue accent.
             PackagedUiTheme("slate", themeId = "slate", uiStyleId = "material"),
             // Streaming-service looks (user, 2026-11-01), each under its colour theme's name.
