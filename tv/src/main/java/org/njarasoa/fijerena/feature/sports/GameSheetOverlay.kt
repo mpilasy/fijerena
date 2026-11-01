@@ -32,16 +32,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
+import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -162,20 +166,31 @@ private fun ChannelRow(
         ) {
             CinemaThumbnail(
                 url = stream.iconUrl,
-                fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                fallbackLetter = channelLetter(stream.name),
                 contentType = ThumbnailContentType.LIVE_TV,
                 contentDescription = null,
                 modifier = Modifier.height(TvDimensions.iconXLarge).aspectRatio(CHANNEL_LOGO_ASPECT),
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                CinemaText(text = stream.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // As in the Live TV list: the name without its tags, the tags as badges before the programme.
+                val parsed = remember(stream.name) { parseDisplayTitle(stream.name) }
                 CinemaText(
-                    text = listOfNotNull(programme?.title, note).joinToString(" · "),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
+                    text = shownChannelName(stream.name),
+                    role = TextRole.Heading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    TitleBadges(parsed, maxLines = 1)
+                    CinemaText(
+                        text = listOfNotNull(programme?.title, note).joinToString(" · "),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
             }
         }
     }

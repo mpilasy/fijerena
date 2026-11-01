@@ -43,11 +43,11 @@ const val MAX_CAST_CARDS = 10
  */
 const val CAST_MORE_STEP = 30
 
-/** The actors a More card adds when [shown] of [total] are on screen. */
+/** The number on a More card: all the actors not on screen when [shown] of [total] are. A press adds [CAST_MORE_STEP] of them. */
 fun castMoreCount(
     shown: Int,
     total: Int,
-): Int = (total - shown).coerceIn(0, CAST_MORE_STEP)
+): Int = (total - shown).coerceAtLeast(0)
 
 /** The most people on the Writers line. */
 const val MAX_WRITERS = 5

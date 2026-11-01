@@ -31,13 +31,16 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.canRemind
+import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
+import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -242,7 +245,7 @@ fun MobileGameCard(
                     best?.stream?.let { stream ->
                         CinemaThumbnail(
                             url = stream.iconUrl,
-                            fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                            fallbackLetter = channelLetter(stream.name),
                             contentType = ThumbnailContentType.LIVE_TV,
                             contentDescription = null,
                             modifier = Modifier.height(MobileDimensions.iconDefault).aspectRatio(CHANNEL_LOGO_ASPECT),
@@ -251,14 +254,16 @@ fun MobileGameCard(
                     CinemaText(
                         text =
                             listOfNotNull(
-                                best?.stream?.name,
+                                best?.stream?.name?.let(::shownChannelName),
                                 best?.let { channelNote(resources, it) } ?: noChannelNote(resources, channels),
                             ).joinToString(" · "),
                         role = TextRole.BodySmall,
                         tone = TextTone.Accent,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    MoreChannelsBadge(channels)
                 }
             }
             trailing?.invoke(this)
@@ -352,7 +357,7 @@ fun MobileUpcomingGameCard(
                 best?.stream?.let { stream ->
                     CinemaThumbnail(
                         url = stream.iconUrl,
-                        fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                        fallbackLetter = channelLetter(stream.name),
                         contentType = ThumbnailContentType.LIVE_TV,
                         contentDescription = null,
                         modifier = Modifier.height(MobileDimensions.iconDefault).aspectRatio(CHANNEL_LOGO_ASPECT),
@@ -360,12 +365,14 @@ fun MobileUpcomingGameCard(
                 }
                 CinemaText(
                     // A line even with no channel, so the cards in the row line up.
-                    text = best?.stream?.name ?: stringResource(R.string.sports_not_found),
+                    text = best?.stream?.name?.let(::shownChannelName) ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Accent,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                MoreChannelsBadge(game.channels)
             }
         }
     }

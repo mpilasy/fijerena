@@ -125,9 +125,9 @@ class SportsPagesFocusTest {
             down("C / Arsenal v Chelsea"),
             down("L / Liverpool v Arsenal"),
             up("C / Arsenal v Chelsea"),
-            center("U / UK: Sky Sports Main Event"),
-            down("U / UK| PPV 3: Arsenal v Chelsea"),
-            up("U / UK: Sky Sports Main Event"),
+            center("S / Sky Sports Main Event / UK"),
+            down("P / PPV 3: Arsenal v Chelsea / UK"),
+            up("S / Sky Sports Main Event / UK"),
             back("C / Arsenal v Chelsea"),
         )
 

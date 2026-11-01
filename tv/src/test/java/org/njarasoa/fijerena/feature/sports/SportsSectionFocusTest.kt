@@ -176,9 +176,9 @@ class SportsSectionFocusTest {
         walk.awaitFocused("A / Arsenal")
         walk.run(
             down("A / Arsenal v Chelsea"),
-            center("U / UK: Sky Sports Main Event"),
+            center("S / Sky Sports Main Event / UK"),
             up("Remind Me"),
-            down("U / UK: Sky Sports Main Event"),
+            down("S / Sky Sports Main Event / UK"),
             back("A / Arsenal v Chelsea"),
         )
     }

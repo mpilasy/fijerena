@@ -30,11 +30,14 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.canRemind
+import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
+import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
@@ -348,7 +351,7 @@ private fun TvBestChannel(
         best?.stream?.let { stream ->
             CinemaThumbnail(
                 url = stream.iconUrl,
-                fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                fallbackLetter = channelLetter(stream.name),
                 contentType = ThumbnailContentType.LIVE_TV,
                 contentDescription = null,
                 modifier = Modifier.height(TvDimensions.iconLarge).aspectRatio(CHANNEL_LOGO_ASPECT),
@@ -356,7 +359,16 @@ private fun TvBestChannel(
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             best?.stream?.let { stream ->
-                CinemaText(text = stream.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    CinemaText(
+                        text = shownChannelName(stream.name),
+                        role = TextRole.Body,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    MoreChannelsBadge(channels)
+                }
             }
             CinemaText(
                 text = best?.let { channelNote(resources, it) } ?: noChannelNote(resources, channels),

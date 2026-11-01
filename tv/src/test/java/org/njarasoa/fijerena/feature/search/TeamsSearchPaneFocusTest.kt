@@ -136,13 +136,13 @@ class TeamsSearchPaneFocusTest {
         walk.run(
             down(BEST),
             down("C / Arsenal v Chelsea"),
-            center("U / UK| PPV 3: Arsenal v Chelsea"),
+            center("P / PPV 3: Arsenal v Chelsea / UK"),
             back("C / Arsenal v Chelsea"),
             down("C / Chelsea v Arsenal"),
             center("Not found on your channels"),
             back("C / Chelsea v Arsenal"),
             up("C / Arsenal v Chelsea"),
-            center("U / UK| PPV 3: Arsenal v Chelsea"),
+            center("P / PPV 3: Arsenal v Chelsea / UK"),
         )
         walk.press(Key.DirectionCenter)
         assertEquals(listOf("7"), played.map { it.initialStreamId })

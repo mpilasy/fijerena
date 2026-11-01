@@ -24,9 +24,12 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
+import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.key
+import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
@@ -98,7 +101,7 @@ private fun TvUpcomingGameCard(
                 best?.stream?.let { stream ->
                     CinemaThumbnail(
                         url = stream.iconUrl,
-                        fallbackLetter = stream.name.firstOrNull(Char::isLetterOrDigit),
+                        fallbackLetter = channelLetter(stream.name),
                         contentType = ThumbnailContentType.LIVE_TV,
                         contentDescription = null,
                         modifier = Modifier.height(TvDimensions.iconMedium).aspectRatio(CHANNEL_LOGO_ASPECT),
@@ -106,12 +109,14 @@ private fun TvUpcomingGameCard(
                 }
                 CinemaText(
                     // A line even with no channel, so the cards in the row line up.
-                    text = best?.stream?.name ?: stringResource(R.string.sports_not_found),
+                    text = best?.stream?.name?.let(::shownChannelName) ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                MoreChannelsBadge(game.channels)
             }
         }
     }

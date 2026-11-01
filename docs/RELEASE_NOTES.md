@@ -5,6 +5,8 @@
 - **See a theme before you keep it:** on the phone, a tap in the UI Theme, Theme or Look and Feel picker now only marks the option and shows the picker in it. **OK** saves it; **Cancel** keeps the old one. Phone.
 - **Dialog buttons stay on screen:** a dialog that opens from the bottom (Groove and Rounded) now opens fully, and a long list in it scrolls above its buttons. Before, the buttons of a long picker were below the screen edge. Phone.
 - **Channel letter fits its frame:** when a channel logo does not load, the channel's first letter shows in its place. In a small frame (the channel beside a game on Sports) the letter was cut off; it is now sized to the frame. TV and phone.
+- **Sports channels without their tags:** a game's channels show their names as the Live TV list does: "US| ESPN DEPORTES HD 60fps" is "ESPN DEPORTES", with the US, HD and 60 fps badges on the game's sheet. On a game card, "+N" after the best channel tells how many other channels show the game. TV and phone.
+- **Full cast count:** a title's "+N more" cast card gives the number of all the actors not on screen, not only the next 30. A press still adds 30. TV and phone.
 
 ## Version: 0.9.20261101054935
 

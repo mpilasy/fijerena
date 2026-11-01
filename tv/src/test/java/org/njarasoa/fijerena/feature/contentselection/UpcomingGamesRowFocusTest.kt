@@ -105,13 +105,13 @@ class UpcomingGamesRowFocusTest {
             right("L / A / Liverpool / Arsenal"),
             right("L / A / Liverpool / Arsenal"),
             left("A / C / Arsenal / Chelsea"),
-            center("U / UK: Sky Sports Main Event"),
+            center("S / Sky Sports Main Event / UK"),
             up("Remind Me"),
         )
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Reminder Set")
         assertEquals(setOf("espn/1"), bells.reminded.value.games)
-        walk.run(down("U / UK: Sky Sports Main Event"), back("A / C / Arsenal / Chelsea"))
+        walk.run(down("S / Sky Sports Main Event / UK"), back("A / C / Arsenal / Chelsea"))
     }
 
     private companion object {

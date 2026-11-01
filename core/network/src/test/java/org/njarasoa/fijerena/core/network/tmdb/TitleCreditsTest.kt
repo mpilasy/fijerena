@@ -78,8 +78,8 @@ class TitleCreditsTest {
     }
 
     @Test
-    fun `a More card adds at most a step of actors, never more than are left`() {
-        assertEquals(30, castMoreCount(shown = 10, total = 7666))
+    fun `a More card counts every actor not on screen`() {
+        assertEquals(7656, castMoreCount(shown = 10, total = 7666))
         assertEquals(2, castMoreCount(shown = 10, total = 12))
         assertEquals(0, castMoreCount(shown = 40, total = 40))
     }
