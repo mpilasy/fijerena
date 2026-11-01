@@ -30,8 +30,8 @@ class WishlistControl(
  * (the Wishlist is hidden there), or a title that is not on the Wishlist. This page is a source's,
  * so a source has the title: there is nothing to add. A title on the Wishlist keeps its icon until
  * the page is left, so a removal can be undone and TV focus does not lose its button. [title]
- * and [year] stand in when TMDB doesn't answer; [watched] says the film, or an episode of the
- * show, is watched.
+ * and [year] stand in when TMDB doesn't answer; [watched] says the film, or the show, is watched
+ * to the end (consistency plan, C-D4: for a show, its last episode).
  */
 @Composable
 fun rememberWishlist(
@@ -54,6 +54,8 @@ fun rememberWishlist(
     val entry = id?.let { state.titles.firstOrNull { it.contentType == contentType && it.tmdbId == id } }
     var wasOn by remember(contentType, id) { mutableStateOf(false) }
     if (entry != null) wasOn = true
+    // Set on the answer, so the prompt closes before the stored answer comes back.
+    var answered by remember(contentType, id) { mutableStateOf(false) }
     return if (id == null || child || !wasOn) {
         null
     } else {
@@ -65,8 +67,9 @@ fun rememberWishlist(
                     if (entry != null) wanted.remove(key) else wanted.addFromTmdb(contentType, id, title, year)
                 }
             },
-            askRemove = entry != null && watched && entry.askedAt == null,
+            askRemove = shouldAskRemove(onWishlist = entry != null, watched = watched, askedAt = entry?.askedAt, answered = answered),
             answer = { remove ->
+                answered = true
                 scope.launchGuarded("Wishlist.answer") {
                     wanted.markAsked(key)
                     if (remove) wanted.remove(key)
@@ -75,3 +78,15 @@ fun rememberWishlist(
         )
     }
 }
+
+/**
+ * The Wishlist question shows when the title is on the Wishlist, watched to the end, and never
+ * answered: not on this device ([answered]) and not on a device that syncs ([askedAt]). Each
+ * title is asked once for each profile.
+ */
+internal fun shouldAskRemove(
+    onWishlist: Boolean,
+    watched: Boolean,
+    askedAt: Long?,
+    answered: Boolean,
+): Boolean = onWishlist && watched && askedAt == null && !answered

@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.player.domain.cleanTitle
 import org.njarasoa.fijerena.core.player.domain.episodeOwnTitle
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.isWatchedToEnd
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.seriesYearRange
@@ -525,8 +526,8 @@ private fun EpisodeListContent(
         routeEpisodePlayed = initialEpisodeId != null && wasPlayed(mediaRepository, initialEpisodeId)
     }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
-    // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1): any watched episode
-    // counts as watching the show. None for a child.
+    // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1): asked when the show
+    // is watched to the end, its last episode watched (consistency plan, C-D4). None for a child.
     val wishlistTitle = tmdbTitle ?: cleanTitle(seriesDetail.name.ifEmpty { seriesName })
     val wishlist =
         rememberWishlist(
@@ -534,7 +535,7 @@ private fun EpisodeListContent(
             tmdbId = seriesDetail.metadata.tmdbId,
             title = wishlistTitle,
             year = extractYear(seriesDetail.metadata.year, seriesDetail.metadata.releaseDate, seriesDetail.name),
-            watched = watchedEpisodeIds.isNotEmpty(),
+            watched = seriesDetail.isWatchedToEnd(sortedSeasons, watchedEpisodeIds),
         )
     if (wishlist?.askRemove == true) WishlistRemovePrompt(wishlistTitle, wishlist.answer)
 
