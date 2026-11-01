@@ -29,9 +29,9 @@ import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -142,37 +143,31 @@ private fun WatchOrRemindDialog(
     val canSetReminder = canRemind(game, System.currentTimeMillis() / 1000) && !bells.reminded.has(game)
     val context = LocalContext.current
     val canCalendar = remember { canOpenCalendar(context) }
-    val wide = Modifier.fillMaxWidth()
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(watchQuestionTitle(game.startEpochSec), role = TextRole.Title, tone = TextTone.Inherit) },
         text = { WatchQuestionBody(channel.stream.name, channel.stream.providerId) },
-        confirmButton = {
-            Column(wide, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                CinemaDialogActionButton(onClick = onWatch, modifier = wide, kind = ButtonKind.Main) {
-                    CinemaText(stringResource(R.string.epg_browser_watch_now_btn), role = TextRole.Label, tone = TextTone.Inherit)
-                }
+        main = DialogAction(stringResource(R.string.epg_browser_watch_now_btn), onClick = onWatch),
+        others =
+            listOfNotNull(
                 if (canSetReminder) {
-                    CinemaDialogActionButton(onClick = {
+                    DialogAction(stringResource(R.string.sports_remind_me)) {
                         bells.toggle(game)
                         onDismiss()
-                    }, modifier = wide, kind = ButtonKind.Other) {
-                        CinemaText(stringResource(R.string.sports_remind_me), role = TextRole.Label, tone = TextTone.Inherit)
                     }
-                }
+                } else {
+                    null
+                },
                 if (canCalendar) {
-                    CinemaDialogActionButton(onClick = {
+                    DialogAction(stringResource(R.string.epg_browser_add_calendar_btn)) {
                         addGameToCalendar(context, game, channel)
                         onDismiss()
-                    }, modifier = wide, kind = ButtonKind.Other) {
-                        CinemaText(stringResource(R.string.epg_browser_add_calendar_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
-                }
-                CinemaDialogActionButton(onClick = onDismiss, modifier = wide, kind = ButtonKind.Other) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            }
-        },
+                } else {
+                    null
+                },
+            ),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 

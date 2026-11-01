@@ -14,14 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -66,14 +67,6 @@ fun MobileSourceChooserDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(
-                    stringResource(R.string.common_cancel),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

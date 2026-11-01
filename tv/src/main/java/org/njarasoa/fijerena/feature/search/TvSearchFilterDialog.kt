@@ -13,8 +13,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.FacetCount
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacets
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
@@ -215,12 +216,7 @@ internal fun TvSearchFilterDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_close), tone = TextTone.Inherit) }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 

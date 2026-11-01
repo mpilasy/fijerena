@@ -34,8 +34,8 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -443,8 +444,8 @@ private fun RenameDialog(
                     ),
             )
         },
-        confirmButton = { CinemaPrimaryButton(onClick = { onSave(name) }, text = stringResource(R.string.provider_save_button)) },
-        dismissButton = { CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel)) },
+        main = DialogAction(stringResource(R.string.provider_save_button)) { onSave(name) },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -460,7 +461,7 @@ private fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(title, role = TextRole.Title) },
         text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
-        confirmButton = { CinemaDangerButton(onClick = onConfirm, text = confirm) },
-        dismissButton = { CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel)) },
+        danger = DialogAction(confirm, onClick = onConfirm),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

@@ -49,11 +49,32 @@ data class UiTypeTokens(
 
 enum class DialogPosition { CENTERED, BOTTOM_SHEET, FULL_BLEED }
 
+/** How a dialog's buttons sit: [ROW] while two or fewer fit on one line (else stacked), or always [STACKED]. */
+enum class DialogActionArrangement { ROW, STACKED }
+
+/** [LABEL]: each button as wide as its label (in a stack, all as wide as the widest); [FULL]: the panel's width. */
+enum class DialogActionWidth { LABEL, FULL }
+
+/** [LAST]: Cancel takes the least place (the bottom of a stack, the start of a row); [FIRST]: the main place. */
+enum class DialogCancelPlace { LAST, FIRST }
+
+/**
+ * How [org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog] lays out its actions. The main
+ * action takes the main place: the top of a stack, the end of a row.
+ */
+@Immutable
+data class UiDialogActionTokens(
+    val arrangement: DialogActionArrangement = DialogActionArrangement.ROW,
+    val width: DialogActionWidth = DialogActionWidth.LABEL,
+    val cancel: DialogCancelPlace = DialogCancelPlace.LAST,
+)
+
 @Immutable
 data class UiDialogTokens(
     val cornerRadius: Dp,
     val position: DialogPosition,
     val scrimAlpha: Float,
+    val actions: UiDialogActionTokens = UiDialogActionTokens(),
 )
 
 @Immutable
@@ -142,7 +163,13 @@ val CupertinoStyle =
                 trackingTitleSp = -0.2f,
                 trackingBodySp = 0f,
             ),
-        dialog = UiDialogTokens(cornerRadius = 18.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.4f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 18.dp,
+                position = DialogPosition.BOTTOM_SHEET,
+                scrimAlpha = 0.4f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.09f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(height = 52.dp, titleRole = TextRole.Heading, centredTitle = true, divider = true),
@@ -164,7 +191,13 @@ val RokuStyle =
                 titleFontFamily = UiFonts.BarlowCondensed,
                 titleWeight = 600,
             ),
-        dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.FULL_BLEED, scrimAlpha = 0.55f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 0.dp,
+                position = DialogPosition.FULL_BLEED,
+                scrimAlpha = 0.55f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 4.dp, focusScale = 1.0f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
         topBar = UiTopBarTokens(height = 56.dp, divider = true),
@@ -248,7 +281,13 @@ val SoftStyle =
                 trackingBodySp = 0f,
                 titleWeight = 700,
             ),
-        dialog = UiDialogTokens(cornerRadius = 24.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.4f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 24.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.4f,
+                actions = UiDialogActionTokens(width = DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
     )
@@ -295,7 +334,13 @@ val ConsoleStyle =
                 labelFontFamily = UiFonts.Antonio,
                 capsLabels = true,
             ),
-        dialog = UiDialogTokens(cornerRadius = 24.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.7f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 24.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.7f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED),
+            ),
         grid = UiGridTokens(spacing = 6.dp, focusScale = 1.0f, focusUsesOutline = false, focusUsesShadow = false, flat = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
         frame = ConsoleFrame,
@@ -317,7 +362,13 @@ val MeadowStyle =
                 titleFontFamily = UiFonts.KleeOne,
                 titleWeight = 600,
             ),
-        dialog = UiDialogTokens(cornerRadius = 24.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.45f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 24.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.45f,
+                actions = UiDialogActionTokens(width = DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.05f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
         topBar = UiTopBarTokens(centredTitle = true, filled = false),
@@ -338,7 +389,13 @@ val BoldStyle =
                 trackingBodySp = 0f,
                 titleWeight = 800,
             ),
-        dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 8.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.6f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
         topBar = UiTopBarTokens(height = 56.dp, filled = false),
@@ -359,7 +416,13 @@ val GrooveStyle =
                 trackingBodySp = 0f,
                 titleWeight = 800,
             ),
-        dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.6f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 12.dp,
+                position = DialogPosition.BOTTOM_SHEET,
+                scrimAlpha = 0.6f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.05f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(filled = false),
@@ -380,7 +443,13 @@ val SpotlightStyle =
                 trackingBodySp = 0.3f,
                 capsLabels = true,
             ),
-        dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 12.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.6f,
+                actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+            ),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(height = 56.dp, centredTitle = true, filled = false),

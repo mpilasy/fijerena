@@ -19,16 +19,17 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
@@ -55,16 +56,8 @@ fun DuplicateProviderDialog(
                 modifier = Modifier.fillMaxWidth(),
             )
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = { onConfirm(name.trim().ifBlank { defaultName }) }, kind = ButtonKind.Main) {
-                CinemaText(stringResource(R.string.provider_duplicate_button), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
-        dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main = DialogAction(stringResource(R.string.provider_duplicate_button)) { onConfirm(name.trim().ifBlank { defaultName }) },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -129,27 +122,19 @@ fun CopyProviderDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    val resolvedTargetId = targetId ?: return@CinemaDialogActionButton
-                    onConfirm(
-                        resolvedTargetId,
-                        ProviderCopyManager.CopyOptions(
-                            copyConnection = copyConnection,
-                            copyProviderSettings = copySettings,
-                            copyFavorites = copyFavorites,
-                            copyWatchHistory = copyWatchHistory,
-                        ),
-                    )
-                },
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_copy_to_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.provider_copy_to_button)) {
+                val resolvedTargetId = targetId ?: return@DialogAction
+                onConfirm(
+                    resolvedTargetId,
+                    ProviderCopyManager.CopyOptions(
+                        copyConnection = copyConnection,
+                        copyProviderSettings = copySettings,
+                        copyFavorites = copyFavorites,
+                        copyWatchHistory = copyWatchHistory,
+                    ),
+                )
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
+import org.njarasoa.fijerena.core.ui.theme.DialogActionWidth
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaBorders
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaColors
@@ -175,9 +176,18 @@ fun ProvideLookAndAccent(
 }
 
 // Decision D3 (design-system plan): dialogs stay centred on TV in every Look and Feel — a bottom
-// sheet or a full-screen dialog doesn't suit the remote.
+// sheet or a full-screen dialog doesn't suit the remote. Its buttons keep their label width, as in
+// CinemaButtonArea: a stack is as wide as its widest label.
 private fun tvStyle(styleId: String): UiStyle =
-    styleById(styleId).let { it.copy(dialog = it.dialog.copy(position = DialogPosition.CENTERED)) }
+    styleById(styleId).let {
+        it.copy(
+            dialog =
+                it.dialog.copy(
+                    position = DialogPosition.CENTERED,
+                    actions = it.dialog.actions.copy(width = DialogActionWidth.LABEL),
+                ),
+        )
+    }
 
 /** [CinemaTheme], Material 3 and TV Material from [palette] and [style]. */
 @OptIn(ExperimentalTvMaterial3Api::class)

@@ -29,10 +29,10 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -251,16 +252,11 @@ private fun ShortNameDialog(
                         ?: stringResource(R.string.provider_short_name_desc),
             )
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = {
+        main =
+            DialogAction(stringResource(R.string.common_ok)) {
                 val wanted = value.trim()
                 onSave(wanted) { taken = wanted }
-            }) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

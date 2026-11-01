@@ -52,11 +52,11 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -70,6 +70,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -99,18 +100,9 @@ fun ConfirmActionDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
         text = { CinemaText(text, role = TextRole.Body, tone = TextTone.Secondary) },
-        confirmButton = {
-            CinemaButton(
-                onClick = onConfirm,
-                kind = if (isDanger) ButtonKind.Danger else ButtonKind.Main,
-            ) { CinemaText(confirmText, role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main = if (isDanger) null else DialogAction(confirmText, onClick = onConfirm),
+        danger = if (isDanger) DialogAction(confirmText, onClick = onConfirm) else null,
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }
@@ -397,21 +389,12 @@ fun CategoryFilterDialog(
             }
         },
         initialFocus = firstControlFocusRequester,
-        confirmButton = {
-            CinemaButton(
-                onClick = {
-                    val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
-                    onSave(newFilters)
-                },
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main =
+            DialogAction(stringResource(R.string.provider_save_button)) {
+                val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
+                onSave(newFilters)
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }
@@ -541,13 +524,7 @@ fun QuickConnectDialog(
                 }
             }
         },
-        confirmButton = {},
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }
@@ -573,24 +550,8 @@ fun DuplicateProviderDialog(
                 keyboardOptions = FieldKeyboards.Name,
             )
         },
-        confirmButton = {
-            CinemaButton(
-                onClick = { onConfirm(name.trim().ifBlank { defaultName }) },
-                kind = ButtonKind.Main,
-            ) {
-                CinemaText(
-                    stringResource(R.string.provider_duplicate_button),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main = DialogAction(stringResource(R.string.provider_duplicate_button)) { onConfirm(name.trim().ifBlank { defaultName }) },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }
@@ -687,7 +648,6 @@ fun ProviderActionsMenuDialog(
             }
         },
         initialFocus = firstFocusRequester,
-        confirmButton = {},
         containerColor = CinemaTheme.colors.surface,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
@@ -767,29 +727,20 @@ fun CopyProviderDialog(
             }
         },
         initialFocus = firstFocus,
-        confirmButton = {
-            CinemaButton(
-                onClick = {
-                    val resolvedTargetId = targetId ?: return@CinemaButton
-                    onConfirm(
-                        resolvedTargetId,
-                        ProviderCopyManager.CopyOptions(
-                            copyConnection = copyConnection,
-                            copyProviderSettings = copySettings,
-                            copyFavorites = copyFavorites,
-                            copyWatchHistory = copyWatchHistory,
-                        ),
-                    )
-                },
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_copy_to_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main =
+            DialogAction(stringResource(R.string.provider_copy_to_button)) {
+                val resolvedTargetId = targetId ?: return@DialogAction
+                onConfirm(
+                    resolvedTargetId,
+                    ProviderCopyManager.CopyOptions(
+                        copyConnection = copyConnection,
+                        copyProviderSettings = copySettings,
+                        copyFavorites = copyFavorites,
+                        copyWatchHistory = copyWatchHistory,
+                    ),
+                )
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }

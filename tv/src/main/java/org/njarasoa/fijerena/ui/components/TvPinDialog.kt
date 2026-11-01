@@ -27,8 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PinDots
 import org.njarasoa.fijerena.core.ui.components.PinOnPhoneEffect
 import org.njarasoa.fijerena.core.ui.components.PinPromptState
@@ -140,11 +140,8 @@ fun TvPinDialog(
                         }
                     }
                 }
-            }
-        },
-        dismissButton =
-            if (state.canUsePhone) {
-                {
+                // An icon action, so it sits under the pad: the dialog's buttons are text.
+                if (state.canUsePhone) {
                     if (waiting) {
                         TvIconAction(
                             onClick = { state.useHere() },
@@ -156,14 +153,9 @@ fun TvPinDialog(
                         TvIconAction(onClick = state::usePhone, icon = CinemaIcons.Phone, label = stringResource(R.string.pin_use_phone))
                     }
                 }
-            } else {
-                null
-            },
-        confirmButton = {
-            CinemaButton(onClick = onCancel, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), tone = TextTone.Inherit)
             }
         },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onCancel),
     )
 }
 

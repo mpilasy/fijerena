@@ -21,12 +21,13 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.restartProcess
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -82,21 +83,13 @@ fun MobileNewerDataScreen() {
             onDismissRequest = { confirmingReset = false },
             title = { CinemaText(stringResource(R.string.newer_data_reset_confirm_title), role = TextRole.Title) },
             text = { CinemaText(stringResource(R.string.newer_data_reset_confirm_message), tone = TextTone.Secondary) },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = {
+            danger =
+                DialogAction(stringResource(R.string.newer_data_reset_confirm)) {
                     confirmingReset = false
                     ProvidersDbGuard.setAside(context)
                     activity?.let { restartProcess(it) }
-                }, kind = ButtonKind.Danger) {
-                    CinemaText(stringResource(R.string.newer_data_reset_confirm), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(
-                    onClick = { confirmingReset = false },
-                    kind = ButtonKind.Other,
-                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmingReset = false },
         )
     }
 }

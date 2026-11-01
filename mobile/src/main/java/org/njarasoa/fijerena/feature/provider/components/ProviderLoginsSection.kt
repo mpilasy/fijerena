@@ -30,9 +30,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
@@ -206,21 +207,12 @@ fun ColumnScope.ProviderLoginsSection(
                     tone = TextTone.Secondary,
                 )
             },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        loginsViewModel.remove(username)
-                        removeUsername = null
-                    },
-                    kind = ButtonKind.Danger,
-                ) { CinemaText(stringResource(R.string.provider_logins_remove), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(
-                    onClick = { removeUsername = null },
-                    kind = ButtonKind.Other,
-                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
+            danger =
+                DialogAction(stringResource(R.string.provider_logins_remove)) {
+                    loginsViewModel.remove(username)
+                    removeUsername = null
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { removeUsername = null },
         )
     }
 }
@@ -287,19 +279,7 @@ private fun AddLoginDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = { onAdd(username, password) },
-                enabled = !busy,
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(
-                onClick = onDismiss,
-                enabled = !busy,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main = DialogAction(stringResource(R.string.provider_logins_add), enabled = !busy) { onAdd(username, password) },
+        cancel = DialogAction(stringResource(R.string.common_cancel), enabled = !busy, onClick = onDismiss),
     )
 }

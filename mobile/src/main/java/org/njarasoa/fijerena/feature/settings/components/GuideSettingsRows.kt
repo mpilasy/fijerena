@@ -22,8 +22,8 @@ import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.feature.epg.localizedEpgPhase
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -97,31 +98,18 @@ private fun GuideMaintenanceDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 
     if (showClearConfirm) {
         CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        viewModel.clearDatabase()
-                        showClearConfirm = false
-                    },
-                    kind = ButtonKind.Danger,
-                ) { CinemaText(stringResource(R.string.epg_clear_everything_btn), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(
-                    onClick = { showClearConfirm = false },
-                    kind = ButtonKind.Other,
-                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
+            danger =
+                DialogAction(stringResource(R.string.epg_clear_everything_btn)) {
+                    viewModel.clearDatabase()
+                    showClearConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
             title = { CinemaText(stringResource(R.string.epg_clear_db_confirm_title), role = TextRole.Title) },
             text = { CinemaText(stringResource(R.string.epg_clear_db_confirm_message), tone = TextTone.Secondary) },
         )

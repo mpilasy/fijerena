@@ -19,7 +19,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -104,7 +103,6 @@ internal fun DetailsMoreMenu(
             }
         },
         initialFocus = firstItemFocusRequester,
-        confirmButton = {},
         containerColor = CinemaTheme.colors.surface,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,

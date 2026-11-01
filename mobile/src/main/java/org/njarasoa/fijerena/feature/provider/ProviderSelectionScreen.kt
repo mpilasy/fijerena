@@ -23,10 +23,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SourceStatus
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -147,22 +148,12 @@ fun MobileProviderSelectionScreen(
             text = {
                 CinemaText(stringResource(R.string.provider_delete_confirm_message, provider.name), tone = TextTone.Secondary)
             },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        viewModel.deleteProvider(provider.id)
-                        deleteConfirmProvider = null
-                    },
-                    kind = ButtonKind.Danger,
-                ) {
-                    CinemaText(stringResource(R.string.provider_delete_button), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
-            dismissButton = {
-                CinemaOutlinedButton(onClick = { deleteConfirmProvider = null }) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            danger =
+                DialogAction(stringResource(R.string.provider_delete_button)) {
+                    viewModel.deleteProvider(provider.id)
+                    deleteConfirmProvider = null
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { deleteConfirmProvider = null },
         )
     }
 
@@ -201,11 +192,7 @@ fun MobileProviderSelectionScreen(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
             title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title) },
             text = { CinemaText(message, tone = TextTone.Secondary) },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = { viewModel.clearCopyResultMessage() }, kind = ButtonKind.Main) {
-                    CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            main = DialogAction(stringResource(R.string.common_ok)) { viewModel.clearCopyResultMessage() },
         )
     }
 }

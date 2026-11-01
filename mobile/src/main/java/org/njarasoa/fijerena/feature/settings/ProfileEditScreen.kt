@@ -30,8 +30,8 @@ import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PaletteSwatches
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
@@ -340,12 +341,7 @@ fun MobileProfileEditScreen(
                             }
                         }
                     },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = { editingSources = false },
-                            kind = ButtonKind.Other,
-                        ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    cancel = DialogAction(stringResource(R.string.common_close)) { editingSources = false },
                 )
             }
 
@@ -354,22 +350,13 @@ fun MobileProfileEditScreen(
                     onDismissRequest = { confirmDelete = false },
                     title = { CinemaText(stringResource(R.string.profile_delete_confirm_title, profile.name), role = TextRole.Title) },
                     text = { CinemaText(stringResource(R.string.profile_delete_confirm_text), tone = TextTone.Secondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                confirmDelete = false
-                                viewModel.deleteProfile(profileId)
-                                onBack()
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.profile_delete_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(
-                            onClick = { confirmDelete = false },
-                            kind = ButtonKind.Other,
-                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.profile_delete_button)) {
+                            confirmDelete = false
+                            viewModel.deleteProfile(profileId)
+                            onBack()
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmDelete = false },
                 )
             }
         }
@@ -511,11 +498,7 @@ internal fun ProfileOwnRows(
                     }
                 }
             },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            cancel = DialogAction(stringResource(R.string.common_cancel), onClick = pinFlow::cancel),
         )
     }
     if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
@@ -533,16 +516,8 @@ internal fun ProfileOwnRows(
                     tone = TextTone.Secondary,
                 )
             },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = pinFlow::confirmRemove, kind = ButtonKind.Danger) {
-                    CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            danger = DialogAction(stringResource(R.string.profile_pin_remove), onClick = pinFlow::confirmRemove),
+            cancel = DialogAction(stringResource(R.string.common_cancel), onClick = pinFlow::cancel),
         )
     }
     // The profile: name, colour, PIN (a child's own page: colour only).

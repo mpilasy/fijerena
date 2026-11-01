@@ -78,12 +78,12 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
@@ -111,6 +111,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.HeaderGround
@@ -627,15 +628,7 @@ private fun EpisodeListContent(
                     tone = TextTone.Inherit,
                 )
             },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = { markManyError = null }) {
-                    CinemaText(
-                        stringResource(R.string.common_ok),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
+            main = DialogAction(stringResource(R.string.common_ok)) { markManyError = null },
         )
     }
 

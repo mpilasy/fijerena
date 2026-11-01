@@ -162,11 +162,11 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -217,6 +217,7 @@ import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaIconTab
 import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
@@ -1782,11 +1783,7 @@ private fun AllCategoriesDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 

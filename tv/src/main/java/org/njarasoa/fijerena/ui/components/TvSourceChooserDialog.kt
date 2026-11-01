@@ -12,8 +12,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -63,11 +63,6 @@ fun TvSourceChooserDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), tone = TextTone.Inherit) }
-        },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

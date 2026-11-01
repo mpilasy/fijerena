@@ -131,12 +131,12 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
@@ -167,6 +167,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.feature.contentselection.components.openActionsOnMenuKey
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
@@ -2430,7 +2431,6 @@ private fun SeasonActionsMenu(
             }
         },
         initialFocus = firstItemFocusRequester,
-        confirmButton = {},
         containerColor = CinemaTheme.colors.surface,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
@@ -2447,14 +2447,7 @@ private fun MarkWatchedErrorDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(stringResource(R.string.watched_mark_many_failed), role = TextRole.Title) },
         text = { CinemaText(message, tone = TextTone.Secondary) },
-        confirmButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Main,
-            ) {
-                CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main = DialogAction(stringResource(R.string.common_ok), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,

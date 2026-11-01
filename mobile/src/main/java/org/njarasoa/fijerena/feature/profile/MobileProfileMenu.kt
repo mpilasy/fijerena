@@ -17,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -127,15 +128,7 @@ fun MobileProfileMenu(
                     }
                 }
             },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = { browseChoice = null }, kind = ButtonKind.Other) {
-                    CinemaText(
-                        stringResource(R.string.common_cancel),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { browseChoice = null },
         )
     }
 }

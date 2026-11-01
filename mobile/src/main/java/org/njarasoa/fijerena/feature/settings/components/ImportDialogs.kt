@@ -16,13 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
@@ -71,26 +72,18 @@ fun ImportOptionsDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    val options =
-                        SettingsExportManager.ImportOptions(
-                            importProviders = optProviders,
-                            importEpgSources = optEpg,
-                            importGlobalSettings = optGlobal,
-                            importFavorites = optFavorites,
-                        )
-                    onConfirm(options)
-                },
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.common_import), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.common_import)) {
+                val options =
+                    SettingsExportManager.ImportOptions(
+                        importProviders = optProviders,
+                        importEpgSources = optEpg,
+                        importGlobalSettings = optGlobal,
+                        importFavorites = optFavorites,
+                    )
+                onConfirm(options)
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -114,57 +107,13 @@ fun ImportConflictDialog(
                 tone = TextTone.Secondary,
             )
         },
-        confirmButton = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                ) {
-                    CinemaDialogActionButton(
-                        onClick = onOverwrite,
-                        modifier = Modifier.weight(1f),
-                        kind = ButtonKind.Main,
-                    ) {
-                        CinemaText(
-                            stringResource(R.string.common_overwrite),
-                            role = TextRole.Label,
-                            tone = TextTone.Inherit,
-                            maxLines = 1,
-                        )
-                    }
-                    CinemaDialogActionButton(
-                        onClick = onDuplicate,
-                        modifier = Modifier.weight(1f),
-                        kind = ButtonKind.Main,
-                    ) {
-                        CinemaText(
-                            stringResource(R.string.common_duplicate),
-                            role = TextRole.Label,
-                            tone = TextTone.Inherit,
-                            maxLines = 1,
-                        )
-                    }
-                }
-                CinemaDialogActionButton(
-                    onClick = onSkip,
-                    modifier = Modifier.fillMaxWidth(),
-                    kind = ButtonKind.Main,
-                ) {
-                    CinemaText(
-                        stringResource(R.string.settings_import_skip_duplicates_button),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        // Overwrite is the main action, as on TV.
+        main = DialogAction(stringResource(R.string.common_overwrite), onClick = onOverwrite),
+        others =
+            listOf(
+                DialogAction(stringResource(R.string.common_duplicate), onClick = onDuplicate),
+                DialogAction(stringResource(R.string.settings_import_skip_duplicates_button), onClick = onSkip),
+            ),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

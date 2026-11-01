@@ -35,11 +35,11 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.feature.settings.components.GuideMaintenancePane
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -616,21 +617,12 @@ fun TvEpgManagementScreen(
     deletingSource?.let { source ->
         CinemaAlertDialog(
             onDismissRequest = { deletingSource = null },
-            confirmButton = {
-                CinemaDangerButton(
-                    onClick = {
-                        viewModel.deleteSource(source.id)
-                        deletingSource = null
-                    },
-                    text = stringResource(R.string.provider_delete_button),
-                )
-            },
-            dismissButton = {
-                CinemaSecondaryButton(
-                    onClick = { deletingSource = null },
-                    text = stringResource(R.string.common_cancel),
-                )
-            },
+            danger =
+                DialogAction(stringResource(R.string.provider_delete_button)) {
+                    viewModel.deleteSource(source.id)
+                    deletingSource = null
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { deletingSource = null },
             title = {
                 CinemaText(stringResource(R.string.epg_delete_source_confirm_title), role = TextRole.Title)
             },
@@ -778,25 +770,22 @@ private fun EpgSourceEditDialog(
                 role = TextRole.Title,
             )
         },
-        confirmButton = {
-            CinemaPrimaryButton(
-                onClick = {
-                    onConfirm(
-                        url,
-                        label,
-                        tzOffset.toIntOrNull() ?: 0,
-                        initialSource?.ingestMethod ?: "DOWNLOADED",
-                        initialSource?.enabled ?: true,
-                        checkedFor,
-                    )
-                },
-                text = stringResource(R.string.provider_save_button),
-                enabled = url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
-            )
-        },
-        dismissButton = {
-            CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel))
-        },
+        main =
+            DialogAction(
+                stringResource(R.string.provider_save_button),
+                enabled =
+                    url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
+            ) {
+                onConfirm(
+                    url,
+                    label,
+                    tzOffset.toIntOrNull() ?: 0,
+                    initialSource?.ingestMethod ?: "DOWNLOADED",
+                    initialSource?.enabled ?: true,
+                    checkedFor,
+                )
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
         text = {
             // Scrolls: with several sources the Use for list runs past the dialog's height, and

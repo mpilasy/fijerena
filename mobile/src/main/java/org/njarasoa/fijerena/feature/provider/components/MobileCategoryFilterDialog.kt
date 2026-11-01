@@ -33,17 +33,18 @@ import org.njarasoa.fijerena.core.network.provider.MatchType
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -329,16 +330,10 @@ fun MobileCategoryFilterDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = { onSave(CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)) },
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.provider_save_button)) {
+                onSave(CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts))
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
