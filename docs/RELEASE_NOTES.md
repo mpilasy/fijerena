@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261101162711
 
 - **Watch now or later:** on a game's sheet, a channel of a game that has not started now asks first, as the guide does for a programme that is not on yet: **Watch now** opens the channel, **Remind Me** sets the game's reminder (shown only when the game has none), **Add to calendar** adds the game to the calendar app (only on a device that has one). A game that has started still opens its channel at once. TV and phone.
 - **Reminders for guide programmes:** in Search the Guide, a programme that is not on yet now also offers **Remind Me**. It rings 10 minutes before the programme, as a game reminder does: a banner on an open TV app, else a notification. Watch or a tap opens the channel. A reminder is for the profile in use, on that device only. TV and phone.
