@@ -1,18 +1,14 @@
-package org.njarasoa.fijerena.ui.components.text
+package org.njarasoa.fijerena.core.ui.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.ui.components.TextRole
-import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.colorOf
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
+import org.njarasoa.fijerena.core.ui.theme.UiFonts
 
 /**
- * Machine text — log lines, stack traces, raw details — in a fixed-width font, otherwise as
- * [org.njarasoa.fijerena.core.ui.components.CinemaText]: [role] and [tone] from the theme.
+ * Machine text — log lines, stack traces, raw details — in a fixed-width font ([UiFonts.Code]),
+ * otherwise as [CinemaText]: [role] and [tone] from the theme.
  */
 @Composable
 fun CinemaCodeText(
@@ -26,7 +22,7 @@ fun CinemaCodeText(
     Text(
         text = text,
         modifier = modifier,
-        style = textStyleOf(role).copy(fontFamily = FontFamily.Monospace),
+        style = textStyleOf(role).copy(fontFamily = UiFonts.Code),
         color = colorOf(tone),
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,

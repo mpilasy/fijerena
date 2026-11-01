@@ -6,18 +6,20 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * TV Spacing System (8dp Grid)
- * Re-exports shared spacing values and adds TV-specific safe margins.
+ * Re-exports shared spacing values and adds TV-specific safe margins. The TV keeps the base steps
+ * in every Look and Feel (no [org.njarasoa.fijerena.core.ui.theme.UiStyle.spacing] density): TV
+ * layouts have fixed sizes, and the focus tests depend on them.
  */
 object Spacing {
-    val none: Dp = CinemaSpacing.none
-    val xxxs: Dp = CinemaSpacing.xxxs
-    val xxs: Dp = CinemaSpacing.xxs
-    val xs: Dp = CinemaSpacing.xs
-    val sm: Dp = CinemaSpacing.sm
-    val md: Dp = CinemaSpacing.md
-    val lg: Dp = CinemaSpacing.lg
-    val xl: Dp = CinemaSpacing.xl
-    val xxl: Dp = CinemaSpacing.xxl
+    val none: Dp = CinemaSpacing.Base.none
+    val xxxs: Dp = CinemaSpacing.Base.xxxs
+    val xxs: Dp = CinemaSpacing.Base.xxs
+    val xs: Dp = CinemaSpacing.Base.xs
+    val sm: Dp = CinemaSpacing.Base.sm
+    val md: Dp = CinemaSpacing.Base.md
+    val lg: Dp = CinemaSpacing.Base.lg
+    val xl: Dp = CinemaSpacing.Base.xl
+    val xxl: Dp = CinemaSpacing.Base.xxl
 
     // TV Safe Margins (Google TV design language)
     val tvSafeMarginHorizontal: Dp = 56.dp

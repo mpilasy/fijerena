@@ -2378,7 +2378,7 @@ private val StreamThumbnailWidth = MobileDimensions.streamThumbnailWidth
 private val StreamThumbnailHeight = MobileDimensions.streamThumbnailHeight
 
 /** A row's height when its text fits beside the thumbnail; a longer title makes it taller. */
-private val StreamCardMinHeight = StreamThumbnailHeight + CinemaSpacing.xs * 2
+private val StreamCardMinHeight = StreamThumbnailHeight + CinemaSpacing.Base.xs * 2
 
 /**
  * A provider's separator row in a channel list ("####### ETHIOPIA VIP #######"), or a chart's

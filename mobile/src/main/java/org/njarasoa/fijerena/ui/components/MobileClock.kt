@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -173,6 +174,8 @@ fun MobileClockText(
  * How far a top bar's end moves in for the clock: see [mobileClockTopBarInsets]. The clock sits
  * CinemaSpacing.md in from the safe edge; the bar's actions have a small end padding of their own.
  */
+@Composable
+@ReadOnlyComposable
 internal fun clockClearance(clockWidth: Dp): Dp = clockWidth + CinemaSpacing.md + CinemaSpacing.xxs
 
 /** Blur of the halo behind the screens' clock, in px (as TV's backdrop text). */

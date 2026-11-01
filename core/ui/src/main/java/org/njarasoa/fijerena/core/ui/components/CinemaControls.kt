@@ -91,8 +91,8 @@ fun CinemaTextField(
                 unfocusedLeadingIconColor = c.textSecondary,
                 focusedTrailingIconColor = c.textSecondary,
                 unfocusedTrailingIconColor = c.textSecondary,
-                focusedContainerColor = c.surface.copy(alpha = 0f),
-                unfocusedContainerColor = c.surface.copy(alpha = 0f),
+                focusedContainerColor = c.surface.copy(alpha = CinemaAlpha.none),
+                unfocusedContainerColor = c.surface.copy(alpha = CinemaAlpha.none),
             ),
     )
 }

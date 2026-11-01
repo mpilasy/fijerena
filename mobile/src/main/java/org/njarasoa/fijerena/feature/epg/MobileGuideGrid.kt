@@ -137,7 +137,7 @@ fun MobileGuideGrid(
                 pxPerMinute = with(density) { GuideLayout.PHONE_DP_PER_MINUTE.dp.toPx() },
                 windowStartSec = selectedDate.atStartOfDay(zone).toEpochSecond(),
                 windowEndSec = selectedDate.plusDays(1).atStartOfDay(zone).toEpochSecond(),
-                minLabelWidthPx = with(density) { CinemaSpacing.xxl.toPx() },
+                minLabelWidthPx = with(density) { CinemaSpacing.Base.xxl.toPx() },
             )
         }
     var viewportPx by remember { mutableIntStateOf(0) }
@@ -379,7 +379,7 @@ private fun guideRowHeight(): Dp {
     return maxOf(MobileDimensions.epgProgramHeight, content + CHANNEL_CELL_PADDING * 2)
 }
 
-private val CHANNEL_CELL_PADDING = CinemaSpacing.xxs
+private val CHANNEL_CELL_PADDING = CinemaSpacing.Base.xxs
 
 /**
  * The channel's logo with its clean name beneath, or the name alone when it has no logo; above them

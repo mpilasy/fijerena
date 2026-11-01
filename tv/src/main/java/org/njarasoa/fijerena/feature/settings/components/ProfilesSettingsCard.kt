@@ -64,7 +64,6 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.rememberProfilePinFlow
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -177,7 +176,7 @@ fun ProfilesSettingsCard(
                         name = profile.name,
                         colorIndex = profile.colorIndex,
                         size = TvDimensions.iconMedium,
-                        fontSize = textStyleOf(TextRole.Label).fontSize,
+                        initialRole = TextRole.Label,
                     )
                 },
             )
@@ -1025,10 +1024,7 @@ private fun ColourDot(
         name = "",
         colorIndex = index,
         size = TvDimensions.iconMedium.scaled(scale),
-        fontSize =
-            textStyleOf(TextRole.Label)
-                .fontSize
-                .scaled(scale),
+        initialRole = TextRole.Label,
     )
 }
 

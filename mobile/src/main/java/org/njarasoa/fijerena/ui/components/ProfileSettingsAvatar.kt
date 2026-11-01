@@ -10,10 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -28,11 +28,11 @@ fun ProfileSettingsAvatar(
     name: String,
     colorIndex: Int,
     size: Dp,
-    fontSize: TextUnit,
+    initialRole: TextRole,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
-        ProfileAvatar(name = name, colorIndex = colorIndex, size = size, fontSize = fontSize)
+        ProfileAvatar(name = name, colorIndex = colorIndex, size = size, initialRole = initialRole)
         Box(
             modifier =
                 Modifier

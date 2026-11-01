@@ -16,13 +16,17 @@ import androidx.compose.ui.unit.dp
 object PinStyle {
     /** A digit's dot, and the space between dots. */
     val dotSize: Dp = 16.dp
-    val dotGap: Dp = CinemaSpacing.md
+    val dotGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.md
     val dotOutline: Dp = 2.dp
     val dotShape: Shape = CircleShape
 
     /** A TV number pad key, and the space between keys. */
     val keyWidth: Dp = 96.dp
-    val keyGap: Dp = CinemaSpacing.sm
+    val keyGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.sm
 
     /** A typed digit's dot, and the outline of one still to type. */
     val filled: Color

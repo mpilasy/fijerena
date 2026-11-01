@@ -72,7 +72,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -316,7 +315,7 @@ private fun RailOverlay(
                 maxLines = 1,
                 modifier =
                     Modifier
-                        .background(panel.copy(alpha = 1f), cornerShape(CornerRadius.large))
+                        .background(panel.copy(alpha = CinemaAlpha.opaque), cornerShape(CornerRadius.large))
                         .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             )
         }
@@ -360,7 +359,7 @@ private fun RailEntry(
                 name = profileInitial,
                 colorIndex = state.profileColorIndex,
                 size = TvDimensions.iconMedium,
-                fontSize = textStyleOf(TextRole.Label).fontSize,
+                initialRole = TextRole.Label,
             )
         } else {
             Icon(

@@ -28,6 +28,9 @@
 #     Modifier.panel (PanelFill, PanelCorner, PanelOutline), TV TvPanel, TvCard with a TvCardLooks
 #     look, the focus modifiers (FocusModifiers.kt), the phone CinemaChoiceRow and SettingsListRow
 #     (docs/plans/20261101_style-layout-tokens-plan.md, Phase 5)
+#   - an alpha number (alpha = 0.5f, .copy(alpha = 0.5f)) — use a CinemaAlpha token; and a type
+#     value set in place (fontSize = , fontSize * , FontFamily.) — use a TextRole, CinemaCodeText for
+#     machine text, or the Look's fonts (UiFonts)
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
 # scripts/check-button-text-tone.py; the core CinemaAlertDialog used outside each app's own
 # CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons.
@@ -52,6 +55,10 @@ PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transpare
 # Phone top bars: MobileScreenHeader is the only one (docs/plans/20261101_style-layout-tokens-plan.md, Phase 3).
 TOP_BAR_PATTERN='(^|[^A-Za-z0-9_.])(TopAppBar|CenterAlignedTopAppBar|MediumTopAppBar|LargeTopAppBar)\(|TopAppBarDefaults'
 PATTERN="$PATTERN|$TOP_BAR_PATTERN"
+# Alpha numbers and type values set in place (same plan, Phase 6). An alpha computed from a value
+# (alpha = 1f - open) is not counted: only a number that ends the argument.
+ALPHA_TYPE_PATTERN='(^|[^A-Za-z0-9_])alpha[[:space:]]*=[[:space:]]*[0-9.]+f?[[:space:]]*([,)}]|$)|(^|[^A-Za-z0-9_])fontSize[[:space:]]*(=([^=]|$)|\*)|(^|[^A-Za-z0-9_])FontFamily\.'
+PATTERN="$PATTERN|$ALPHA_TYPE_PATTERN"
 # Sheets and dialog windows: only the dialog and sheet components open one (same plan, Phase 2).
 WINDOW_PATTERN='(^|[^A-Za-z0-9_.])(ModalBottomSheet|Dialog|BasicAlertDialog|DialogProperties)\('
 WINDOW_COMPONENT='/ui/components/[^/]*(Dialog|Sheet|Overlay|Panel)[^/]*\.kt$'

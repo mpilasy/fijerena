@@ -1581,6 +1581,7 @@ private fun SeasonTabs(
         if (!fullyShown) rowState.animateScrollToItem(selectedIndex)
     }
     val background = CinemaTheme.colors.background
+    val bleedStep = CinemaSpacing.md
     LazyRow(
         state = rowState,
         contentPadding = PaddingValues(horizontal = CinemaSpacing.md),
@@ -1593,7 +1594,7 @@ private fun SeasonTabs(
                 .fillMaxWidth()
                 .layout { measurable, constraints ->
                     // Out through the LazyColumn's side padding to the screen's edges.
-                    val bleed = CinemaSpacing.md.roundToPx()
+                    val bleed = bleedStep.roundToPx()
                     val placeable =
                         measurable.measure(
                             constraints.copy(

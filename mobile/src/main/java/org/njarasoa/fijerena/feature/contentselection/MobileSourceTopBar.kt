@@ -62,7 +62,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
@@ -175,7 +174,7 @@ private fun ProfileButton(
                 name = name,
                 colorIndex = colorIndex,
                 size = MobileDimensions.iconLarge,
-                fontSize = textStyleOf(TextRole.Label).fontSize,
+                initialRole = TextRole.Label,
             )
         }
     }

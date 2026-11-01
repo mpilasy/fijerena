@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalCinemaBorders
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaColors
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaShapes
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaType
+import org.njarasoa.fijerena.core.ui.theme.LocalSpacingScale
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.UiStyle
@@ -55,6 +56,7 @@ fun ProvideLook(
     val type = remember(style) { cinemaTypeRoles(cinemaTypography(style.type)) }
     CompositionLocalProvider(
         LocalUiStyle provides style,
+        LocalSpacingScale provides style.spacing,
         LocalCinemaType provides type,
         LocalCinemaShapes provides remember(style) { CinemaShapeRoles.from(style) },
         LocalCinemaBorders provides remember(style) { CinemaBorders.from(style) },
@@ -142,11 +144,14 @@ private fun ProvideFullTheme(
 ) {
     val typography = remember(style) { cinemaTypography(style.type) }
     ProvideCinemaTheme(palette, style, remember(typography) { cinemaTypeRoles(typography) }) {
-        MaterialTheme(
-            colorScheme = remember(palette) { cinemaMaterialColorScheme(CinemaColorRoles.from(palette)) },
-            typography = typography,
-            shapes = remember(style) { cinemaMaterialShapes(style) },
-            content = content,
-        )
+        // The phone's spacing follows the Look's density; the TV keeps the base steps.
+        CompositionLocalProvider(LocalSpacingScale provides style.spacing) {
+            MaterialTheme(
+                colorScheme = remember(palette) { cinemaMaterialColorScheme(CinemaColorRoles.from(palette)) },
+                typography = typography,
+                shapes = remember(style) { cinemaMaterialShapes(style) },
+                content = content,
+            )
+        }
     }
 }

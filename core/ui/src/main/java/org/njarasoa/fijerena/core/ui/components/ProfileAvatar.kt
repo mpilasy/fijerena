@@ -11,18 +11,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.isSpecified
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
-/** A profile's avatar: its colour as a circle, with the first letter of its name. */
+/**
+ * A profile's avatar: its colour as a circle, with the first letter of its name. The letter has the
+ * size of [initialRole], times [initialScale] for an avatar that is much larger than the text.
+ */
 @Composable
 fun ProfileAvatar(
     name: String,
     colorIndex: Int,
     size: Dp,
-    fontSize: TextUnit,
+    initialRole: TextRole,
     modifier: Modifier = Modifier,
+    initialScale: Float = 1f,
 ) {
+    // The initial has its role's size, times the scale for a large avatar.
+    val initialSize = textStyleOf(initialRole).fontSize.let { if (it.isSpecified) it * initialScale else it }
     Box(
         modifier =
             modifier
@@ -36,7 +43,8 @@ fun ProfileAvatar(
             text = initialOf(name),
             style =
                 CinemaTheme.type.heading.copy(
-                    fontSize = fontSize,
+                    // look-ok: the initial's size from its role, above
+                    fontSize = initialSize,
                     fontWeight = emphasisWeight,
                     lineHeight = TextUnit.Unspecified,
                 ),

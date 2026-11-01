@@ -94,7 +94,7 @@ fun CinemaBadge(
     )
 }
 
-private val BADGE_PADDING_VERTICAL = CinemaSpacing.xxs
+private val BADGE_PADDING_VERTICAL = CinemaSpacing.Base.xxs
 
 /** The height of a one-line [CinemaBadge] in [role] text, in the current Look and Feel and size. */
 @Composable
@@ -169,8 +169,9 @@ fun CardBadgeLine(
     val stars = rating?.takeIf { (it.trim().toDoubleOrNull() ?: 0.0) > 0.0 }
     val events = stringResource(R.string.title_badge_events)
     val texts = remember(parsed, events) { parsed?.let { cardBadgeTexts(it, events) }.orEmpty() }
+    val gapStep = CinemaSpacing.xs
     SubcomposeLayout(modifier) { constraints ->
-        val gap = CinemaSpacing.xs.roundToPx()
+        val gap = gapStep.roundToPx()
         val bounded = constraints.hasBoundedWidth
         val maxWidth = constraints.maxWidth
         // A pill at its own width, so it stays on one line.

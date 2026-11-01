@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.Constraints
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 
 private const val STAGGER_STEP_MS = 40L
 private const val STAGGER_CAP_INDEX = 12
@@ -48,7 +49,7 @@ private class StaggeredEntranceNode(
     var index: Int,
 ) : Modifier.Node(),
     LayoutModifierNode {
-    private var alpha = 0f
+    private var alpha = CinemaAlpha.none
     private var translationY = ENTRANCE_TRANSLATION_PX
     private var animationJob: Job? = null
 
@@ -76,7 +77,7 @@ private class StaggeredEntranceNode(
                     // measurement for a placement-only animation is simply wrong.
                     invalidatePlacement()
                 }
-                alpha = 1f
+                alpha = CinemaAlpha.opaque
                 translationY = 0f
                 invalidatePlacement()
             }
