@@ -1033,7 +1033,7 @@ private fun AiringRow(
                 Modifier
                     .fillMaxWidth()
                     .alpha(if (isMatched) 1f else 0.5f)
-                    .padding(vertical = Spacing.xxs.scaled(scale)),
+                    .padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xxs.scaled(scale)),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1081,7 +1081,8 @@ private fun AiringRow(
         }
     }
 
-    Surface(
+    // The app's list row look: its focus fill keeps the channel name readable.
+    TvCard(
         onClick = {
             airing.matchedStream?.let { matched ->
                 if (isOnAir) {
@@ -1091,7 +1092,7 @@ private fun AiringRow(
                 }
             }
         },
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        look = TvCardLooks.listRow(),
         modifier = modifier.fillMaxWidth(),
     ) {
         rowContent()

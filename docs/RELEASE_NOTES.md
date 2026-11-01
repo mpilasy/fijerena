@@ -4,6 +4,7 @@
 
 - **Watch now or later:** on a game's sheet, a channel of a game that has not started now asks first, as the guide does for a programme that is not on yet: **Watch now** opens the channel, **Remind Me** sets the game's reminder (shown only when the game has none), **Add to calendar** adds the game to the calendar app (only on a device that has one). A game that has started still opens its channel at once. TV and phone.
 - **Reminders for guide programmes:** in Search the Guide, a programme that is not on yet now also offers **Remind Me**. It rings 10 minutes before the programme, as a game reminder does: a banner on an open TV app, else a notification. Watch or a tap opens the channel. A reminder is for the profile in use, on that device only. TV and phone.
+- **Search the Guide on TV:** the focused channel row had a white fill under white text, so its channel name could not be read. It now has the list row look of the rest of the app (a light fill and a white outline). TV.
 - **Notification channel renamed:** "Game reminders" is now "Reminders", because it also carries guide programmes. TV and phone.
 
 ## Version: 0.9.20261101120335
