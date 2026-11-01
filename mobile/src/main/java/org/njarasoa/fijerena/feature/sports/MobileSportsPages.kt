@@ -178,6 +178,7 @@ private fun MobileSportsPage(
     val bells = rememberGameBells()
     val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
+    val pinnedDay = rememberPinnedDayKey(listState)
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
@@ -261,7 +262,10 @@ private fun MobileSportsPage(
                         }
                     }
                     for (day in days) {
-                        item(key = "day:${day.date}") { MobileSportsHeading(gameDayLabel(resources, day.date)) }
+                        stickyHeader(
+                            key = "day:${day.date}",
+                            contentType = DAY_HEADING,
+                        ) { MobileSportsDayHeading(gameDayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
                         items(day.games, key = { "game:${it.key}" }) { game ->
                             MobileGameCard(
                                 game = game,

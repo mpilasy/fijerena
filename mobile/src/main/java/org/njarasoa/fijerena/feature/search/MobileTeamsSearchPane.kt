@@ -57,12 +57,15 @@ import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.feature.sports.DAY_HEADING
 import org.njarasoa.fijerena.feature.sports.MobileBestTeamCard
 import org.njarasoa.fijerena.feature.sports.MobileGameBell
 import org.njarasoa.fijerena.feature.sports.MobileGameCard
 import org.njarasoa.fijerena.feature.sports.MobileGameSheet
+import org.njarasoa.fijerena.feature.sports.MobileSportsDayHeading
 import org.njarasoa.fijerena.feature.sports.MobileSportsHeading
 import org.njarasoa.fijerena.feature.sports.MobileSportsItemCard
+import org.njarasoa.fijerena.feature.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.feature.sports.sportsCardColors
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
@@ -104,6 +107,7 @@ internal fun MobileTeamsSearchPane(
     // Here, not in the list: the list leaves while results load, and Back from a result must find
     // the place the user left (saved with the screen).
     val listState = rememberLazyListState()
+    val pinnedDay = rememberPinnedDayKey(listState)
     // The type shown with text it has not searched: at once. Then once typing stops.
     LaunchedEffect(Unit) { viewModel.search(query) }
     LaunchedEffect(query) {
@@ -198,7 +202,7 @@ internal fun MobileTeamsSearchPane(
                                     cardColors = cardColors,
                                 )
                             }
-                            bestGameCards(bestGames, team, bells, cardColors, viewModel::retryBestGames) { openGame = it }
+                            bestGameCards(bestGames, team, bells, cardColors, pinnedDay, viewModel::retryBestGames) { openGame = it }
                         }
                         if (shown.teams.isNotEmpty()) {
                             item(key = "teams_header", contentType = "header") {
@@ -267,6 +271,7 @@ private fun LazyListScope.bestGameCards(
     team: SportsTeam,
     bells: GameBells,
     cardColors: CardColors,
+    pinnedDay: Any?,
     onRetry: () -> Unit,
     onOpenGame: (String) -> Unit,
 ) {
@@ -303,8 +308,8 @@ private fun LazyListScope.bestGameCards(
                 }
             }
             for (day in gamesByDay(games.games)) {
-                item(key = "best_day:${day.date}", contentType = "day") {
-                    MobileSportsHeading(gameDayLabel(LocalResources.current, day.date))
+                stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
+                    MobileSportsDayHeading(gameDayLabel(LocalResources.current, day.date), pinned = pinnedDay == "best_day:${day.date}")
                 }
                 items(day.games, key = { "game:${it.key}" }, contentType = { "game" }) { game ->
                     val nowSec = remember { System.currentTimeMillis() / 1000 }

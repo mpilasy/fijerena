@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **The day stays on top:** on the phone's Sports tab, league and team pages and Teams search, a day's heading stays pinned at the top while you scroll its games, until the next day's heading takes its place. Phone.
 - **Guide follows a new server address:** when you change an Xtream source's URL in Edit Source, its own guide source (`<host> (Bulk)`) moves to the new server and is downloaded again, and an old one on the previous server is removed with its guide data. Before, the old entry stayed and a second one could be added. TV and phone.
 
 ## Version: 0.9.20261101112508

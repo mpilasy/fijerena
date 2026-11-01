@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.sports
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,10 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
@@ -191,6 +196,42 @@ fun MobileSportsHeading(
     modifier: Modifier = Modifier,
 ) {
     CinemaText(text = text, role = TextRole.Title, modifier = modifier.padding(vertical = Spacing.xs))
+}
+
+/**
+ * A day's heading over its games, pinned at the top of the list (a sticky header) until the next
+ * day's heading takes its place (user, 2026-11-01). While [pinned] it is on the ground's colour, so
+ * the games scroll under it; elsewhere it has no band.
+ */
+@Composable
+fun MobileSportsDayHeading(
+    text: String,
+    pinned: Boolean,
+) {
+    MobileSportsHeading(
+        text,
+        modifier = Modifier.fillMaxWidth().then(if (pinned) Modifier.background(CinemaTheme.colors.background) else Modifier),
+    )
+}
+
+/** Content type of a day heading in a games list: [rememberPinnedDayKey] looks for it. */
+const val DAY_HEADING = "day"
+
+/** The key of the day heading pinned at the top of [state]'s list; null while the list is at its top. */
+@Composable
+fun rememberPinnedDayKey(state: LazyListState): Any? {
+    val key by remember(state) {
+        derivedStateOf {
+            if (!state.canScrollBackward) {
+                null
+            } else {
+                state.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.contentType == DAY_HEADING && it.offset <= 0 }
+                    ?.key
+            }
+        }
+    }
+    return key
 }
 
 /**

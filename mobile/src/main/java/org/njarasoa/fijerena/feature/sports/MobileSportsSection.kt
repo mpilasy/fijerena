@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -116,7 +117,10 @@ fun MobileSportsSectionScreen(
             }
 
             else -> {
+                val listState = rememberLazyListState()
+                val pinnedDay = rememberPinnedDayKey(listState)
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
                     contentPadding =
                         PaddingValues(start = Spacing.md, end = Spacing.md, top = Spacing.sm, bottom = Spacing.md + LocalDockInset.current),
@@ -169,7 +173,10 @@ fun MobileSportsSectionScreen(
                                 }
                             }
                             for (day in days) {
-                                item(key = "day:${day.date}") { MobileSportsHeading(gameDayLabel(resources, day.date)) }
+                                stickyHeader(
+                                    key = "day:${day.date}",
+                                    contentType = DAY_HEADING,
+                                ) { MobileSportsDayHeading(gameDayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
                                 items(day.games, key = { "game:${it.key}" }) { game ->
                                     MobileGameCard(
                                         game = game,
