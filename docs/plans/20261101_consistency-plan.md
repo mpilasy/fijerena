@@ -1,6 +1,6 @@
 # Consistency: one behaviour and one word for each thing
 
-**Status:** Planned 2026-11-01. Decisions taken the same day (below).
+**Status:** In progress 2026-11-01: Phase 3 done; 1 and 2 in progress.
 
 ## Goal
 
@@ -56,9 +56,9 @@ rule (removals last, above Cancel) holds everywhere.
 
 | # | Phase | State |
 |---|---|---|
-| 1 | Errors and empty states: findings 2, 3, 4, 16; Retry everywhere, raw errors only in dev mode | Not started |
-| 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | Not started |
-| 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Not started |
+| 1 | Errors and empty states: findings 2, 3, 4, 16; Retry everywhere, raw errors only in dev mode | In progress |
+| 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | In progress |
+| 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Done 2026-11-01 (3ac940c86): `DateText` in core/ui |
 | 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Not started |
 | 5 | Wishlist question (C-D4) | Not started |
 | 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Not started |
