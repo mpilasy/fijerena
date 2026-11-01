@@ -120,9 +120,8 @@ fun GameSheetOverlay(
         ).joinToString(" · ")
     val first = Modifier.focusRequester(firstRow)
 
-    // The ground hides the page; on it, a bounded panel. Its header stays at the top while the
-    // channels scroll under it, and its inner space keeps a focused row (which grows) inside the
-    // panel, clear of the rail.
+    // The ground hides the page. The header stays at the top while the channels scroll under it,
+    // and the inner space keeps a focused row (which grows) clear of the rail.
     Box(
         modifier =
             modifier
@@ -139,7 +138,7 @@ fun GameSheetOverlay(
                 .focusGroup()
                 .padding(contentPadding),
     ) {
-        Column(modifier = Modifier.fillMaxSize().panel(PanelFill.Surface, PanelCorner.Card).padding(vertical = Spacing.md)) {
+        Column(modifier = Modifier.fillMaxSize().padding(vertical = Spacing.md)) {
             TvScreenHeader(
                 title = gameTitle(resources, game),
                 subtitle = subtitle,
