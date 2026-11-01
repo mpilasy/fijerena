@@ -1,6 +1,6 @@
 # Consistency: one behaviour and one word for each thing
 
-**Status:** In progress 2026-11-01: Phases 1, 2 and 3 done, 4 done, 5 in progress.
+**Status:** In progress 2026-11-01: Phases 1, 2 and 3 done, 4 done, 5 done.
 
 ## Goal
 
@@ -32,7 +32,7 @@ rule (removals last, above Cancel) holds everywhere.
 | 12 | Dead `formatTimestamp` | `tv/.../SettingsUtils.kt` |
 | 13 | Clear Recent and Edit Favourites on TV only | `TwoColumnLayout.kt:268`, `StreamList.kt` |
 | 14 | FEATURES.md gives an old Home row order | `FEATURES.md:33,39` |
-| 15 | The wishlist "remove after watching?" question is never shown | `WishlistPrompt.kt` (both apps) |
+| 15 | The wishlist "remove after watching?" question is never shown (wrong: `WishlistRemovePrompt` in `WishlistPrompt.kt` was shown, after any watched episode of a show) | `WishlistPrompt.kt` (both apps) |
 | 16 | Sync `lastError` stored without `Redact` | `SyncManager.kt:314` |
 | 17 | `epg_guide_no_listings_index_empty` may name an old Settings path | `strings.xml:1075` |
 
@@ -61,7 +61,7 @@ rule (removals last, above Cancel) holds everywhere.
 | 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | Done 2026-11-01 (45b98a5ef); 90 unused or merged strings deleted |
 | 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Done 2026-11-01 (3ac940c86): `DateText` in core/ui |
 | 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Clear Recent done 2026-11-01 (6f7e5a4e5). Reorder dropped 2026-11-01 (C-D6): Favourites stay newest first |
-| 5 | Wishlist question (C-D4) | In progress |
+| 5 | Wishlist question (C-D4) | Done 2026-11-01 (3d479816e): a show asks once its last episode is watched, not after any episode; films unchanged |
 | 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Not started |
 
 Each phase is one commit on main with its tests and an emulator check.
