@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **The phone bottom bar is see-through again:** a little of the page shows through it, by the same amount in every theme. The tab in use keeps its solid accent pill. Phone.
+
 ## Version: 0.9.20261101215357
 
 - **Each Look and Feel sets the whole look:** dialogs, sheets, top bars, icons, panels, list rows and spacing now come from the Look and Feel, not from each screen. A dialog's buttons are laid out by the Look (a row or a stack, label or full width, Cancel last), and its main action is in the theme's colour. Sheets on the phone are a bottom sheet, a centred panel or full screen by Look. Phone screens share one header, whose height, title position and line come from the Look. Icons take their colour from the theme. The phone's spacing is a little denser in Sharp, Console and Grotesk, and a little roomier in Soft, Meadow, Calm, Rounded and Spotlight. TV and phone.

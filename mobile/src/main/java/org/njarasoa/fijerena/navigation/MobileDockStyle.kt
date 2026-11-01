@@ -20,7 +20,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
- * How the phone's bottom bar ([MobileBottomBar]) looks, in one place: a floating opaque bar lifted
+ * How the phone's bottom bar ([MobileBottomBar]) looks, in one place: a floating, slightly see-through bar lifted
  * off the screen's edges, its corners from the Display style, the tab in use in a solid accent pill
  * with its icon and name in the theme's colour on the accent, the others in the text colour.
  */
@@ -34,10 +34,17 @@ object MobileDockStyle {
         @Composable @ReadOnlyComposable
         get() = cornerShape(LocalUiStyle.current.shapes.button)
 
-    /** Opaque, also when the theme's raised surface is see-through: the page under it must not show through its labels. */
+    /**
+     * Slightly see-through, by the same amount in every theme: the raised surface is made solid on
+     * the background first, since some themes' raised surface is see-through already, which let the
+     * page show through the labels.
+     */
     val barContainer: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.surfaceRaised.compositeOver(CinemaTheme.colors.background)
+        get() =
+            CinemaTheme.colors.surfaceRaised
+                .compositeOver(CinemaTheme.colors.background)
+                .copy(alpha = BAR_ALPHA)
     val barOutline: Color
         @Composable @ReadOnlyComposable
         get() = CinemaTheme.colors.textPrimary.copy(alpha = OUTLINE_ALPHA)
@@ -68,6 +75,7 @@ object MobileDockStyle {
     val iconSize: Dp = 26.dp
     val iconToLabel: Dp = 2.dp
 
+    private const val BAR_ALPHA = 0.88f
     private const val OUTLINE_ALPHA = 0.08f
 }
 
