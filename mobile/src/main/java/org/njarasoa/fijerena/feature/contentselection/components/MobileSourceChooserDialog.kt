@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,8 +20,8 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -51,11 +50,9 @@ fun MobileSourceChooserDialog(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             ) {
                 sources.forEach { (id, name) ->
-                    Surface(
+                    CinemaChoiceRow(
                         onClick = { onChosen(id) },
                         modifier = Modifier.fillMaxWidth(),
-                        color = CinemaTheme.colors.surfaceRaised,
-                        shape = CinemaTheme.shapes.chip,
                     ) {
                         CinemaText(
                             text = name,

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.epg
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,11 +21,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.SelectableSurfaceDefaults
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
@@ -36,7 +33,6 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
-import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
@@ -67,13 +63,13 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
+import org.njarasoa.fijerena.ui.components.input.TvSwitchButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
@@ -325,59 +321,14 @@ fun TvEpgManagementScreen(
                                     ) {
                                         // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
                                         val useLabel = stringResource(R.string.epg_source_use_label)
-                                        androidx.tv.material3.Surface(
-                                            selected = source.enabled,
-                                            onClick = { viewModel.setSourceEnabled(source, !source.enabled) },
+                                        TvSwitchButton(
+                                            checked = source.enabled,
+                                            onToggle = { viewModel.setSourceEnabled(source, !source.enabled) },
                                             modifier =
                                                 (if (source.id == entrySourceId) Modifier.focusRequester(entryRowFocus) else Modifier)
                                                     .leftToRail()
                                                     .semantics { contentDescription = useLabel },
-                                            // P5: checked keeps the resting container and shows the
-                                            // check glyph in the current colour; only focus lifts it.
-                                            colors =
-                                                SelectableSurfaceDefaults.colors(
-                                                    containerColor = TvFocusTokens.restingContainer,
-                                                    contentColor = CinemaTheme.colors.textSecondary,
-                                                    focusedContainerColor = TvFocusTokens.focusedContainer,
-                                                    focusedContentColor = CinemaTheme.colors.textPrimary,
-                                                    selectedContainerColor = TvFocusTokens.restingContainer,
-                                                    selectedContentColor = TvFocusTokens.currentText,
-                                                    focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
-                                                    focusedSelectedContentColor = TvFocusTokens.currentText,
-                                                ),
-                                            scale =
-                                                SelectableSurfaceDefaults.scale(
-                                                    scale = TvFocusTokens.defaultScale,
-                                                    focusedScale = TvFocusTokens.focusedScale,
-                                                    selectedScale = TvFocusTokens.defaultScale,
-                                                    pressedScale = TvFocusTokens.pressedScale,
-                                                ),
-                                            border =
-                                                SelectableSurfaceDefaults.border(
-                                                    border = Border.None,
-                                                    focusedBorder =
-                                                        Border(
-                                                            border =
-                                                                BorderStroke(
-                                                                    TvFocusTokens.focusBorderWidth,
-                                                                    CinemaTheme.colors.accentSoft,
-                                                                ),
-                                                            shape = CinemaTheme.shapes.control,
-                                                        ),
-                                                ),
-                                            glow = SelectableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
-                                            shape = SelectableSurfaceDefaults.shape(shape = CinemaTheme.shapes.control),
-                                        ) {
-                                            Box(
-                                                modifier = Modifier.padding(Spacing.xs.scaled(scale)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                CinemaSwitch(
-                                                    checked = source.enabled,
-                                                    onCheckedChange = null,
-                                                )
-                                            }
-                                        }
+                                        )
 
                                         StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
 

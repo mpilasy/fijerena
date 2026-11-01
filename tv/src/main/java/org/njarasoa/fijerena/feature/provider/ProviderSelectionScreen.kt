@@ -2,7 +2,6 @@
 
 package org.njarasoa.fijerena.feature.provider
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +58,6 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -81,6 +79,7 @@ import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.restingRowGround
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.*
 
@@ -306,7 +305,7 @@ private fun ProviderList(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
+                        .restingRowGround()
                         .padding(end = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,

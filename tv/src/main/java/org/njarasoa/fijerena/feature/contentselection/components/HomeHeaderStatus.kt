@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -42,8 +41,11 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -88,14 +90,14 @@ private fun StatusLine(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val dotColor =
+    val dotFill =
         when (status) {
-            SourceSyncStatus.UPDATING -> CinemaTheme.colors.warning
-            SourceSyncStatus.FAILED -> CinemaTheme.colors.danger
-            else -> CinemaTheme.colors.success
+            SourceSyncStatus.UPDATING -> PanelFill.Warning
+            SourceSyncStatus.FAILED -> PanelFill.Danger
+            else -> PanelFill.Success
         }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        StatusDot(color = dotColor, pulsing = status == SourceSyncStatus.UPDATING)
+        StatusDot(fill = dotFill, pulsing = status == SourceSyncStatus.UPDATING)
         CinemaText(
             text = text,
             role = TextRole.Label,
@@ -157,7 +159,7 @@ internal fun SourcesStatusSheet(
 
 @Composable
 private fun StatusDot(
-    color: Color,
+    fill: PanelFill,
     pulsing: Boolean,
 ) {
     val alpha =
@@ -179,6 +181,6 @@ private fun StatusDot(
             Modifier
                 .size(TvDimensions.liveDotSize)
                 .graphicsLayer { this.alpha = alpha?.value ?: 1f }
-                .background(color, CinemaTheme.shapes.identity),
+                .panel(fill, PanelCorner.Identity),
     )
 }

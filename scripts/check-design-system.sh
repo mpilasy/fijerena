@@ -23,6 +23,11 @@
 #     DialogProperties), outside the dialog and sheet components (a file in ui/components named
 #     *Dialog*, *Sheet*, *Overlay* or *Panel*): use the phone CinemaSheet, the app's
 #     CinemaAlertDialog or TvOverlayPanel, which follow the Look and Feel
+#   - outside the components (ui/components, core/ui/components): a raw panel or list row (Surface(,
+#     ListItem() and a fill or outline set in place (.background(, .border() — CinemaPanel /
+#     Modifier.panel (PanelFill, PanelCorner, PanelOutline), TV TvPanel, TvCard with a TvCardLooks
+#     look, the focus modifiers (FocusModifiers.kt), the phone CinemaChoiceRow and SettingsListRow
+#     (docs/plans/20261101_style-layout-tokens-plan.md, Phase 5)
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
 # scripts/check-button-text-tone.py; the core CinemaAlertDialog used outside each app's own
 # CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons.
@@ -59,6 +64,16 @@ ICON_COMPONENTS=(
     tv/src/main/java/org/njarasoa/fijerena/ui/components/buttons/TvIconAction.kt
 )
 
+# Raw panels, list rows, fills and outlines: counted outside the component folders only.
+PANEL_PATTERN='(^|[^A-Za-z0-9_])(Surface|ListItem)\(|\.(background|border)\('
+
+is_component() {
+    case "$1" in
+    */ui/components/* | core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/*) return 0 ;;
+    *) return 1 ;;
+    esac
+}
+
 count_file() {
     local pat="$PATTERN|$ICON_PATTERN"
     local c
@@ -66,6 +81,7 @@ count_file() {
         [ "$1" = "$c" ] && pat="$PATTERN"
     done
     [[ "$1" =~ $WINDOW_COMPONENT ]] || pat="$pat|$WINDOW_PATTERN"
+    is_component "$1" || pat="$pat|$PANEL_PATTERN"
     # The pattern goes in through the environment: awk -v would strip its backslashes (gawk does).
     PAT="$pat" awk '
         BEGIN { pat = ENVIRON["PAT"] }

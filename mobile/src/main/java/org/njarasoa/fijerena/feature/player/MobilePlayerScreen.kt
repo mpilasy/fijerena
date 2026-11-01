@@ -75,10 +75,12 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
@@ -746,7 +748,7 @@ fun MobilePlayerContent(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(CinemaTheme.colors.mediaScrim)
+                            .panel(PanelFill.Media)
                             .then(
                                 if (isInPipMode) {
                                     Modifier

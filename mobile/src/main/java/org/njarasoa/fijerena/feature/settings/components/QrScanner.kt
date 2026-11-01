@@ -9,7 +9,6 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,10 +34,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import java.util.concurrent.Executors
@@ -60,7 +60,7 @@ fun QrScanner(
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     LaunchedEffect(Unit) { if (!granted) permission.launch(Manifest.permission.CAMERA) }
 
-    Box(Modifier.fillMaxSize().background(CinemaTheme.colors.mediaScrim)) {
+    Box(Modifier.fillMaxSize().panel(PanelFill.Media)) {
         if (granted) CameraPreview(onScanned)
         Column(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(CinemaSpacing.lg),

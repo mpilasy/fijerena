@@ -10,9 +10,6 @@ import androidx.compose.ui.unit.dp
  * [ButtonStyle]: change a control's look here and every screen follows.
  */
 object ControlStyle {
-    /** A panel's (card's) inner padding. */
-    val panelPadding: Dp = CinemaSpacing.md
-
     /** Space between a control and its label in a labelled row. */
     val labelGap: Dp = CinemaSpacing.sm
 

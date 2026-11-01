@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,10 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
@@ -37,17 +33,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
-import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
@@ -113,27 +108,16 @@ fun DeviceInfoScreen() {
             }
         }
         itemsIndexed(sections.orEmpty()) { index, section ->
-            // A no-op clickable Surface only so each section takes D-pad focus (and the list
+            // A no-op clickable card only so each section takes D-pad focus (and the list
             // scrolls to it) with the standard focus border.
-            Surface(
+            TvCard(
                 onClick = {},
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .then(if (index == 0) Modifier.focusRequester(firstSectionFocus) else Modifier)
                         .leftToRail(),
-                shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.large)),
-                colors =
-                    ClickableSurfaceDefaults.colors(
-                        containerColor = TvFocusTokens.restingContainer,
-                        focusedContainerColor = TvFocusTokens.focusedContainer,
-                        pressedContainerColor = TvFocusTokens.focusedContainer,
-                    ),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = TvFocusTokens.defaultScale),
-                border =
-                    ClickableSurfaceDefaults.border(
-                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
-                    ),
+                look = TvCardLooks.infoBlock(),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                     CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)

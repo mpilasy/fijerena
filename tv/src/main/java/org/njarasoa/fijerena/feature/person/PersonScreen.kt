@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.person
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,14 +53,15 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
 import org.njarasoa.fijerena.core.ui.person.personRoleText
 import org.njarasoa.fijerena.core.ui.person.showMissingNote
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
 import org.njarasoa.fijerena.ui.components.TvContentText
@@ -121,7 +121,7 @@ fun PersonScreen(
     }
     BackHandler { if (showOpening is PersonViewModel.ShowOpening.Lines) viewModel.closeShow() else onBack() }
 
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         when (val current = state) {
             PersonViewModel.State.Loading -> {
                 CinemaSpinner(modifier = Modifier.align(Alignment.Center))

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,10 +31,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelOutline
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panelOutline
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -280,17 +282,8 @@ private fun ColorSwatch(
             Modifier
                 .size(MobileDimensions.iconLarge)
                 .clip(CinemaTheme.shapes.identity)
-                .then(
-                    if (selected) {
-                        Modifier.border(
-                            MobileDimensions.strokeWidth,
-                            CinemaTheme.colors.textPrimary,
-                            CinemaTheme.shapes.identity,
-                        )
-                    } else {
-                        Modifier
-                    },
-                ).clickable(onClick = onClick)
+                .panelOutline(if (selected) PanelOutline.Marked else PanelOutline.None, PanelCorner.Identity)
+                .clickable(onClick = onClick)
                 .semantics {
                     contentDescription = label
                     this.selected = selected

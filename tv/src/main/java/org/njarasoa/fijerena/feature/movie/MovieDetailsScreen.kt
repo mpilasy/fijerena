@@ -3,8 +3,6 @@
 package org.njarasoa.fijerena.feature.movie
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,19 +84,19 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
@@ -126,6 +124,7 @@ import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.pickerFocus
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
@@ -133,7 +132,6 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
@@ -427,7 +425,7 @@ private fun MovieDetailsContent(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
         // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
         // measure pass on every rebuild of this screen, which is why backing out of the player was
@@ -1019,20 +1017,8 @@ private fun StreamNamePicker(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier
-                    .background(
-                        color = if (isFocused) CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.tint) else CinemaTheme.colors.clear,
-                        shape = CinemaTheme.shapes.card,
-                    ).then(
-                        if (isFocused) {
-                            Modifier.border(
-                                width = TvFocusTokens.focusBorderWidth,
-                                color = CinemaTheme.colors.accentSoft,
-                                shape = CinemaTheme.shapes.card,
-                            )
-                        } else {
-                            Modifier
-                        },
-                    ).focusRequester(focusRequester)
+                    .pickerFocus(isFocused)
+                    .focusRequester(focusRequester)
                     .leftToRail()
                     .onFocusChanged {
                         isFocused = it.isFocused

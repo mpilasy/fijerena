@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.feature.category.components
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,6 +85,8 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -93,6 +94,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
@@ -470,10 +472,8 @@ internal fun StreamList(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        color = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.tint),
-                        shape = CinemaTheme.shapes.chip,
-                    ).then(
+                    .panel(PanelFill.RaisedFaint, PanelCorner.Chip)
+                    .then(
                         // The screen header above stays outside the pane: Up from the first row
                         // reaches it. Right goes nowhere (R1).
                         if (paneFocus != null) Modifier.tvPane(paneFocus, exitLeft = categoriesPane) else Modifier,

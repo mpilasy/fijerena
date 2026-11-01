@@ -3,8 +3,6 @@
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,7 +50,6 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
 import org.njarasoa.fijerena.core.ui.history.LocalSourceShortNames
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -60,8 +57,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.components.glassCard
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -352,14 +349,7 @@ fun TvStatsOverlay(
                     .heightIn(max = maxHeight * 0.9f)
                     .align(Alignment.TopEnd)
                     .padding(top = Spacing.xxl)
-                    .background(
-                        CinemaTheme.colors.glass,
-                        shape = CinemaTheme.shapes.card,
-                    ).border(
-                        width = TvDimensions.borderDefault,
-                        color = CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.scrim),
-                        shape = CinemaTheme.shapes.card,
-                    ),
+                    .glassCard(),
             // Not focusable - allows keys to pass to the stream
         ) {
             Box(

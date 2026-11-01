@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.ui.components.modifiers
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.withFrameNanos
@@ -22,9 +24,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.panelShape
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
@@ -75,6 +81,57 @@ fun Modifier.tvFocusableContent(cornerRadius: Dp = CornerRadius.medium): Modifie
         borderColor = CinemaTheme.colors.accentSoft,
         cornerRadius = cornerRadius,
     )
+
+/**
+ * The focus look of a picker that opens a menu (a title's copy picker): a faint accent fill and an
+ * accent outline in the card corner while [isFocused], nothing at rest.
+ */
+@Composable
+fun Modifier.pickerFocus(isFocused: Boolean): Modifier {
+    val shape = CinemaTheme.shapes.card
+    val colors = CinemaTheme.colors
+    return background(if (isFocused) colors.accent.copy(alpha = CinemaAlpha.tint) else colors.clear, shape)
+        .then(if (isFocused) Modifier.border(TvFocusTokens.focusBorderWidth, colors.accentSoft, shape) else Modifier)
+}
+
+/** An accent outline in [corner] while [isFocused], none at rest; the element keeps its own fill. */
+@Composable
+fun Modifier.accentFocusOutline(
+    isFocused: Boolean,
+    corner: PanelCorner,
+): Modifier =
+    border(
+        width = TvFocusTokens.focusBorderWidth,
+        color = if (isFocused) CinemaTheme.colors.accentSoft else CinemaTheme.colors.clear,
+        shape = panelShape(corner),
+    )
+
+/** The rows' white focus outline in [corner] while [isFocused], none at rest (the player's seek bar). */
+@Composable
+fun Modifier.rowFocusOutline(
+    isFocused: Boolean,
+    corner: PanelCorner,
+): Modifier =
+    border(
+        width = TvFocusTokens.focusBorderWidth,
+        color = if (isFocused) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
+        shape = panelShape(corner),
+    )
+
+/**
+ * A tab chip's fill (the season tabs): [TvFocusTokens.focusFill] while [isFocused], the resting
+ * container otherwise. Selection is not a fill (P5): the chip's current bar and text carry it.
+ */
+@Composable
+fun Modifier.tabChipFill(isFocused: Boolean): Modifier =
+    background(
+        color = if (isFocused) TvFocusTokens.focusFill else TvFocusTokens.restingContainer,
+        shape = CinemaTheme.shapes.chip,
+    )
+
+/** The resting ground of a row made of several focus stops (a source row and its buttons). */
+@Composable
+fun Modifier.restingRowGround(): Modifier = background(TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
 
 private data class TvFocusableElement(
     val focusScale: Float,

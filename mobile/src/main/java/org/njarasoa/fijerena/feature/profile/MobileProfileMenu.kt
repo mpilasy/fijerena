@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,9 +24,9 @@ import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -102,14 +101,12 @@ fun MobileProfileMenu(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     contentTypes.forEach { contentType ->
-                        Surface(
+                        CinemaChoiceRow(
                             onClick = {
                                 browseChoice = null
                                 onBrowseSection(browsed.providerId, contentType)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            color = CinemaTheme.colors.surfaceRaised,
-                            shape = CinemaTheme.shapes.chip,
                         ) {
                             CinemaText(
                                 text =

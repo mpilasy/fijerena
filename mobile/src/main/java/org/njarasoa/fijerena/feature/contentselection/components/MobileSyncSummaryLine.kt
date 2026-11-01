@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,8 +33,11 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -46,7 +47,6 @@ import org.njarasoa.fijerena.core.ui.home.syncSummaryText
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -87,11 +87,11 @@ private fun StatusText(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         StatusDot(
-            color =
+            fill =
                 when (status) {
-                    SourceSyncStatus.UPDATING -> CinemaTheme.colors.warning
-                    SourceSyncStatus.FAILED -> CinemaTheme.colors.danger
-                    else -> CinemaTheme.colors.success
+                    SourceSyncStatus.UPDATING -> PanelFill.Warning
+                    SourceSyncStatus.FAILED -> PanelFill.Danger
+                    else -> PanelFill.Success
                 },
             pulsing = status == SourceSyncStatus.UPDATING,
         )
@@ -159,7 +159,7 @@ fun MobileSourcesStatusSheet(
 
 @Composable
 private fun StatusDot(
-    color: Color,
+    fill: PanelFill,
     pulsing: Boolean,
 ) {
     val alpha =
@@ -181,6 +181,6 @@ private fun StatusDot(
             Modifier
                 .size(MobileDimensions.liveDotSize)
                 .graphicsLayer { this.alpha = alpha?.value ?: 1f }
-                .background(color, CinemaTheme.shapes.identity),
+                .panel(fill, PanelCorner.Identity),
     )
 }

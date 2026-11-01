@@ -94,8 +94,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
@@ -173,6 +171,8 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -182,6 +182,7 @@ import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
@@ -800,7 +801,7 @@ fun MobileCategoryListScreen(
     // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
     // chrome in PiP.
     if (isInPip) {
-        Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.mediaScrim)) {
+        Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Media)) {
             EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
         }
         return
@@ -1299,7 +1300,7 @@ fun MobileCategoryListScreen(
                                                     Modifier
                                                         .fillMaxWidth()
                                                         .clip(CinemaTheme.shapes.card)
-                                                        .background(CinemaTheme.colors.surface)
+                                                        .panel(PanelFill.Surface)
                                                         .clickable(onClick = { promoteDock() }),
                                             ) {
                                                 val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
@@ -1425,19 +1426,14 @@ fun MobileCategoryListScreen(
                                                     tone = TextTone.OnMedia,
                                                 )
 
-                                                val colors = CinemaTheme.colors
                                                 // Over the video: the media scrim and white text in every theme (a light
                                                 // theme's background wash put dark text on the picture).
-                                                val scrimBrush =
-                                                    remember(colors.mediaScrim) {
-                                                        Brush.verticalGradient(listOf(colors.clear, colors.mediaScrim))
-                                                    }
                                                 Column(
                                                     modifier =
                                                         Modifier
                                                             .align(Alignment.BottomStart)
                                                             .fillMaxWidth()
-                                                            .background(scrimBrush)
+                                                            .panel(PanelFill.MediaFade)
                                                             .padding(CinemaSpacing.sm),
                                                 ) {
                                                     // The clean name with its badges, as in the player.
@@ -1542,7 +1538,7 @@ private fun DockUnavailable(
     Column(
         modifier =
             modifier
-                .background(CinemaTheme.colors.mediaScrim)
+                .panel(PanelFill.Media)
                 .then(if (onNext != null) Modifier.clickable(onClickLabel = nextLabel, onClick = onNext) else Modifier)
                 .padding(CinemaSpacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1573,7 +1569,7 @@ private enum class SwipeReveal { CLOSED, FAVORITE_ACTIONS, DELETE_ACTION }
 private fun SwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
-    fill: Color,
+    fill: PanelFill,
     onClick: () -> Unit,
 ) {
     Box(
@@ -1581,7 +1577,7 @@ private fun SwipeActionButton(
             Modifier
                 .size(MobileDimensions.swipeActionCircleSize)
                 .clip(CinemaTheme.shapes.control)
-                .background(fill)
+                .panel(fill)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -2177,7 +2173,7 @@ private fun StreamsList(
                                         .width(favoriteRevealWidth)
                                         .fillMaxHeight()
                                         .clip(CinemaTheme.shapes.card)
-                                        .background(CinemaTheme.colors.surface)
+                                        .panel(PanelFill.Surface)
                                         .clickable(
                                             indication = null,
                                             interactionSource = remember { MutableInteractionSource() },
@@ -2193,7 +2189,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
                                             ),
-                                        fill = CinemaTheme.colors.success,
+                                        fill = PanelFill.Success,
                                         onClick = {
                                             onToggleFavorite(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2216,7 +2212,7 @@ private fun StreamsList(
                                                         R.string.watched_mark_show
                                                     },
                                                 ),
-                                            fill = CinemaTheme.colors.accent,
+                                            fill = PanelFill.Accent,
                                             onClick = {
                                                 onSetShowWatched(showSeriesId, isShowWatched != true, item.providerId)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2229,7 +2225,7 @@ private fun StreamsList(
                                                 stringResource(
                                                     if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
                                                 ),
-                                            fill = CinemaTheme.colors.accent,
+                                            fill = PanelFill.Accent,
                                             onClick = {
                                                 onToggleWatched(item)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2247,7 +2243,7 @@ private fun StreamsList(
                                             .width(deleteRevealWidth)
                                             .fillMaxHeight()
                                             .clip(CinemaTheme.shapes.card)
-                                            .background(CinemaTheme.colors.surface)
+                                            .panel(PanelFill.Surface)
                                             .clickable(
                                                 indication = null,
                                                 interactionSource = remember { MutableInteractionSource() },
@@ -2262,7 +2258,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
                                             ),
-                                        fill = CinemaTheme.colors.danger,
+                                        fill = PanelFill.Danger,
                                         onClick = {
                                             if (isRecentList) onRemoveItem?.invoke(item) else onRemoveFavorite?.invoke(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }

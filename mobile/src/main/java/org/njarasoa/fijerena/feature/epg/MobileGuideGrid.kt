@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -65,11 +64,13 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.components.rememberTextHeight
@@ -261,7 +262,7 @@ private fun TimeRuler(
                                     Modifier
                                         .width(MobileDimensions.dividerThin)
                                         .fillMaxHeight()
-                                        .background(CinemaTheme.colors.textTertiary),
+                                        .panel(PanelFill.Rule),
                             )
                             CinemaText(
                                 text = TimeFormat.formatTime(tick.epochSec),
@@ -338,7 +339,7 @@ private fun GuideRow(
                             Modifier
                                 .padding(vertical = CinemaSpacing.xxs)
                                 .alpha(CinemaAlpha.tint)
-                                .background(CinemaTheme.colors.surfaceRaised),
+                                .panel(PanelFill.Raised),
                     )
                     cells.forEach { cell ->
                         key(cell.program.id) {
@@ -471,7 +472,7 @@ private fun ProgramCell(
                 .padding(horizontal = MobileDimensions.dividerThin, vertical = CinemaSpacing.xxs)
                 .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f)
                 .clip(shape)
-                .background(CinemaTheme.colors.surfaceRaised)
+                .panel(PanelFill.Raised)
                 .clickable(onClick = onClick),
     ) {
         if (onAir) {
@@ -480,7 +481,7 @@ private fun ProgramCell(
                     Modifier
                         .width(CinemaSpacing.xxs)
                         .fillMaxHeight()
-                        .background(CinemaTheme.colors.accent),
+                        .panel(PanelFill.Accent),
             )
         }
         if (cell.labelFits) {

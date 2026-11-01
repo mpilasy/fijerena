@@ -68,10 +68,12 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -775,7 +777,7 @@ internal fun LiveTvSplitLayout(
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
                             .clip(previewPaneShape)
-                            .background(CinemaTheme.colors.surface),
+                            .panel(PanelFill.Surface),
                 ) {
                     // TextureView (not the default SurfaceView): this box sits next to the
                     // scrolling/recomposing channel list, and SurfaceView there stalls the main

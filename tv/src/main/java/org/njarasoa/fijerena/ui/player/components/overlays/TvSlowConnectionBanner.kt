@@ -2,22 +2,21 @@
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -33,9 +32,6 @@ fun TvSlowConnectionBanner(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val background = CinemaTheme.colors.background
-    val pill = remember(background) { background.copy(alpha = CinemaAlpha.glass) }
-    val pillShape = CinemaTheme.shapes.card
     Box(
         modifier = modifier.fillMaxSize().padding(top = Spacing.xl),
         contentAlignment = Alignment.TopCenter,
@@ -46,7 +42,7 @@ fun TvSlowConnectionBanner(
             tone = TextTone.Primary,
             modifier =
                 Modifier
-                    .background(pill, pillShape)
+                    .panel(PanelFill.Notice, PanelCorner.Card)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         )
     }

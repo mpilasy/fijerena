@@ -47,7 +47,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -106,6 +105,7 @@ import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -495,7 +495,7 @@ fun TvAddProviderScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    TvPanel(modifier = Modifier.fillMaxSize()) {
         if (isEditMode) {
             // Back with unsaved connection edits asks first. Taken at the root
             // (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"): the press is claimed

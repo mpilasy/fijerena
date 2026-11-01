@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.person
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,9 +28,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.person.appearanceLabel
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
@@ -67,7 +67,7 @@ fun ShowAppearancesOverlay(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.background)
+                .panel(PanelFill.Ground)
                 .onPreviewKeyEvent { event ->
                     if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
                         onClose()

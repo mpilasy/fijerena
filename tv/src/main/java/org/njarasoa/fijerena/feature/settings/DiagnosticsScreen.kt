@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,11 +26,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -45,19 +41,18 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
-import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /** How much of one stack trace a TV row shows; the whole log is on the device (see CrashLog). */
@@ -134,27 +129,16 @@ fun DiagnosticsScreen() {
             val causes = entry.causes
             // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
             var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
-            // A clickable Surface so each entry takes D-pad focus (and the list scrolls to it) with
+            // A clickable card so each entry takes D-pad focus (and the list scrolls to it) with
             // the standard focus border.
-            Surface(
+            TvCard(
                 onClick = { if (causes != null) expanded = !expanded },
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .then(if (index == 0) Modifier.focusRequester(firstEntryFocus) else Modifier)
                         .leftToRail(),
-                shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.large)),
-                colors =
-                    ClickableSurfaceDefaults.colors(
-                        containerColor = TvFocusTokens.restingContainer,
-                        focusedContainerColor = TvFocusTokens.focusedContainer,
-                        pressedContainerColor = TvFocusTokens.focusedContainer,
-                    ),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = TvFocusTokens.defaultScale),
-                border =
-                    ClickableSurfaceDefaults.border(
-                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
-                    ),
+                look = TvCardLooks.infoBlock(),
             ) {
                 Row(Modifier.padding(Spacing.md.scaled(scale)), horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {

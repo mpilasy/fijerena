@@ -2,7 +2,6 @@
 
 package org.njarasoa.fijerena.ui.player.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,13 +40,16 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaPanel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.colorOf
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -115,7 +117,7 @@ fun ErrorContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.background.copy(alpha = 0.95f)),
+                .panel(PanelFill.Shade),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -134,10 +136,10 @@ fun ErrorContent(
             if (isDevMode && error.exception != null) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
-                Surface(
+                CinemaPanel(
                     modifier = Modifier.fillMaxWidth(),
-                    color = CinemaTheme.colors.surface,
-                    shape = CinemaTheme.shapes.chip,
+                    fill = PanelFill.Surface,
+                    corner = PanelCorner.Chip,
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.md),

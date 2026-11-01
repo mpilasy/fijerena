@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.provider.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +15,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,15 +33,18 @@ import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaPanel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.PanelOutline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -203,11 +204,10 @@ fun MobileCategoryFilterDialog(
                         if (editingIndex == index) {
                             // A neutral fill with an accent outline: on the accent fill the field, the
                             // chips and the caption could not be read on light themes.
-                            Surface(
-                                color = CinemaTheme.colors.surfaceHigh,
-                                contentColor = CinemaTheme.colors.textPrimary,
-                                shape = CinemaTheme.shapes.chip,
-                                border = BorderStroke(CinemaTheme.borders.focus, CinemaTheme.colors.accent),
+                            CinemaPanel(
+                                fill = PanelFill.High,
+                                corner = PanelCorner.Chip,
+                                outline = PanelOutline.Selected,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(

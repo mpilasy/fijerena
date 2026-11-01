@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.sports
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,10 +40,12 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sports.GameBells
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.addGameToCalendar
@@ -124,7 +125,7 @@ fun GameSheetOverlay(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.background)
+                .panel(PanelFill.Ground)
                 .onPreviewKeyEvent { event ->
                     if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
                         onClose()

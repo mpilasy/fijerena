@@ -1,8 +1,12 @@
 package org.njarasoa.fijerena.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
@@ -67,6 +71,19 @@ object MobileDockStyle {
     private const val OUTLINE_ALPHA = 0.08f
     private const val SELECTED_FILL_ALPHA = 0.10f
 }
+
+/** The bar's fill and outline, in [MobileDockStyle.barShape]. */
+@Composable
+fun Modifier.dockBar(): Modifier =
+    clip(MobileDockStyle.barShape)
+        .background(MobileDockStyle.barContainer)
+        .border(MobileDockStyle.barOutlineWidth, MobileDockStyle.barOutline, MobileDockStyle.barShape)
+
+/** A tab's pill: [MobileDockStyle.selectedTabContainer] on the tab in use, nothing on the others. */
+@Composable
+fun Modifier.dockTab(isSelected: Boolean): Modifier =
+    clip(MobileDockStyle.tabShape)
+        .background(if (isSelected) MobileDockStyle.selectedTabContainer else CinemaTheme.colors.clear)
 
 /**
  * Space the floating bar covers at the bottom of the screen (its height with its margins and the

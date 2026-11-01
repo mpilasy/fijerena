@@ -9,8 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -27,9 +25,8 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -65,28 +62,13 @@ fun AudioTrackSelectorDialog(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     audioTracks.forEachIndexed { _, track ->
-                        Surface(
+                        CinemaChoiceRow(
                             onClick = {
                                 viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
                                 onDismiss()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            color =
-                                if (track.isSelected) {
-                                    CinemaTheme.colors.accentStrong
-                                } else {
-                                    CinemaTheme.colors.surfaceRaised
-                                },
-                            // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
-                            contentColor =
-                                if (track.isSelected) {
-                                    contentOn(
-                                        CinemaTheme.colors.accentStrong,
-                                    )
-                                } else {
-                                    CinemaTheme.colors.textPrimary
-                                },
-                            shape = CinemaTheme.shapes.chip,
+                            selected = track.isSelected,
                         ) {
                             Column(modifier = Modifier.padding(Spacing.sm)) {
                                 Row(
@@ -148,21 +130,13 @@ fun SubtitleSelectorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                Surface(
+                CinemaChoiceRow(
                     onClick = {
                         viewModel.disableSubtitles()
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    color =
-                        if (!hasActiveSubtitle) {
-                            CinemaTheme.colors.accentStrong
-                        } else {
-                            CinemaTheme.colors.surfaceRaised
-                        },
-                    // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
-                    contentColor = if (!hasActiveSubtitle) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
-                    shape = CinemaTheme.shapes.chip,
+                    selected = !hasActiveSubtitle,
                 ) {
                     Row(
                         modifier =
@@ -189,21 +163,13 @@ fun SubtitleSelectorDialog(
                 }
 
                 subtitleTracks.forEachIndexed { _, track ->
-                    Surface(
+                    CinemaChoiceRow(
                         onClick = {
                             viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        color =
-                            if (track.isSelected) {
-                                CinemaTheme.colors.accentStrong
-                            } else {
-                                CinemaTheme.colors.surfaceRaised
-                            },
-                        // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
-                        contentColor = if (track.isSelected) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
-                        shape = CinemaTheme.shapes.chip,
+                        selected = track.isSelected,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(
@@ -264,21 +230,13 @@ fun QualitySelectorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                Surface(
+                CinemaChoiceRow(
                     onClick = {
                         viewModel.enableAutoQuality()
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    color =
-                        if (!hasManualSelection) {
-                            CinemaTheme.colors.accentStrong
-                        } else {
-                            CinemaTheme.colors.surfaceRaised
-                        },
-                    // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
-                    contentColor = if (!hasManualSelection) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
-                    shape = CinemaTheme.shapes.chip,
+                    selected = !hasManualSelection,
                 ) {
                     Column(modifier = Modifier.padding(Spacing.sm)) {
                         Row(
@@ -309,28 +267,13 @@ fun QualitySelectorDialog(
                 }
 
                 videoQualities.forEachIndexed { _, quality ->
-                    Surface(
+                    CinemaChoiceRow(
                         onClick = {
                             viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        color =
-                            if (quality.isSelected) {
-                                CinemaTheme.colors.accentStrong
-                            } else {
-                                CinemaTheme.colors.surfaceRaised
-                            },
-                        // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
-                        contentColor =
-                            if (quality.isSelected) {
-                                contentOn(
-                                    CinemaTheme.colors.accentStrong,
-                                )
-                            } else {
-                                CinemaTheme.colors.textPrimary
-                            },
-                        shape = CinemaTheme.shapes.chip,
+                        selected = quality.isSelected,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(

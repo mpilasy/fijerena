@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -24,10 +23,13 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelOutline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panelOutline
+import org.njarasoa.fijerena.core.ui.components.panelShape
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -106,9 +108,7 @@ fun <T> SettingsPickerDialog(
  * or pill), the accent at its selected width on the chosen row, a hairline on the others.
  */
 @Composable
-private fun Modifier.lookOutline(selected: Boolean): Modifier {
-    val shape = CinemaTheme.shapes.card
-    val width = if (selected) CinemaTheme.borders.focus else CinemaTheme.borders.outline
-    val color = if (selected) CinemaTheme.colors.accent else CinemaTheme.colors.surfaceHigh
-    return padding(vertical = Spacing.xxs).clip(shape).border(width, color, shape)
-}
+private fun Modifier.lookOutline(selected: Boolean): Modifier =
+    padding(vertical = Spacing.xxs)
+        .clip(panelShape(PanelCorner.Card))
+        .panelOutline(if (selected) PanelOutline.Selected else PanelOutline.Hairline, PanelCorner.Card)

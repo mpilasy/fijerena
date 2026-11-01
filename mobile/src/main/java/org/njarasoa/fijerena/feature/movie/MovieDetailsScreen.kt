@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.movie
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,10 +49,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
@@ -62,7 +64,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
@@ -279,7 +280,7 @@ private fun MovieDetailsContent(
 ) {
     val extension = movieDetail.extension ?: "mp4"
 
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
         // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
         // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same

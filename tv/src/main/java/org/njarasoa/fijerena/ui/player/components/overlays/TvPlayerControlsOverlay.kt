@@ -3,8 +3,6 @@
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +47,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -90,15 +87,17 @@ import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvClockText
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
@@ -106,13 +105,13 @@ import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.rowFocusOutline
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.util.Date
 
 // Frame-count budget for the OSD's initial-focus retry loop — see its LaunchedEffect below.
@@ -288,7 +287,7 @@ fun TvPlayerControlsOverlay(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.osdScrim)),
+                .panel(PanelFill.Osd),
     ) {
         // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's
         // logo (Live TV) with the developer-mode resolution/codec line under it, on a soft gradient
@@ -300,11 +299,8 @@ fun TvPlayerControlsOverlay(
                     Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.textMedium), CinemaTheme.colors.clear),
-                            ),
-                        ).padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+                        .panel(PanelFill.TopFade)
+                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
                 // Self-ticking so only this leaf recomposes each second.
                 TvClockText(modifier = Modifier.align(Alignment.TopEnd))
@@ -414,7 +410,7 @@ fun TvPlayerControlsOverlay(
                             modifier =
                                 Modifier
                                     .size(TvDimensions.statsDotSize)
-                                    .background(CinemaTheme.colors.live, shape = CinemaTheme.shapes.identity),
+                                    .panel(PanelFill.Live, PanelCorner.Identity),
                         )
                         CinemaText(text = stringResource(R.string.player_live), role = TextRole.Label)
                         BadgedTitle(
@@ -561,11 +557,8 @@ fun TvPlayerControlsOverlay(
                                         } else {
                                             false
                                         }
-                                    }.border(
-                                        width = TvFocusTokens.focusBorderWidth,
-                                        color = if (seekBarLit) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
-                                        shape = CinemaTheme.shapes.chip,
-                                    ).padding(Spacing.xs),
+                                    }.rowFocusOutline(seekBarLit, PanelCorner.Chip)
+                                    .padding(Spacing.xs),
                         ) {
                             CinemaProgressBar(
                                 progress = { displayPosition.toFloat() / duration.toFloat() },

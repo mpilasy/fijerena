@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,26 +20,22 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.licenses.OpenSourceEntry
 import org.njarasoa.fijerena.core.ui.licenses.OpenSourceLicenses
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
-import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.R as AppR
 
@@ -174,21 +169,10 @@ internal fun LicenseCard(
     content: @Composable () -> Unit,
 ) {
     val scale = LocalUiScale.current
-    Surface(
+    TvCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().leftToRail(),
-        shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.large)),
-        colors =
-            ClickableSurfaceDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                pressedContainerColor = TvFocusTokens.focusedContainer,
-            ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = TvFocusTokens.defaultScale),
-        border =
-            ClickableSurfaceDefaults.border(
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
-            ),
+        look = TvCardLooks.infoBlock(),
     ) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
             content()

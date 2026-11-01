@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -56,11 +54,13 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import java.net.HttpURLConnection
 import java.net.URI
@@ -315,7 +315,7 @@ private fun TrailerDialog(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black) // look-ok: video letterbox, black on every theme
+                    .panel(PanelFill.Media) // The video letterbox: black on every theme.
                     .focusRequester(focus)
                     .focusable()
                     .onPreviewKeyEvent { event ->
@@ -419,7 +419,7 @@ private fun TrailerDialog(
                     tone = TextTone.OnMedia,
                     modifier =
                         Modifier
-                            .background(CinemaTheme.colors.mediaScrim, CinemaTheme.shapes.chip)
+                            .panel(PanelFill.Media, PanelCorner.Chip)
                             .padding(CinemaSpacing.md)
                             .size(CinemaSpacing.xxl),
                 )
@@ -436,7 +436,7 @@ private fun TrailerDialog(
                         Modifier
                             .align(Alignment.TopStart)
                             .padding(CinemaSpacing.xl)
-                            .background(CinemaTheme.colors.mediaScrim, CinemaTheme.shapes.chip)
+                            .panel(PanelFill.Media, PanelCorner.Chip)
                             .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
                 )
             }
@@ -449,7 +449,7 @@ private fun TrailerDialog(
                         Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = CinemaSpacing.xxl)
-                            .background(CinemaTheme.colors.mediaScrim, CinemaTheme.shapes.chip)
+                            .panel(PanelFill.Media, PanelCorner.Chip)
                             .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
                 )
             }

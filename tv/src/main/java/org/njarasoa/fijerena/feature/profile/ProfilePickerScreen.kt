@@ -2,7 +2,6 @@
 
 package org.njarasoa.fijerena.feature.profile
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,11 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.ui.R
@@ -52,10 +48,11 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * "Who's watching?" — pick the profile this TV uses. See the live sync plan
@@ -153,36 +150,12 @@ private fun PickerCard(
     avatar: @Composable () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
+        TvCard(
             onClick = onClick,
             // The name is under the card, outside it: give it to the card too, so a screen reader
             // (and the focus walks) read "atr", not only the initial.
             modifier = modifier.semantics { contentDescription = label },
-            shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
-            colors =
-                ClickableSurfaceDefaults.colors(
-                    containerColor = TvFocusTokens.restingContainer,
-                    focusedContainerColor = TvFocusTokens.focusedContainer,
-                    pressedContainerColor = TvFocusTokens.focusedContainer,
-                ),
-            scale =
-                ClickableSurfaceDefaults.scale(
-                    scale = TvFocusTokens.defaultScale,
-                    focusedScale = TvFocusTokens.focusedScale,
-                    pressedScale = TvFocusTokens.pressedScale,
-                ),
-            // A white ring hugging the avatar (F-PP-1, TV UI audit #1): drawn just outside its edge,
-            // with no gap, so it reads as the avatar's own outline; white, the rows' focus colour,
-            // never blends into a coloured avatar the way the accent did.
-            border =
-                ClickableSurfaceDefaults.border(
-                    focusedBorder =
-                        Border(
-                            border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth, TvFocusTokens.focusedRowOutline),
-                            inset = TvFocusTokens.avatarFocusBorderWidth / 2,
-                            shape = CinemaTheme.shapes.identity,
-                        ),
-                ),
+            look = TvCardLooks.avatar(),
         ) { avatar() }
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaText(

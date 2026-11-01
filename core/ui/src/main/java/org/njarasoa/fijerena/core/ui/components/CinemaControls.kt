@@ -1,13 +1,8 @@
 package org.njarasoa.fijerena.core.ui.components
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -192,34 +187,6 @@ fun CinemaRadioButton(
 fun CinemaDivider(modifier: Modifier = Modifier) {
     // look-ok: the component that wraps Material's HorizontalDivider
     HorizontalDivider(modifier = modifier, thickness = CinemaTheme.borders.hairline, color = CinemaTheme.colors.divider)
-}
-
-/**
- * A panel (card) on the phone and in dialogs: the raised surface, the Look and Feel's card corner,
- * [ControlStyle.panelPadding] inside. [outlined] adds the theme's outline; [onClick] makes it a
- * tappable card. TV rows and cards with focus are the TV app's own (tv `ui/components/cards`).
- */
-@Composable
-fun CinemaPanel(
-    modifier: Modifier = Modifier,
-    outlined: Boolean = false,
-    onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val c = CinemaTheme.colors
-    val colors = CardDefaults.cardColors(containerColor = c.surfaceRaised, contentColor = c.textPrimary)
-    val border = if (outlined) BorderStroke(CinemaTheme.borders.outline, c.outline) else null
-    val inner: @Composable ColumnScope.() -> Unit = {
-        androidx.compose.foundation.layout
-            .Column(Modifier.padding(ControlStyle.panelPadding), content = content)
-    }
-    if (onClick != null) {
-        // look-ok: the component that wraps Material's Card
-        Card(onClick = onClick, modifier = modifier, shape = CinemaTheme.shapes.card, colors = colors, border = border, content = inner)
-    } else {
-        // look-ok: the component that wraps Material's Card
-        Card(modifier = modifier, shape = CinemaTheme.shapes.card, colors = colors, border = border, content = inner)
-    }
 }
 
 /**

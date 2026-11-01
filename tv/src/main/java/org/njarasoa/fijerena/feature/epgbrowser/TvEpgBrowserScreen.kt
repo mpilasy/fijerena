@@ -8,7 +8,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,10 +95,12 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
@@ -133,6 +134,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
+import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
 import org.njarasoa.fijerena.ui.components.TvStatusBadgeKind
@@ -210,7 +212,7 @@ fun TvEpgBrowserScreen(
             indexState is EpgIndexState.Indexing ||
             indexState is EpgIndexState.Optimizing
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    TvPanel(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
@@ -810,7 +812,7 @@ private fun ResultsContent(
                 pinnedHeaderLabel?.let { label ->
                     DateHeader(
                         dateLabel = label,
-                        modifier = Modifier.background(CinemaTheme.colors.surface),
+                        modifier = Modifier.panel(PanelFill.Surface),
                     )
                 }
             }
@@ -862,7 +864,7 @@ private fun ProgramCard(
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.xs.scaled(scale))
                 .clip(CinemaTheme.shapes.card)
-                .background(CinemaTheme.colors.surface),
+                .panel(PanelFill.Surface),
     ) {
         Column(
             modifier =

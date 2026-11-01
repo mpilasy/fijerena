@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.sports
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,9 +44,11 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsSectionViewModel
@@ -59,7 +60,6 @@ import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -165,7 +165,7 @@ fun SportsSectionScreen(
         closedGame = null
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         LazyColumn(
             state = listState,
             modifier =

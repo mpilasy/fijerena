@@ -19,7 +19,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,7 +32,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -63,8 +61,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.catchup.guideChannelRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.PinSession
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -73,7 +73,6 @@ import org.njarasoa.fijerena.core.ui.sports.league
 import org.njarasoa.fijerena.core.ui.sports.team
 import org.njarasoa.fijerena.core.ui.sports.teamsSearch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -104,6 +103,7 @@ import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
 import org.njarasoa.fijerena.ui.components.TvClockState
 import org.njarasoa.fijerena.ui.components.TvGameReminderBanner
+import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
@@ -621,10 +621,7 @@ fun TvNavHost(
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        shape = RectangleShape,
-    ) {
+    TvPanel(modifier = Modifier.fillMaxSize()) {
         if (initializationComplete && startDestination != null) {
             CompositionLocalProvider(
                 LocalTvNavRail provides rail,
@@ -1479,7 +1476,7 @@ fun TvNavHost(
             LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
             if (!refused && !childInSettings && destination.isPinGuarded() && gateProfiles.needsPin(profile.id)) {
                 // Nothing of Settings shows behind the prompt.
-                Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
+                Box(Modifier.fillMaxSize().panel(PanelFill.Ground))
                 TvPinDialog(
                     state =
                         rememberPinPromptState(

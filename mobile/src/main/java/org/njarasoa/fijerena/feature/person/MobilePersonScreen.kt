@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.person
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,15 +39,17 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
 import org.njarasoa.fijerena.core.ui.person.personRoleText
 import org.njarasoa.fijerena.core.ui.person.showMissingNote
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.home.HomeRow
 import org.njarasoa.fijerena.feature.home.MissingTitlesSwitch
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -117,7 +118,7 @@ fun MobilePersonScreen(
             MobileScreenHeader(title = shownName, onBack = onBack)
         },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background).padding(padding)) {
+        Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground).padding(padding)) {
             when (val current = state) {
                 PersonViewModel.State.Loading -> {
                     CinemaSpinner(modifier = Modifier.align(Alignment.Center))
