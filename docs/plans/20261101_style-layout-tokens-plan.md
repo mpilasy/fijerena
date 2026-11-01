@@ -1,6 +1,6 @@
 # Style layout tokens: layout from the style, not from the screen
 
-**Status:** In progress 2026-11-01: Phases 1 to 5 done; 6 in progress.
+**Status:** In progress 2026-11-01: Phases 1 to 6 done; 7 (walk and docs) in progress.
 
 ## Goal
 
@@ -72,8 +72,8 @@ switches. It does not see these:
 | 3 | Phone top bar: `MobileScreenHeader` and `UiStyle.topBar`, 22 screens moved, gate | Done 2026-11-01 (d99d74a4c) |
 | 4 | Icons: icon buttons and icon tones, 35 + 71 sites moved, gate | Done 2026-11-01 (5010ee606); icon colour is a `TextTone` (`CinemaIcon`, `TvIcon`) |
 | 5 | Panels, list rows and focus fills: `CinemaPanel`, row components, 10 + 5 + 73 sites moved, gate | Done 2026-11-01 (3c4d1d71b): `CinemaPanel` (`PanelFill`, `PanelCorner`, `PanelOutline`; stops touches like a Surface), `TvPanel`, new `TvCardLooks`, `CinemaChoiceRow` |
-| 6 | Leftovers: alpha and type values, spacing per style, gate | In progress |
-| 7 | Walk both emulators in every Look and Feel (dialogs, sheets, top bars, icons, rows); docs (CONTRIBUTING rules, FEATURES, RELEASE_NOTES, design system plan) | Not started |
+| 6 | Leftovers: alpha and type values, spacing per style, gate | Done 2026-11-01 (9bf0dc137): `UiStyle.spacing` (phone 0.9 to 1.1; TV stays 1.0), `CinemaCodeText` in core/ui |
+| 7 | Walk both emulators in every Look and Feel (dialogs, sheets, top bars, icons, rows); docs (CONTRIBUTING rules, FEATURES, RELEASE_NOTES, design system plan) | In progress |
 
 Each phase is one commit on main, with its tests, its gate checks at 0, and its emulator check.
 Phases 3 and 4 touch different files from 1 and 2 and can run beside them; 5 and 6 come after.
