@@ -19,6 +19,10 @@
 #   - outside the icon components (ICON_COMPONENTS): a raw IconButton( — phone CinemaIconButton /
 #     IconAction, TV TvIconAction / CinemaIconButton; and a colour set on an icon (tint = ,
 #     iconTint = ) — an icon's colour is a tone: CinemaIcon(tone = …) (TV TvIcon)
+#   - a sheet or dialog window opened directly (ModalBottomSheet, Dialog, BasicAlertDialog,
+#     DialogProperties), outside the dialog and sheet components (a file in ui/components named
+#     *Dialog*, *Sheet*, *Overlay* or *Panel*): use the phone CinemaSheet, the app's
+#     CinemaAlertDialog or TvOverlayPanel, which follow the Look and Feel
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
 # scripts/check-button-text-tone.py; the core CinemaAlertDialog used outside each app's own
 # CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons.
@@ -43,6 +47,9 @@ PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transpare
 # Phone top bars: MobileScreenHeader is the only one (docs/plans/20261101_style-layout-tokens-plan.md, Phase 3).
 TOP_BAR_PATTERN='(^|[^A-Za-z0-9_.])(TopAppBar|CenterAlignedTopAppBar|MediumTopAppBar|LargeTopAppBar)\(|TopAppBarDefaults'
 PATTERN="$PATTERN|$TOP_BAR_PATTERN"
+# Sheets and dialog windows: only the dialog and sheet components open one (same plan, Phase 2).
+WINDOW_PATTERN='(^|[^A-Za-z0-9_.])(ModalBottomSheet|Dialog|BasicAlertDialog|DialogProperties)\('
+WINDOW_COMPONENT='/ui/components/[^/]*(Dialog|Sheet|Overlay|Panel)[^/]*\.kt$'
 
 # Raw icon buttons and icon colours: counted outside the icon components only.
 ICON_PATTERN='(^|[^A-Za-z0-9_.])IconButton\(|(^|[^A-Za-z0-9_])(tint|iconTint)[[:space:]]*=([^=]|$)'
@@ -58,6 +65,7 @@ count_file() {
     for c in "${ICON_COMPONENTS[@]}"; do
         [ "$1" = "$c" ] && pat="$PATTERN"
     done
+    [[ "$1" =~ $WINDOW_COMPONENT ]] || pat="$pat|$WINDOW_PATTERN"
     # The pattern goes in through the environment: awk -v would strip its backslashes (gawk does).
     PAT="$pat" awk '
         BEGIN { pat = ENVIRON["PAT"] }

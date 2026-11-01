@@ -75,6 +75,11 @@ data class UiDialogTokens(
     val position: DialogPosition,
     val scrimAlpha: Float,
     val actions: UiDialogActionTokens = UiDialogActionTokens(),
+    /**
+     * How a sheet (the phone's `CinemaSheet`: a list or a detail over the screen) opens: from the
+     * bottom with a drag handle, as a centred panel, or full screen.
+     */
+    val sheet: DialogPosition = DialogPosition.BOTTOM_SHEET,
 )
 
 @Immutable
@@ -197,6 +202,7 @@ val RokuStyle =
                 position = DialogPosition.FULL_BLEED,
                 scrimAlpha = 0.55f,
                 actions = UiDialogActionTokens(DialogActionArrangement.STACKED, DialogActionWidth.FULL),
+                sheet = DialogPosition.FULL_BLEED,
             ),
         grid = UiGridTokens(spacing = 4.dp, focusScale = 1.0f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
@@ -217,7 +223,13 @@ val BraviaStyle =
                 trackingTitleSp = 0.3f,
                 trackingBodySp = 0.2f,
             ),
-        dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.4f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 8.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.4f,
+                sheet = DialogPosition.CENTERED,
+            ),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.06f, focusUsesOutline = true, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
         topBar = UiTopBarTokens(height = 56.dp, divider = true),
@@ -307,7 +319,13 @@ val GroteskStyle =
                 trackingBodySp = 0f,
                 titleWeight = 700,
             ),
-        dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
+        dialog =
+            UiDialogTokens(
+                cornerRadius = 0.dp,
+                position = DialogPosition.CENTERED,
+                scrimAlpha = 0.5f,
+                sheet = DialogPosition.CENTERED,
+            ),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.04f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
         topBar = UiTopBarTokens(height = 56.dp, filled = false, divider = true),

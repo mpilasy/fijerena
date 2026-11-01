@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -165,7 +164,7 @@ fun CategoryFilterDialog(
         // UI scale in by hand so the box shrinks with the text inside it instead of framing tiny
         // controls in a full-screen panel.
         modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        wide = true,
         title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
         text = {
             Column(

@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaSheet
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -68,7 +66,6 @@ import java.time.ZoneId
  *
  * [actions]: icon actions beside the title (the reminder bell, [MobileGameBell]).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileGameSheet(
     game: SportsGame,
@@ -81,10 +78,7 @@ fun MobileGameSheet(
     val resources = LocalResources.current
     var asking by remember { mutableStateOf<GameChannel?>(null) }
     val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
+    CinemaSheet(onDismissRequest = onDismiss) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.md),
             verticalAlignment = Alignment.CenterVertically,

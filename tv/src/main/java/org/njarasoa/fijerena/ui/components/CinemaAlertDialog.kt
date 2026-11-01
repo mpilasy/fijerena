@@ -33,6 +33,7 @@ fun CinemaAlertDialog(
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
     textContentColor: Color = AlertDialogDefaults.textContentColor,
     properties: DialogProperties = DialogProperties(),
+    wide: Boolean = false,
 ) = CoreAlertDialog(
     onDismissRequest = onDismissRequest,
     actionButton = { action, kind, buttonModifier ->
@@ -58,4 +59,5 @@ fun CinemaAlertDialog(
     titleContentColor = titleContentColor,
     textContentColor = textContentColor,
     properties = properties,
+    wide = wide,
 )

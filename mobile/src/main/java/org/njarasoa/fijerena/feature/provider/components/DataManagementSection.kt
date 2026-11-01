@@ -1,20 +1,16 @@
 package org.njarasoa.fijerena.feature.provider.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
@@ -34,20 +28,19 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /** Library data: sync, last sync, totals and per-type counts. Clearing lives in [ProviderDangerZoneSection]. */
 @Composable
@@ -214,7 +207,7 @@ fun ColumnScope.ProviderDangerZoneSection(
     onClearTvShowsCache: () -> Unit,
 ) {
     if (!isEditMode) return
-    // One row here; the actions sit on their own page, out of reach of a stray tap.
+    // One row here; the actions sit in their own dialog, out of reach of a stray tap.
     var open by rememberSaveable { mutableStateOf(false) }
     Spacer(modifier = Modifier.height(CinemaSpacing.lg))
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
@@ -225,60 +218,57 @@ fun ColumnScope.ProviderDangerZoneSection(
         )
     }
     if (open) {
-        Dialog(
+        CinemaAlertDialog(
             onDismissRequest = { open = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(CinemaTheme.colors.background)
-                        .verticalScroll(rememberScrollState())
-                        .padding(CinemaSpacing.md),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconAction(onClick = { open = false }, icon = CinemaIcons.ArrowBack, label = stringResource(R.string.player_back))
-                    ProviderSectionTitle(
-                        title = stringResource(R.string.provider_section_danger_zone),
-                        titleTone = TextTone.Danger,
-                    )
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                // One row per action: what it removes, and a small Clear (each opens its confirm).
-                DangerRow(label = stringResource(R.string.provider_clear_favorites_desc), onClear = onClearFavorites)
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                DangerRow(label = stringResource(R.string.provider_clear_progress_desc), onClear = onClearProgress)
-
-                cacheStats?.let { stats ->
+            cancel = DialogAction(stringResource(R.string.common_close)) { open = false },
+            title = {
+                CinemaText(stringResource(R.string.provider_section_danger_zone), role = TextRole.Title, tone = TextTone.Danger)
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    // One row per action: what it removes, and a small Clear (each opens its confirm).
+                    DangerRow(label = stringResource(R.string.provider_clear_favorites_desc), onClear = onClearFavorites)
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    DangerRow(label = stringResource(R.string.provider_clear_library_desc), onClear = onClearAllCache)
+                    DangerRow(label = stringResource(R.string.provider_clear_progress_desc), onClear = onClearProgress)
 
-                    // Per-type clears: only for types that have something to clear
-                    if (stats.liveTv.itemsCount > 0) {
+                    cacheStats?.let { stats ->
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        DangerRow(
-                            label = stringResource(R.string.provider_clear_type_format, stringResource(R.string.provider_live_tv_label)),
-                            onClear = onClearLiveTvCache,
-                        )
-                    }
-                    if (stats.movies.itemsCount > 0) {
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        DangerRow(
-                            label = stringResource(R.string.provider_clear_type_format, stringResource(R.string.provider_movies_label)),
-                            onClear = onClearMoviesCache,
-                        )
-                    }
-                    if (stats.tvShows.itemsCount > 0) {
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        DangerRow(
-                            label = stringResource(R.string.provider_clear_type_format, stringResource(R.string.provider_tv_shows_label)),
-                            onClear = onClearTvShowsCache,
-                        )
+                        DangerRow(label = stringResource(R.string.provider_clear_library_desc), onClear = onClearAllCache)
+
+                        // Per-type clears: only for types that have something to clear
+                        if (stats.liveTv.itemsCount > 0) {
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            DangerRow(
+                                label =
+                                    stringResource(
+                                        R.string.provider_clear_type_format,
+                                        stringResource(R.string.provider_live_tv_label),
+                                    ),
+                                onClear = onClearLiveTvCache,
+                            )
+                        }
+                        if (stats.movies.itemsCount > 0) {
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            DangerRow(
+                                label = stringResource(R.string.provider_clear_type_format, stringResource(R.string.provider_movies_label)),
+                                onClear = onClearMoviesCache,
+                            )
+                        }
+                        if (stats.tvShows.itemsCount > 0) {
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            DangerRow(
+                                label =
+                                    stringResource(
+                                        R.string.provider_clear_type_format,
+                                        stringResource(R.string.provider_tv_shows_label),
+                                    ),
+                                onClear = onClearTvShowsCache,
+                            )
+                        }
                     }
                 }
-            }
-        }
+            },
+        )
     }
 }
 

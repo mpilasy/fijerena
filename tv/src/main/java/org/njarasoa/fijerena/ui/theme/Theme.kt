@@ -184,6 +184,7 @@ private fun tvStyle(styleId: String): UiStyle =
             dialog =
                 it.dialog.copy(
                     position = DialogPosition.CENTERED,
+                    sheet = DialogPosition.CENTERED,
                     actions = it.dialog.actions.copy(width = DialogActionWidth.LABEL),
                 ),
         )

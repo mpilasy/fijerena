@@ -2,58 +2,31 @@
 
 package org.njarasoa.fijerena.ui.player.components.dialogs
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.TvOverlayPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * One choice offered by a [TvSelectorDialog].
@@ -84,7 +57,6 @@ fun TvSelectorDialog(
     onDismiss: () -> Unit,
     emptyText: String? = null,
 ) {
-    val screenHeight = Dp(LocalConfiguration.current.screenHeightDp.toFloat())
     val initialFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.selected }
 
@@ -94,101 +66,60 @@ fun TvSelectorDialog(
         initialFocusRequester.requestFocusWithRetry()
     }
 
-    // Inert fallback: Back is taken in onPreviewKeyEvent below while focus is on a row, since a
-    // focused TV Button/Surface can swallow the first press before BackHandler sees it
-    // (CONTRIBUTING.md → Back on TV).
-    BackHandler { onDismiss() }
+    // In the player's own tree, not a Dialog window, which can break the video surface under it.
+    TvOverlayPanel(onDismiss = onDismiss) {
+        CinemaText(
+            text = title,
+            role = TextRole.Title,
+            tone = TextTone.Primary,
+            emphasis = true,
+        )
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayHeavy))
-                .onPreviewKeyEvent { keyEvent ->
-                    val isBack = keyEvent.key == Key.Back
-                    // Close on KeyUp, so the release does not land on the button focus returns to.
-                    if (isBack && keyEvent.type == KeyEventType.KeyUp) onDismiss()
-                    isBack
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        TvGlassPanel(
+        if (options.isEmpty() && emptyText != null) {
+            CinemaText(
+                text = emptyText,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
+                modifier = Modifier.padding(vertical = Spacing.md),
+            )
+        }
+
+        options.forEachIndexed { index, option ->
+            TvOptionRow(
+                title = option.title,
+                selected = option.selected,
+                onClick = option.onSelect,
+                subtitle = option.subtitle,
+                activeLabel = stringResource(R.string.player_active),
+                modifier =
+                    if (index == selectedIndex) {
+                        Modifier.focusRequester(initialFocusRequester)
+                    } else {
+                        Modifier
+                    },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.xs))
+
+        CinemaSecondaryButton(
+            onClick = onDismiss,
+            text = stringResource(R.string.common_cancel),
             modifier =
                 Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .heightIn(max = screenHeight * 0.8f)
-                    .padding(Spacing.xxl),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .padding(Spacing.xxl)
-                        .verticalScroll(rememberScrollState())
-                        // Keep focus inside the dialog. This is an overlay in the player's own
-                        // tree, not a Dialog window, so without the cancelled exit a D-pad press
-                        // past the first/last row, or Left/Right, moved on to the player controls
-                        // behind it. focusProperties must sit right before focusGroup so the
-                        // exit belongs to the group: without the group (the four dialogs this
-                        // replaced) it froze focus on the row the picker opened on. The scroll
-                        // brings each focused row into view, so long track lists follow focus.
-                        .focusProperties { onExit = { cancelFocusChange() } }
-                        .focusGroup(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                CinemaText(
-                    text = title,
-                    role = TextRole.Title,
-                    tone = TextTone.Primary,
-                    emphasis = true,
-                )
+                    .align(CenterHorizontally)
+                    .width(TvDimensions.selectionListWidth)
+                    .then(
+                        if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                    ),
+        )
 
-                if (options.isEmpty() && emptyText != null) {
-                    CinemaText(
-                        text = emptyText,
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                        modifier = Modifier.padding(vertical = Spacing.md),
-                    )
-                }
-
-                options.forEachIndexed { index, option ->
-                    TvOptionRow(
-                        title = option.title,
-                        selected = option.selected,
-                        onClick = option.onSelect,
-                        subtitle = option.subtitle,
-                        activeLabel = stringResource(R.string.player_active),
-                        modifier =
-                            if (index == selectedIndex) {
-                                Modifier.focusRequester(initialFocusRequester)
-                            } else {
-                                Modifier
-                            },
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(Spacing.xs))
-
-                CinemaSecondaryButton(
-                    onClick = onDismiss,
-                    text = stringResource(R.string.common_cancel),
-                    modifier =
-                        Modifier
-                            .align(CenterHorizontally)
-                            .width(TvDimensions.selectionListWidth)
-                            .then(
-                                if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
-                            ),
-                )
-
-                CinemaText(
-                    text = stringResource(R.string.player_nav_hint),
-                    role = TextRole.BodySmall,
-                    tone = TextTone.Disabled,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
+        CinemaText(
+            text = stringResource(R.string.player_nav_hint),
+            role = TextRole.BodySmall,
+            tone = TextTone.Disabled,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
