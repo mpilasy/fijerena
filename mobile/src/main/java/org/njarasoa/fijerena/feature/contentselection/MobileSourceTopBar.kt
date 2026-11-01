@@ -78,7 +78,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesSt
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -203,7 +203,7 @@ fun MobileSourcesPanel(
         )
         actions.forEachIndexed { index, (label, onClick) ->
             Spacer(modifier = Modifier.height(if (index == 0) CinemaSpacing.lg else CinemaSpacing.sm))
-            CinemaDialogActionButton(onClick = onClick, kind = if (index == 0) ButtonKind.Main else ButtonKind.Other) {
+            CinemaButton(onClick = onClick, kind = if (index == 0) ButtonKind.Main else ButtonKind.Other) {
                 CinemaText(
                     label,
                     role = TextRole.Label,

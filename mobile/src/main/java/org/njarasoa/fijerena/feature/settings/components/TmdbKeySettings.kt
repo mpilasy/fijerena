@@ -99,28 +99,27 @@ fun TmdbKeyDialog(
                 tmdbCheckText(uiState.testing, uiState.lastCheck)?.let {
                     CinemaText(it, role = TextRole.BodySmall, tone = TextTone.Secondary)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    CinemaDialogActionButton(
-                        onClick = { viewModel.test(draft) },
-                        enabled = draft.isNotBlank() && !uiState.testing,
-                        kind = ButtonKind.Other,
-                    ) { CinemaText(stringResource(R.string.tmdb_test_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    if (uiState.savedKey.isNotBlank()) {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                viewModel.save("")
-                                onDismiss()
-                            },
-                            kind = ButtonKind.Other,
-                        ) { CinemaText(stringResource(R.string.tmdb_remove_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    }
-                }
             }
         },
         main =
             DialogAction(stringResource(R.string.provider_save_button), enabled = draft.isNotBlank() && draft != uiState.savedKey) {
                 viewModel.save(draft)
                 onDismiss()
+            },
+        others =
+            listOf(
+                DialogAction(stringResource(R.string.tmdb_test_button), enabled = draft.isNotBlank() && !uiState.testing) {
+                    viewModel.test(draft)
+                },
+            ),
+        danger =
+            if (uiState.savedKey.isNotBlank()) {
+                DialogAction(stringResource(R.string.tmdb_remove_button)) {
+                    viewModel.save("")
+                    onDismiss()
+                }
+            } else {
+                null
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )

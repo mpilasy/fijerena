@@ -33,7 +33,10 @@
 #     machine text, or the Look's fonts (UiFonts)
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
 # scripts/check-button-text-tone.py; the core CinemaAlertDialog used outside each app's own
-# CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons.
+# CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons; the
+# phone's dialog button (CinemaDialogActionButton) called outside the phone's components: a dialog
+# takes its actions as data, a list of actions is rows (CinemaChoiceRow), and a page uses the
+# CinemaButton family.
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -151,6 +154,12 @@ while IFS= read -r file; do
     failures=$((failures + 1))
 done < <(grep -rl --include='*.kt' 'org\.njarasoa\.fijerena\.core\.ui\.components\.CinemaAlertDialog' tv/src/main mobile/src/main |
     grep -v '/ui/components/CinemaAlertDialog\.kt$' || true)
+
+# The phone's dialog button is drawn only by the components (the app dialog and the CinemaButton family).
+while IFS= read -r hit; do
+    echo "$hit: CinemaDialogActionButton outside ui/components — give the dialog DialogAction data, use rows for a list of actions, or the CinemaButton family on a page."
+    failures=$((failures + 1))
+done < <(grep -rn --include='*.kt' 'CinemaDialogActionButton(' mobile/src/main | grep -v '/ui/components/' | cut -d: -f1,2 || true)
 
 if [ "$failures" -gt 0 ]; then
     echo

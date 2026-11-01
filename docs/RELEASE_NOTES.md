@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **One look for the long-press menu:** on the phone, a title's or channel's menu shows every action as a row of the same look: Add to Favourites first, then Mark as watched and the others, then the removals just above Cancel. Before, it mixed buttons of three kinds and widths. The TMDB key dialog gives Test and Remove key as dialog actions. Phone.
 - **The phone bottom bar is see-through again:** a little of the page shows through it, by the same amount in every theme. The tab in use keeps its solid accent pill. Phone.
 
 ## Version: 0.9.20261101215357
