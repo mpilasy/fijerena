@@ -1,6 +1,6 @@
 # Consistency: one behaviour and one word for each thing
 
-**Status:** In progress 2026-11-01: Phases 1, 2 and 3 done, 4 done, 5 done.
+**Status:** Done 2026-11-01. All 6 phases on main; Favourites reorder dropped (C-D6).
 
 ## Goal
 
@@ -62,6 +62,6 @@ rule (removals last, above Cancel) holds everywhere.
 | 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Done 2026-11-01 (3ac940c86): `DateText` in core/ui |
 | 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Clear Recent done 2026-11-01 (6f7e5a4e5). Reorder dropped 2026-11-01 (C-D6): Favourites stay newest first |
 | 5 | Wishlist question (C-D4) | Done 2026-11-01 (3d479816e): a show asks once its last episode is watched, not after any episode; films unchanged |
-| 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Not started |
+| 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Done 2026-11-01, with the style layout tokens walk |
 
 Each phase is one commit on main with its tests and an emulator check.

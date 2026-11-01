@@ -1,6 +1,6 @@
 # Style layout tokens: layout from the style, not from the screen
 
-**Status:** In progress 2026-11-01: Phases 1 to 6 done; 7 (walk and docs) in progress.
+**Status:** Done 2026-11-01. All 7 phases on main; the design-system gate counts dialog buttons, top bars, icon buttons and tints, sheets and dialog windows, panels and fills, alpha and type values, at 0 with an empty allow-list.
 
 ## Goal
 
@@ -73,7 +73,7 @@ switches. It does not see these:
 | 4 | Icons: icon buttons and icon tones, 35 + 71 sites moved, gate | Done 2026-11-01 (5010ee606); icon colour is a `TextTone` (`CinemaIcon`, `TvIcon`) |
 | 5 | Panels, list rows and focus fills: `CinemaPanel`, row components, 10 + 5 + 73 sites moved, gate | Done 2026-11-01 (3c4d1d71b): `CinemaPanel` (`PanelFill`, `PanelCorner`, `PanelOutline`; stops touches like a Surface), `TvPanel`, new `TvCardLooks`, `CinemaChoiceRow` |
 | 6 | Leftovers: alpha and type values, spacing per style, gate | Done 2026-11-01 (9bf0dc137): `UiStyle.spacing` (phone 0.9 to 1.1; TV stays 1.0), `CinemaCodeText` in core/ui |
-| 7 | Walk both emulators in every Look and Feel (dialogs, sheets, top bars, icons, rows); docs (CONTRIBUTING rules, FEATURES, RELEASE_NOTES, design system plan) | In progress |
+| 7 | Walk both emulators in every Look and Feel (dialogs, sheets, top bars, icons, rows); docs (CONTRIBUTING rules, FEATURES, RELEASE_NOTES, design system plan) | Done 2026-11-01: phone walked in 12 Looks, TV in 7; 10 findings fixed (ca87f2593) and checked again on both emulators |
 
 Each phase is one commit on main, with its tests, its gate checks at 0, and its emulator check.
 Phases 3 and 4 touch different files from 1 and 2 and can run beside them; 5 and 6 come after.
