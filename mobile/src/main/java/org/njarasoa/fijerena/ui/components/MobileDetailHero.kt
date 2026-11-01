@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -9,11 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +26,7 @@ import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
  * The film or show page's opening backdrop, shared by [org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen]
@@ -53,7 +49,12 @@ fun MobileDetailHero(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val barBottomPx = WindowInsets.statusBars.getTop(density) + with(density) { TopAppBarDefaults.TopAppBarExpandedHeight.toPx() }
+    val barBottomPx =
+        WindowInsets.statusBars.getTop(density) +
+            with(density) {
+                LocalUiStyle.current.topBar.height
+                    .toPx()
+            }
     Box(
         modifier =
             modifier
@@ -95,15 +96,6 @@ fun MobileDetailHero(
             CinemaText(text = title, role = TextRole.Display, maxLines = 3)
         }
     }
-}
-
-/** The film or show page's top bar: clear over the backdrop, the surface colour once [solid]. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun detailTopBarColors(solid: Boolean): TopAppBarColors {
-    val c = CinemaTheme.colors
-    val container by animateColorAsState(if (solid) c.surface else c.clear, label = "detail_top_bar")
-    return TopAppBarDefaults.topAppBarColors(containerColor = container, scrolledContainerColor = container)
 }
 
 /**

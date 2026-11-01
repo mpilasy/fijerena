@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.TextRole
 
 /**
  * Look-and-feel tokens: platform-inspired shape/type/grid/dialog/icon character, independent of
@@ -72,6 +73,24 @@ data class UiIconTokens(
     val style: IconStyle,
 )
 
+/**
+ * The phone's top bar (`MobileScreenHeader`). The defaults are Material's small top bar: 64 dp, the
+ * title at the start, the surface colour, no line.
+ */
+@Immutable
+data class UiTopBarTokens(
+    /** The bar's height under the status bar. */
+    val height: Dp = 64.dp,
+    /** The text role of the title. */
+    val titleRole: TextRole = TextRole.Title,
+    /** The title in the middle of the bar; false: at the start, after the back button. */
+    val centredTitle: Boolean = false,
+    /** The bar in the surface colour; false: clear, the screen's background shows through. */
+    val filled: Boolean = true,
+    /** A thin line under the bar. */
+    val divider: Boolean = false,
+)
+
 @Immutable
 data class UiStyle(
     val id: String,
@@ -84,6 +103,8 @@ data class UiStyle(
     val icon: UiIconTokens,
     /** A screen frame on TV (Console); null: none. */
     val frame: UiFrameTokens? = null,
+    /** The phone's top bar. */
+    val topBar: UiTopBarTokens = UiTopBarTokens(),
 )
 
 /** The system font throughout, 16–20 dp corners: the device's own look. */
@@ -124,6 +145,7 @@ val CupertinoStyle =
         dialog = UiDialogTokens(cornerRadius = 18.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.4f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.09f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
+        topBar = UiTopBarTokens(height = 52.dp, titleRole = TextRole.Heading, centredTitle = true, divider = true),
     )
 
 /** Barlow Condensed titles over Barlow, square corners, wide tracking, full-screen dialogs: broadcast TV. */
@@ -145,6 +167,7 @@ val RokuStyle =
         dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.FULL_BLEED, scrimAlpha = 0.55f),
         grid = UiGridTokens(spacing = 4.dp, focusScale = 1.0f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
+        topBar = UiTopBarTokens(height = 56.dp, divider = true),
     )
 
 /** IBM Plex Sans throughout, even 8 dp corners: neutral and precise. */
@@ -164,6 +187,7 @@ val BraviaStyle =
         dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.4f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.06f, focusUsesOutline = true, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
+        topBar = UiTopBarTokens(height = 56.dp, divider = true),
     )
 
 /** Manrope titles over Inter, 12 dp corners: clean, like Google TV (the tv visual refresh plan). */
@@ -206,6 +230,7 @@ val CinemaStyle =
         dialog = UiDialogTokens(cornerRadius = 6.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.06f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
+        topBar = UiTopBarTokens(centredTitle = true, filled = false),
     )
 
 /** Lexend throughout, even 18 dp corners: friendly, easy to read. */
@@ -246,6 +271,7 @@ val GroteskStyle =
         dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.04f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
+        topBar = UiTopBarTokens(height = 56.dp, filled = false, divider = true),
     )
 
 /**
@@ -294,6 +320,7 @@ val MeadowStyle =
         dialog = UiDialogTokens(cornerRadius = 24.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.45f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.05f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
+        topBar = UiTopBarTokens(centredTitle = true, filled = false),
     )
 
 /** Inter throughout, bold titles, small 4 dp corners, a white focus outline: a streaming-service look. */
@@ -314,6 +341,7 @@ val BoldStyle =
         dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
+        topBar = UiTopBarTokens(height = 56.dp, filled = false),
     )
 
 /** Manrope throughout, pill buttons and chips, 8 dp cards, bottom-sheet dialogs: a music-app look. */
@@ -334,6 +362,7 @@ val GrooveStyle =
         dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.6f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.05f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
+        topBar = UiTopBarTokens(filled = false),
     )
 
 /** Nunito throughout, labels in spaced capitals, 6 dp corners, a focus outline with a lift and a glow: a family streaming look. */
@@ -354,6 +383,7 @@ val SpotlightStyle =
         dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
+        topBar = UiTopBarTokens(height = 56.dp, centredTitle = true, filled = false),
     )
 
 /** Source Serif 4 titles over Inter, soft 10 dp corners, a quiet outline on focus with little zoom: a calm, paper-like look. */
@@ -375,6 +405,7 @@ val CalmStyle =
         dialog = UiDialogTokens(cornerRadius = 14.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.03f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
+        topBar = UiTopBarTokens(centredTitle = true, divider = true),
     )
 
 val AllUiStyles: List<UiStyle> =

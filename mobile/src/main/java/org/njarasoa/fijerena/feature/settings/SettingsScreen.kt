@@ -74,8 +74,8 @@ import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -318,22 +318,9 @@ fun MobileSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    CinemaText(
-                        stringResource(if (adminOpen) R.string.settings_group_admin else R.string.settings_title),
-                        role = TextRole.Title,
-                    )
-                },
-                navigationIcon = {
-                    val back = if (adminOpen) ({ adminOpen = false }) else onBack
-                    if (back != null) {
-                        IconButton(onClick = back) {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                        }
-                    }
-                },
+            MobileScreenHeader(
+                title = stringResource(if (adminOpen) R.string.settings_group_admin else R.string.settings_title),
+                onBack = if (adminOpen) ({ adminOpen = false }) else onBack,
             )
         },
     ) { paddingValues ->

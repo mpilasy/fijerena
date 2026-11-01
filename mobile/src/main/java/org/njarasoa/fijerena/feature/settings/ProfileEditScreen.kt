@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,11 +64,11 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.PreviewTheme
 import org.njarasoa.fijerena.ui.theme.ProvideLook
 import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
@@ -111,20 +110,10 @@ fun MobileProfileEditScreen(
     val leavePage = remember { LeaveAction(onBack) }
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    // Your Profile: the profile in use edits its own page, as on TV.
-                    CinemaText(
-                        stringResource(if (adminRows) R.string.profile_dialog_edit_title else R.string.profile_own_page_title),
-                        role = TextRole.Title,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { leavePage.action() }) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                    }
-                },
+            MobileScreenHeader(
+                // Your Profile: the profile in use edits its own page, as on TV.
+                title = stringResource(if (adminRows) R.string.profile_dialog_edit_title else R.string.profile_own_page_title),
+                onBack = { leavePage.action() },
             )
         },
     ) { paddingValues ->

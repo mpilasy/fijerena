@@ -50,11 +50,11 @@ import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Every source's guide sources on one page (A-9, M5; the one guide sources page plan): the bulk
@@ -117,28 +117,11 @@ fun MobileEpgManagementScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    CinemaText(
-                        stringResource(R.string.epg_management_screen_title),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        role = TextRole.Title,
-                        tone = TextTone.Inherit,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showAddDialog = true }) {
-                        Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.epg_add_source))
-                    }
-                },
-            )
+            MobileScreenHeader(title = stringResource(R.string.epg_management_screen_title), onBack = onBack) {
+                IconButton(onClick = { showAddDialog = true }) {
+                    Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.epg_add_source))
+                }
+            }
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {

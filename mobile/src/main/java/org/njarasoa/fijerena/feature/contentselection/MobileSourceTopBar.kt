@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -74,14 +73,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -116,41 +116,37 @@ fun MobileSourceTopBar(
     val epgIndexState by remember { EpgIndexer.getInstance(context.applicationContext).state }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
-    TopAppBar(
-        windowInsets = mobileClockTopBarInsets(),
-        title = {
-            Column {
-                // The avatar leads the title line, in the same place on every tab; the clock keeps the
-                // top-right corner it has on every screen.
-                // One row: the avatar, the title, then the icons, level with the clock.
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    activeProfile?.let { profile -> ProfileButton(profile.name, profile.colorIndex, onProfile) }
-                    CinemaText(
-                        text = title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        role = TextRole.Title,
-                        tone = TextTone.Inherit,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (onSearchGuide != null && hasEpgData) {
-                        IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
-                    }
-                    if (onSearch != null) {
-                        IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
-                    }
-                }
-                MobileSyncSummaryLine(
-                    summary = syncSummary,
-                    onClick = { showSourcesSheet = true },
-                    // Under the title's text, not under the avatar.
-                    modifier = Modifier.padding(start = if (activeProfile != null) MobileDimensions.minTouchTarget else CinemaSpacing.none),
+    // The title plus the summary line's 48 dp touch row, whatever the status.
+    MobileScreenHeader(height = MobileDimensions.homeTopBarHeight) {
+        Column {
+            // The avatar leads the title line, in the same place on every tab; the clock keeps the
+            // top-right corner it has on every screen.
+            // One row: the avatar, the title, then the icons, level with the clock.
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                activeProfile?.let { profile -> ProfileButton(profile.name, profile.colorIndex, onProfile) }
+                CinemaText(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    role = LocalUiStyle.current.topBar.titleRole,
+                    tone = TextTone.Inherit,
+                    modifier = Modifier.weight(1f),
                 )
+                if (onSearchGuide != null && hasEpgData) {
+                    IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
+                }
+                if (onSearch != null) {
+                    IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
+                }
             }
-        },
-        // The title plus the summary line's 48 dp touch row, whatever the status.
-        expandedHeight = MobileDimensions.homeTopBarHeight,
-    )
+            MobileSyncSummaryLine(
+                summary = syncSummary,
+                onClick = { showSourcesSheet = true },
+                // Under the title's text, not under the avatar.
+                modifier = Modifier.padding(start = if (activeProfile != null) MobileDimensions.minTouchTarget else CinemaSpacing.none),
+            )
+        }
+    }
 
     if (showSourcesSheet) {
         MobileSourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })

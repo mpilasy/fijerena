@@ -13,6 +13,7 @@
 #     Switch, Checkbox, RadioButton, FilterChip, AlertDialog, Card, Divider, HorizontalDivider)
 #   - a raw Text( — text is CinemaText(role, tone); a raw progress indicator — CinemaProgressBar / CinemaSpinner
 #   - a palette colour read directly (CinemaTextSecondary, CinemaAccent, …) — use a role
+#   - a phone top bar (TopAppBar and its variants, TopAppBarDefaults) — use MobileScreenHeader
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
 # scripts/check-button-text-tone.py.
 #
@@ -33,6 +34,9 @@ cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
 PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|MaterialTheme\.typography|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
+# Phone top bars: MobileScreenHeader is the only one (docs/plans/20261101_style-layout-tokens-plan.md, Phase 3).
+TOP_BAR_PATTERN='(^|[^A-Za-z0-9_.])(TopAppBar|CenterAlignedTopAppBar|MediumTopAppBar|LargeTopAppBar)\(|TopAppBarDefaults'
+PATTERN="$PATTERN|$TOP_BAR_PATTERN"
 
 count_file() {
     # The pattern goes in through the environment: awk -v would strip its backslashes (gawk does).

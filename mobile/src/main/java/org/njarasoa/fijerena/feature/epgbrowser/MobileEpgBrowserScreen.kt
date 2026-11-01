@@ -42,7 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -109,10 +108,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
@@ -172,57 +171,42 @@ fun MobileEpgBrowserScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                // No source subtitle: the search covers every source of the profile. The guide's
-                // status goes below the bar.
-                title = {
-                    CinemaText(
-                        stringResource(R.string.epg_browser_title),
-                        role = TextRole.Title,
-                        tone = TextTone.Inherit,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
+            // No source subtitle: the search covers every source of the profile. The guide's
+            // status goes below the bar.
+            MobileScreenHeader(title = stringResource(R.string.epg_browser_title), onBack = onBack) {
+                // The grid for Recent (D7); Back from it returns here.
+                guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
+                    IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) }) {
+                        Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
                     }
-                },
-                actions = {
-                    // The grid for Recent (D7); Back from it returns here.
-                    guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
-                        IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) }) {
-                            Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
-                        }
+                }
+                IconButton(
+                    onClick = { viewModel.refreshStale() },
+                    enabled = !isRefreshing,
+                ) {
+                    if (isRefreshing) {
+                        CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+                    } else {
+                        Icon(
+                            imageVector = CinemaIcons.Refresh,
+                            contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
+                            tint =
+                                if (staleSourceCount > 0) {
+                                    CinemaTheme.colors.warning
+                                } else {
+                                    CinemaTheme.colors.textPrimary
+                                },
+                        )
                     }
-                    IconButton(
-                        onClick = { viewModel.refreshStale() },
-                        enabled = !isRefreshing,
-                    ) {
-                        if (isRefreshing) {
-                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                        } else {
-                            Icon(
-                                imageVector = CinemaIcons.Refresh,
-                                contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
-                                tint =
-                                    if (staleSourceCount > 0) {
-                                        CinemaTheme.colors.warning
-                                    } else {
-                                        CinemaTheme.colors.textPrimary
-                                    },
-                            )
-                        }
+                }
+                // The guides this search runs over, of a source that can have them: an Expert's
+                // (the profile rules plan, PR-11).
+                if (guideSourceOwners.isNotEmpty() && expert) {
+                    IconButton(onClick = onGuideSources) {
+                        Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
                     }
-                    // The guides this search runs over, of a source that can have them: an Expert's
-                    // (the profile rules plan, PR-11).
-                    if (guideSourceOwners.isNotEmpty() && expert) {
-                        IconButton(onClick = onGuideSources) {
-                            Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
-                        }
-                    }
-                },
-            )
+                }
+            }
         },
         // Above the floating bottom bar, not behind it.
         snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = LocalDockInset.current)) },

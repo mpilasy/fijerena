@@ -113,6 +113,7 @@ import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
+import org.njarasoa.fijerena.ui.components.HeaderGround
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
@@ -120,6 +121,7 @@ import org.njarasoa.fijerena.ui.components.MobileCategoryLinkRow
 import org.njarasoa.fijerena.ui.components.MobileCreditsTabContent
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.OtherCopiesList
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.SavedCopyNote
@@ -131,9 +133,6 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
-import org.njarasoa.fijerena.ui.components.detailBackBacking
-import org.njarasoa.fijerena.ui.components.detailTopBarColors
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
@@ -257,36 +256,17 @@ fun MobileEpisodeSelectionScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                colors = detailTopBarColors(solidBar),
+            MobileScreenHeader(
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
-                title = {
-                    if (solidBar) {
-                        CinemaText(
-                            tmdbTitle ?: cleanTitle(lastSuccess?.streamName ?: seriesName),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            role = TextRole.Title,
-                            tone = TextTone.Inherit,
-                        )
+                title = if (solidBar) tmdbTitle ?: cleanTitle(lastSuccess?.streamName ?: seriesName) else "",
+                onBack = {
+                    if (selectedEpisode != null) {
+                        closeEpisode()
+                    } else {
+                        onBack()
                     }
                 },
-                navigationIcon = {
-                    CinemaIconButton(
-                        modifier = Modifier.detailBackBacking(solidBar),
-                        onClick = {
-                            if (selectedEpisode != null) {
-                                closeEpisode()
-                            } else {
-                                onBack()
-                            }
-                        },
-                        icon = {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTheme.colors.textPrimary)
-                        },
-                    )
-                },
+                ground = if (solidBar) HeaderGround.Covered else HeaderGround.Artwork,
                 // Favourite is in the icon row under the Play/Resume button (see EpisodeListContent),
                 // the Plex/Netflix "actions under the poster" layout, not a top-bar icon.
             )

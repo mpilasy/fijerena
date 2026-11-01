@@ -109,11 +109,11 @@ import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.time.LocalDate
@@ -313,29 +313,10 @@ fun MobileSearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                title = {
-                    Column {
-                        CinemaText(
-                            stringResource(R.string.common_search),
-                            role = TextRole.Title,
-                            tone = TextTone.Inherit,
-                        )
-                        CinemaText(
-                            text = localizedContentTypeLabel(contentType),
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
-                        }
-                    }
-                },
+            MobileScreenHeader(
+                title = stringResource(R.string.common_search),
+                subtitle = localizedContentTypeLabel(contentType),
+                onBack = onBack,
             )
         },
         // Above the floating bottom bar, not behind it.

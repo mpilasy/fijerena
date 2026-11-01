@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,17 +54,16 @@ import org.njarasoa.fijerena.feature.movie.CastChipsTabContent
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
+import org.njarasoa.fijerena.ui.components.HeaderGround
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
 import org.njarasoa.fijerena.ui.components.MobileCreditsTabContent
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
+import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
-import org.njarasoa.fijerena.ui.components.detailBackBacking
-import org.njarasoa.fijerena.ui.components.detailTopBarColors
-import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 
 /**
@@ -110,29 +108,10 @@ fun MobileTmdbTitleScreen(
         stringResource(if (title.contentType == ContentType.MOVIES) R.string.wanted_kind_movie else R.string.wanted_kind_show)
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = mobileClockTopBarInsets(),
-                colors = detailTopBarColors(heroCovered),
-                title = {
-                    if (heroCovered) {
-                        CinemaText(
-                            text = title.title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            role = TextRole.Title,
-                            tone = TextTone.Inherit,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    CinemaIconButton(
-                        modifier = Modifier.detailBackBacking(heroCovered),
-                        onClick = onBack,
-                        icon = {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTheme.colors.textPrimary)
-                        },
-                    )
-                },
+            MobileScreenHeader(
+                title = if (heroCovered) title.title else "",
+                onBack = onBack,
+                ground = if (heroCovered) HeaderGround.Covered else HeaderGround.Artwork,
             )
         },
     ) { paddingValues ->
