@@ -40,7 +40,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
@@ -70,7 +69,7 @@ import org.njarasoa.fijerena.feature.sports.MobileSportsItemCard
 import org.njarasoa.fijerena.feature.sports.sportsCardColors
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
-import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -164,12 +163,10 @@ internal fun MobileTeamsSearchPane(
             }
 
             is TeamsSearchViewModel.State.Failed -> {
-                RetryWhenOnline(viewModel::retry)
-                MobileEmptyState(
-                    message = stringResource(R.string.sports_load_error),
-                    secondary = shown.raw?.let { "[dev] $it" },
-                    actionLabel = stringResource(R.string.common_retry),
-                    onAction = viewModel::retry,
+                MobileErrorState(
+                    title = stringResource(R.string.sports_load_error),
+                    message = shown.raw?.let { "[dev] $it" }.orEmpty(),
+                    onRetry = viewModel::retry,
                 )
             }
 
@@ -286,12 +283,10 @@ private fun LazyListScope.bestGameCards(
 
         is GamesState.Failed -> {
             item(key = "best_failed", contentType = "failed") {
-                RetryWhenOnline(onRetry)
-                MobileEmptyState(
-                    message = stringResource(R.string.sports_load_error),
-                    secondary = games.raw?.let { "[dev] $it" },
-                    actionLabel = stringResource(R.string.common_retry),
-                    onAction = onRetry,
+                MobileErrorState(
+                    title = stringResource(R.string.sports_load_error),
+                    message = games.raw?.let { "[dev] $it" }.orEmpty(),
+                    onRetry = onRetry,
                 )
             }
         }

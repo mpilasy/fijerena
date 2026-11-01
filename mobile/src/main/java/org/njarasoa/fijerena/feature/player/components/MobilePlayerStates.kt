@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -43,51 +44,6 @@ fun LoadingScreen(kind: WaitKind) {
         contentAlignment = Alignment.Center,
     ) {
         WaitIndicator(kind = kind)
-    }
-}
-
-@Composable
-fun ErrorScreen(
-    message: String,
-    onRetry: () -> Unit,
-    onBack: () -> Unit,
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            modifier = Modifier.padding(Spacing.xl),
-        ) {
-            CinemaText(
-                text = stringResource(R.string.player_error),
-                role = TextRole.Display,
-                tone = TextTone.Danger,
-            )
-            CinemaText(
-                text = message,
-                role = TextRole.Body,
-                tone = TextTone.Primary,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                CinemaButton(onClick = onRetry) {
-                    CinemaText(
-                        stringResource(R.string.player_retry),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-                CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                    CinemaText(
-                        stringResource(R.string.player_back),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -119,7 +75,8 @@ fun ErrorOverlay(
                 tone = TextTone.Primary,
             )
             // Developer mode: the raw error beneath the friendly one.
-            val rawMessage = error.exception?.message
+            // Masked: a raw message can hold the stream URL with the login and password.
+            val rawMessage = error.exception?.message?.let(Redact::text)
             if (isDevMode && rawMessage != null) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 CinemaText(

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.R
@@ -151,20 +152,23 @@ fun ErrorContent(
                         val noStackTraceText = stringResource(R.string.player_no_stack_trace)
 
                         val exception = error.exception
+                        // Masked: a raw message can hold the stream URL with the login and password.
                         val errorDetails =
-                            buildString {
-                                append("$typeLabel${exception?.javaClass?.simpleName ?: unknownText}\n")
-                                exception?.message?.let { msg ->
-                                    append("$messageLabel$msg\n")
-                                }
-                                val stackTrace =
-                                    exception
-                                        ?.stackTraceToString()
-                                        ?.lines()
-                                        ?.take(5)
-                                        ?.joinToString("\n") ?: noStackTraceText
-                                append("\n$stackTraceLabel\n$stackTrace")
-                            }
+                            Redact.text(
+                                buildString {
+                                    append("$typeLabel${exception?.javaClass?.simpleName ?: unknownText}\n")
+                                    exception?.message?.let { msg ->
+                                        append("$messageLabel$msg\n")
+                                    }
+                                    val stackTrace =
+                                        exception
+                                            ?.stackTraceToString()
+                                            ?.lines()
+                                            ?.take(5)
+                                            ?.joinToString("\n") ?: noStackTraceText
+                                    append("\n$stackTraceLabel\n$stackTrace")
+                                },
+                            )
 
                         // look-ok: developer-mode stack trace, monospace; its size and colour are the theme's roles
                         Text(

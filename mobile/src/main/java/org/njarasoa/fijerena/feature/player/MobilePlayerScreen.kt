@@ -76,7 +76,6 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
@@ -103,7 +102,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.feature.player.components.AudioTrackSelectorDialog
 import org.njarasoa.fijerena.feature.player.components.ChannelToast
 import org.njarasoa.fijerena.feature.player.components.ErrorOverlay
-import org.njarasoa.fijerena.feature.player.components.ErrorScreen
 import org.njarasoa.fijerena.feature.player.components.LoadingScreen
 import org.njarasoa.fijerena.feature.player.components.MobileChannelListSheet
 import org.njarasoa.fijerena.feature.player.components.MobileControlsOverlay
@@ -113,6 +111,7 @@ import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SlowConnectionBanner
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
 import org.njarasoa.fijerena.ui.components.HideMobileClock
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
@@ -708,11 +707,13 @@ fun MobilePlayerContent(
             }
 
             is StreamLoaderViewModel.StreamState.Error -> {
-                RetryWhenOnline { loaderViewModel.retryLastLoad() }
-                ErrorScreen(
+                MobileErrorState(
                     message = state.message,
                     onRetry = { loaderViewModel.retryLastLoad() },
+                    title = stringResource(R.string.player_error),
+                    retryLabel = stringResource(R.string.player_retry),
                     onBack = onBack,
+                    backLabel = stringResource(R.string.player_back),
                 )
             }
 

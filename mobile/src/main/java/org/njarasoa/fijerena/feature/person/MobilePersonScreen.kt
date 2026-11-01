@@ -40,7 +40,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -54,7 +53,7 @@ import org.njarasoa.fijerena.feature.home.HomeRow
 import org.njarasoa.fijerena.feature.home.MissingTitlesSwitch
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
-import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PosterCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -125,12 +124,10 @@ fun MobilePersonScreen(
                 }
 
                 is PersonViewModel.State.Error -> {
-                    RetryWhenOnline(viewModel::retry)
-                    MobileEmptyState(
-                        message = stringResource(R.string.person_load_error),
-                        secondary = current.raw?.let { "[dev] $it" },
-                        actionLabel = stringResource(R.string.common_retry),
-                        onAction = viewModel::retry,
+                    MobileErrorState(
+                        title = stringResource(R.string.person_load_error),
+                        message = current.raw?.let { "[dev] $it" }.orEmpty(),
+                        onRetry = viewModel::retry,
                     )
                 }
 

@@ -173,7 +173,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -227,6 +226,7 @@ import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
@@ -1467,35 +1467,7 @@ fun MobileCategoryListScreen(
                         }
 
                         is CategoryViewModel.UiState.Error -> {
-                            RetryWhenOnline { viewModel.retry() }
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                                    modifier = Modifier.padding(Spacing.xl),
-                                ) {
-                                    CinemaText(
-                                        text = stringResource(R.string.common_error),
-                                        role = TextRole.Display,
-                                        tone = TextTone.Danger,
-                                    )
-                                    CinemaText(
-                                        text = state.message,
-                                        role = TextRole.Body,
-                                        tone = TextTone.Inherit,
-                                    )
-                                    CinemaButton(onClick = { viewModel.retry() }) {
-                                        CinemaText(
-                                            stringResource(R.string.common_retry),
-                                            role = TextRole.Label,
-                                            tone = TextTone.Inherit,
-                                        )
-                                    }
-                                }
-                            }
+                            MobileErrorState(message = state.message, onRetry = { viewModel.retry() })
                         }
                     }
                 }

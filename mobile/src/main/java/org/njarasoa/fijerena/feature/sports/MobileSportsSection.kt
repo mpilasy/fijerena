@@ -34,7 +34,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -53,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -153,12 +153,10 @@ fun MobileSportsSectionScreen(
 
                         is GamesState.Failed -> {
                             item(key = "failed") {
-                                RetryWhenOnline(viewModel::retry)
-                                MobileEmptyState(
-                                    message = stringResource(R.string.sports_load_error),
-                                    secondary = state.raw?.let { "[dev] $it" },
-                                    actionLabel = stringResource(R.string.common_retry),
-                                    onAction = viewModel::retry,
+                                MobileErrorState(
+                                    title = stringResource(R.string.sports_load_error),
+                                    message = state.raw?.let { "[dev] $it" }.orEmpty(),
+                                    onRetry = viewModel::retry,
                                 )
                             }
                         }

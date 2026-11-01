@@ -24,8 +24,7 @@
 
     <!-- Settings export/import -->
     <string name="settings_export_error_read_file">Tsy afaka namaky ny rakitra</string>
-    <string name="settings_export_error_import_failed">Tsy nahomby ny fampidirana</string>
-    <string name="settings_export_error_invalid_format">Diso ny endriky ny rakitra</string>
+    <string name="settings_export_error_invalid_format">Tsy rakitra fandrindrana Fijerena ity rakitra ity.</string>
     <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
     <string name="settings_export_summary_providers_format">Loharano: %1$s</string>
     <string name="settings_export_item_added_format">%1$d nampidirina</string>
