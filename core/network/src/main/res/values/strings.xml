@@ -26,8 +26,7 @@
 
     <!-- Settings export/import (SettingsExportManager) -->
     <string name="settings_export_error_read_file">Couldn\'t read the file</string>
-    <string name="settings_export_error_import_failed">Couldn\'t import the settings</string>
-    <string name="settings_export_error_invalid_format">Invalid settings file format</string>
+    <string name="settings_export_error_invalid_format">This file isn\'t a Fijerena settings file.</string>
     <string name="settings_export_summary_import_failed_format">Couldn\'t import the settings: %1$s</string>
     <string name="settings_export_summary_providers_format">Sources: %1$s</string>
     <string name="settings_export_item_added_format">%1$d added</string>

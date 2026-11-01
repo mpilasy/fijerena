@@ -87,7 +87,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -124,6 +123,7 @@ import org.njarasoa.fijerena.ui.components.MobileCategoryLinkRow
 import org.njarasoa.fijerena.ui.components.MobileCreditsTabContent
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.OtherCopiesList
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
@@ -292,11 +292,12 @@ fun MobileEpisodeSelectionScreen(
                 }
 
                 errorState != null -> {
-                    RetryWhenOnline { viewModel.loadSeriesInfo() }
-                    ErrorScreen(
+                    MobileErrorState(
                         message = errorState.message,
+                        onRetry = { viewModel.loadSeriesInfo() },
+                        title = stringResource(R.string.series_error_loading),
                         onBack = onBack,
-                        otherCopies = {
+                        extra = {
                             OtherCopiesList(alternateStreams, sourceNames) {
                                 if (viewModel.otherSourceOf(it) !=
                                     null
@@ -1791,44 +1792,6 @@ private fun LoadingScreen() {
                 role = TextRole.Body,
                 tone = TextTone.Inherit,
             )
-        }
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    message: String,
-    onBack: () -> Unit,
-    otherCopies: @Composable () -> Unit = {},
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-            // Scrolls when the other copies run past the screen.
-            modifier = Modifier.verticalScroll(rememberScrollState()).padding(CinemaSpacing.xl),
-        ) {
-            CinemaText(
-                text = stringResource(R.string.series_error_loading),
-                role = TextRole.Display,
-                tone = TextTone.Danger,
-            )
-            CinemaText(
-                text = message,
-                role = TextRole.Body,
-                tone = TextTone.Inherit,
-            )
-            CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                CinemaText(
-                    stringResource(R.string.common_back),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-            otherCopies()
         }
     }
 }

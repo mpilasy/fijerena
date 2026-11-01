@@ -522,7 +522,7 @@ class SettingsExportManager(
 
                 kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
             } catch (e: kotlinx.serialization.SerializationException) {
-                kotlin.Result.failure(Exception("Invalid settings file format"))
+                kotlin.Result.failure(InvalidSettingsFileException())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -553,7 +553,7 @@ class SettingsExportManager(
 
                 kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
             } catch (e: kotlinx.serialization.SerializationException) {
-                kotlin.Result.failure(Exception("Invalid settings file format"))
+                kotlin.Result.failure(InvalidSettingsFileException())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -582,7 +582,7 @@ class SettingsExportManager(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
+                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
             }
         }
 
@@ -922,7 +922,7 @@ class SettingsExportManager(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
+                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
             }
         }
 

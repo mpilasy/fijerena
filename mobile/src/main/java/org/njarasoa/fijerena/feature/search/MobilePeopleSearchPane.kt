@@ -51,7 +51,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -63,7 +62,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.PeopleSearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
-import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -149,12 +148,10 @@ internal fun MobilePeopleSearchPane(
             }
 
             is PeopleSearchViewModel.State.Failed -> {
-                RetryWhenOnline(viewModel::retry)
-                MobileEmptyState(
-                    message = stringResource(R.string.search_people_unreachable),
-                    secondary = shown.raw?.let { "[dev] $it" },
-                    actionLabel = stringResource(R.string.common_retry),
-                    onAction = viewModel::retry,
+                MobileErrorState(
+                    title = stringResource(R.string.search_people_unreachable),
+                    message = shown.raw?.let { "[dev] $it" }.orEmpty(),
+                    onRetry = viewModel::retry,
                 )
             }
 

@@ -38,7 +38,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -57,7 +56,7 @@ import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
-import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -234,12 +233,10 @@ private fun MobileSportsPage(
 
                 is GamesState.Failed -> {
                     item(key = "failed") {
-                        RetryWhenOnline(onRetry)
-                        MobileEmptyState(
-                            message = stringResource(R.string.sports_load_error),
-                            secondary = games.raw?.let { "[dev] $it" },
-                            actionLabel = stringResource(R.string.common_retry),
-                            onAction = onRetry,
+                        MobileErrorState(
+                            title = stringResource(R.string.sports_load_error),
+                            message = games.raw?.let { "[dev] $it" }.orEmpty(),
+                            onRetry = onRetry,
                         )
                     }
                 }

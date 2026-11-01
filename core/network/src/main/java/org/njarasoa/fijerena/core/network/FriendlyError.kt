@@ -41,6 +41,10 @@ fun friendlyErrorMessage(
             context.getString(R.string.error_invalid_playlist)
         }
 
+        e is InvalidSettingsFileException -> {
+            context.getString(R.string.settings_export_error_invalid_format)
+        }
+
         e is HttpStatusException -> {
             httpStatusMessage(e.code, context)
         }
@@ -101,6 +105,9 @@ class HttpStatusException(
 
 /** What should be an M3U playlist has no `#EXTM3U` header. */
 class InvalidPlaylistException : Exception("Not an M3U playlist: missing #EXTM3U header")
+
+/** A file to import is not a settings file that this app exported. */
+class InvalidSettingsFileException : Exception("Invalid settings file format")
 
 private fun httpStatusMessage(
     code: Int,

@@ -21,6 +21,7 @@ class FriendlyErrorTest {
             every { getString(R.string.error_not_found) } returns "not found"
             every { getString(R.string.error_server) } returns "server"
             every { getString(R.string.error_invalid_playlist) } returns "invalid playlist"
+            every { getString(R.string.settings_export_error_invalid_format) } returns "not a settings file"
             every { applicationContext } returns this
             every { getSharedPreferences(any(), any()) } returns healthPrefs
         }
@@ -104,6 +105,11 @@ class FriendlyErrorTest {
     @Test
     fun notAPlaylist_mapsToInvalidPlaylist() {
         assertEquals("invalid playlist", friendlyErrorMessage(InvalidPlaylistException(), context))
+    }
+
+    @Test
+    fun notASettingsFile_mapsToInvalidSettingsFile() {
+        assertEquals("not a settings file", friendlyErrorMessage(InvalidSettingsFileException(), context))
     }
 
     @Test
