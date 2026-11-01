@@ -1,6 +1,6 @@
 # Consistency: one behaviour and one word for each thing
 
-**Status:** In progress 2026-11-01: Phase 3 done; 1 and 2 in progress.
+**Status:** In progress 2026-11-01: Phases 2 and 3 done, 4 partly (C-Q1); 1 in progress.
 
 ## Goal
 
@@ -57,9 +57,9 @@ rule (removals last, above Cancel) holds everywhere.
 | # | Phase | State |
 |---|---|---|
 | 1 | Errors and empty states: findings 2, 3, 4, 16; Retry everywhere, raw errors only in dev mode | In progress |
-| 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | In progress |
+| 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | Done 2026-11-01 (45b98a5ef); 90 unused or merged strings deleted |
 | 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Done 2026-11-01 (3ac940c86): `DateText` in core/ui |
-| 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Not started |
+| 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Clear Recent done 2026-11-01 (6f7e5a4e5). Reorder: TV has none (its Edit mode only removes); open question C-Q1 |
 | 5 | Wishlist question (C-D4) | Not started |
 | 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Not started |
 
