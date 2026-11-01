@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261101021447
 
 - **Sync catches up after an update:** when an update teaches the app a new kind of synced data (such as followed teams), the device downloads the sync group's data again once, so it also gets what other devices sent before it updated. Only changes that are newer than what the device has are applied. TV and phone.
 - **Full resync:** Settings → Live sync has a **Full resync** button next to Sync now. It downloads all the sync group's data again without leaving the group. TV and phone.
