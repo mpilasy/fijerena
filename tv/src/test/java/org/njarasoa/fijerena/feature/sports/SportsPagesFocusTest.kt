@@ -202,7 +202,13 @@ class SportsPagesFocusTest {
             }
         }
         walk.awaitFocused("A / C / Arsenal v Chelsea")
-        walk.run(up("Follow"), down("A / C / Arsenal v Chelsea"), down("L / A / Liverpool v Arsenal"), down("A / Arsenal"), down("L / Liverpool"))
+        walk.run(
+            up("Follow"),
+            down("A / C / Arsenal v Chelsea"),
+            down("L / A / Liverpool v Arsenal"),
+            down("A / Arsenal"),
+            down("L / Liverpool"),
+        )
         walk.press(Key.DirectionCenter)
         assertEquals(listOf(LIVERPOOL.id), opened.map { it.teamId })
     }
