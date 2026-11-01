@@ -1,6 +1,6 @@
 # Style layout tokens: layout from the style, not from the screen
 
-**Status:** In progress 2026-11-01 (Phases 1, 3, 4).
+**Status:** In progress 2026-11-01: Phases 1 and 3 done, 4 merging.
 
 ## Goal
 
@@ -67,9 +67,9 @@ switches. It does not see these:
 
 | # | Phase | State |
 |---|---|---|
-| 1 | Dialog actions: the token, the `CinemaAlertDialog` actions API, all 81 dialogs moved, gate | In progress |
+| 1 | Dialog actions: the token, the `CinemaAlertDialog` actions API, all 81 dialogs moved, gate | Done 2026-11-01 (e7a593f51); TV focus opens on the main action, Cancel with a Danger action |
 | 2 | Sheets and dialog windows: phone sheet and TV overlay components, the 4 sheets, 4 raw dialogs and the TV player selectors moved, gate | Not started |
-| 3 | Phone top bar: `MobileScreenHeader` and `UiStyle.topBar`, 22 screens moved, gate | In progress |
+| 3 | Phone top bar: `MobileScreenHeader` and `UiStyle.topBar`, 22 screens moved, gate | Done 2026-11-01 (d99d74a4c) |
 | 4 | Icons: icon buttons and icon tones, 35 + 71 sites moved, gate | In progress |
 | 5 | Panels, list rows and focus fills: `CinemaPanel`, row components, 10 + 5 + 73 sites moved, gate | Not started |
 | 6 | Leftovers: alpha and type values, spacing per style, gate | Not started |
