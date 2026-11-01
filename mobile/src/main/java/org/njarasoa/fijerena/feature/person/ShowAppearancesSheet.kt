@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +21,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.person.appearanceLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.CinemaSheet
 
 /**
  * A person's appearances in one show, as a sheet over the person page
@@ -31,7 +29,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
  * per season ("Season 3"), a row the source lacks marked "Not in your source". A tap on a row calls
  * [onSelect]; the sheet stays, for Back from the show. Dismissing it calls [onDismiss].
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowAppearancesSheet(
     title: String,
@@ -41,10 +38,7 @@ fun ShowAppearancesSheet(
     onDismiss: () -> Unit,
 ) {
     val resources = LocalResources.current
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
+    CinemaSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.md),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),

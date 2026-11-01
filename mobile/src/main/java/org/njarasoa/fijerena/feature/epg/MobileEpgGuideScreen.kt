@@ -21,18 +21,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
@@ -61,13 +57,13 @@ import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
+import org.njarasoa.fijerena.ui.components.CinemaSheet
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
@@ -457,7 +453,6 @@ private fun dayLabel(
 }
 
 /** Tap on a programme: what it is, where and when, and a way to watch the channel (dock). */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProgramDetailsSheet(
     selection: GuideSelection,
@@ -467,85 +462,74 @@ private fun ProgramDetailsSheet(
     onWatchFromStart: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
     val program = selection.program
     val startDay = remember(program.startTime) { DateText.day(program.startTime) }
     val description = program.description?.takeIf { it.isNotBlank() }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        ProvideUiScaledDensity {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = CinemaSpacing.md)
-                        .padding(bottom = CinemaSpacing.md),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+    CinemaSheet(onDismissRequest = onDismiss) { close ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = CinemaSpacing.md)
+                    .padding(bottom = CinemaSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+        ) {
+            CinemaText(
+                text = program.title,
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+                emphasis = true,
+            )
+            BadgedTitle(selection.channel.name, role = TextRole.Body, tone = TextTone.Secondary)
+            CinemaText(
+                text =
+                    dayLabel(startDay, today) + " · " +
+                        TimeFormat.formatTimeRange(program.startTime, program.endTime),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+            )
+            if (description != null) {
+                CinemaText(
+                    text = description,
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    role = TextRole.Body,
+                    tone = TextTone.Primary,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End),
             ) {
-                CinemaText(
-                    text = program.title,
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                    emphasis = true,
-                )
-                BadgedTitle(selection.channel.name, role = TextRole.Body, tone = TextTone.Secondary)
-                CinemaText(
-                    text =
-                        dayLabel(startDay, today) + " · " +
-                            TimeFormat.formatTimeRange(program.startTime, program.endTime),
-                    role = TextRole.BodySmall,
-                    tone = TextTone.Secondary,
-                )
-                if (description != null) {
+                CinemaTextButton(onClick = close) {
                     CinemaText(
-                        text = description,
-                        modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-                        role = TextRole.Body,
-                        tone = TextTone.Primary,
+                        stringResource(R.string.common_close),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
                     )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End),
-                ) {
-                    CinemaTextButton(
-                        onClick = {
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                        },
-                    ) {
+                if (onWatchFromStart != null) {
+                    CinemaTextButton(onClick = onWatchChannel) {
                         CinemaText(
-                            stringResource(R.string.common_close),
+                            stringResource(R.string.epg_details_watch_channel),
                             role = TextRole.Label,
                             tone = TextTone.Inherit,
                         )
                     }
-                    if (onWatchFromStart != null) {
-                        CinemaTextButton(onClick = onWatchChannel) {
-                            CinemaText(
-                                stringResource(R.string.epg_details_watch_channel),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                        CinemaButton(onClick = onWatchFromStart) {
-                            CinemaText(
-                                stringResource(R.string.player_osd_start_over),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                    } else {
-                        CinemaButton(onClick = onWatchChannel) {
-                            CinemaText(
-                                stringResource(R.string.epg_details_watch_channel),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        }
+                    CinemaButton(onClick = onWatchFromStart) {
+                        CinemaText(
+                            stringResource(R.string.player_osd_start_over),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    }
+                } else {
+                    CinemaButton(onClick = onWatchChannel) {
+                        CinemaText(
+                            stringResource(R.string.epg_details_watch_channel),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
                     }
                 }
             }

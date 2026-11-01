@@ -73,6 +73,9 @@ typealias DialogActionButton = @Composable (action: DialogAction, kind: ButtonKi
  * [cancel]. The style's [org.njarasoa.fijerena.core.ui.theme.UiDialogTokens.actions] lays them out
  * and the dialog gives each one its [ButtonKind]. Each app draws the buttons with [actionButton]
  * through its own `CinemaAlertDialog` (`ui.components`); feature code calls that one.
+ *
+ * [wide]: a centred panel as wide as its content asks (with [modifier]), not the platform's
+ * dialog width — for a big form, such as the TV category filter.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +96,7 @@ fun CinemaAlertDialog(
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
     textContentColor: Color = AlertDialogDefaults.textContentColor,
     properties: DialogProperties = DialogProperties(),
+    wide: Boolean = false,
 ) {
     val tokens = LocalUiStyle.current.dialog
     val shape = cornerShape(tokens.cornerRadius)
@@ -143,7 +147,18 @@ fun CinemaAlertDialog(
             BasicAlertDialog(
                 onDismissRequest = onDismissRequest,
                 modifier = modifier,
-                properties = properties,
+                properties =
+                    if (wide) {
+                        DialogProperties(
+                            dismissOnBackPress = properties.dismissOnBackPress,
+                            dismissOnClickOutside = properties.dismissOnClickOutside,
+                            securePolicy = properties.securePolicy,
+                            usePlatformDefaultWidth = false,
+                            decorFitsSystemWindows = properties.decorFitsSystemWindows,
+                        )
+                    } else {
+                        properties
+                    },
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
                 ProvideUiScaledDensity {
@@ -353,10 +368,11 @@ private fun DialogActionArea(
 /**
  * Sets the underlying dialog window's dim amount to [alpha] — [Dialog] has no
  * direct scrim-alpha param, unlike [ModalBottomSheet]'s `scrimColor`, so this reaches into the
- * window directly. Must be called from within a [Dialog]'s content.
+ * window directly. Must be called from within a [Dialog]'s content. For the dialog and sheet
+ * components only.
  */
 @Composable
-private fun ApplyDialogScrim(alpha: Float) {
+fun ApplyDialogScrim(alpha: Float) {
     val view = LocalView.current
     SideEffect {
         (view.parent as? DialogWindowProvider)?.window?.setDimAmount(alpha)

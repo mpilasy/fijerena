@@ -304,9 +304,10 @@ private fun TrailerDialog(
         seekCount++
     }
 
+    // look-ok: a full-screen video window, not a dialog or a sheet
     Dialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false), // look-ok: as above
     ) {
         val focus = remember { FocusRequester() }
         LaunchedEffect(Unit) { focus.requestFocus() }
