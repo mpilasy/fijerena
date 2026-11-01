@@ -17,13 +17,14 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
@@ -140,12 +141,7 @@ fun QuickConnectDialog(
                     }
                 }
             },
-            confirmButton = {},
-            dismissButton = {
-                CinemaOutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { onShowQuickConnectDialogChange(false) },
         )
     }
 }

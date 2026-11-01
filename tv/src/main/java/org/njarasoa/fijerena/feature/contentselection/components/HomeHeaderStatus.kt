@@ -40,8 +40,8 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -150,12 +151,7 @@ internal fun SourcesStatusSheet(
                 }
             }
         },
-        confirmButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 

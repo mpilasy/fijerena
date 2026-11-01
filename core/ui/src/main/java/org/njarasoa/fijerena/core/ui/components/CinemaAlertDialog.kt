@@ -1,16 +1,13 @@
 package org.njarasoa.fijerena.core.ui.components
 
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -33,32 +31,59 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.DialogActionArrangement
+import org.njarasoa.fijerena.core.ui.theme.DialogActionWidth
+import org.njarasoa.fijerena.core.ui.theme.DialogCancelPlace
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.theme.UiDialogActionTokens
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
+
+/** One button of a dialog: its label and what it does. The dialog gives it its kind and its place. */
+@Immutable
+class DialogAction(
+    val label: String,
+    val enabled: Boolean = true,
+    /** For a caller that moves focus to this button itself, e.g. Down from the last field. */
+    val focusRequester: FocusRequester? = null,
+    val onClick: () -> Unit,
+)
+
+/** Draws one dialog button of [ButtonKind] in the app's own button look. */
+typealias DialogActionButton = @Composable (action: DialogAction, kind: ButtonKind, modifier: Modifier) -> Unit
 
 /**
  * Themed replacement for [androidx.compose.material3.AlertDialog] — branches on the active
  * [org.njarasoa.fijerena.core.ui.theme.UiStyle]'s [org.njarasoa.fijerena.core.ui.theme.UiDialogTokens.position]
  * so Cupertino renders as a bottom sheet and Roku renders full-bleed, matching each platform's
  * real dialog convention; Material/BRAVIA stay centered. Corner radius and scrim
- * alpha come from the same tokens. Param list intentionally mirrors `AlertDialog`'s slot-based
- * overload so migrating a call site is a rename, not a rewrite.
+ * alpha come from the same tokens.
+ *
+ * The caller gives the actions as data: one [main] action, [others], one [danger] action and
+ * [cancel]. The style's [org.njarasoa.fijerena.core.ui.theme.UiDialogTokens.actions] lays them out
+ * and the dialog gives each one its [ButtonKind]. Each app draws the buttons with [actionButton]
+ * through its own `CinemaAlertDialog` (`ui.components`); feature code calls that one.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CinemaAlertDialog(
     onDismissRequest: () -> Unit,
-    confirmButton: @Composable () -> Unit,
+    actionButton: DialogActionButton,
     modifier: Modifier = Modifier,
-    dismissButton: (@Composable () -> Unit)? = null,
+    main: DialogAction? = null,
+    others: List<DialogAction> = emptyList(),
+    danger: DialogAction? = null,
+    cancel: DialogAction? = null,
     icon: (@Composable () -> Unit)? = null,
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
@@ -74,33 +99,34 @@ fun CinemaAlertDialog(
 
     // A new Dialog window doesn't inherit Compose's focus state from the screen behind it, so
     // without an explicit initial-focus request TV's D-pad has nothing to move onto — key
-    // events fall through to the (now invisible) triggering button. Land focus on the safer
-    // default action (dismiss, if present) once per dialog appearance.
+    // events fall through to the (now invisible) triggering button. Land focus on the safe
+    // default action once per dialog appearance: Cancel when there is a Danger action, else the
+    // main action, else Cancel. A disabled button cannot take focus, so it is skipped.
     //
     // A dialog whose real content lives in [text] — a list of options to choose from — should pass
     // [initialFocus] instead, attached to its first item, so the user does not have to D-pad up
     // through the whole panel to reach it. When it is supplied the buttons are left alone.
+    val actions = dialogActions(main, others, danger, cancel, tokens.actions.cancel)
+    val focusedAction =
+        when {
+            initialFocus != null -> null
+            danger != null -> listOfNotNull(cancel, main) + others + danger
+            else -> listOfNotNull(main, cancel) + others
+        }?.firstOrNull { it.enabled }
     val buttonFocusRequester = remember { FocusRequester() }
-    val focusButtons = initialFocus == null
-    val focusedDismissButton: (@Composable () -> Unit)? =
-        if (focusButtons) {
-            dismissButton?.let { real -> { Box(Modifier.focusRequester(buttonFocusRequester).focusGroup()) { real() } } }
-        } else {
-            dismissButton
+    val actionArea: @Composable () -> Unit = {
+        DialogActionArea(actions, tokens.actions, actionButton) { action ->
+            Modifier
+                .then(if (action === focusedAction) Modifier.focusRequester(buttonFocusRequester) else Modifier)
+                .then(action.focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
         }
-    val focusedConfirmButton: @Composable () -> Unit =
-        if (!focusButtons || dismissButton != null) {
-            confirmButton
-        } else {
-            { Box(Modifier.focusRequester(buttonFocusRequester).focusGroup()) { confirmButton() } }
-        }
+    }
     LaunchedEffect(Unit) {
         // The dialog window composes after this screen, and a caller-supplied target may come later
         // still, so retry each frame until the request takes (an unattached requester returns
-        // false, it doesn't throw). An empty confirm/dismiss slot leaves the requester on a Box
-        // with nothing focusable inside it; that never takes, and the loop just gives up. Same
-        // shape as the TV app's requestFocusWithRetry, which core:ui can't depend on.
-        val target = initialFocus ?: buttonFocusRequester
+        // false, it doesn't throw). Same shape as the TV app's requestFocusWithRetry, which
+        // core:ui can't depend on.
+        val target = initialFocus ?: buttonFocusRequester.takeIf { focusedAction != null } ?: return@LaunchedEffect
         var frames = 0
         while (!target.requestFocus(FocusDirection.Enter) && frames < FOCUS_RETRY_MAX_FRAMES) {
             withFrameNanos { }
@@ -149,11 +175,7 @@ fun CinemaAlertDialog(
                                 }
                                 Spacer(Modifier.height(CinemaSpacing.lg))
                             }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                focusedDismissButton?.invoke()
-                                if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
-                                focusedConfirmButton()
-                            }
+                            actionArea()
                         }
                     }
                 }
@@ -201,11 +223,7 @@ fun CinemaAlertDialog(
                                     }
                                 }
                             }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                focusedDismissButton?.invoke()
-                                if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
-                                focusedConfirmButton()
-                            }
+                            actionArea()
                         }
                     }
                 }
@@ -243,11 +261,7 @@ fun CinemaAlertDialog(
                             }
                             Spacer(Modifier.height(CinemaSpacing.md))
                         }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            focusedDismissButton?.invoke()
-                            if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
-                            focusedConfirmButton()
-                        }
+                        actionArea()
                         Spacer(Modifier.height(CinemaSpacing.md))
                     }
                 }
@@ -258,6 +272,83 @@ fun CinemaAlertDialog(
 
 /** About half a second at 60 Hz for the dialog window to compose and attach its focus target. */
 private const val FOCUS_RETRY_MAX_FRAMES = 30
+
+private class KindedAction(
+    val action: DialogAction,
+    val kind: ButtonKind,
+)
+
+/** The actions in stack order (the main place first), each with its kind. */
+private fun dialogActions(
+    main: DialogAction?,
+    others: List<DialogAction>,
+    danger: DialogAction?,
+    cancel: DialogAction?,
+    cancelPlace: DialogCancelPlace,
+): List<KindedAction> {
+    val rest =
+        listOfNotNull(main?.let { KindedAction(it, ButtonKind.Main) }) +
+            others.map { KindedAction(it, ButtonKind.Other) } +
+            listOfNotNull(danger?.let { KindedAction(it, ButtonKind.Danger) })
+    val cancelAction = listOfNotNull(cancel?.let { KindedAction(it, ButtonKind.Other) })
+    return if (cancelPlace == DialogCancelPlace.FIRST) cancelAction + rest else rest + cancelAction
+}
+
+/**
+ * The dialog's buttons as [tokens] say. A stack puts the first action on top; a row puts it at
+ * the end and goes to a stack when it has more than two actions or its labels do not fit.
+ */
+@Composable
+private fun DialogActionArea(
+    actions: List<KindedAction>,
+    tokens: UiDialogActionTokens,
+    actionButton: DialogActionButton,
+    modifierFor: (DialogAction) -> Modifier,
+) {
+    if (actions.isEmpty()) return
+    val gap = CinemaSpacing.xs
+    Layout(
+        content = { actions.forEach { actionButton(it.action, it.kind, modifierFor(it.action)) } },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val gapPx = gap.roundToPx()
+        val gaps = gapPx * (measurables.size - 1)
+        val labels = measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else labels.sum() + gaps
+        val share = (width - gaps) / measurables.size
+        val full = tokens.width == DialogActionWidth.FULL
+        val inRow =
+            tokens.arrangement == DialogActionArrangement.ROW &&
+                measurables.size <= 2 &&
+                if (full) labels.max() <= share else labels.sum() + gaps <= width
+        val widths =
+            when {
+                inRow && full -> List(measurables.size) { share }
+                inRow -> labels
+                full -> List(measurables.size) { width }
+                else -> List(measurables.size) { labels.max().coerceAtMost(width) }
+            }
+        val placeables =
+            measurables.mapIndexed { i, it ->
+                it.measure(Constraints(minWidth = widths[i], maxWidth = widths[i], maxHeight = constraints.maxHeight))
+            }
+        val height = if (inRow) placeables.maxOf { it.height } else placeables.sumOf { it.height } + gaps
+        layout(width, height) {
+            var x = width
+            var y = 0
+            placeables.forEach {
+                if (inRow) {
+                    x -= it.width
+                    it.place(x, (height - it.height) / 2)
+                    x -= gapPx
+                } else {
+                    it.place(width - it.width, y)
+                    y += it.height + gapPx
+                }
+            }
+        }
+    }
+}
 
 /**
  * Sets the underlying dialog window's dim amount to [alpha] — [Dialog] has no

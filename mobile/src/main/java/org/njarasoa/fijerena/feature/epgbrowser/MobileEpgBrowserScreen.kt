@@ -76,13 +76,13 @@ import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgeKind
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
@@ -109,6 +109,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
@@ -712,84 +713,45 @@ private fun MobileProgramCard(
             if (pending != null && matched != null) {
                 val airingContext = LocalContext.current
                 val reminder = programmeReminderOf(program.title, pending, nowEpoch)?.takeUnless { bells.reminded.hasProgramme(it) }
-                val wide = Modifier.fillMaxWidth()
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
                     title = {
                         CinemaText(watchQuestionTitle(pending.startEpoch), role = TextRole.Title, tone = TextTone.Inherit)
                     },
                     text = { WatchQuestionBody(pending.channelName, matched.providerId) },
-                    confirmButton = {
-                        Column(wide, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                            CinemaDialogActionButton(
-                                onClick = {
-                                    // A second click before the dialog leaves doesn't open the player twice (R-20).
-                                    if (pendingConfirmAiring != null) {
-                                        pendingConfirmAiring = null
-                                        onNavigateToPlayer(matched)
-                                    }
-                                },
-                                modifier = wide,
-                                kind = ButtonKind.Main,
-                            ) {
-                                CinemaText(
-                                    stringResource(R.string.epg_browser_watch_now_btn),
-                                    role = TextRole.Label,
-                                    tone = TextTone.Inherit,
-                                )
-                            }
-
-                            if (reminder != null) {
-                                CinemaDialogActionButton(
-                                    onClick = {
-                                        pendingConfirmAiring = null
-                                        bells.remindProgramme(reminder)
-                                    },
-                                    modifier = wide,
-                                    kind = ButtonKind.Other,
-                                ) {
-                                    CinemaText(
-                                        stringResource(R.string.sports_remind_me),
-                                        role = TextRole.Label,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-
-                            if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
-                                CinemaDialogActionButton(
-                                    onClick = {
-                                        pendingConfirmAiring = null
-                                        openAddToCalendarEvent(
-                                            context = airingContext,
-                                            title = program.title,
-                                            description = program.description,
-                                            location = pending.channelName,
-                                            startEpochSeconds = pending.startEpoch,
-                                            endEpochSeconds = pending.endEpoch,
-                                        )
-                                    },
-                                    modifier = wide,
-                                    kind = ButtonKind.Other,
-                                ) {
-                                    CinemaText(
-                                        stringResource(R.string.epg_browser_add_calendar_btn),
-                                        role = TextRole.Label,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                            CinemaDialogActionButton(onClick = {
+                    main =
+                        DialogAction(stringResource(R.string.epg_browser_watch_now_btn)) {
+                            // A second click before the dialog leaves doesn't open the player twice (R-20).
+                            if (pendingConfirmAiring != null) {
                                 pendingConfirmAiring = null
-                            }, modifier = wide, kind = ButtonKind.Other) {
-                                CinemaText(
-                                    stringResource(R.string.common_cancel),
-                                    role = TextRole.Label,
-                                    tone = TextTone.Inherit,
-                                )
+                                onNavigateToPlayer(matched)
                             }
-                        }
-                    },
+                        },
+                    others =
+                        listOfNotNull(
+                            reminder?.let {
+                                DialogAction(stringResource(R.string.sports_remind_me)) {
+                                    pendingConfirmAiring = null
+                                    bells.remindProgramme(it)
+                                }
+                            },
+                            if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
+                                DialogAction(stringResource(R.string.epg_browser_add_calendar_btn)) {
+                                    pendingConfirmAiring = null
+                                    openAddToCalendarEvent(
+                                        context = airingContext,
+                                        title = program.title,
+                                        description = program.description,
+                                        location = pending.channelName,
+                                        startEpochSeconds = pending.startEpoch,
+                                        endEpochSeconds = pending.endEpoch,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        ),
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { pendingConfirmAiring = null },
                 )
             }
 

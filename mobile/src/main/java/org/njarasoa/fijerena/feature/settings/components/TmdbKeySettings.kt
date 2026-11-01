@@ -22,14 +22,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyCheck
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -116,21 +117,12 @@ fun TmdbKeyDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    viewModel.save(draft)
-                    onDismiss()
-                },
-                enabled = draft.isNotBlank() && draft != uiState.savedKey,
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.provider_save_button), enabled = draft.isNotBlank() && draft != uiState.savedKey) {
+                viewModel.save(draft)
+                onDismiss()
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 

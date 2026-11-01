@@ -13,8 +13,11 @@
 #     Switch, Checkbox, RadioButton, FilterChip, AlertDialog, Card, Divider, HorizontalDivider)
 #   - a raw Text( — text is CinemaText(role, tone); a raw progress indicator — CinemaProgressBar / CinemaSpinner
 #   - a palette colour read directly (CinemaTextSecondary, CinemaAccent, …) — use a role
+#   - dialog buttons laid out by the caller (confirmButton = / dismissButton =): a dialog takes its
+#     actions as data and the Look and Feel lays them out (docs/plans/20261101_style-layout-tokens-plan.md)
 # And, anywhere: a button's text with a fixed tone (it must follow the button's colour) —
-# scripts/check-button-text-tone.py.
+# scripts/check-button-text-tone.py; the core CinemaAlertDialog used outside each app's own
+# CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons.
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -32,7 +35,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
-PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|MaterialTheme\.typography|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
+PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|MaterialTheme\.typography|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])(confirmButton|dismissButton)[[:space:]]*=|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
 
 count_file() {
     # The pattern goes in through the environment: awk -v would strip its backslashes (gawk does).
@@ -90,6 +93,13 @@ done < <(files)
 if ! python3 "$(dirname "$0")/check-button-text-tone.py" tv/src/main mobile/src/main core/ui/src/main; then
     failures=$((failures + 1))
 fi
+
+# Feature code calls its app's CinemaAlertDialog; only that one calls the core dialog.
+while IFS= read -r file; do
+    echo "$file: uses the core CinemaAlertDialog — use the app's own (ui/components/CinemaAlertDialog.kt)."
+    failures=$((failures + 1))
+done < <(grep -rl --include='*.kt' 'org\.njarasoa\.fijerena\.core\.ui\.components\.CinemaAlertDialog' tv/src/main mobile/src/main |
+    grep -v '/ui/components/CinemaAlertDialog\.kt$' || true)
 
 if [ "$failures" -gt 0 ]; then
     echo

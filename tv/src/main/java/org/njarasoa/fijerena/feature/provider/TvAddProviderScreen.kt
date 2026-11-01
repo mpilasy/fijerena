@@ -62,9 +62,9 @@ import org.njarasoa.fijerena.core.network.smb.smbSourceConfig
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.feature.provider.components.SourceAdvancedSection
 import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
 import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -873,38 +874,18 @@ fun TvAddProviderScreen(
                         tone = TextTone.Secondary,
                     )
                 },
-                confirmButton = {
-                    CinemaButton(
-                        onClick = {
-                            val then = discardThen
-                            showDiscardDialog = false
-                            discardThen = null
-                            if (then != null) then() else onBack()
-                        },
-                        kind = ButtonKind.Danger,
-                    ) {
-                        CinemaText(
-                            stringResource(R.string.provider_discard_button),
-                            role = TextRole.Label,
-                            tone = TextTone.Inherit,
-                        )
-                    }
-                },
-                dismissButton = {
-                    CinemaButton(
-                        onClick = {
-                            showDiscardDialog = false
-                            discardThen = null
-                        },
-                        kind = ButtonKind.Other,
-                    ) {
-                        CinemaText(
-                            stringResource(R.string.provider_keep_editing_button),
-                            role = TextRole.Label,
-                            tone = TextTone.Inherit,
-                        )
-                    }
-                },
+                danger =
+                    DialogAction(stringResource(R.string.provider_discard_button)) {
+                        val then = discardThen
+                        showDiscardDialog = false
+                        discardThen = null
+                        if (then != null) then() else onBack()
+                    },
+                cancel =
+                    DialogAction(stringResource(R.string.provider_keep_editing_button)) {
+                        showDiscardDialog = false
+                        discardThen = null
+                    },
                 containerColor = CinemaTheme.colors.surface,
             )
         }
@@ -936,10 +917,11 @@ fun TvAddProviderScreen(
                     )
                 },
                 // Going back to fix the login is the main action; saving a source that failed its
-                // check stays possible but secondary. Focus lands on Go back (the dismiss slot).
-                confirmButton = {
-                    CinemaSecondaryButton(
-                        onClick = {
+                // check stays possible but secondary. Focus lands on Go back (the main action).
+                main = DialogAction(stringResource(R.string.provider_go_back)) { viewModel.resetSaveState() },
+                others =
+                    listOf(
+                        DialogAction(stringResource(R.string.provider_save_anyway)) {
                             viewModel.forceSave(
                                 id = if (isEditMode) editId else null,
                                 name = name.trim(),
@@ -956,15 +938,7 @@ fun TvAddProviderScreen(
                                     ),
                             )
                         },
-                        text = stringResource(R.string.provider_save_anyway),
-                    )
-                },
-                dismissButton = {
-                    CinemaPrimaryButton(
-                        onClick = { viewModel.resetSaveState() },
-                        text = stringResource(R.string.provider_go_back),
-                    )
-                },
+                    ),
                 containerColor = CinemaTheme.colors.surface,
             )
         }

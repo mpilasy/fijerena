@@ -36,8 +36,8 @@ import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.feature.epg.localizedEpgPhase
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -130,21 +131,12 @@ fun GuideMaintenancePane(
     if (showClearConfirm) {
         CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            confirmButton = {
-                CinemaDangerButton(
-                    onClick = {
-                        viewModel.clearDatabase()
-                        showClearConfirm = false
-                    },
-                    text = stringResource(R.string.epg_clear_everything_btn),
-                )
-            },
-            dismissButton = {
-                CinemaSecondaryButton(
-                    onClick = { showClearConfirm = false },
-                    text = stringResource(R.string.common_cancel),
-                )
-            },
+            danger =
+                DialogAction(stringResource(R.string.epg_clear_everything_btn)) {
+                    viewModel.clearDatabase()
+                    showClearConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
             title = {
                 CinemaText(
                     stringResource(R.string.epg_clear_db_confirm_title),

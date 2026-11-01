@@ -26,10 +26,10 @@ import androidx.compose.ui.semantics.semantics
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -191,23 +192,15 @@ internal fun ProfileAddDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    if (name.isBlank()) {
-                        showNameError = true
-                    } else {
-                        onSave(name, colorIndex, child)
-                    }
-                },
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.profile_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.profile_save_button)) {
+                if (name.isBlank()) {
+                    showNameError = true
+                } else {
+                    onSave(name, colorIndex, child)
+                }
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 

@@ -38,8 +38,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
@@ -76,21 +77,12 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
         CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
             title = { CinemaText(stringResource(R.string.settings_diagnostics_clear_confirm_title), role = TextRole.Title) },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        viewModel.clear()
-                        showClearConfirm = false
-                    },
-                    kind = ButtonKind.Other,
-                ) { CinemaText(stringResource(R.string.settings_diagnostics_clear), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(
-                    onClick = { showClearConfirm = false },
-                    kind = ButtonKind.Other,
-                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-            },
+            danger =
+                DialogAction(stringResource(R.string.settings_diagnostics_clear)) {
+                    viewModel.clear()
+                    showClearConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
         )
     }
 

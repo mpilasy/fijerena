@@ -22,8 +22,7 @@ import org.njarasoa.fijerena.core.ui.sync.PinAsker
 import org.njarasoa.fijerena.testing.FocusWalk
 import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
-import org.njarasoa.fijerena.testing.left
-import org.njarasoa.fijerena.testing.right
+import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
@@ -89,10 +88,10 @@ class TvPinDialogFocusTest {
     }
 
     @Test
-    fun `Down from the pad reaches Use My Phone, and Right from it Cancel`() {
+    fun `Down from the pad reaches Use My Phone, and Down from it Cancel`() {
         setDialog()
 
-        walk.run(down("4"), down("7"), down("Erase"), down("Use my phone"), right("Cancel"), left("Use my phone"))
+        walk.run(down("4"), down("7"), down("Erase"), down("Use my phone"), down("Cancel"), up("Use my phone"))
     }
 
     @Test
@@ -156,7 +155,7 @@ class TvPinDialogFocusTest {
     @Test
     fun `Cancel while the phone is asked closes the request`() {
         setDialog()
-        walk.run(down("4"), down("7"), down("Erase"), down("Use my phone"), center("Use the TV"), right("Cancel"))
+        walk.run(down("4"), down("7"), down("Erase"), down("Use my phone"), center("Use the TV"), down("Cancel"))
 
         walk.press(Key.DirectionCenter)
 

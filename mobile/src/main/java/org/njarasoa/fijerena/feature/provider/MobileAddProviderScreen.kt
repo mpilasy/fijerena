@@ -57,9 +57,9 @@ import org.njarasoa.fijerena.core.network.smb.smbSourceConfig
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -84,6 +84,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.feature.provider.components.SourceAdvancedSection
 import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -579,32 +580,18 @@ fun MobileAddProviderScreen(
                     },
                     title = { CinemaText(stringResource(R.string.provider_discard_changes_title), role = TextRole.Title) },
                     text = { CinemaText(stringResource(R.string.provider_discard_changes_message), tone = TextTone.Secondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                val then = discardThen
-                                showDiscardDialog = false
-                                discardThen = null
-                                if (then != null) then() else onBack()
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.provider_discard_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                showDiscardDialog = false
-                                discardThen = null
-                            },
-                            kind = ButtonKind.Other,
-                        ) {
-                            CinemaText(
-                                stringResource(R.string.provider_keep_editing_button),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.provider_discard_button)) {
+                            val then = discardThen
+                            showDiscardDialog = false
+                            discardThen = null
+                            if (then != null) then() else onBack()
+                        },
+                    cancel =
+                        DialogAction(stringResource(R.string.provider_keep_editing_button)) {
+                            showDiscardDialog = false
+                            discardThen = null
+                        },
                 )
             }
 
@@ -626,9 +613,10 @@ fun MobileAddProviderScreen(
                     title = { CinemaText(stringResource(R.string.provider_connection_failed), role = TextRole.Title) },
                     text = { CinemaText(failedState.errorMessage, tone = TextTone.Secondary) },
                     // Going back to fix the login is the main action; saving anyway stays secondary.
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
+                    main = DialogAction(stringResource(R.string.provider_go_back)) { viewModel.resetSaveState() },
+                    others =
+                        listOf(
+                            DialogAction(stringResource(R.string.provider_save_anyway)) {
                                 viewModel.forceSave(
                                     id = if (isEditMode) editId else null,
                                     name = name.trim(),
@@ -645,19 +633,7 @@ fun MobileAddProviderScreen(
                                         ),
                                 )
                             },
-                            kind = ButtonKind.Other,
-                        ) {
-                            CinemaText(stringResource(R.string.provider_save_anyway), role = TextRole.Label, tone = TextTone.Inherit)
-                        }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(
-                            onClick = { viewModel.resetSaveState() },
-                            kind = ButtonKind.Main,
-                        ) {
-                            CinemaText(stringResource(R.string.provider_go_back), role = TextRole.Label, tone = TextTone.Inherit)
-                        }
-                    },
+                        ),
                 )
             }
 
@@ -668,23 +644,15 @@ fun MobileAddProviderScreen(
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_cache_all_message), tone = TextTone.Secondary)
                     },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    providerRepo.clearAllCacheForProvider(editId)
-                                    cacheRefreshTrigger++
-                                    showClearCacheDialog = false
-                                }
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.provider_clear_all_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(onClick = {
-                            showClearCacheDialog = false
-                        }) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.provider_clear_all_button)) {
+                            coroutineScope.launch {
+                                providerRepo.clearAllCacheForProvider(editId)
+                                cacheRefreshTrigger++
+                                showClearCacheDialog = false
+                            }
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearCacheDialog = false },
                 )
             }
 
@@ -693,23 +661,15 @@ fun MobileAddProviderScreen(
                     onDismissRequest = { showClearLiveTvCacheDialog = false },
                     title = { CinemaText(stringResource(R.string.provider_clear_cache_live_title), role = TextRole.Title) },
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_live_message), tone = TextTone.Secondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
-                                    cacheRefreshTrigger++
-                                    showClearLiveTvCacheDialog = false
-                                }
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.provider_clear_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(
-                            onClick = { showClearLiveTvCacheDialog = false },
-                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.provider_clear_button)) {
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
+                                cacheRefreshTrigger++
+                                showClearLiveTvCacheDialog = false
+                            }
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearLiveTvCacheDialog = false },
                 )
             }
 
@@ -718,23 +678,15 @@ fun MobileAddProviderScreen(
                     onDismissRequest = { showClearMoviesCacheDialog = false },
                     title = { CinemaText(stringResource(R.string.provider_clear_cache_movies_title), role = TextRole.Title) },
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_movies_message), tone = TextTone.Secondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
-                                    cacheRefreshTrigger++
-                                    showClearMoviesCacheDialog = false
-                                }
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.provider_clear_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(
-                            onClick = { showClearMoviesCacheDialog = false },
-                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.provider_clear_button)) {
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
+                                cacheRefreshTrigger++
+                                showClearMoviesCacheDialog = false
+                            }
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearMoviesCacheDialog = false },
                 )
             }
 
@@ -743,23 +695,15 @@ fun MobileAddProviderScreen(
                     onDismissRequest = { showClearTvShowsCacheDialog = false },
                     title = { CinemaText(stringResource(R.string.provider_clear_cache_tvshows_title), role = TextRole.Title) },
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_tvshows_message), tone = TextTone.Secondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
-                                    cacheRefreshTrigger++
-                                    showClearTvShowsCacheDialog = false
-                                }
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.provider_clear_button), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(
-                            onClick = { showClearTvShowsCacheDialog = false },
-                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.provider_clear_button)) {
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
+                                cacheRefreshTrigger++
+                                showClearTvShowsCacheDialog = false
+                            }
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearTvShowsCacheDialog = false },
                 )
             }
             if (showClearFavoritesDialog) {
@@ -769,25 +713,17 @@ fun MobileAddProviderScreen(
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_favorites_message), tone = TextTone.Secondary)
                     },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    // The live per-provider store, not a fresh XtreamRepository on provider 0:
-                                    // going through AppContainer keeps the cached instance's in-memory
-                                    // favorites view consistent with what was just removed from disk.
-                                    AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
-                                }
-                                showClearFavoritesDialog = false
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(
-                            onClick = { showClearFavoritesDialog = false },
-                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                    danger =
+                        DialogAction(stringResource(R.string.common_ok)) {
+                            coroutineScope.launch {
+                                // The live per-provider store, not a fresh XtreamRepository on provider 0:
+                                // going through AppContainer keeps the cached instance's in-memory
+                                // favorites view consistent with what was just removed from disk.
+                                AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
+                            }
+                            showClearFavoritesDialog = false
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearFavoritesDialog = false },
                 )
             }
 
@@ -798,22 +734,14 @@ fun MobileAddProviderScreen(
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_progress_message), tone = TextTone.Secondary)
                     },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
-                                }
-                                showClearProgressDialog = false
-                            },
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
-                    dismissButton = {
-                        CinemaOutlinedButton(onClick = {
+                    danger =
+                        DialogAction(stringResource(R.string.common_ok)) {
+                            coroutineScope.launch {
+                                AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
+                            }
                             showClearProgressDialog = false
-                        }) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-                    },
+                        },
+                    cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearProgressDialog = false },
                 )
             }
 

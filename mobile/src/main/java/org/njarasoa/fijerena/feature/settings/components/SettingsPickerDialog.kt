@@ -21,13 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -89,28 +90,15 @@ fun <T> SettingsPickerDialog(
                     footer?.invoke(this)
                 }
             },
-            confirmButton = {
-                val pick = marked
-                if (previewIn != null && pick != null) {
-                    CinemaDialogActionButton(onClick = { onSelect(pick) }, kind = ButtonKind.Main) {
-                        CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
-                    }
-                } else {
-                    CancelButton(onDismiss)
-                }
-            },
-            dismissButton = if (previewIn != null) ({ CancelButton(onDismiss) }) else null,
+            main =
+                marked?.takeIf { previewIn != null }?.let { pick ->
+                    DialogAction(stringResource(R.string.common_ok)) { onSelect(pick) }
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         )
     }
     val pick = marked
     if (previewIn != null && pick != null) previewIn(pick, dialog) else dialog()
-}
-
-@Composable
-private fun CancelButton(onDismiss: () -> Unit) {
-    CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-        CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-    }
 }
 
 /**

@@ -115,10 +115,10 @@ import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -148,6 +148,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -1602,8 +1603,7 @@ private fun ProgramDetailsDialog(
     onWatchFromStart: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    val watchRequester = remember { FocusRequester() }
-    val fromStartRequester = remember { FocusRequester() }
+    val watchChannel = DialogAction(stringResource(R.string.epg_details_watch_channel), onClick = onWatchChannel)
     val today = remember { LocalDate.now() }
     val day = remember(program.startTime) { Instant.ofEpochSecond(program.startTime).atZone(ZoneId.systemDefault()).toLocalDate() }
     val dayLabel =
@@ -1643,30 +1643,16 @@ private fun ProgramDetailsDialog(
                 }
             }
         },
-        // Watch from start first when the programme can be replayed: it is what the panel was opened for.
-        initialFocus = if (onWatchFromStart != null) fromStartRequester else watchRequester,
-        confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                if (onWatchFromStart != null) {
-                    CinemaButton(
-                        onClick = onWatchFromStart,
-                        modifier = Modifier.focusRequester(fromStartRequester),
-                        kind = ButtonKind.Main,
-                    ) { CinemaText(stringResource(R.string.epg_details_watch_from_start), role = TextRole.Label, tone = TextTone.Inherit) }
-                }
-                CinemaButton(
-                    onClick = onWatchChannel,
-                    modifier = Modifier.focusRequester(watchRequester),
-                    kind = if (onWatchFromStart != null) ButtonKind.Other else ButtonKind.Main,
-                ) { CinemaText(stringResource(R.string.epg_details_watch_channel), role = TextRole.Label, tone = TextTone.Inherit) }
-            }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        // Watch from start is the main action (and has focus) when the programme can be replayed:
+        // it is what the panel was opened for.
+        main =
+            if (onWatchFromStart != null) {
+                DialogAction(stringResource(R.string.epg_details_watch_from_start), onClick = onWatchFromStart)
+            } else {
+                watchChannel
+            },
+        others = if (onWatchFromStart != null) listOf(watchChannel) else emptyList(),
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }

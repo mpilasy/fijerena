@@ -31,8 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -367,19 +368,11 @@ private fun AddLoginDialog(
             }
         },
         initialFocus = usernameRequester,
-        confirmButton = {
-            CinemaButton(
-                onClick = { onAdd(username, password.trim()) },
-                enabled = !busy && username.isNotBlank() && password.isNotBlank(),
-                kind = ButtonKind.Main,
-            ) { CinemaText(stringResource(R.string.common_add), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
-        dismissButton = {
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
-        },
+        main =
+            DialogAction(stringResource(R.string.common_add), enabled = !busy && username.isNotBlank() && password.isNotBlank()) {
+                onAdd(username, password.trim())
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         containerColor = CinemaTheme.colors.surface,
     )
 }

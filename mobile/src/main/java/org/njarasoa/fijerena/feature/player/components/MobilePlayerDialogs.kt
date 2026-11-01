@@ -21,14 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.contentOn
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -118,15 +119,7 @@ fun AudioTrackSelectorDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(
-                    stringResource(R.string.common_close),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 
@@ -242,15 +235,7 @@ fun SubtitleSelectorDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(
-                    stringResource(R.string.common_close),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 
@@ -383,14 +368,6 @@ fun QualitySelectorDialog(
                 }
             }
         },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(
-                    stringResource(R.string.common_close),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }

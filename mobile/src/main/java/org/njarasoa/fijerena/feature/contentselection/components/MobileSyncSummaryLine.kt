@@ -33,8 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
@@ -152,15 +153,7 @@ fun MobileSourcesStatusSheet(
             }
         },
         // The sole action: the app's dialog button, as other one-button dialogs (OK), not a text link.
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Main) {
-                CinemaText(
-                    stringResource(R.string.common_close),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+        main = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }
 

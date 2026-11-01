@@ -56,8 +56,8 @@ import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.PaletteSwatches
@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
@@ -803,22 +804,9 @@ fun ProfileEditPane(
                 containerColor = CinemaTheme.colors.background,
                 titleContentColor = CinemaTheme.colors.textPrimary,
                 title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title) },
-                confirmButton = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main) {
-                            CinemaText(stringResource(R.string.profile_pin_change), tone = TextTone.Inherit)
-                        }
-                        CinemaButton(
-                            onClick = pinFlow::remove,
-                            kind = ButtonKind.Danger,
-                        ) { CinemaText(stringResource(R.string.profile_pin_remove), tone = TextTone.Inherit) }
-                    }
-                },
-                dismissButton = {
-                    CinemaButton(onClick = closeOptions, kind = ButtonKind.Other) {
-                        CinemaText(stringResource(R.string.common_cancel), tone = TextTone.Inherit)
-                    }
-                },
+                main = DialogAction(stringResource(R.string.profile_pin_change), onClick = pinFlow::change),
+                danger = DialogAction(stringResource(R.string.profile_pin_remove), onClick = pinFlow::remove),
+                cancel = DialogAction(stringResource(R.string.common_cancel), onClick = closeOptions),
             )
         }
         if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
@@ -1015,28 +1003,15 @@ internal fun ProfileAddDialog(
                 )
             }
         },
-        confirmButton = {
-            CinemaButton(
-                onClick = {
-                    if (name.isBlank()) {
-                        showNameError = true
-                    } else {
-                        onSave(name, colorIndex, child)
-                    }
-                },
-                kind = ButtonKind.Main,
-                modifier = Modifier.focusRequester(saveFocusRequester),
-            ) { androidx.compose.material3.Text(stringResource(R.string.profile_save_button)) }
-        },
-        dismissButton = {
-            // Cancel is secondary: resting container, accent label. Save keeps the fill.
-            CinemaButton(
-                onClick = onDismiss,
-                kind = ButtonKind.Other,
-            ) {
-                androidx.compose.material3.Text(stringResource(R.string.common_cancel))
-            }
-        },
+        main =
+            DialogAction(stringResource(R.string.profile_save_button), focusRequester = saveFocusRequester) {
+                if (name.isBlank()) {
+                    showNameError = true
+                } else {
+                    onSave(name, colorIndex, child)
+                }
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         initialFocus = nameFocusRequester,
     )
 }

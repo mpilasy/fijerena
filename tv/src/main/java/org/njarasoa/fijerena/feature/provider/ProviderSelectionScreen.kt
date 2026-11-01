@@ -49,9 +49,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.sourceStatusLine
@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -221,29 +222,12 @@ fun TvProviderSelectionScreen(
                     tone = TextTone.Secondary,
                 )
             },
-            confirmButton = {
-                CinemaButton(
-                    onClick = {
-                        viewModel.deleteProvider(provider.id)
-                        deleteConfirmProvider = null
-                    },
-                    kind = ButtonKind.Danger,
-                ) {
-                    CinemaText(
-                        stringResource(R.string.provider_delete_button),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
-            dismissButton = {
-                CinemaButton(
-                    onClick = { deleteConfirmProvider = null },
-                    kind = ButtonKind.Other,
-                ) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            danger =
+                DialogAction(stringResource(R.string.provider_delete_button)) {
+                    viewModel.deleteProvider(provider.id)
+                    deleteConfirmProvider = null
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { deleteConfirmProvider = null },
             containerColor = CinemaTheme.colors.surface,
         )
     }
@@ -287,14 +271,7 @@ fun TvProviderSelectionScreen(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
             title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title, tone = TextTone.Primary) },
             text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
-            confirmButton = {
-                CinemaButton(
-                    onClick = { viewModel.clearCopyResultMessage() },
-                    kind = ButtonKind.Main,
-                ) {
-                    CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            },
+            main = DialogAction(stringResource(R.string.common_ok)) { viewModel.clearCopyResultMessage() },
             containerColor = CinemaTheme.colors.surface,
         )
     }

@@ -40,10 +40,10 @@ import org.njarasoa.fijerena.core.network.provider.ParentalControlsRepository
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceCho
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
@@ -277,16 +278,8 @@ private fun ResetListDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(stringResource(R.string.parental_list_reset), role = TextRole.Title) },
         text = { CinemaText(stringResource(R.string.parental_list_reset_confirm), tone = TextTone.Secondary) },
-        confirmButton = {
-            CinemaDialogActionButton(onClick = onConfirm, kind = ButtonKind.Danger) {
-                CinemaText(stringResource(R.string.parental_list_reset), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-            }
-        },
+        danger = DialogAction(stringResource(R.string.parental_list_reset), onClick = onConfirm),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 

@@ -29,12 +29,12 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -545,33 +546,12 @@ private fun EpgSourceCard(
     if (showDeleteConfirm) {
         CinemaAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        onDelete()
-                        showDeleteConfirm = false
-                    },
-                    kind = ButtonKind.Danger,
-                ) {
-                    CinemaText(
-                        stringResource(R.string.provider_delete_button),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
-            dismissButton = {
-                CinemaDialogActionButton(
-                    onClick = { showDeleteConfirm = false },
-                    kind = ButtonKind.Other,
-                ) {
-                    CinemaText(
-                        stringResource(R.string.common_cancel),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
+            danger =
+                DialogAction(stringResource(R.string.provider_delete_button)) {
+                    onDelete()
+                    showDeleteConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showDeleteConfirm = false },
             title = {
                 CinemaText(
                     stringResource(R.string.epg_delete_source_title),
@@ -682,37 +662,22 @@ private fun EpgSourceEditDialog(
                 tone = TextTone.Inherit,
             )
         },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    onConfirm(
-                        url,
-                        label,
-                        tzOffset.toIntOrNull() ?: 0,
-                        initialSource?.ingestMethod ?: "DOWNLOADED",
-                        initialSource?.enabled ?: true,
-                        checkedFor,
-                    )
-                },
-                enabled = url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
-                kind = ButtonKind.Main,
+        main =
+            DialogAction(
+                stringResource(R.string.provider_save_button),
+                enabled =
+                    url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
             ) {
-                CinemaText(
-                    stringResource(R.string.provider_save_button),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
+                onConfirm(
+                    url,
+                    label,
+                    tzOffset.toIntOrNull() ?: 0,
+                    initialSource?.ingestMethod ?: "DOWNLOADED",
+                    initialSource?.enabled ?: true,
+                    checkedFor,
                 )
-            }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(
-                    stringResource(R.string.common_cancel),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        },
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                 CinemaTextField(

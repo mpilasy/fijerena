@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -35,7 +35,7 @@ data class ItemMenuAction(
  * is no source item).
  *
  * Removals are never the main button (UX audit fixes plan → UX-D1): Add to Favourites is the
- * confirm button, but Remove from Favourites is a plain action after the others, the last one above
+ * main action, but Remove from Favourites is a plain action after the others, the last one above
  * Cancel. Callers put their own removals (Remove from Recent) at the end of [actions].
  */
 @Composable
@@ -78,23 +78,15 @@ fun ItemActionsDialog(
                     }
                 }
             },
-        confirmButton = {
+        main =
             if (onToggleFavorite != null && !isFavorite) {
-                CinemaDialogActionButton(
-                    onClick = {
-                        onToggleFavorite()
-                        onDismiss()
-                    },
-                    kind = ButtonKind.Main,
-                ) {
-                    CinemaText(stringResource(R.string.favorite_add))
+                DialogAction(stringResource(R.string.favorite_add)) {
+                    onToggleFavorite()
+                    onDismiss()
                 }
-            }
-        },
-        dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                CinemaText(stringResource(R.string.common_cancel))
-            }
-        },
+            } else {
+                null
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

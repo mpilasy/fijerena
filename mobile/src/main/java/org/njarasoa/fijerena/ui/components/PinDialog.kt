@@ -23,8 +23,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PinDots
 import org.njarasoa.fijerena.core.ui.components.PinPromptState
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -98,13 +98,7 @@ fun PinDialog(
                 }
             }
         },
-        confirmButton = {
-            if (cancellable) {
-                CinemaDialogActionButton(onClick = onCancel, kind = ButtonKind.Other) {
-                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            }
-        },
+        cancel = if (cancellable) DialogAction(stringResource(R.string.common_cancel), onClick = onCancel) else null,
     )
 }
 
