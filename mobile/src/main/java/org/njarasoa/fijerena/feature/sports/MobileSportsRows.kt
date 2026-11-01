@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
+import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
@@ -200,38 +201,14 @@ fun MobileSportsHeading(
 
 /**
  * A day's heading over its games, pinned at the top of the list (a sticky header) until the next
- * day's heading takes its place (user, 2026-11-01). While [pinned] it is on the ground's colour, so
- * the games scroll under it; elsewhere it has no band.
+ * day's heading takes its place (user, 2026-11-01); a band only while [pinned] ([dayHeadingBand]).
  */
 @Composable
 fun MobileSportsDayHeading(
     text: String,
     pinned: Boolean,
 ) {
-    MobileSportsHeading(
-        text,
-        modifier = Modifier.fillMaxWidth().then(if (pinned) Modifier.background(CinemaTheme.colors.background) else Modifier),
-    )
-}
-
-/** Content type of a day heading in a games list: [rememberPinnedDayKey] looks for it. */
-const val DAY_HEADING = "day"
-
-/** The key of the day heading pinned at the top of [state]'s list; null while the list is at its top. */
-@Composable
-fun rememberPinnedDayKey(state: LazyListState): Any? {
-    val key by remember(state) {
-        derivedStateOf {
-            if (!state.canScrollBackward) {
-                null
-            } else {
-                state.layoutInfo.visibleItemsInfo
-                    .firstOrNull { it.contentType == DAY_HEADING && it.offset <= 0 }
-                    ?.key
-            }
-        }
-    }
-    return key
+    MobileSportsHeading(text, modifier = Modifier.dayHeadingBand(pinned))
 }
 
 /**

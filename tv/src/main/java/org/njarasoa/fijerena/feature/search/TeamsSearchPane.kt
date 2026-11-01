@@ -40,15 +40,18 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GameBells
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.TeamsSearchViewModel
+import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.followKey
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
+import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
@@ -190,6 +193,7 @@ internal fun TeamsSearchPane(
                         }
                     } else {
                         val listState = rememberLazyListState()
+                        val pinnedDay = rememberPinnedDayKey(listState)
                         NavReturnFocusEffect(returnFocus, listState = listState)
                         LazyColumn(
                             state = listState,
@@ -216,7 +220,7 @@ internal fun TeamsSearchPane(
                                                 .navReturnFocusTarget(returnFocus, bestKey),
                                     )
                                 }
-                                bestGameRows(bestGames, team, bells, returnFocus, viewModel::retryBestGames) { openGame = it }
+                                bestGameRows(bestGames, team, bells, returnFocus, pinnedDay, viewModel::retryBestGames) { openGame = it }
                             }
                             teamAndLeagueRows(shown, followed, returnFocus, listState, firstResultFocus, onTeamSelected, onLeagueSelected)
                         }
@@ -262,6 +266,7 @@ private fun LazyListScope.bestGameRows(
     team: SportsTeam,
     bells: GameBells,
     returnFocus: NavReturnFocus,
+    pinnedDay: Any?,
     onRetry: () -> Unit,
     onOpenGame: (String) -> Unit,
 ) {
@@ -295,8 +300,12 @@ private fun LazyListScope.bestGameRows(
                 }
             }
             for (day in gamesByDay(games.games)) {
-                item(key = "best_day:${day.date}", contentType = "day") {
-                    TvSportsHeading(gameDayLabel(LocalResources.current, day.date))
+                stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
+                    TvSportsHeading(
+                        gameDayLabel(LocalResources.current, day.date),
+                        modifier =
+                            Modifier.dayHeadingBand(pinnedDay == "best_day:${day.date}"),
+                    )
                 }
                 for (game in day.games) {
                     val key = "game:${game.key}"

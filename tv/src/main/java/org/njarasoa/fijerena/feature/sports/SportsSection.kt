@@ -48,13 +48,16 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsSectionViewModel
+import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
+import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -114,6 +117,7 @@ fun SportsSectionScreen(
     val bells = rememberGameBells()
     val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
+    val pinnedDay = rememberPinnedDayKey(listState)
     val returnFocus = rememberNavReturnFocus()
     val firstItemFocus = remember { FocusRequester() }
     val findTeamsFocus = remember { FocusRequester() }
@@ -288,11 +292,14 @@ fun SportsSectionScreen(
                                 }
                             }
                             for (day in days) {
-                                item(key = "day:${day.date}") {
+                                stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
                                     CinemaText(
                                         text = gameDayLabel(resources, day.date),
                                         tone = TextTone.Secondary,
-                                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                                        modifier =
+                                            Modifier
+                                                .dayHeadingBand(pinnedDay == "day:${day.date}")
+                                                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                                     )
                                 }
                                 for (game in day.games) {
