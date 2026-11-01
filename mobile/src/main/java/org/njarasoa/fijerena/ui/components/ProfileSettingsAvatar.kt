@@ -12,7 +12,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -40,10 +42,10 @@ fun ProfileSettingsAvatar(
                     .background(CinemaTheme.colors.surfaceRaised),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
+            CinemaIcon(
                 CinemaIcons.Settings,
                 contentDescription = stringResource(R.string.settings_title),
-                tint = CinemaTheme.colors.textPrimary,
+                tone = TextTone.Primary,
                 modifier = Modifier.size(MobileDimensions.profileSettingsBadgeIcon),
             )
         }

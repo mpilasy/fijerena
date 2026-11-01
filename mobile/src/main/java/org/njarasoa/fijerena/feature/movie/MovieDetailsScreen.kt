@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
@@ -405,14 +406,14 @@ private fun MovieDetailsContent(
                             icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                             label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                             onClick = onToggleFavorite,
-                            tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                            tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
                         )
                         if (wishlist != null) {
                             DetailIconAction(
                                 icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
                                 label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
                                 onClick = wishlist.toggle,
-                                tint = if (wishlist.isOn) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                tone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
                             )
                         }
                         // None where the source keeps watched state on its server (Jellyfin).
@@ -421,7 +422,7 @@ private fun MovieDetailsContent(
                                 icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
                                 label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                                 onClick = onToggleWatched,
-                                tint = if (isWatched) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                tone = if (isWatched) TextTone.Accent else TextTone.Primary,
                             )
                         }
                         if (hasResume) {
@@ -791,10 +792,10 @@ private fun StreamNamePicker(
                 role = TextRole.Body,
                 tone = TextTone.Primary,
             )
-            Icon(
+            CinemaIcon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
-                tint = CinemaTheme.colors.accent,
+                tone = TextTone.Accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
@@ -807,7 +808,7 @@ private fun StreamNamePicker(
                         tone = TextTone.Accent,
                     )
                 },
-                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
+                leadingIcon = { CinemaIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
                 onClick = { expanded = false },
             )
             alternates.forEach { alternate ->

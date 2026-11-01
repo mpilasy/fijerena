@@ -404,7 +404,7 @@ private fun DevicesPanel(
                             onClick = { onStop(device) },
                             icon = Icons.Filled.Stop,
                             label = stringResource(R.string.live_sync_stop),
-                            tint = CinemaTheme.colors.danger,
+                            tone = TextTone.Danger,
                         )
                     }
                     IconAction(
@@ -417,7 +417,7 @@ private fun DevicesPanel(
                             onClick = { onRemove(device) },
                             icon = CinemaIcons.Delete,
                             label = stringResource(R.string.live_sync_device_remove),
-                            tint = CinemaTheme.colors.danger,
+                            tone = TextTone.Danger,
                         )
                     }
                 }

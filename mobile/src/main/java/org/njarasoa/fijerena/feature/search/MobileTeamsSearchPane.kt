@@ -36,6 +36,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -70,6 +71,7 @@ import org.njarasoa.fijerena.feature.sports.sportsCardColors
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -126,18 +128,15 @@ internal fun MobileTeamsSearchPane(
             if (state is TeamsSearchViewModel.State.Loading) {
                 CinemaSpinner(modifier = Modifier.size(MobileDimensions.iconDefault))
             } else if (query.isNotEmpty()) {
-                IconButton(
+                IconAction(
                     onClick = {
                         onQueryChange("")
                         viewModel.search("")
                     },
-                ) {
-                    Icon(
-                        imageVector = CinemaIcons.Close,
-                        contentDescription = stringResource(R.string.provider_clear_button),
-                        tint = CinemaTheme.colors.textPrimary,
-                    )
-                }
+                    icon = CinemaIcons.Close,
+                    label = stringResource(R.string.provider_clear_button),
+                    tone = TextTone.Primary,
+                )
             }
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

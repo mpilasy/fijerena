@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.core.ui.wanted.route
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.UndoBarState
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLook
@@ -939,10 +940,10 @@ internal fun StreamItem(
                     }
 
                     if (isWatched) {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaTheme.colors.success,
+                            tone = TextTone.Success,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
                     }
@@ -1006,10 +1007,10 @@ internal fun StreamItem(
 /** The "⋮" at the end of a focused content row (StreamList and CategoryList): long-press OK or Menu opens its actions. */
 @Composable
 internal fun RowActionsHint() {
-    Icon(
+    TvIcon(
         imageVector = CinemaIcons.MoreVert,
         contentDescription = stringResource(R.string.row_actions_hint),
-        tint = CinemaTheme.colors.textSecondary,
+        tone = TextTone.Secondary,
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }
@@ -1017,10 +1018,10 @@ internal fun RowActionsHint() {
 /** The ✕ at the end of a focused row in edit mode: OK removes it. A glyph, not a focus stop. */
 @Composable
 private fun RowRemoveHint() {
-    Icon(
+    TvIcon(
         imageVector = CinemaIcons.Close,
         contentDescription = stringResource(R.string.edit_remove_row),
-        tint = CinemaTheme.colors.danger,
+        tone = TextTone.Danger,
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }

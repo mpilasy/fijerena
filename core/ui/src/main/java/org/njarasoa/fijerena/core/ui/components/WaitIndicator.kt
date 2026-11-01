@@ -99,7 +99,7 @@ fun waitName(metadata: PlayerMetadata): String =
 /**
  * The player's wait, without words: [kind]'s picture over a soft disc, filled by how much video is
  * held of what playback waits for, and in the warning colour while the connection is slower than
- * the stream. [tint] is the colour taken from the frozen frame ([rememberSceneTint]); the theme's
+ * the stream. [sceneColor] is the colour taken from the frozen frame ([rememberSceneTint]); the theme's
  * accent without one. A [WaitKind.Live] ring shows [logoUrl], or [name] when there is none.
  */
 @Composable
@@ -109,12 +109,12 @@ fun WaitIndicator(
     size: Dp = WaitStyle.indicatorSize,
     logoUrl: String? = null,
     name: String = "",
-    tint: Color? = null,
+    sceneColor: Color? = null,
     contentDescription: String = stringResource(R.string.loading_buffering),
 ) {
     val info = rememberBufferingInfo()
     val c = CinemaTheme.colors
-    val color = if (info?.tooSlow == true) c.warning else tint ?: c.accent
+    val color = if (info?.tooSlow == true) c.warning else sceneColor ?: c.accent
     val progress = WaitMath.progress(info)
     Box(
         modifier =
@@ -143,7 +143,7 @@ fun PlayerWait(
     metadata: PlayerMetadata,
     modifier: Modifier = Modifier,
     kind: WaitKind = waitKindOf(metadata),
-    tint: Color? = null,
+    sceneColor: Color? = null,
     showBadge: Boolean = true,
     showDetails: Boolean = false,
     badgeLogoHeight: Dp = WaitStyle.badgeLogoHeight,
@@ -166,7 +166,7 @@ fun PlayerWait(
             size = size,
             logoUrl = metadata.logoUrl,
             name = name,
-            tint = tint,
+            sceneColor = sceneColor,
         )
         // Below the indicator, so the details never push it off the centre. A soft backing: they may
         // sit on a light frozen frame.
@@ -209,20 +209,20 @@ fun rememberSceneTint(
     active: Boolean,
     capture: suspend () -> Bitmap?,
 ): Color? {
-    var tint by remember { mutableStateOf<Color?>(null) }
+    var scene by remember { mutableStateOf<Color?>(null) }
     val currentCapture by rememberUpdatedState(capture)
     LaunchedEffect(active) {
-        tint = null
+        scene = null
         if (!active) return@LaunchedEffect
         val frame = currentCapture() ?: return@LaunchedEffect
-        tint =
+        scene =
             withContext(Dispatchers.Default) {
                 val pixels = IntArray(frame.width * frame.height)
                 frame.getPixels(pixels, 0, frame.width, 0, 0, frame.width, frame.height)
                 WaitMath.sceneTint(pixels, frame.width)?.let(::Color)
             }
     }
-    return tint
+    return scene
 }
 
 /** The playback service's [BufferingInfo], read twice a second (as [BufferingDetails] does). */

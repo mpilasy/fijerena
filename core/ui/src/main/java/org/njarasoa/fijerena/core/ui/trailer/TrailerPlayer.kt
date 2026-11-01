@@ -54,6 +54,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -411,10 +412,10 @@ private fun TrailerDialog(
                 modifier = Modifier.fillMaxWidth(),
             )
             if (pausedByKey) {
-                Icon(
+                CinemaIcon(
                     imageVector = CinemaIcons.Pause,
                     contentDescription = null,
-                    tint = CinemaTheme.colors.onMedia,
+                    tone = TextTone.OnMedia,
                     modifier =
                         Modifier
                             .background(CinemaTheme.colors.mediaScrim, CinemaTheme.shapes.chip)

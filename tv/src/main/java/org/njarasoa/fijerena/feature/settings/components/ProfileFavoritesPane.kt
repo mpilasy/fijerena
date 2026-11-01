@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -174,11 +175,11 @@ internal fun ProfileFavoritesPane(
                             chevron = false,
                             focusRequester = if (item.key == rows.first().key) firstRowFocus else null,
                             leading = {
-                                Icon(
+                                TvIcon(
                                     imageVector = if (item.isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                     contentDescription =
                                         stringResource(if (item.isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                                    tint = if (item.isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                    tone = if (item.isFavorite) TextTone.Accent else TextTone.Primary,
                                     modifier = Modifier.size(TvDimensions.iconMedium),
                                 )
                             },

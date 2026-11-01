@@ -39,10 +39,10 @@ fun WatchedBadge(
                 .border(RING_WIDTH, CinemaTheme.colors.mediaScrim.copy(alpha = RING_ALPHA), CinemaTheme.shapes.control),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        CinemaIcon(
             imageVector = Icons.Rounded.Check,
             contentDescription = stringResource(R.string.content_watched_badge),
-            tint = CinemaTheme.colors.onMedia,
+            tone = TextTone.OnMedia,
             modifier = Modifier.size(size * GLYPH_FRACTION),
         )
     }

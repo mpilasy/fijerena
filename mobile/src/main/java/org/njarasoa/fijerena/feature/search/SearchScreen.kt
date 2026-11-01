@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -441,18 +442,15 @@ fun MobileSearchScreen(
                                     labels = facetLabels,
                                 )
                             }
-                            IconButton(
+                            IconAction(
                                 onClick = {
                                     searchQuery = ""
                                     viewModel.clearSearch()
                                 },
-                            ) {
-                                Icon(
-                                    imageVector = CinemaIcons.Close,
-                                    contentDescription = stringResource(R.string.provider_clear_button),
-                                    tint = CinemaTheme.colors.textPrimary,
-                                )
-                            }
+                                icon = CinemaIcons.Close,
+                                label = stringResource(R.string.provider_clear_button),
+                                tone = TextTone.Primary,
+                            )
                         }
                     }
                 },
@@ -629,7 +627,7 @@ private fun SearchFilterAction(
             onClick = { expanded = true },
             icon = CinemaIcons.Tune,
             label = stringResource(R.string.search_filter_label),
-            tint = if (active) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+            tone = if (active) TextTone.Accent else TextTone.Primary,
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             @Composable
@@ -1184,14 +1182,13 @@ private fun MobileSearchHistorySection(
                 role = TextRole.Label,
                 tone = TextTone.Secondary,
             )
-            IconButton(onClick = onClearAll) {
-                Icon(
-                    imageVector = CinemaIcons.Delete,
-                    contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                    tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
-                    modifier = Modifier.size(MobileDimensions.iconSmall),
-                )
-            }
+            IconAction(
+                onClick = onClearAll,
+                icon = CinemaIcons.Delete,
+                label = stringResource(R.string.epg_browser_clear_all_description),
+                tone = TextTone.Secondary,
+                iconModifier = Modifier.size(MobileDimensions.iconSmall),
+            )
         }
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
         FlowRow(
@@ -1220,16 +1217,13 @@ private fun MobileSearchHistorySection(
                         )
                     },
                     trailingIcon = {
-                        IconButton(
+                        IconAction(
                             onClick = { onItemRemove(term) },
-                            modifier = Modifier.size(AssistChipDefaults.IconSize),
-                        ) {
-                            Icon(
-                                imageVector = CinemaIcons.Close,
-                                contentDescription = stringResource(R.string.epg_browser_remove_description),
-                                modifier = Modifier.size(AssistChipDefaults.IconSize),
-                            )
-                        }
+                            icon = CinemaIcons.Close,
+                            label = stringResource(R.string.epg_browser_remove_description),
+                            buttonSize = AssistChipDefaults.IconSize,
+                            iconModifier = Modifier.size(AssistChipDefaults.IconSize),
+                        )
                     },
                 )
             }
@@ -1316,10 +1310,10 @@ private fun MobileCollapsibleHeader(
                 role = TextRole.Body,
                 tone = TextTone.Secondary,
             )
-            Icon(
+            CinemaIcon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tint = CinemaTheme.colors.accent,
+                tone = TextTone.Accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
@@ -1352,10 +1346,10 @@ private fun CategoryResultCard(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
+            CinemaIcon(
                 CinemaIcons.Folder,
                 contentDescription = null,
-                tint = CinemaTheme.colors.accent,
+                tone = TextTone.Accent,
             )
             CinemaText(
                 text = result.categoryName,
@@ -1523,10 +1517,10 @@ internal fun TmdbTitleCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
+            CinemaIcon(
                 imageVector = if (onWishlist) CinemaIcons.Bookmark else CinemaIcons.CloudOff,
                 contentDescription = stringResource(if (onWishlist) R.string.wanted_title else R.string.wanted_not_available),
-                tint = if (onWishlist) CinemaTheme.colors.accent else CinemaTheme.colors.textSecondary,
+                tone = if (onWishlist) TextTone.Accent else TextTone.Secondary,
             )
         }
     }

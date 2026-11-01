@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -48,10 +49,10 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         ) {
-            Icon(
+            CinemaIcon(
                 imageVector = CinemaIcons.Warning,
                 contentDescription = null,
-                tint = CinemaTheme.colors.onDanger,
+                tone = TextTone.OnDanger,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
             Column {

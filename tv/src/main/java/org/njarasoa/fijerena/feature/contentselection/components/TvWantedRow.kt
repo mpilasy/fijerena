@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.statusLabel
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -114,10 +115,10 @@ private fun TvWantedCard(
                     if (isFocused) RowActionsHint()
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
+                    TvIcon(
                         imageVector = if (card.isAvailable) CinemaIcons.CheckCircleFilled else CinemaIcons.CloudOff,
                         contentDescription = null,
-                        tint = if (card.isAvailable) CinemaTheme.colors.accent else CinemaTheme.colors.textSecondary,
+                        tone = if (card.isAvailable) TextTone.Accent else TextTone.Secondary,
                         modifier = Modifier.size(TvDimensions.iconSmall),
                     )
                     CinemaText(
@@ -152,10 +153,10 @@ fun TvWantedBanner(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
+            TvIcon(
                 imageVector = CinemaIcons.Bookmark,
                 contentDescription = null,
-                tint = CinemaTheme.colors.accent,
+                tone = TextTone.Accent,
                 modifier = Modifier.size(TvDimensions.iconMedium),
             )
             CinemaText(text = text, role = TextRole.Heading, modifier = Modifier.weight(1f))

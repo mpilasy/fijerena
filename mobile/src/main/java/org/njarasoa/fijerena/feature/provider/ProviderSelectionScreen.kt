@@ -79,9 +79,7 @@ fun MobileProviderSelectionScreen(
     Scaffold(
         topBar = {
             MobileScreenHeader(title = stringResource(R.string.provider_selection_title), onBack = onBack) {
-                IconButton(onClick = onAddProvider) {
-                    Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.provider_add_title))
-                }
+                IconAction(onClick = onAddProvider, icon = CinemaIcons.Add, label = stringResource(R.string.provider_add_title))
             }
         },
     ) { paddingValues ->
@@ -278,12 +276,11 @@ private fun MobileProviderRow(
                 }
             }
             Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(
-                        CinemaIcons.MoreVert,
-                        contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
-                    )
-                }
+                IconAction(
+                    onClick = { menuOpen = true },
+                    icon = CinemaIcons.MoreVert,
+                    label = stringResource(R.string.provider_more_actions_for_format, provider.name),
+                )
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     // Guide sources only apply to sources that carry live channels
                     if (MediaProviderFactory.hasLiveTv(provider)) {

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -121,7 +122,7 @@ fun DetailIconAction(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = CinemaTheme.colors.textPrimary,
+    tone: TextTone = TextTone.Primary,
 ) {
     // A capped width and a two-line, centred label: at a large system font size the one-line
     // labels of a row of actions ran into each other ("Add to FavoritesMark as watched…").
@@ -130,7 +131,7 @@ fun DetailIconAction(
         modifier = modifier.widthIn(max = DETAIL_ACTION_MAX_WIDTH),
     ) {
         CinemaIconButton(onClick = onClick, icon = {
-            Icon(imageVector = icon, contentDescription = label, tint = tint)
+            CinemaIcon(imageVector = icon, contentDescription = label, tone = tone)
         })
         CinemaText(
             text = label,

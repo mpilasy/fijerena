@@ -30,6 +30,7 @@ import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -110,10 +111,10 @@ fun MobileSportsItemCard(
                 }
             }
             if (followed) {
-                Icon(
+                CinemaIcon(
                     imageVector = CinemaIcons.Star,
                     contentDescription = stringResource(R.string.sports_followed),
-                    tint = CinemaTheme.colors.accent,
+                    tone = TextTone.Accent,
                     modifier = Modifier.size(MobileDimensions.iconDefault),
                 )
             }

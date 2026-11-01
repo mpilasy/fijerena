@@ -166,6 +166,7 @@ private fun ProfileButton(
         tooltip = { PlainTooltip { CinemaText(switchLabel, role = TextRole.BodySmall, tone = TextTone.Inherit) } },
         state = rememberTooltipState(),
     ) {
+        // look-ok: the profile avatar as a button, not an icon; it has its own tooltip above
         IconButton(
             onClick = onClick,
             modifier = Modifier.size(MobileDimensions.minTouchTarget).semantics { contentDescription = switchLabel },

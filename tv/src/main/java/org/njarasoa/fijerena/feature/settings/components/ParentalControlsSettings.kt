@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ParentalControlsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -306,10 +307,10 @@ private fun ParentalEntryRow(
         focusRequester = focusRequester,
         trailing = {
             if (focused) {
-                Icon(
+                TvIcon(
                     imageVector = CinemaIcons.Close,
                     contentDescription = stringResource(R.string.edit_remove_row),
-                    tint = CinemaTheme.colors.danger,
+                    tone = TextTone.Danger,
                     modifier = Modifier.size(TvDimensions.iconSmall),
                 )
             } else {

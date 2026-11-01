@@ -102,6 +102,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvClockText
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -425,10 +426,10 @@ fun TvPlayerControlsOverlay(
                         )
                     } else if (metadata.catchupLabel != null) {
                         // Catch-up: CATCH-UP · the programme · its channel and day, time.
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Replay,
                             contentDescription = null,
-                            tint = CinemaTheme.colors.accentSoft,
+                            tone = TextTone.AccentSoft,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
                         CinemaText(text = stringResource(R.string.player_catchup), role = TextRole.Label)
@@ -750,7 +751,7 @@ fun TvPlayerControlsOverlay(
                                 icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
                                 onClick = onToggleFavorite,
-                                iconTint = if (isFavorite) CinemaTheme.colors.accent else null,
+                                iconTone = if (isFavorite) TextTone.Accent else null,
                             )
                         }
 
@@ -819,7 +820,7 @@ fun TvPlayerControlsOverlay(
 
 /**
  * One OSD button: [TvIconAction], the icon button used on details and across the app — its label
- * shows beside the icon while focused. [iconTint] marks a state (a favourite).
+ * shows beside the icon while focused. [iconTone] marks a state (a favourite).
  */
 @Composable
 private fun OsdButton(
@@ -827,9 +828,9 @@ private fun OsdButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconTint: Color? = null,
+    iconTone: TextTone? = null,
 ) {
-    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTint = iconTint)
+    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTone = iconTone)
 }
 
 /** [key] (on KeyDown) moves focus to [target]; no-op when [target] is null or can't take focus. */

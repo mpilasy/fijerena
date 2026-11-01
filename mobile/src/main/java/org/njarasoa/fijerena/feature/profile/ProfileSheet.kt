@@ -25,11 +25,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -109,10 +111,10 @@ fun ProfileSheet(
                             trailingContent =
                                 if (profile.isActive) {
                                     {
-                                        Icon(
+                                        CinemaIcon(
                                             CinemaIcons.CheckCircle,
                                             stringResource(R.string.provider_active_label),
-                                            tint = CinemaTheme.colors.accent,
+                                            tone = TextTone.Accent,
                                         )
                                     }
                                 } else {

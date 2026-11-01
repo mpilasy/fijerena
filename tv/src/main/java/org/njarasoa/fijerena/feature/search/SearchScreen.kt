@@ -150,6 +150,7 @@ import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDial
 import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -700,7 +701,7 @@ private fun SearchFilterRow(
                         .focusRequester(iconFocusRequester)
                         .entryIf(types.isEmpty())
                         .then(if (types.isEmpty()) Modifier.leftToRail() else Modifier),
-                iconTint = if (active) CinemaTheme.colors.accent else null,
+                iconTone = if (active) TextTone.Accent else null,
             )
             summary?.let {
                 CinemaText(
@@ -1080,10 +1081,10 @@ private fun SearchHistorySection(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tint = CinemaTheme.colors.textSecondary,
+                            tone = TextTone.Secondary,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
                         CinemaText(text = term, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1487,10 +1488,10 @@ private fun CollapsibleHeader(
                 tone = TextTone.Secondary,
                 modifier = Modifier.padding(end = Spacing.sm),
             )
-            Icon(
+            TvIcon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tint = CinemaTheme.colors.textSecondary,
+                tone = TextTone.Secondary,
                 modifier = Modifier.size(TvDimensions.iconMedium),
             )
         }
@@ -1774,10 +1775,10 @@ internal fun TmdbTitleRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
+            TvIcon(
                 imageVector = if (onWishlist) CinemaIcons.Bookmark else CinemaIcons.CloudOff,
                 contentDescription = stringResource(if (onWishlist) R.string.wanted_title else R.string.wanted_not_available),
-                tint = if (onWishlist) CinemaTheme.colors.accent else CinemaTheme.colors.textSecondary,
+                tone = if (onWishlist) TextTone.Accent else TextTone.Secondary,
                 modifier = Modifier.size(TvDimensions.iconMedium),
             )
         }

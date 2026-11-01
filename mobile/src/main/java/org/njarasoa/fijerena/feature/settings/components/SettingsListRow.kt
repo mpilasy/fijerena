@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -89,10 +90,10 @@ fun SettingsListRow(
             }
 
             onClick != null -> {
-                Icon(
+                CinemaIcon(
                     CinemaIcons.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = colorOf(summaryTone),
+                    tone = summaryTone,
                 )
             }
         }

@@ -934,7 +934,7 @@ fun MobilePlayerContent(
                                                 controlsVisible -> WaitStyle.liftedIndicatorSize
                                                 else -> WaitStyle.indicatorSize
                                             },
-                                        tint = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
+                                        sceneColor = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
                                     )
                                 }
                             }

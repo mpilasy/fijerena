@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
@@ -48,7 +49,7 @@ fun TvOptionRow(
                     if (activeLabel != null) {
                         CinemaText(text = activeLabel, role = TextRole.BodySmall, tone = TextTone.Accent)
                     } else {
-                        Icon(imageVector = CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent)
+                        TvIcon(imageVector = CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent)
                     }
                 }
             } else {

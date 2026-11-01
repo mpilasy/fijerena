@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -100,11 +101,11 @@ fun FavoriteContextMenuDialog(
                         },
                         modifier = itemModifier.fillMaxWidth(),
                         leadingContent = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.Delete,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaTheme.colors.danger,
+                                tone = TextTone.Danger,
                             )
                         },
                         headlineContent = {
@@ -123,11 +124,11 @@ fun FavoriteContextMenuDialog(
                         },
                         modifier = itemModifier.fillMaxWidth(),
                         leadingContent = {
-                            Icon(
+                            TvIcon(
                                 imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = if (isFavorite) CinemaTheme.colors.danger else CinemaTheme.colors.accent,
+                                tone = if (isFavorite) TextTone.Danger else TextTone.Accent,
                             )
                         },
                         headlineContent = {
@@ -147,11 +148,11 @@ fun FavoriteContextMenuDialog(
                         },
                         modifier = focusIf(MenuAction.WATCHED).fillMaxWidth(),
                         leadingContent = {
-                            Icon(
+                            TvIcon(
                                 imageVector = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaTheme.colors.accent,
+                                tone = TextTone.Accent,
                             )
                         },
                         headlineContent = {
@@ -170,11 +171,11 @@ fun FavoriteContextMenuDialog(
                         },
                         modifier = focusIf(MenuAction.SHOW_WATCHED).fillMaxWidth(),
                         leadingContent = {
-                            Icon(
+                            TvIcon(
                                 imageVector = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaTheme.colors.accent,
+                                tone = TextTone.Accent,
                             )
                         },
                         headlineContent = {
@@ -192,11 +193,11 @@ fun FavoriteContextMenuDialog(
                     onClick = onDismiss,
                     modifier = focusIf(MenuAction.CANCEL).fillMaxWidth(),
                     leadingContent = {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTheme.colors.textSecondary,
+                            tone = TextTone.Secondary,
                         )
                     },
                     headlineContent = {

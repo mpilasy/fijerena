@@ -149,6 +149,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -1829,10 +1830,10 @@ private fun ProgramCell(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
                         if (replayable) {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.Replay,
                                 contentDescription = stringResource(R.string.epg_replayable),
-                                tint = CinemaTheme.colors.textPrimary,
+                                tone = TextTone.Primary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }

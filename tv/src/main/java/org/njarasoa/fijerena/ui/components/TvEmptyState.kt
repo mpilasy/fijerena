@@ -90,10 +90,10 @@ fun TvEmptyState(
             modifier = Modifier.padding(Spacing.xl),
         ) {
             if (icon != null) {
-                Icon(
+                TvIcon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = CinemaTheme.colors.textSecondary,
+                    tone = TextTone.Secondary,
                     modifier = Modifier.size(TvDimensions.iconLarge),
                 )
             }
