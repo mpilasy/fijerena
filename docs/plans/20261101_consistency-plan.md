@@ -1,6 +1,6 @@
 # Consistency: one behaviour and one word for each thing
 
-**Status:** In progress 2026-11-01: Phases 1, 2 and 3 done, 4 partly (C-Q1), 5 in progress.
+**Status:** In progress 2026-11-01: Phases 1, 2 and 3 done, 4 done, 5 in progress.
 
 ## Goal
 
@@ -48,6 +48,7 @@ rule (removals last, above Cancel) holds everywhere.
   has. Swipe to remove stays.
 - **C-D4 — wishlist question.** Wire it: after a film or show from the wishlist is watched to the
   end, ask whether to remove it. TV and phone.
+- **C-D6 — Favourites order.** Decided 2026-11-01: no reorder. Favourites stay newest first on TV and phone; TV's Edit mode only removes, which the phone does by swipe.
 - **C-D5 — one date helper** (no user decision needed): one shared, Malagasy-aware helper for day
   labels and times (today, tomorrow, yesterday, short and full date, overnight end day), used by
   the guides, search, sports and the guide source dates.
@@ -59,7 +60,7 @@ rule (removals last, above Cancel) holds everywhere.
 | 1 | Errors and empty states: findings 2, 3, 4, 16; Retry everywhere, raw errors only in dev mode | Done 2026-11-01 (55050d3c9): `MobileErrorState`, `TvErrorState` in Search, Search the Guide and Sources; follow-up in progress (the other phone error screens, a clear message for a file that is not a settings file) |
 | 2 | Words: findings 5, 6, 7, 8, 9, 17 with C-D1 and C-D2, in en, fr and mg; Title Case rule kept | Done 2026-11-01 (45b98a5ef); 90 unused or merged strings deleted |
 | 3 | Dates and times: findings 1, 10, 11, 12 with C-D5 | Done 2026-11-01 (3ac940c86): `DateText` in core/ui |
-| 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Clear Recent done 2026-11-01 (6f7e5a4e5). Reorder: TV has none (its Edit mode only removes); open question C-Q1 |
+| 4 | Phone lists: Clear Recent and reorder Favourites (C-D3) | Clear Recent done 2026-11-01 (6f7e5a4e5). Reorder dropped 2026-11-01 (C-D6): Favourites stay newest first |
 | 5 | Wishlist question (C-D4) | In progress |
 | 6 | Docs (finding 14, FEATURES, RELEASE_NOTES, CONTRIBUTING wording rules) and a walk of both emulators | Not started |
 
