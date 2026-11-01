@@ -134,8 +134,7 @@ class SportsPagesFocusTest {
         // A channel in the sheet opens its preview, as a guide result: Watch now, as the game has not started.
         walk.press(Key.DirectionCenter)
         walk.press(Key.DirectionCenter)
-        walk.awaitFocused("Cancel")
-        walk.run(right("Watch now"))
+        walk.awaitFocused("Watch now")
         walk.press(Key.DirectionCenter)
         assertEquals(
             listOf(Screen.CategoryList(contentType = "LIVE_TV", initialCategoryId = "sport", initialStreamId = "7", providerId = 1)),

@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **A clearer question before watching:** the question on a game's channel and on a guide programme that is not on yet is shorter. Its title gives the start ("Starts Thu 5 Nov · 11:45"), then the channel's name on one line and, on a device with more than one source, the source it is on. **Watch now** is the main button in the theme's colour, and the buttons stand one under the other, all the same width, Cancel last. Malagasy "kalandrie" is now "alimanaka". TV and phone.
+
 ## Version: 0.9.20261101162711
 
 - **Watch now or later:** on a game's sheet, a channel of a game that has not started now asks first, as the guide does for a programme that is not on yet: **Watch now** opens the channel, **Remind Me** sets the game's reminder (shown only when the game has none), **Add to calendar** adds the game to the calendar app (only on a device that has one). A game that has started still opens its channel at once. TV and phone.

@@ -146,8 +146,7 @@ class TeamsSearchPaneFocusTest {
         )
         // The game has not started: OK asks first, and Watch now plays the channel.
         walk.press(Key.DirectionCenter)
-        walk.awaitFocused("Cancel")
-        walk.run(right("Watch now"))
+        walk.awaitFocused("Watch now")
         walk.press(Key.DirectionCenter)
         assertEquals(listOf("7"), played.map { it.initialStreamId })
 

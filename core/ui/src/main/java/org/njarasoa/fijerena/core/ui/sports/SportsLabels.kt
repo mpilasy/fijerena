@@ -156,15 +156,3 @@ fun asksBeforeWatching(
     game: SportsGame,
     nowSec: Long,
 ): Boolean = game.startEpochSec > nowSec
-
-/** The question before a channel of a game that has not started: "This game starts: Today · 19:30. Watch Sky Sports now?" */
-@Composable
-fun watchGameQuestion(
-    resources: Resources,
-    game: SportsGame,
-    channel: GameChannel,
-): String {
-    val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
-    val start = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(game.startEpochSec)}"
-    return resources.getString(R.string.sports_watch_confirm_message, start, shownChannelName(channel.stream.name))
-}

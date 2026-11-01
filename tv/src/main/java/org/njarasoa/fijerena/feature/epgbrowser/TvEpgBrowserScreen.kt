@@ -102,8 +102,11 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
+import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -131,6 +134,7 @@ import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
 import org.njarasoa.fijerena.ui.components.TvStatusBadgeKind
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
@@ -939,20 +943,11 @@ private fun ProgramCard(
                 val reminder = programmeReminderOf(program.title, pending, nowEpoch)?.takeUnless { bells.reminded.hasProgramme(it) }
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { CinemaText(stringResource(R.string.epg_browser_watch_confirm_title), role = TextRole.Title) },
-                    text = {
-                        CinemaText(
-                            stringResource(
-                                R.string.epg_browser_watch_confirm_message,
-                                formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
-                                pending.channelName,
-                            ),
-                            tone = TextTone.Secondary,
-                        )
-                    },
+                    title = { CinemaText(watchQuestionTitle(pending.startEpoch), role = TextRole.Title) },
+                    text = { WatchQuestionBody(pending.channelName, matched.providerId) },
                     confirmButton = {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                            CinemaButton(onClick = {
+                        CinemaButtonArea {
+                            CinemaButton(kind = ButtonKind.Main, onClick = {
                                 // A second click before the dialog leaves doesn't open the player twice (R-20).
                                 if (pendingConfirmAiring != null) {
                                     pendingConfirmAiring = null
@@ -999,12 +994,10 @@ private fun ProgramCard(
                                     )
                                 }
                             }
+                            CinemaButton(onClick = {
+                                pendingConfirmAiring = null
+                            }) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
                         }
-                    },
-                    dismissButton = {
-                        CinemaButton(onClick = {
-                            pendingConfirmAiring = null
-                        }) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
                     },
                     containerColor = CinemaTheme.colors.surface,
                 )

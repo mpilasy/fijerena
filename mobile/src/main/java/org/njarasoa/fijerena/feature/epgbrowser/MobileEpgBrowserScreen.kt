@@ -90,8 +90,10 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
+import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -710,28 +712,15 @@ private fun MobileProgramCard(
             if (pending != null && matched != null) {
                 val airingContext = LocalContext.current
                 val reminder = programmeReminderOf(program.title, pending, nowEpoch)?.takeUnless { bells.reminded.hasProgramme(it) }
+                val wide = Modifier.fillMaxWidth()
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
                     title = {
-                        CinemaText(
-                            stringResource(R.string.epg_browser_watch_confirm_title),
-                            role = TextRole.Title,
-                            tone = TextTone.Inherit,
-                        )
+                        CinemaText(watchQuestionTitle(pending.startEpoch), role = TextRole.Title, tone = TextTone.Inherit)
                     },
-                    text = {
-                        CinemaText(
-                            stringResource(
-                                R.string.epg_browser_watch_confirm_message,
-                                formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
-                                pending.channelName,
-                            ),
-                            role = TextRole.Body,
-                            tone = TextTone.Inherit,
-                        )
-                    },
+                    text = { WatchQuestionBody(pending.channelName, matched.providerId) },
                     confirmButton = {
-                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                        Column(wide, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                             CinemaDialogActionButton(
                                 onClick = {
                                     // A second click before the dialog leaves doesn't open the player twice (R-20).
@@ -740,7 +729,8 @@ private fun MobileProgramCard(
                                         onNavigateToPlayer(matched)
                                     }
                                 },
-                                kind = ButtonKind.Other,
+                                modifier = wide,
+                                kind = ButtonKind.Main,
                             ) {
                                 CinemaText(
                                     stringResource(R.string.epg_browser_watch_now_btn),
@@ -755,6 +745,7 @@ private fun MobileProgramCard(
                                         pendingConfirmAiring = null
                                         bells.remindProgramme(reminder)
                                     },
+                                    modifier = wide,
                                     kind = ButtonKind.Other,
                                 ) {
                                     CinemaText(
@@ -778,6 +769,7 @@ private fun MobileProgramCard(
                                             endEpochSeconds = pending.endEpoch,
                                         )
                                     },
+                                    modifier = wide,
                                     kind = ButtonKind.Other,
                                 ) {
                                     CinemaText(
@@ -787,17 +779,15 @@ private fun MobileProgramCard(
                                     )
                                 }
                             }
-                        }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(onClick = {
-                            pendingConfirmAiring = null
-                        }, kind = ButtonKind.Other) {
-                            CinemaText(
-                                stringResource(R.string.common_cancel),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
+                            CinemaDialogActionButton(onClick = {
+                                pendingConfirmAiring = null
+                            }, modifier = wide, kind = ButtonKind.Other) {
+                                CinemaText(
+                                    stringResource(R.string.common_cancel),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
                         }
                     },
                 )

@@ -123,7 +123,6 @@
     <string name="home_upcoming_games">Lalao ho avy</string>
     <string name="sports_remind_me">Ampahatsiahivo aho</string>
     <string name="sports_reminder_set">Voatendry ny fampahatsiahivana</string>
-    <string name="sports_watch_confirm_message">Manomboka ity lalao ity: %1$s.\nHijery ny %2$s izao?</string>
     <string name="sports_remind_team">Ampahatsiahivo aho isaky ny lalao</string>
     <string name="sports_remind_team_set">Voatendry ny fampahatsiahivana isaky ny lalao</string>
     <string name="sport_soccer">Baolina kitra</string>
@@ -512,11 +511,9 @@
     <string name="epg_browser_optimizing_label">Manatsara…</string>
     <string name="epg_browser_hint_search_titles">Karohy ny lohatenin\'ny fandaharana</string>
     <string name="epg_browser_no_file_message">Mbola tsy misy fandaharana.\nAmpio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
-    <string name="epg_browser_watch_confirm_title">Hijery ve izao?</string>
-    <string name="epg_browser_watch_confirm_message">Hivoaka amin\'ny %1$s ity fandaharana ity.\nHijery ny %2$s izao?</string>
     <string name="epg_browser_watch_now_btn">Hijery izao</string>
-    <string name="epg_browser_add_calendar_btn">Ampidiro ao amin\'ny kalandrie</string>
-    <string name="epg_browser_no_calendar_app">Tsy misy rindrankajy kalandrie hita amin\'ity fitaovana ity</string>
+    <string name="epg_browser_add_calendar_btn">Ampidiro ao amin\'ny alimanaka</string>
+    <string name="epg_browser_no_calendar_app">Tsy misy rindrankajy alimanaka hita amin\'ity fitaovana ity</string>
     <string name="epg_browser_watch_description">Hijery</string>
     <string name="epg_browser_show_less">Ahena</string>
     <string name="epg_browser_show_more">Ampio</string>
@@ -1588,4 +1585,8 @@
     <string name="game_reminder_watch">Hijery</string>
     <string name="game_reminder_dismiss">Hanilika</string>
     <string name="game_reminder_banner_hint">Tazony ny OK na tsindrio Menu hisafidianana</string>
+    <!-- The question before a channel that has not started: its title and the channel's source -->
+    <string name="watch_question_starts">Manomboka %1$s</string>
+    <string name="watch_question_source">Loharano: %1$s</string>
+    <string name="watch_question_aired">Nalefa %1$s</string>
 </resources>

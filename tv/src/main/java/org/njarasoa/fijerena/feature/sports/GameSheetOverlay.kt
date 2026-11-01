@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.addGameToCalendar
 import org.njarasoa.fijerena.core.ui.sports.asksBeforeWatching
 import org.njarasoa.fijerena.core.ui.sports.canRemind
@@ -55,12 +56,14 @@ import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
-import org.njarasoa.fijerena.core.ui.sports.watchGameQuestion
+import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
@@ -176,17 +179,16 @@ private fun WatchOrRemindDialog(
     onWatch: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val resources = LocalResources.current
     val canSetReminder = canRemind(game, System.currentTimeMillis() / 1000) && !bells.reminded.has(game)
     val context = LocalContext.current
     val canCalendar = remember { canOpenCalendar(context) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.epg_browser_watch_confirm_title), role = TextRole.Title) },
-        text = { CinemaText(watchGameQuestion(resources, game, channel), tone = TextTone.Secondary) },
+        title = { CinemaText(watchQuestionTitle(game.startEpochSec), role = TextRole.Title) },
+        text = { WatchQuestionBody(channel.stream.name, channel.stream.providerId) },
         confirmButton = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(LocalUiScale.current))) {
-                CinemaButton(onClick = onWatch) {
+            CinemaButtonArea {
+                CinemaButton(onClick = onWatch, kind = ButtonKind.Main) {
                     CinemaText(stringResource(R.string.epg_browser_watch_now_btn), role = TextRole.Label, tone = TextTone.Inherit)
                 }
                 if (canSetReminder) {
@@ -205,11 +207,9 @@ private fun WatchOrRemindDialog(
                         CinemaText(stringResource(R.string.epg_browser_add_calendar_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
-            }
-        },
-        dismissButton = {
-            CinemaButton(onClick = onDismiss) {
-                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                CinemaButton(onClick = onDismiss) {
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                }
             }
         },
         containerColor = CinemaTheme.colors.surface,

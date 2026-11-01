@@ -123,7 +123,6 @@
     <string name="home_upcoming_games">Matchs à venir</string>
     <string name="sports_remind_me">Rappel</string>
     <string name="sports_reminder_set">Rappel activé</string>
-    <string name="sports_watch_confirm_message">Ce match commence : %1$s.\nRegarder %2$s maintenant ?</string>
     <string name="sports_remind_team">Rappel pour chaque match</string>
     <string name="sports_remind_team_set">Rappels activés pour chaque match</string>
     <string name="sport_soccer">Football</string>
@@ -585,8 +584,6 @@
     <string name="epg_browser_optimizing_label">Optimisation…</string>
     <string name="epg_browser_hint_search_titles">Rechercher des titres de programmes</string>
     <string name="epg_browser_no_file_message">Pas encore de guide.\nAjoutez une source de guide dans Modifier la source → Sources de guide.</string>
-    <string name="epg_browser_watch_confirm_title">Regarder maintenant ?</string>
-    <string name="epg_browser_watch_confirm_message">Cette émission passe à %1$s.\nRegarder %2$s maintenant ?</string>
     <string name="epg_browser_watch_now_btn">Regarder maintenant</string>
     <string name="epg_browser_add_calendar_btn">Ajouter au calendrier</string>
     <string name="epg_browser_no_calendar_app">Aucune application de calendrier trouvée sur cet appareil</string>
@@ -1598,4 +1595,8 @@
     <string name="game_reminder_watch">Regarder</string>
     <string name="game_reminder_dismiss">Ignorer</string>
     <string name="game_reminder_banner_hint">Maintenez OK ou appuyez sur Menu pour choisir</string>
+    <!-- The question before a channel that has not started: its title and the channel's source -->
+    <string name="watch_question_starts">Commence %1$s</string>
+    <string name="watch_question_source">Source : %1$s</string>
+    <string name="watch_question_aired">Diffusé %1$s</string>
 </resources>
