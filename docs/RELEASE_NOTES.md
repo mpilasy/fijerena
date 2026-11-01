@@ -1,7 +1,8 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Version: 0.9.20261101095809
+## Version: 0.9.20261101101306
 
+- **Upcoming Games first:** on Home, the Upcoming Games row now comes before Favourite channels. TV and phone.
 - **New UI theme Clay:** a warm charcoal ground, a terracotta accent and warm off-white text, with serif titles (new Look and Feel **Calm**: soft corners, a quiet focus outline). Pick it on a profile's page (Look → UI Theme). TV and phone.
 - **Malagasy:** a channel made for one game ("PPV 3: Arsenal v Chelsea") is now "Fantsona manokana" on Sports. TV and phone.
 - **See a theme before you keep it:** on the phone, a tap in the UI Theme, Theme or Look and Feel picker now only marks the option and shows the picker in it. **OK** saves it; **Cancel** keeps the old one. Phone.

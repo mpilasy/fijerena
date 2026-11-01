@@ -544,9 +544,9 @@ fun ContentTypeSelectionScreen(
 
                     liveRowEntries.isNotEmpty() -> liveRowFirstFocus
 
-                    favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
-
                     upcomingGames.isNotEmpty() -> upcomingFirstFocus
+
+                    favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
 
                     else -> sectionFirstFocus(ContentType.TV_SHOWS) ?: sectionFirstFocus(ContentType.MOVIES)
                 }
@@ -1469,6 +1469,27 @@ fun ContentTypeSelectionScreen(
                                             bottom = Spacing.xl.scaled(scale),
                                         ),
                                 ) {
+                                    // Upcoming games before the favourite channels (user, 2026-11-01).
+                                    if (upcomingGames.isNotEmpty()) {
+                                        TvUpcomingGamesRow(
+                                            title = stringResource(R.string.home_upcoming_games),
+                                            games = upcomingGames,
+                                            onGameSelected = { game -> openGame = game.game.key },
+                                            firstItemFocus = upcomingFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_UPCOMING_PREFIX) },
+                                            listState = upcomingListState,
+                                            itemModifier = { game ->
+                                                Modifier
+                                                    .navReturnFocusTarget(returnFocus, RETURN_UPCOMING_PREFIX + game.game.key)
+                                                    .then(cardFocusTarget(HomeShelf.UPCOMING_GAMES, game.game.key))
+                                                    .then(artOnFocus(game.game.home.logoUrl, false))
+                                            },
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
                                     if (favoriteChannelEntries.isNotEmpty()) {
                                         TvLiveRow(
                                             title = stringResource(R.string.home_favorite_channels),
@@ -1507,26 +1528,6 @@ fun ContentTypeSelectionScreen(
                                                     .then(artOnFocus(entry.item.thumbnailUrl, false))
                                             },
                                             sourceNames = sourceNames,
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(top = Spacing.xl.scaled(scale)),
-                                        )
-                                    }
-                                    if (upcomingGames.isNotEmpty()) {
-                                        TvUpcomingGamesRow(
-                                            title = stringResource(R.string.home_upcoming_games),
-                                            games = upcomingGames,
-                                            onGameSelected = { game -> openGame = game.game.key },
-                                            firstItemFocus = upcomingFirstFocus,
-                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_UPCOMING_PREFIX) },
-                                            listState = upcomingListState,
-                                            itemModifier = { game ->
-                                                Modifier
-                                                    .navReturnFocusTarget(returnFocus, RETURN_UPCOMING_PREFIX + game.game.key)
-                                                    .then(cardFocusTarget(HomeShelf.UPCOMING_GAMES, game.game.key))
-                                                    .then(artOnFocus(game.game.home.logoUrl, false))
-                                            },
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()

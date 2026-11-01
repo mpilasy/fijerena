@@ -653,16 +653,16 @@ private fun HomeRowsColumn(
         // section's tint, its favourites first.
         if (rows.favoriteChannels.isNotEmpty() || upcoming.isNotEmpty()) {
             HomeSection(ThumbnailContentType.LIVE_TV) {
+                // Upcoming games before the favourite channels (user, 2026-11-01).
+                HomeRow(stringResource(R.string.home_upcoming_games), upcoming, { it.game.key }) { game ->
+                    MobileUpcomingGameCard(game, onClick = { onUpcoming(game) })
+                }
                 HomeRow(
                     stringResource(R.string.home_favorite_channels),
                     rows.favoriteChannels,
                     { it.item.sourceKey },
                     content = channelCard,
                 )
-                // After the favourite channels (the sports teams plan → Home row).
-                HomeRow(stringResource(R.string.home_upcoming_games), upcoming, { it.game.key }) { game ->
-                    MobileUpcomingGameCard(game, onClick = { onUpcoming(game) })
-                }
             }
         }
         sectionRows(ContentType.TV_SHOWS, rows.favoriteShows, R.string.home_favorite_shows)
