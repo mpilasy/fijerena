@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261101054935
 
 - **Four streaming-style UI themes:** pick them on a profile's page (Look → UI Theme). TV and phone.
   - **Crimson:** near-black with a red accent, bold titles and small corners (new Look and Feel **Bold**).
