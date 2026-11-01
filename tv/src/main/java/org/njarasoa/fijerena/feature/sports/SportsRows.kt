@@ -34,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
+import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
@@ -233,7 +234,7 @@ fun TvSportsHeading(
 }
 
 /**
- * A game: both teams, the home team first (on a team page, the opponent's logo), the competition
+ * A game: both teams, the home team first, with both logos (on a team page, the opponent's alone), the competition
  * and time, and its best channel
  * ([channels]' first: logo, name, "In the guide", "Event channel" or "On ESPN"; "Looking for
  * channels…" while [channels] is null, "Not found on your channels" when it is empty). [trailing]: a fixed slot after the row, outside it, for an action of its own
@@ -251,7 +252,7 @@ fun TvGameRow(
 ) {
     val resources = LocalResources.current
     val title = gameTitle(resources, game)
-    val logoTeam = team?.let { opponentIn(game, it) } ?: game.home
+    val logoTeams = gameLogoTeams(game, team)
     val details =
         listOfNotNull(
             game.competition.name.takeIf { it.isNotBlank() },
@@ -275,19 +276,21 @@ fun TvGameRow(
                     .weight(1f)
                     .fillMaxHeight(),
         ) {
-            GameRowContent(channels, title, logoTeam.logoUrl, logoTeam.name, details)
+            GameRowContent(channels, title, logoTeams, details)
         }
         trailing?.invoke(this)
     }
 }
 
-/** A game row's logo ([logoName]'s first letter when it has none), its two lines and its best channel. */
+/**
+ * A game row's logos (one team at the row's height; two at half of it, one above the other, home on
+ * top as in the title; a team's first letter when it has none), its two lines and its best channel.
+ */
 @Composable
 private fun GameRowContent(
     channels: List<GameChannel>?,
     title: String,
-    logo: String?,
-    logoName: String,
+    logoTeams: List<SportsTeam>,
     details: String,
 ) {
     Row(
@@ -295,13 +298,17 @@ private fun GameRowContent(
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CinemaThumbnail(
-            url = logo,
-            fallbackLetter = logoName.firstOrNull(Char::isLetterOrDigit),
-            contentType = ThumbnailContentType.LIVE_TV,
-            contentDescription = null,
-            modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-        )
+        Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+            logoTeams.forEach { team ->
+                CinemaThumbnail(
+                    url = team.logoUrl,
+                    fallbackLetter = team.name.firstOrNull(Char::isLetterOrDigit),
+                    contentType = ThumbnailContentType.LIVE_TV,
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).aspectRatio(1f),
+                )
+            }
+        }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             CinemaText(text = title, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
             CinemaText(text = details, role = TextRole.Body, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)

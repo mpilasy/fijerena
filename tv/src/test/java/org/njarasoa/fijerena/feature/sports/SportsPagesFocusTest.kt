@@ -201,8 +201,8 @@ class SportsPagesFocusTest {
                 SportsLeagueScreen(league = LEAGUE, onTeamSelected = { opened += it }, onPlay = {}, onBack = {}, viewModel = vm)
             }
         }
-        walk.awaitFocused("A / Arsenal v Chelsea")
-        walk.run(up("Follow"), down("A / Arsenal v Chelsea"), down("L / Liverpool v Arsenal"), down("A / Arsenal"), down("L / Liverpool"))
+        walk.awaitFocused("A / C / Arsenal v Chelsea")
+        walk.run(up("Follow"), down("A / C / Arsenal v Chelsea"), down("L / A / Liverpool v Arsenal"), down("A / Arsenal"), down("L / Liverpool"))
         walk.press(Key.DirectionCenter)
         assertEquals(listOf(LIVERPOOL.id), opened.map { it.teamId })
     }

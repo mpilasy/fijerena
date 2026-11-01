@@ -92,6 +92,12 @@ fun opponentIn(
     team: SportsTeam,
 ): SportsTeam? = if (isHomeGame(game, team)) game.away else game.home
 
+/** The teams whose logos a game's card shows: on [team]'s page its opponent alone; else both, home first (one for a game without an away team). */
+fun gameLogoTeams(
+    game: SportsGame,
+    team: SportsTeam?,
+): List<SportsTeam> = if (team != null) listOf(opponentIn(game, team) ?: game.home) else listOfNotNull(game.home, game.away)
+
 /**
  * What a channel row says under the channel's name: "In the guide" for a guide programme, "Event
  * channel" for a channel whose name names the game, "On ESPN" for a network's channel.

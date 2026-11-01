@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
+import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
@@ -193,7 +194,7 @@ fun MobileSportsHeading(
 }
 
 /**
- * A game: both teams, the home team first (on a team page, the opponent's logo), the time and the
+ * A game: both teams, the home team first, with both logos (on a team page, the opponent's alone), the time and the
  * competition, then its best channel ([channels]' first: logo, name, "In the
  * guide", "Event channel" or "On ESPN"; "Looking for channels…" while [channels] is null, "Not
  * found on your channels" when it is empty). [trailing]: a slot at
@@ -211,7 +212,6 @@ fun MobileGameCard(
 ) {
     val resources = LocalResources.current
     val title = gameTitle(resources, game)
-    val logoTeam = team?.let { opponentIn(game, it) } ?: game.home
     val details =
         listOfNotNull(
             TimeFormat.formatTime(game.startEpochSec),
@@ -224,13 +224,7 @@ fun MobileGameCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
-            CinemaThumbnail(
-                url = logoTeam.logoUrl,
-                fallbackLetter = logoTeam.name.firstOrNull(Char::isLetterOrDigit),
-                contentType = ThumbnailContentType.LIVE_TV,
-                contentDescription = null,
-                modifier = Modifier.size(MobileDimensions.iconXLarge),
-            )
+            GameLogos(gameLogoTeams(game, team))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 // Long team and competition names wrap to a second line rather than being cut.
                 CinemaText(text = title, role = TextRole.Heading, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -267,6 +261,23 @@ fun MobileGameCard(
                 }
             }
             trailing?.invoke(this)
+        }
+    }
+}
+
+/** A game card's logos: one team large; two smaller, one above the other, home on top as in the title. */
+@Composable
+private fun GameLogos(teams: List<SportsTeam>) {
+    val size = if (teams.size > 1) MobileDimensions.iconLarge else MobileDimensions.iconXLarge
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+        teams.forEach { logoTeam ->
+            CinemaThumbnail(
+                url = logoTeam.logoUrl,
+                fallbackLetter = logoTeam.name.firstOrNull(Char::isLetterOrDigit),
+                contentType = ThumbnailContentType.LIVE_TV,
+                contentDescription = null,
+                modifier = Modifier.size(size),
+            )
         }
     }
 }

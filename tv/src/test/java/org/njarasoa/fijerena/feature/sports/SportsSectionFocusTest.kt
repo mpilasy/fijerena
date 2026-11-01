@@ -146,15 +146,15 @@ class SportsSectionFocusTest {
         walk.run(
             right("P / Premier League"),
             left("A / Arsenal"),
-            down("A / Arsenal v Chelsea"),
-            down("L / Liverpool v Arsenal"),
-            up("A / Arsenal v Chelsea"),
+            down("A / C / Arsenal v Chelsea"),
+            down("L / A / Liverpool v Arsenal"),
+            up("A / C / Arsenal v Chelsea"),
             right("Remind Me"),
         )
         walk.press(Key.DirectionCenter)
         walk.awaitFocused("Reminder Set")
         assertEquals(setOf("espn/1"), bells.reminded.value.games)
-        walk.run(left("A / Arsenal v Chelsea"))
+        walk.run(left("A / C / Arsenal v Chelsea"))
     }
 
     @Test
@@ -175,11 +175,11 @@ class SportsSectionFocusTest {
 
         walk.awaitFocused("A / Arsenal")
         walk.run(
-            down("A / Arsenal v Chelsea"),
+            down("A / C / Arsenal v Chelsea"),
             center("S / Sky Sports Main Event / UK"),
             up("Remind Me"),
             down("S / Sky Sports Main Event / UK"),
-            back("A / Arsenal v Chelsea"),
+            back("A / C / Arsenal v Chelsea"),
         )
     }
 
@@ -197,11 +197,11 @@ class SportsSectionFocusTest {
 
         walk.awaitFocused("A / Arsenal")
         walk.run(
-            down("A / Arsenal v Chelsea"),
+            down("A / C / Arsenal v Chelsea"),
             up("A / Arsenal"),
             right("C / Chelsea"),
             right("L / Liverpool"),
-            down("A / Arsenal v Chelsea"),
+            down("A / C / Arsenal v Chelsea"),
             up("L / Liverpool"),
         )
     }
@@ -231,7 +231,7 @@ class SportsSectionFocusTest {
         rule.runOnIdle { ready.value = true }
         // The section's own first focus.
         walk.awaitFocused("A / Arsenal")
-        walk.run(down("A / Arsenal v Chelsea"))
+        walk.run(down("A / C / Arsenal v Chelsea"))
         rule.runOnIdle { outside.requestFocus() }
         walk.awaitFocused("Rail")
         walk.run(right("A / Arsenal"))
