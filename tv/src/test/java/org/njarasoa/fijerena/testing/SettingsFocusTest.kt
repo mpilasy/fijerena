@@ -105,7 +105,7 @@ abstract class SettingsFocusTest {
                 "Manage Sources",
                 "Guide Sources",
                 "Guide Data Maintenance",
-                "Film and Series Details (TMDB)",
+                "Film and Show Details (TMDB)",
                 "TMDB Charts",
                 "Refresh Charts",
                 "Sports",

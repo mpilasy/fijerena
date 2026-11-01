@@ -84,7 +84,7 @@ class TvGameReminderBannerFocusTest {
         walk.assertFocused("Second")
 
         walk.press(Key.Menu)
-        walk.assertFocused("Watch")
+        walk.assertFocused("Watch now")
     }
 
     @Test
@@ -92,7 +92,7 @@ class TvGameReminderBannerFocusTest {
         setScreen()
         walk.press(Key.Menu)
 
-        walk.run(right("Dismiss"), right("Dismiss"), left("Watch"), down("Watch"))
+        walk.run(right("Dismiss"), right("Dismiss"), left("Watch now"), down("Watch now"))
     }
 
     @Test

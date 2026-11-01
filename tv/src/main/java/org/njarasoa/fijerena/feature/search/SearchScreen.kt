@@ -1183,9 +1183,9 @@ private fun SearchResultsList(
                 CinemaText(
                     text =
                         if (queryContentType == "ALL") {
-                            stringResource(R.string.search_no_results_query_format_tv, query)
+                            stringResource(R.string.search_no_results_query_format, query)
                         } else {
-                            stringResource(R.string.search_no_results_type_format_tv, localizedContentTypeLabel(queryContentType), query)
+                            stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
                         },
                     tone = TextTone.Secondary,
                 )

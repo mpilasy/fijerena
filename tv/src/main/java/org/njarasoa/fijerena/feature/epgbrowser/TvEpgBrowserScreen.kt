@@ -1015,7 +1015,7 @@ private fun AiringRow(
             if (isMatched) {
                 TvIcon(
                     imageVector = CinemaIcons.PlayArrow,
-                    contentDescription = stringResource(R.string.epg_browser_watch_description),
+                    contentDescription = stringResource(R.string.epg_browser_watch_now_btn),
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
                     tone = if (isOnAir) TextTone.Success else TextTone.AccentSoft,
                 )

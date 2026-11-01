@@ -1638,11 +1638,11 @@ private fun ProgramDetailsDialog(
                 }
             }
         },
-        // Watch from start is the main action (and has focus) when the programme can be replayed:
+        // Start over is the main action (and has focus) when the programme can be replayed:
         // it is what the panel was opened for.
         main =
             if (onWatchFromStart != null) {
-                DialogAction(stringResource(R.string.epg_details_watch_from_start), onClick = onWatchFromStart)
+                DialogAction(stringResource(R.string.player_osd_start_over), onClick = onWatchFromStart)
             } else {
                 watchChannel
             },

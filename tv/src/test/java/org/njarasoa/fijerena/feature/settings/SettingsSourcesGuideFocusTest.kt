@@ -40,7 +40,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             // The fixture's sources are Xtream ones, with live channels: Guide Sources shows.
             down("Guide Sources / The guides for each source’s channels"),
             down("Guide Data Maintenance / The guide's downloads and programmes kept on this device"),
-            down("Film and Series Details (TMDB)"),
+            down("Film and Show Details (TMDB)"),
             down("TMDB Charts"),
             down("Refresh Charts"),
             down("Sports"),
@@ -49,7 +49,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             up("Sports"),
             up("Refresh Charts"),
             up("TMDB Charts"),
-            up("Film and Series Details (TMDB)"),
+            up("Film and Show Details (TMDB)"),
             up("Guide Data Maintenance"),
             // The sub-pane opens on its first action, the destructive one last.
             center("Delete leftover downloads"),
@@ -83,10 +83,10 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toShowClock(),
-            *adminDown("Show Clock", "Film and Series Details (TMDB)"),
+            *adminDown("Show Clock", "Film and Show Details (TMDB)"),
             // Focus opens on the key's Edit button.
             center("Edit TMDB key / TMDB key"),
-            left("Film and Series Details (TMDB)"),
+            left("Film and Show Details (TMDB)"),
             left("Admin"),
         )
     }

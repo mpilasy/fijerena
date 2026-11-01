@@ -6,7 +6,7 @@
 # The title row has no buttons (the section-root button went with the TV navigation rail,
 # 2026-10-08), so the walk's last UP stays on Add.
 # Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
-# source it is "Add guide source" under "No guide sources configured". No System Status or
+# source it is "Add guide source" under "No guide sources configured.". No System Status or
 # Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /
 # Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
 # the third its auto-refresh ("Refreshes daily", "Auto-refresh off").

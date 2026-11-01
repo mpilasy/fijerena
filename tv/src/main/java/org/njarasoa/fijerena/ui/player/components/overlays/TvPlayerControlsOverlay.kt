@@ -749,7 +749,7 @@ fun TvPlayerControlsOverlay(
                         if (onToggleFavorite != null) {
                             OsdButton(
                                 icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
+                                label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                                 onClick = onToggleFavorite,
                                 iconTone = if (isFavorite) TextTone.Accent else null,
                             )

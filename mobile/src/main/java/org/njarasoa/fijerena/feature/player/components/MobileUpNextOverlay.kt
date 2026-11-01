@@ -93,7 +93,7 @@ fun MobileUpNextOverlay(
                     )
                     CinemaTextButton(onClick = onPlayNow) {
                         CinemaText(
-                            text = stringResource(R.string.player_up_next_play_now),
+                            text = stringResource(R.string.epg_browser_watch_now_btn),
                             role = TextRole.Caption,
                             tone = TextTone.Inherit,
                         )

@@ -35,7 +35,7 @@ DOWN	Kids' Categories / A category shows to a child when its name has one of the
 DOWN	Kids' Film Categories / These also show, for film categories only.
 DOWN	Adult Categories / A category with one of these words never shows to a child.
 DOWN	Hidden Titles / A title with one of these words never shows to a child, also in a kids' category.
-DOWN	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
+DOWN	Exceptions / A film or show with one of these words shows to a child, also from a hidden category.
 CENTER	Add a word
 DOWN	pokemon
 REMOVE	doraemon
@@ -44,7 +44,7 @@ DOWN	doraemon
 UP	pokemon
 UP	Add a word
 # Left leaves the list, focus back on its row.
-LEFT	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
+LEFT	Exceptions / A film or show with one of these words shows to a child, also from a hidden category.
 DOWN	Check a Source
 # The first child profile's first Xtream source (Kid: panel-a, then panel-d).
 CENTER	

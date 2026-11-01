@@ -552,7 +552,7 @@ private fun ProgramDetailsSheet(
                         }
                         CinemaButton(onClick = onWatchFromStart) {
                             CinemaText(
-                                stringResource(R.string.epg_details_watch_from_start),
+                                stringResource(R.string.player_osd_start_over),
                                 role = TextRole.Label,
                                 tone = TextTone.Inherit,
                             )

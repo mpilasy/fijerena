@@ -11,7 +11,7 @@
 # Down through the favourites rows and back up: each row keeps its card.
 # Up from the row: the tile focused last (TV Shows).
 # Left on the first focusable tile (Live TV is dimmed) goes to the rail, Right comes back.
-# Down from the header: the tile focused last (Movies).
+# Down from the header: the tile focused last (Films).
 # 2026-10-09: no section tiles; Up from Continue Watching reaches the header, Down from it the first row (lines marked by -r recording).
 @start The Matrix / 2h 12m remaining
 LEFT	Home

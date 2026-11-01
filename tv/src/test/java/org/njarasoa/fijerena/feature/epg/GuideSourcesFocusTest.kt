@@ -61,7 +61,7 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
         // Both sources' groups show, Source Two's with no guide source.
         rule.onNodeWithText("Source One").assertExists()
         rule.onNodeWithText("Source Two").assertExists()
-        rule.onNodeWithText("No guide sources configured").assertExists()
+        rule.onNodeWithText("No guide sources configured.").assertExists()
         // The group's own Add, under Source One's guide source: Up reaches that guide source's row.
         walk.run(up("Refresh"))
         // The Add dialog's Use for list is checked on the emulator: its text field's cursor keeps

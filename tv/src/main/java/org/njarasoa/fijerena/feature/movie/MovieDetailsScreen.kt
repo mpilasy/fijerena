@@ -558,7 +558,7 @@ private fun MovieDetailsContent(
                                 icon = {
                                     Icon(
                                         imageVector = CinemaIcons.Replay,
-                                        contentDescription = stringResource(R.string.movie_start_beginning),
+                                        contentDescription = stringResource(R.string.player_osd_start_over),
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                     )
                                 },
@@ -583,7 +583,7 @@ private fun MovieDetailsContent(
                                 onClick = onToggleFavorite,
                                 icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 iconTone = if (isFavorite) TextTone.Accent else TextTone.Primary,
-                                label = stringResource(R.string.details_action_favorite),
+                                label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
                         }
@@ -594,7 +594,7 @@ private fun MovieDetailsContent(
                                 onClick = onToggleWatched,
                                 icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
                                 iconTone = if (isWatched) TextTone.Accent else TextTone.Primary,
-                                label = stringResource(R.string.details_action_watched),
+                                label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
                         }
