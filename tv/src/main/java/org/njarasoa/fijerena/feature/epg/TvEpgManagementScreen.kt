@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -498,22 +499,14 @@ fun TvEpgManagementScreen(
                                         ) {
                                             val lastIngested =
                                                 if (source.lastIngestedAtMs > 0) {
-                                                    java.text
-                                                        .SimpleDateFormat(
-                                                            "MMM dd, HH:mm",
-                                                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0],
-                                                        ).format(java.util.Date(source.lastIngestedAtMs))
+                                                    DateText.dateTime(LocalContext.current, source.lastIngestedAtMs)
                                                 } else {
                                                     stringResource(R.string.epg_source_never)
                                                 }
 
                                             val latestProgStr =
                                                 if (latestTime > 0) {
-                                                    java.text
-                                                        .SimpleDateFormat(
-                                                            "MMM dd, HH:mm",
-                                                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0],
-                                                        ).format(java.util.Date(latestTime * 1000L))
+                                                    DateText.dateTime(LocalContext.current, latestTime * 1000L)
                                                 } else {
                                                     stringResource(R.string.epg_source_none)
                                                 }

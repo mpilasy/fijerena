@@ -47,7 +47,6 @@ import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
@@ -57,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -267,7 +267,7 @@ private fun MobileSportsPage(
                         stickyHeader(
                             key = "day:${day.date}",
                             contentType = DAY_HEADING,
-                        ) { MobileSportsDayHeading(gameDayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
+                        ) { MobileSportsDayHeading(DateText.dayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
                         items(day.games, key = { "game:${it.key}" }) { game ->
                             MobileGameCard(
                                 game = game,

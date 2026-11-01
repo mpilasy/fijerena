@@ -42,7 +42,6 @@ import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
@@ -52,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -376,7 +376,7 @@ fun MobileUpcomingGameCard(
                 CinemaText(text = team.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CinemaText(
-                text = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
+                text = "${DateText.shortDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
                 maxLines = 1,

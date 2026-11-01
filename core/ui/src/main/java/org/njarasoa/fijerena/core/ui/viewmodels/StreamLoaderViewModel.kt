@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.net.SocketTimeoutException
 import kotlin.coroutines.CoroutineContext
@@ -952,33 +953,8 @@ internal fun catchupLabel(
     channelName: String,
     programStartSec: Long,
 ): String {
-    val zone = java.time.ZoneId.systemDefault()
-    val day =
-        java.time.Instant
-            .ofEpochSecond(programStartSec)
-            .atZone(zone)
-            .toLocalDate()
-    val today = java.time.LocalDate.now(zone)
-    val dayLabel =
-        when (day) {
-            today -> {
-                context.getString(R.string.epg_tab_today)
-            }
-
-            today.minusDays(1) -> {
-                context.getString(R.string.epg_tab_yesterday)
-            }
-
-            else -> {
-                day.format(
-                    java.time.format.DateTimeFormatter
-                        .ofPattern("EEE d MMM"),
-                )
-            }
-        }
-    val time =
-        org.njarasoa.fijerena.core.player.model.TimeFormat
-            .formatTime(context, programStartSec)
+    val dayLabel = DateText.shortDayLabel(context.resources, DateText.day(programStartSec))
+    val time = DateText.time(context, programStartSec)
     return listOf(channelName, "$dayLabel $time").filter { it.isNotBlank() }.joinToString(" · ")
 }
 

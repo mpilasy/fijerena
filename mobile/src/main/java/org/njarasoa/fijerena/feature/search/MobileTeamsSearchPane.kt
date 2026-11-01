@@ -47,7 +47,6 @@ import org.njarasoa.fijerena.core.ui.sports.GameBells
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.TeamsSearchViewModel
 import org.njarasoa.fijerena.core.ui.sports.followKey
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
@@ -59,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.feature.sports.MobileBestTeamCard
 import org.njarasoa.fijerena.feature.sports.MobileGameBell
 import org.njarasoa.fijerena.feature.sports.MobileGameCard
@@ -310,7 +310,10 @@ private fun LazyListScope.bestGameCards(
             }
             for (day in gamesByDay(games.games)) {
                 stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
-                    MobileSportsDayHeading(gameDayLabel(LocalResources.current, day.date), pinned = pinnedDay == "best_day:${day.date}")
+                    MobileSportsDayHeading(
+                        DateText.dayLabel(LocalResources.current, day.date),
+                        pinned = pinnedDay == "best_day:${day.date}",
+                    )
                 }
                 items(day.games, key = { "game:${it.key}" }, contentType = { "game" }) { game ->
                     val nowSec = remember { System.currentTimeMillis() / 1000 }

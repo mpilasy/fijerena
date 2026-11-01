@@ -81,6 +81,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -143,6 +144,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
@@ -178,7 +180,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
@@ -217,8 +218,6 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * near it). A row whose page has not arrived is a channel cell with an empty track — moves treat it
  * like a row without listings, and when its page lands focus goes on to the cell at the kept time.
  */
-
-private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 
 private const val HEADER_PREV = "prev"
 private const val HEADER_NOW = "now"
@@ -490,7 +489,8 @@ private fun GuideHeader(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val dateLabel = selectedDate.format(EPG_DATE_FORMATTER)
+    val resources = LocalResources.current
+    val dateLabel = remember(resources, selectedDate) { DateText.dayLabel(resources, selectedDate) }
     Column(modifier = modifier) {
         // The shared TV header (TV UI audit #22): "TV Guide", the list and the day as its subtitle.
         TvScreenHeader(
@@ -1604,14 +1604,8 @@ private fun ProgramDetailsDialog(
 ) {
     val watchRequester = remember { FocusRequester() }
     val fromStartRequester = remember { FocusRequester() }
-    val today = remember { LocalDate.now() }
-    val day = remember(program.startTime) { Instant.ofEpochSecond(program.startTime).atZone(ZoneId.systemDefault()).toLocalDate() }
-    val dayLabel =
-        when (day) {
-            today -> stringResource(R.string.epg_tab_today)
-            today.plusDays(1) -> stringResource(R.string.epg_tab_tomorrow)
-            else -> day.format(EPG_DATE_FORMATTER)
-        }
+    val resources = LocalResources.current
+    val dayLabel = remember(resources, program.startTime) { DateText.shortDayLabel(resources, DateText.day(program.startTime)) }
     val description = program.description?.takeIf { it.isNotBlank() }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,

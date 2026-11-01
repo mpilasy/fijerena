@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.epg
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,8 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
@@ -74,11 +74,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Date tabs: today and the six days after it (the guide loads any day; a week is what fits a thumb). */
 private const val DAY_TAB_COUNT = 7
@@ -447,8 +444,6 @@ private fun DateTabs(
     onSelectDate: (LocalDate) -> Unit,
     onNow: () -> Unit,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) { dayTabFormatter(locale) }
     val days = remember(today, pastDays) { (-pastDays until DAY_TAB_COUNT).map { today.plusDays(it.toLong()) } }
     val tabsState = rememberLazyListState(initialFirstVisibleItemIndex = pastDays)
     // Past tabs that arrive after the row first showed (the archive days load with the channels)
@@ -470,7 +465,7 @@ private fun DateTabs(
                     onClick = { onSelectDate(day) },
                     label = {
                         CinemaText(
-                            dayLabel(day, today, formatter),
+                            dayLabel(day, today),
                             role = TextRole.Label,
                             tone = TextTone.Inherit,
                         )
@@ -493,22 +488,15 @@ private fun DateTabs(
     }
 }
 
-/** "Fri 3" in the user's locale (its own order and abbreviations). */
-private fun dayTabFormatter(locale: Locale): DateTimeFormatter =
-    DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEd"), locale)
-
+/** "Today", "Tomorrow", "Yesterday", else "Tue 3 Nov" ([DateText.shortDayLabel]). */
 @Composable
 private fun dayLabel(
     day: LocalDate,
     today: LocalDate,
-    formatter: DateTimeFormatter,
-): String =
-    when (day) {
-        today -> stringResource(R.string.epg_tab_today)
-        today.plusDays(1) -> stringResource(R.string.epg_tab_tomorrow)
-        today.minusDays(1) -> stringResource(R.string.epg_tab_yesterday)
-        else -> remember(day, formatter) { day.format(formatter) }
-    }
+): String {
+    val resources = LocalResources.current
+    return remember(resources, day, today) { DateText.shortDayLabel(resources, day, today) }
+}
 
 /** Tap on a programme: what it is, where and when, and a way to watch the channel (dock). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -524,15 +512,7 @@ private fun ProgramDetailsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val program = selection.program
-    val locale = LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) { dayTabFormatter(locale) }
-    val startDay =
-        remember(program.startTime) {
-            Instant
-                .ofEpochSecond(program.startTime)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
-        }
+    val startDay = remember(program.startTime) { DateText.day(program.startTime) }
     val description = program.description?.takeIf { it.isNotBlank() }
 
     ModalBottomSheet(
@@ -557,7 +537,7 @@ private fun ProgramDetailsSheet(
                 BadgedTitle(selection.channel.name, role = TextRole.Body, tone = TextTone.Secondary)
                 CinemaText(
                     text =
-                        dayLabel(startDay, today, formatter) + " · " +
+                        dayLabel(startDay, today) + " · " +
                             TimeFormat.formatTimeRange(program.startTime, program.endTime),
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,

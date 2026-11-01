@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.UiText
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.util.Date
@@ -693,11 +694,7 @@ class EpgBrowserViewModel(
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         val zoneId = java.time.ZoneId.systemDefault()
-        val labelFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Locale.getDefault())
-
-        val now = java.time.Instant.now()
-        val today = now.atZone(zoneId).toLocalDate()
-        val tomorrow = today.plusDays(1)
+        val today = java.time.LocalDate.now(zoneId)
 
         val byDay =
             airings.groupBy {
@@ -710,21 +707,7 @@ class EpgBrowserViewModel(
         return byDay.entries
             .sortedBy { it.key }
             .map { (localDate, dayAirings) ->
-                val label =
-                    when (localDate) {
-                        today -> {
-                            "Today"
-                        }
-
-                        tomorrow -> {
-                            "Tomorrow"
-                        }
-
-                        else -> {
-                            val zdt = localDate.atStartOfDay(zoneId)
-                            labelFormat.format(java.util.Date.from(zdt.toInstant()))
-                        }
-                    }
+                val label = DateText.dayLabel(context.resources, localDate, today)
 
                 // Compute day start epoch (midnight local time) for sorting
                 val dayStartEpoch = localDate.atStartOfDay(zoneId).toInstant().epochSecond

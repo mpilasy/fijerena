@@ -1,8 +1,6 @@
 package org.njarasoa.fijerena.core.ui.utils
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -15,25 +13,7 @@ fun displayDate(
     locale: Locale = Locale.getDefault(),
 ): String {
     val day = runCatching { LocalDate.parse(raw.trim().take(ISO_DAY_LENGTH)) }.getOrNull() ?: return raw
-    // The system has no Malagasy month names: it wrote "1978 Jan 20" (found in the walk, 2026-10-30).
-    if (locale.language == "mg") return "${day.dayOfMonth} ${MALAGASY_MONTHS[day.monthValue - 1]} ${day.year}"
-    return day.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+    return DateText.mediumDate(day, locale)
 }
-
-private val MALAGASY_MONTHS =
-    listOf(
-        "Janoary",
-        "Febroary",
-        "Martsa",
-        "Aprily",
-        "Mey",
-        "Jona",
-        "Jolay",
-        "Aogositra",
-        "Septambra",
-        "Oktobra",
-        "Novambra",
-        "Desambra",
-    )
 
 private const val ISO_DAY_LENGTH = 10

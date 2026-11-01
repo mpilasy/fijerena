@@ -70,7 +70,6 @@ import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
-import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
 import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
@@ -100,6 +99,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -905,9 +905,8 @@ private fun MobileAiringRow(
                 kind = if (isOnAir) BadgeKind.Success else BadgeKind.Warning,
             )
         }
-        val airingContext = LocalContext.current
         CinemaText(
-            text = formatAiringTime(airingContext, airing.startEpoch, airing.endEpoch),
+            text = TimeFormat.formatTimeRange(airing.startEpoch, airing.endEpoch),
             role = TextRole.BodySmall,
             tone =
                 if (isOnAir) {

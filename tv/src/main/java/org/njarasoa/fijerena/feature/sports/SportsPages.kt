@@ -55,7 +55,6 @@ import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
@@ -66,6 +65,7 @@ import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -330,7 +330,7 @@ private fun TvSportsPage(
                     for (day in days) {
                         stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
                             CinemaText(
-                                text = gameDayLabel(resources, day.date),
+                                text = DateText.dayLabel(resources, day.date),
                                 tone = TextTone.Secondary,
                                 modifier =
                                     Modifier

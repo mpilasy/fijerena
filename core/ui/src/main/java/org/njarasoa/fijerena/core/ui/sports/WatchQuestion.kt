@@ -16,11 +16,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import org.njarasoa.fijerena.core.ui.utils.DateText
 
 // The question before a channel whose game or programme has not started (Watch now, Remind Me, Add to calendar), the same on TV and phone.
 
@@ -28,26 +24,13 @@ import java.util.Locale
 @Composable
 fun watchQuestionTitle(startEpochSec: Long): String {
     val resources = LocalResources.current
-    val day = Instant.ofEpochSecond(startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
+    val day = DateText.day(startEpochSec)
     val over = startEpochSec <= System.currentTimeMillis() / 1000
     return stringResource(
         if (over) R.string.watch_question_aired else R.string.watch_question_starts,
-        "${shortDayLabel(resources, day)} · ${TimeFormat.formatTime(startEpochSec)}",
+        "${DateText.shortDayLabel(resources, day)} · ${TimeFormat.formatTime(startEpochSec)}",
     )
 }
-
-/** "Today", "Tomorrow", else the short date ("Tue 3 Nov"); Malagasy has its own names. */
-internal fun shortDayLabel(
-    resources: android.content.res.Resources,
-    date: LocalDate,
-    today: LocalDate = LocalDate.now(),
-    locale: Locale = Locale.getDefault(),
-): String =
-    if (date == today || date == today.plusDays(1) || locale.language == "mg") {
-        gameDayLabel(resources, date, today, locale)
-    } else {
-        date.format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
-    }
 
 /** The question's body: the channel's name on one line, then its source when the device has more than one source. */
 @Composable
