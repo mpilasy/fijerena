@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -138,11 +139,11 @@ fun TvSearchField(
         horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
         val searchIcon: @Composable () -> Unit = {
-            Icon(
+            TvIcon(
                 imageVector = CinemaIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                tint = CinemaTheme.colors.textPrimary,
+                tone = TextTone.Primary,
             )
         }
 

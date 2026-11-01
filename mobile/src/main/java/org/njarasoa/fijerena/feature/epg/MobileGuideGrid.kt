@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
@@ -502,10 +503,10 @@ private fun ProgramCell(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
                 ) {
                     if (replayable) {
-                        Icon(
+                        CinemaIcon(
                             imageVector = CinemaIcons.Replay,
                             contentDescription = stringResource(R.string.epg_replayable),
-                            tint = CinemaTheme.colors.textPrimary,
+                            tone = TextTone.Primary,
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }

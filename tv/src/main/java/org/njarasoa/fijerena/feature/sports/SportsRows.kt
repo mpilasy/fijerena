@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.TvButtonStyle
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
@@ -102,10 +103,10 @@ fun TvSportsItemRow(
                 }
             }
             if (followed) {
-                Icon(
+                TvIcon(
                     imageVector = CinemaIcons.Star,
                     contentDescription = stringResource(R.string.sports_followed),
-                    tint = CinemaTheme.colors.accent,
+                    tone = TextTone.Accent,
                     modifier = Modifier.size(TvDimensions.iconMedium),
                 )
             }

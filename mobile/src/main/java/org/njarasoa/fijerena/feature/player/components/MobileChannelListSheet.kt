@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
@@ -42,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -103,13 +105,12 @@ fun MobileChannelListSheet(
                         role = TextRole.Heading,
                         tone = TextTone.Primary,
                     )
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            CinemaIcons.Close,
-                            contentDescription = stringResource(R.string.common_close),
-                            tint = CinemaTheme.colors.textPrimary,
-                        )
-                    }
+                    IconAction(
+                        onClick = onDismiss,
+                        icon = CinemaIcons.Close,
+                        label = stringResource(R.string.common_close),
+                        tone = TextTone.Primary,
+                    )
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 if (streams.isEmpty()) {

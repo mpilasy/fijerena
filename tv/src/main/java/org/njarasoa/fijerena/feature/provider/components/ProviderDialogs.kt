@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -589,11 +590,11 @@ fun ProviderActionsMenuDialog(
             },
             modifier = modifier.fillMaxWidth(),
             leadingContent = {
-                Icon(
+                TvIcon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(TvDimensions.iconSmall),
-                    tint = CinemaTheme.colors.accent,
+                    tone = TextTone.Accent,
                 )
             },
             headlineContent = {

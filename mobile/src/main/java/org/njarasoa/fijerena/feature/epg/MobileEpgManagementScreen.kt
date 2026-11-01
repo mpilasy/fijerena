@@ -119,9 +119,7 @@ fun MobileEpgManagementScreen(
     Scaffold(
         topBar = {
             MobileScreenHeader(title = stringResource(R.string.epg_management_screen_title), onBack = onBack) {
-                IconButton(onClick = { showAddDialog = true }) {
-                    Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.epg_add_source))
-                }
+                IconAction(onClick = { showAddDialog = true }, icon = CinemaIcons.Add, label = stringResource(R.string.epg_add_source))
             }
         },
     ) { padding ->
@@ -391,9 +389,7 @@ private fun EpgSourceCard(
                     }
                 }
 
-                IconButton(onClick = onRefresh) {
-                    Icon(CinemaIcons.Refresh, stringResource(R.string.common_refresh))
-                }
+                IconAction(onClick = onRefresh, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
             }
 
             if (activeProgress != null) {
@@ -520,7 +516,7 @@ private fun EpgSourceCard(
                     onClick = { showDeleteConfirm = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.provider_delete_button),
-                    tint = CinemaTheme.colors.danger,
+                    tone = TextTone.Danger,
                 )
             }
         }

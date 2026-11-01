@@ -63,19 +63,19 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 /**
  * The player's wait: the iris, reel or ring for [metadata] in the centre, its logo or name at the
  * top left when [showBadge] (in the banner's logo place), and Expert mode's details under it.
- * [tint] is the colour taken from the frozen frame, null for the accent.
+ * [sceneColor] is the colour taken from the frozen frame, null for the accent.
  */
 @Composable
 fun BufferingContent(
     metadata: PlayerMetadata,
     showBadge: Boolean,
-    tint: Color? = null,
+    sceneColor: Color? = null,
 ) {
     val context = LocalContext.current
     val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
     PlayerWait(
         metadata = metadata,
-        tint = tint,
+        sceneColor = sceneColor,
         showBadge = showBadge,
         showDetails = isDevMode,
         // Where the banner's top bar puts its logo, so one replaces the other in place.

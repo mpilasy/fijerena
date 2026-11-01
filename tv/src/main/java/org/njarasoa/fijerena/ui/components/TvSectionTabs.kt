@@ -163,7 +163,6 @@ private fun SectionTab(
             isSelected -> TextTone.AccentSoft
             else -> TextTone.Secondary
         }
-    val textColor = colorOf(textTone)
 
     Box(
         modifier =
@@ -206,10 +205,10 @@ private fun SectionTab(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
-                Icon(
+                TvIcon(
                     imageVector = icon,
                     contentDescription = if (isFocused) null else label,
-                    tint = textColor,
+                    tone = textTone,
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                 )
                 if (isFocused) text()

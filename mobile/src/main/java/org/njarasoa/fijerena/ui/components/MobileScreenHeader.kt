@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -169,7 +170,7 @@ private fun HeaderBack(
         CinemaIconButton(
             modifier = Modifier.detailBackBacking(solid = ground == HeaderGround.Covered),
             onClick = onBack,
-            icon = { Icon(CinemaIcons.ArrowBack, label, tint = CinemaTheme.colors.textPrimary) },
+            icon = { CinemaIcon(CinemaIcons.ArrowBack, label, tone = TextTone.Primary) },
         )
     }
 }

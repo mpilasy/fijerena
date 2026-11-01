@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -753,7 +754,7 @@ private fun WantedBanner(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(imageVector = CinemaIcons.Bookmark, contentDescription = null, tint = CinemaTheme.colors.accent)
+            CinemaIcon(imageVector = CinemaIcons.Bookmark, contentDescription = null, tone = TextTone.Accent)
             CinemaText(text = text, role = TextRole.Body, modifier = Modifier.weight(1f))
             CinemaText(text = stringResource(R.string.wanted_banner_open), role = TextRole.Label, tone = TextTone.Accent)
         }

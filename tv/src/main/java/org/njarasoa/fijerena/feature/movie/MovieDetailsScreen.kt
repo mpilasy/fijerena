@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvOtherCopiesList
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.WishlistRemovePrompt
@@ -581,7 +582,7 @@ private fun MovieDetailsContent(
                             TvIconAction(
                                 onClick = onToggleFavorite,
                                 icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                iconTint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                iconTone = if (isFavorite) TextTone.Accent else TextTone.Primary,
                                 label = stringResource(R.string.details_action_favorite),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
@@ -592,7 +593,7 @@ private fun MovieDetailsContent(
                             TvIconAction(
                                 onClick = onToggleWatched,
                                 icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
-                                iconTint = if (isWatched) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                iconTone = if (isWatched) TextTone.Accent else TextTone.Primary,
                                 label = stringResource(R.string.details_action_watched),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
@@ -601,7 +602,7 @@ private fun MovieDetailsContent(
                             TvIconAction(
                                 onClick = wishlist.toggle,
                                 icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
-                                iconTint = if (wishlist.isOn) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                iconTone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
                                 label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
@@ -1001,8 +1002,6 @@ private fun StreamNamePicker(
     focusRequester: FocusRequester,
     onFocusedChanged: (Boolean) -> Unit = {},
 ) {
-    val textColor = CinemaTheme.colors.textPrimary
-
     if (alternates.isEmpty()) {
         CinemaText(text = currentName, role = TextRole.Heading)
         return
@@ -1044,10 +1043,10 @@ private fun StreamNamePicker(
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
             CinemaText(text = currentName, role = TextRole.Heading)
-            Icon(
+            TvIcon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
-                tint = textColor,
+                tone = TextTone.Primary,
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -1056,7 +1055,7 @@ private fun StreamNamePicker(
                 Column {
                     DropdownMenuItem(
                         text = { CinemaText(currentName, role = TextRole.Heading, tone = TextTone.Accent) },
-                        leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
+                        leadingIcon = { TvIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
                         onClick = { expanded = false },
                     )
                     alternates.forEach { alternate ->

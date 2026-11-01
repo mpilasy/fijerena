@@ -131,6 +131,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
 import org.njarasoa.fijerena.ui.components.TvStatusBadgeKind
@@ -246,7 +247,7 @@ fun TvEpgBrowserScreen(
                     onClick = { if (!isRefreshing) viewModel.refreshStale() },
                     icon = CinemaIcons.Refresh,
                     label = stringResource(R.string.epg_browser_refresh_stale_description),
-                    iconTint = if (staleSourceCount > 0) CinemaTheme.colors.warning else null,
+                    iconTone = if (staleSourceCount > 0) TextTone.Warning else null,
                     iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
                 )
                 // The guides this search runs over, of a source that can have them: an Expert's
@@ -686,10 +687,10 @@ private fun EpgSearchHistorySection(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tint = CinemaTheme.colors.textSecondary,
+                            tone = TextTone.Secondary,
                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         )
                         CinemaText(
@@ -1012,11 +1013,11 @@ private fun AiringRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isMatched) {
-                Icon(
+                TvIcon(
                     imageVector = CinemaIcons.PlayArrow,
                     contentDescription = stringResource(R.string.epg_browser_watch_description),
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
-                    tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accentSoft,
+                    tone = if (isOnAir) TextTone.Success else TextTone.AccentSoft,
                 )
             }
             CinemaText(

@@ -167,10 +167,10 @@ private fun PhoneWaiting() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Icon(
+        TvIcon(
             CinemaIcons.Phone,
             contentDescription = null,
-            tint = CinemaTheme.colors.accent,
+            tone = TextTone.Accent,
             modifier = Modifier.size(PinStyle.keyWidth),
         )
         CinemaText(stringResource(R.string.pin_phone_instructions), role = TextRole.Body, textAlign = TextAlign.Center)

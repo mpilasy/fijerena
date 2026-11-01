@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /** Library data: sync, last sync, totals and per-type counts. Clearing lives in [ProviderDangerZoneSection]. */
 @Composable
@@ -237,9 +238,7 @@ fun ColumnScope.ProviderDangerZoneSection(
                         .padding(CinemaSpacing.md),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { open = false }) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                    }
+                    IconAction(onClick = { open = false }, icon = CinemaIcons.ArrowBack, label = stringResource(R.string.player_back))
                     ProviderSectionTitle(
                         title = stringResource(R.string.provider_section_danger_zone),
                         titleTone = TextTone.Danger,

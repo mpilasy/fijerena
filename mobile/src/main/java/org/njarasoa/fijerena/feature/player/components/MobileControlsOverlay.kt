@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
 import org.njarasoa.fijerena.core.ui.components.BadgeKind
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -95,6 +96,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.components.MobileClockText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -300,49 +302,40 @@ fun MobileControlsOverlay(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (onRewind != null) {
-                            IconButton(
+                            IconAction(
                                 onClick = onRewind,
-                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                            ) {
-                                Icon(
-                                    imageVector = CinemaIcons.FastRewind,
-                                    contentDescription = stringResource(R.string.player_rewind_1min_description),
-                                    tint = CinemaTheme.colors.onMedia,
-                                    modifier = Modifier.size(MobileDimensions.iconLarge),
-                                )
-                            }
-                        }
-                        IconButton(
-                            onClick = onPlayPause,
-                            modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                        ) {
-                            Icon(
-                                imageVector =
-                                    if (playbackState is PlaybackState.Paused) {
-                                        CinemaIcons.PlayArrow
-                                    } else {
-                                        CinemaIcons.Pause
-                                    },
-                                contentDescription =
-                                    stringResource(
-                                        if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
-                                    ),
-                                tint = CinemaTheme.colors.onMedia,
-                                modifier = Modifier.size(MobileDimensions.iconPlayIcon),
+                                icon = CinemaIcons.FastRewind,
+                                label = stringResource(R.string.player_rewind_1min_description),
+                                buttonSize = MobileDimensions.iconPlayContainer,
+                                tone = TextTone.OnMedia,
+                                iconModifier = Modifier.size(MobileDimensions.iconLarge),
                             )
                         }
+                        IconAction(
+                            onClick = onPlayPause,
+                            icon =
+                                if (playbackState is PlaybackState.Paused) {
+                                    CinemaIcons.PlayArrow
+                                } else {
+                                    CinemaIcons.Pause
+                                },
+                            label =
+                                stringResource(
+                                    if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
+                                ),
+                            buttonSize = MobileDimensions.iconPlayContainer,
+                            tone = TextTone.OnMedia,
+                            iconModifier = Modifier.size(MobileDimensions.iconPlayIcon),
+                        )
                         if (onFastForward != null) {
-                            IconButton(
+                            IconAction(
                                 onClick = onFastForward,
-                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                            ) {
-                                Icon(
-                                    imageVector = CinemaIcons.FastForward,
-                                    contentDescription = stringResource(R.string.player_fast_forward_5min_description),
-                                    tint = CinemaTheme.colors.onMedia,
-                                    modifier = Modifier.size(MobileDimensions.iconLarge),
-                                )
-                            }
+                                icon = CinemaIcons.FastForward,
+                                label = stringResource(R.string.player_fast_forward_5min_description),
+                                buttonSize = MobileDimensions.iconPlayContainer,
+                                tone = TextTone.OnMedia,
+                                iconModifier = Modifier.size(MobileDimensions.iconLarge),
+                            )
                         }
                     }
                 }
@@ -403,10 +396,10 @@ fun MobileControlsOverlay(
                                 )
                             } else if (metadata.catchupLabel != null) {
                                 // Catch-up: CATCH-UP · the programme · its channel and day, time.
-                                Icon(
+                                CinemaIcon(
                                     imageVector = CinemaIcons.Replay,
                                     contentDescription = null,
-                                    tint = CinemaTheme.colors.accentSoft,
+                                    tone = TextTone.AccentSoft,
                                     modifier = Modifier.size(MobileDimensions.iconSmall),
                                 )
                                 CinemaText(
@@ -591,10 +584,10 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onWatchLive,
                                 icon = {
-                                    Icon(
+                                    CinemaIcon(
                                         CinemaIcons.LiveTv,
                                         stringResource(R.string.player_osd_watch_live),
-                                        tint = CinemaTheme.colors.textPrimary,
+                                        tone = TextTone.Primary,
                                     )
                                 },
                             )
@@ -604,10 +597,10 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onStartOver,
                                 icon = {
-                                    Icon(
+                                    CinemaIcon(
                                         CinemaIcons.Replay,
                                         stringResource(R.string.player_osd_start_over),
-                                        tint = CinemaTheme.colors.textPrimary,
+                                        tone = TextTone.Primary,
                                     )
                                 },
                             )
@@ -617,7 +610,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onAudioTrack,
                                 icon = {
-                                    Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tint = CinemaTheme.colors.textPrimary)
+                                    CinemaIcon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tone = TextTone.Primary)
                                 },
                             )
                         }
@@ -626,10 +619,10 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onSubtitle,
                                 icon = {
-                                    Icon(
+                                    CinemaIcon(
                                         CinemaIcons.Subtitles,
                                         stringResource(R.string.player_subtitles),
-                                        tint = CinemaTheme.colors.textPrimary,
+                                        tone = TextTone.Primary,
                                     )
                                 },
                             )
@@ -639,7 +632,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onQuality,
                                 icon = {
-                                    Icon(CinemaIcons.Tune, stringResource(R.string.player_quality), tint = CinemaTheme.colors.textPrimary)
+                                    CinemaIcon(CinemaIcons.Tune, stringResource(R.string.player_quality), tone = TextTone.Primary)
                                 },
                             )
                         }
@@ -651,13 +644,13 @@ fun MobileControlsOverlay(
                                     onToggleFavorite()
                                 },
                                 icon = {
-                                    Icon(
+                                    CinemaIcon(
                                         imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                         contentDescription =
                                             stringResource(
                                                 if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
                                             ),
-                                        tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                                        tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
                                     )
                                 },
                             )
@@ -666,7 +659,7 @@ fun MobileControlsOverlay(
                         CinemaIconButton(
                             onClick = onStats,
                             icon = {
-                                Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tint = CinemaTheme.colors.textPrimary)
+                                CinemaIcon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tone = TextTone.Primary)
                             },
                         )
 
@@ -674,7 +667,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = { showInfo = true },
                                 icon = {
-                                    Icon(CinemaIcons.Info, stringResource(R.string.player_info), tint = CinemaTheme.colors.textPrimary)
+                                    CinemaIcon(CinemaIcons.Info, stringResource(R.string.player_info), tone = TextTone.Primary)
                                 },
                             )
                         }
@@ -686,10 +679,10 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = { onPlayNextEpisode(nextEpisode) },
                                 icon = {
-                                    Icon(
+                                    CinemaIcon(
                                         CinemaIcons.SkipNext,
                                         contentDescription = stringResource(R.string.player_next_episode),
-                                        tint = CinemaTheme.colors.textPrimary,
+                                        tone = TextTone.Primary,
                                     )
                                 },
                             )

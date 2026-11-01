@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -208,10 +209,10 @@ fun MobileCategoryLinkRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CinemaText(text = categoryName, tone = TextTone.Primary)
-            Icon(
+            CinemaIcon(
                 imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = null,
-                tint = CinemaTheme.colors.accent,
+                tone = TextTone.Accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }

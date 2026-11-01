@@ -11,6 +11,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -32,10 +34,10 @@ fun NotAvailableMark(
                 .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.scrim))
                 .padding(CinemaSpacing.xxs),
     ) {
-        Icon(
+        CinemaIcon(
             imageVector = CinemaIcons.CloudOff,
             contentDescription = stringResource(R.string.wanted_not_available),
-            tint = CinemaTheme.colors.textPrimary,
+            tone = TextTone.Primary,
             modifier = Modifier.size(iconSize),
         )
     }

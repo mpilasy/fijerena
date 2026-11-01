@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
@@ -88,10 +89,10 @@ private fun ProviderChoiceRow(
         }
         Spacer(modifier = Modifier.width(CinemaSpacing.md))
         CinemaText(value, tone = TextTone.Primary)
-        Icon(
+        CinemaIcon(
             CinemaIcons.KeyboardArrowRight,
             contentDescription = null,
-            tint = CinemaTheme.colors.textSecondary,
+            tone = TextTone.Secondary,
         )
     }
 }

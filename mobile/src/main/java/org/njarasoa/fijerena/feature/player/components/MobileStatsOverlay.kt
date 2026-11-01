@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.player.model.formatBitrate
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -55,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
@@ -354,17 +356,14 @@ fun MobileStatsOverlay(
                         role = TextRole.Heading,
                         tone = TextTone.Primary,
                     )
-                    IconButton(
+                    IconAction(
                         onClick = onClose,
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    ) {
-                        Icon(
-                            CinemaIcons.Close,
-                            contentDescription = stringResource(R.string.common_close),
-                            tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textMedium),
-                            modifier = Modifier.size(MobileDimensions.iconSmall),
-                        )
-                    }
+                        icon = CinemaIcons.Close,
+                        label = stringResource(R.string.common_close),
+                        buttonSize = MobileDimensions.iconLarge,
+                        tone = TextTone.Secondary,
+                        iconModifier = Modifier.size(MobileDimensions.iconSmall),
+                    )
                 }
 
                 // The provider's names as sent: everywhere else they are shown cleaned (the tag as a

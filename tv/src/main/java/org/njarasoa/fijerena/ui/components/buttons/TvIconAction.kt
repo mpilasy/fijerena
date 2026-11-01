@@ -43,6 +43,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -61,6 +62,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * is focused, so a row of actions stays compact and the one being pointed at says what it does.
  * The icon carries the state (filled or outlined star); [label] names the action and is the
  * button's content description. [danger] (Remove, Delete) is outlined in the error colour.
+ * [iconTone]: the glyph's colour at rest, from the theme (null: the button's content colour).
  * [on]: the button is a switch (UX-D7) — its glyph takes `TvButtonStyle.iconOnContent` at rest while
  * on, and it reads as a switch with that state; [label] then names the setting and its state.
  * See the icon buttons plan.
@@ -73,7 +75,7 @@ fun TvIconAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     danger: Boolean = false,
-    iconTint: Color? = null,
+    iconTone: TextTone? = null,
     iconModifier: Modifier = Modifier,
     on: Boolean? = null,
 ) {
@@ -141,8 +143,8 @@ fun TvIconAction(
                     when {
                         !enabled -> TvButtonStyle.disabledContent
                         focused -> androidx.tv.material3.LocalContentColor.current
-                        on == true -> iconTint ?: TvButtonStyle.iconOnContent
-                        else -> iconTint ?: androidx.tv.material3.LocalContentColor.current
+                        on == true -> iconTone?.let { colorOf(it) } ?: TvButtonStyle.iconOnContent
+                        else -> iconTone?.let { colorOf(it) } ?: androidx.tv.material3.LocalContentColor.current
                     },
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)).then(iconModifier),
             )

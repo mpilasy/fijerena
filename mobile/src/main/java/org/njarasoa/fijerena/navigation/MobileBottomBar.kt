@@ -39,6 +39,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -211,7 +212,9 @@ fun MobileBottomBar(
                 val color = if (isSelected) MobileDockStyle.selectedContent else MobileDockStyle.content
                 val label = tab.label()
                 val icon: @Composable (description: String?) -> Unit = { description ->
-                    Icon(tab.icon(), contentDescription = description, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
+                    CompositionLocalProvider(LocalContentColor provides color) {
+                        CinemaIcon(tab.icon(), contentDescription = description, modifier = Modifier.size(MobileDockStyle.iconSize))
+                    }
                 }
                 Column(
                     modifier =

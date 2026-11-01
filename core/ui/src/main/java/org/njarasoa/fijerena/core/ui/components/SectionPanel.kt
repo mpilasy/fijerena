@@ -26,11 +26,11 @@ fun SectionPanel(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = CinemaTheme.colors
-    val tint = (colors.sectionColor(section) ?: colors.surfaceRaised).copy(alpha = ControlStyle.SECTION_TINT_ALPHA)
+    val fill = (colors.sectionColor(section) ?: colors.surfaceRaised).copy(alpha = ControlStyle.SECTION_TINT_ALPHA)
     Column(
         modifier =
             modifier
-                .background(tint, CinemaTheme.shapes.card)
+                .background(fill, CinemaTheme.shapes.card)
                 .padding(contentPadding),
         verticalArrangement = verticalArrangement,
         content = content,

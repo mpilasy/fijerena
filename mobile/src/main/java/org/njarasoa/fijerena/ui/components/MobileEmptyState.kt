@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -55,10 +56,10 @@ fun MobileEmptyState(
             modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
             if (icon != null) {
-                Icon(
+                CinemaIcon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = CinemaTheme.colors.textSecondary,
+                    tone = TextTone.Secondary,
                     modifier = Modifier.size(MobileDimensions.iconXLarge),
                 )
             }

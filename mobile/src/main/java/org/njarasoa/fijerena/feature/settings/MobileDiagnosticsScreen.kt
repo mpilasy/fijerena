@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -168,10 +169,10 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                         }
                         if (causes != null) {
                             // Decorative: the entry's click label says what a tap does.
-                            Icon(
+                            CinemaIcon(
                                 imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
                                 contentDescription = null,
-                                tint = CinemaTheme.colors.textSecondary,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }

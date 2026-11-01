@@ -327,10 +327,10 @@ fun CatchupBadge(
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
+        CinemaIcon(
             imageVector = CinemaIcons.Replay,
             contentDescription = null,
-            tint = CinemaTheme.colors.textSecondary,
+            tone = TextTone.Secondary,
             modifier = Modifier.size(iconSize),
         )
         CinemaText(

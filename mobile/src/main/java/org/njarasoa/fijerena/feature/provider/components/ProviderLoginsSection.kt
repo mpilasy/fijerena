@@ -156,7 +156,7 @@ fun ColumnScope.ProviderLoginsSection(
                             icon = Icons.Outlined.Delete,
                             label = stringResource(R.string.provider_logins_remove),
                             enabled = !busy,
-                            tint = CinemaTheme.colors.danger,
+                            tone = TextTone.Danger,
                         )
                     }
                 }
@@ -265,9 +265,7 @@ private fun AddLoginDialog(
                             } else {
                                 stringResource(R.string.provider_show_password)
                             }
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
+                        IconAction(onClick = { passwordVisible = !passwordVisible }, icon = image, label = description)
                     },
                     keyboardOptions = FieldKeyboards.Password,
                     modifier = Modifier.fillMaxWidth(),

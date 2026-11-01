@@ -444,7 +444,7 @@ fun PlayerScreen(
                             BufferingContent(
                                 currentMeta,
                                 showBadge = !state.showControls && !state.showStreamInfo,
-                                tint = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
+                                sceneColor = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
                             )
                         }
                     }

@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -282,33 +283,27 @@ fun MobileCategoryFilterDialog(
                                     modifier = Modifier.width(MobileDimensions.buttonHeight),
                                 )
                                 CinemaText(rule.value, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                IconButton(
+                                IconAction(
                                     onClick = {
                                         editingIndex = index
                                         editingValue = rule.value
                                         editingMatchType = rule.matchType
                                     },
-                                    modifier = Modifier.size(MobileDimensions.iconLarge),
-                                ) {
-                                    Icon(
-                                        CinemaIcons.Edit,
-                                        contentDescription = stringResource(R.string.provider_filter_edit_rule),
-                                        modifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
-                                    )
-                                }
+                                    icon = CinemaIcons.Edit,
+                                    label = stringResource(R.string.provider_filter_edit_rule),
+                                    buttonSize = MobileDimensions.iconLarge,
+                                    iconModifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
+                                )
                                 Spacer(modifier = Modifier.width(CinemaSpacing.xxs))
-                                IconButton(
+                                IconAction(
                                     onClick = {
                                         rules = rules.toMutableList().also { it.removeAt(index) }
                                     },
-                                    modifier = Modifier.size(MobileDimensions.iconLarge),
-                                ) {
-                                    Icon(
-                                        CinemaIcons.Delete,
-                                        contentDescription = stringResource(R.string.provider_filter_delete_rule),
-                                        modifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
-                                    )
-                                }
+                                    icon = CinemaIcons.Delete,
+                                    label = stringResource(R.string.provider_filter_delete_rule),
+                                    buttonSize = MobileDimensions.iconLarge,
+                                    iconModifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
+                                )
                             }
                         }
                     }

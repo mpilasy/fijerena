@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -165,7 +166,7 @@ fun MobileTmdbTitleScreen(
                             icon = if (isWanted) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
                             label = stringResource(if (isWanted) R.string.wanted_remove else R.string.wanted_add),
                             onClick = viewModel::toggleWanted,
-                            tint = if (isWanted) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
+                            tone = if (isWanted) TextTone.Accent else TextTone.Primary,
                         )
                         details.trailerUrl?.let { trailer ->
                             DetailIconAction(

@@ -42,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgeKind
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -111,6 +113,7 @@ import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -177,35 +180,29 @@ fun MobileEpgBrowserScreen(
             MobileScreenHeader(title = stringResource(R.string.epg_browser_title), onBack = onBack) {
                 // The grid for Recent (D7); Back from it returns here.
                 guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
-                    IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) }) {
-                        Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
-                    }
+                    IconAction(
+                        onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) },
+                        icon = CinemaIcons.DateRange,
+                        label = stringResource(R.string.common_tv_guide),
+                    )
                 }
-                IconButton(
-                    onClick = { viewModel.refreshStale() },
-                    enabled = !isRefreshing,
-                ) {
-                    if (isRefreshing) {
+                if (isRefreshing) {
+                    // Where the button was, at its size.
+                    Box(modifier = Modifier.minimumInteractiveComponentSize(), contentAlignment = Alignment.Center) {
                         CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                    } else {
-                        Icon(
-                            imageVector = CinemaIcons.Refresh,
-                            contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
-                            tint =
-                                if (staleSourceCount > 0) {
-                                    CinemaTheme.colors.warning
-                                } else {
-                                    CinemaTheme.colors.textPrimary
-                                },
-                        )
                     }
+                } else {
+                    IconAction(
+                        onClick = { viewModel.refreshStale() },
+                        icon = CinemaIcons.Refresh,
+                        label = stringResource(R.string.epg_browser_refresh_stale_description),
+                        tone = if (staleSourceCount > 0) TextTone.Warning else TextTone.Primary,
+                    )
                 }
                 // The guides this search runs over, of a source that can have them: an Expert's
                 // (the profile rules plan, PR-11).
                 if (guideSourceOwners.isNotEmpty() && expert) {
-                    IconButton(onClick = onGuideSources) {
-                        Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
-                    }
+                    IconAction(onClick = onGuideSources, icon = CinemaIcons.Tune, label = stringResource(R.string.epg_sources_header))
                 }
             }
         },
@@ -321,16 +318,15 @@ internal fun MobileGuideSearchPane(
             trailingIcon = {
                 val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
                 if (query.isNotEmpty() || hasResults) {
-                    IconButton(onClick = {
-                        onQueryChange("")
-                        viewModel.clearSearch()
-                    }) {
-                        Icon(
-                            imageVector = CinemaIcons.Close,
-                            contentDescription = stringResource(R.string.provider_clear_button),
-                            modifier = Modifier.size(MobileDimensions.iconSmall),
-                        )
-                    }
+                    IconAction(
+                        onClick = {
+                            onQueryChange("")
+                            viewModel.clearSearch()
+                        },
+                        icon = CinemaIcons.Close,
+                        label = stringResource(R.string.provider_clear_button),
+                        iconModifier = Modifier.size(MobileDimensions.iconSmall),
+                    )
                 }
             },
             singleLine = true,
@@ -749,7 +745,7 @@ private fun MobileProgramCard(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
+                    CinemaIcon(
                         imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
                         contentDescription =
                             if (expanded) {
@@ -760,7 +756,7 @@ private fun MobileProgramCard(
                                 stringResource(R.string.epg_browser_show_more)
                             },
                         modifier = Modifier.size(CinemaSpacing.lg),
-                        tint = CinemaTheme.colors.accent,
+                        tone = TextTone.Accent,
                     )
                     CinemaText(
                         text =
@@ -820,11 +816,11 @@ private fun MobileAiringRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isMatched) {
-            Icon(
+            CinemaIcon(
                 imageVector = CinemaIcons.PlayArrow,
                 contentDescription = stringResource(R.string.epg_browser_watch_description),
                 modifier = Modifier.size(CinemaSpacing.lg),
-                tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accent,
+                tone = if (isOnAir) TextTone.Success else TextTone.Accent,
             )
         }
         CinemaText(
@@ -888,14 +884,13 @@ private fun MobileEpgSearchHistorySection(
                 role = TextRole.Label,
                 tone = TextTone.Secondary,
             )
-            IconButton(onClick = onClearAll) {
-                Icon(
-                    imageVector = CinemaIcons.Delete,
-                    contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                    tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
-                    modifier = Modifier.size(MobileDimensions.iconSmall),
-                )
-            }
+            IconAction(
+                onClick = onClearAll,
+                icon = CinemaIcons.Delete,
+                label = stringResource(R.string.epg_browser_clear_all_description),
+                tone = TextTone.Secondary,
+                iconModifier = Modifier.size(MobileDimensions.iconSmall),
+            )
         }
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
         FlowRow(
@@ -924,16 +919,13 @@ private fun MobileEpgSearchHistorySection(
                         )
                     },
                     trailingIcon = {
-                        IconButton(
+                        IconAction(
                             onClick = { onItemRemove(term) },
-                            modifier = Modifier.size(AssistChipDefaults.IconSize),
-                        ) {
-                            Icon(
-                                imageVector = CinemaIcons.Close,
-                                contentDescription = stringResource(R.string.epg_browser_remove_description),
-                                modifier = Modifier.size(AssistChipDefaults.IconSize),
-                            )
-                        }
+                            icon = CinemaIcons.Close,
+                            label = stringResource(R.string.epg_browser_remove_description),
+                            buttonSize = AssistChipDefaults.IconSize,
+                            iconModifier = Modifier.size(AssistChipDefaults.IconSize),
+                        )
                     },
                 )
             }

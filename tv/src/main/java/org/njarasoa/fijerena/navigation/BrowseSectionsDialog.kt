@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -61,11 +62,11 @@ internal fun BrowseSectionsDialog(
                         onClick = { onPick(contentType) },
                         modifier = Modifier.fillMaxWidth().then(if (index == 0) Modifier.focusRequester(firstFocus) else Modifier),
                         leadingContent = {
-                            Icon(
+                            TvIcon(
                                 imageVector = sectionIcon(contentType),
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaTheme.colors.textPrimary,
+                                tone = TextTone.Primary,
                             )
                         },
                         headlineContent = {
@@ -78,11 +79,11 @@ internal fun BrowseSectionsDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
                     leadingContent = {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTheme.colors.textSecondary,
+                            tone = TextTone.Secondary,
                         )
                     },
                     headlineContent = {

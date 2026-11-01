@@ -163,6 +163,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -853,10 +854,10 @@ fun MobileCategoryListScreen(
                                                 }
                                             },
                                             icon = {
-                                                Icon(
+                                                CinemaIcon(
                                                     CinemaIcons.DateRange,
                                                     guideLabel,
-                                                    tint = CinemaTheme.colors.textPrimary,
+                                                    tone = TextTone.Primary,
                                                 )
                                             },
                                         )
@@ -1308,19 +1309,16 @@ fun MobileCategoryListScreen(
                                                         )
                                                     }
 
-                                                    IconButton(
+                                                    IconAction(
                                                         onClick = {
                                                             dockPlayback?.stop()
                                                             dockTarget = null
                                                         },
+                                                        icon = CinemaIcons.Close,
+                                                        label = stringResource(R.string.common_close),
                                                         modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
-                                                    ) {
-                                                        Icon(
-                                                            CinemaIcons.Close,
-                                                            contentDescription = stringResource(R.string.common_close),
-                                                            tint = CinemaTheme.colors.onMedia,
-                                                        )
-                                                    }
+                                                        tone = TextTone.OnMedia,
+                                                    )
                                                 }
                                             }
                                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -1391,19 +1389,16 @@ fun MobileCategoryListScreen(
                                                     )
                                                 }
 
-                                                IconButton(
+                                                IconAction(
                                                     onClick = {
                                                         dockPlayback?.stop()
                                                         dockTarget = null
                                                     },
+                                                    icon = CinemaIcons.Close,
+                                                    label = stringResource(R.string.common_close),
                                                     modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
-                                                ) {
-                                                    Icon(
-                                                        CinemaIcons.Close,
-                                                        contentDescription = stringResource(R.string.common_close),
-                                                        tint = CinemaTheme.colors.onMedia,
-                                                    )
-                                                }
+                                                    tone = TextTone.OnMedia,
+                                                )
 
                                                 val colors = CinemaTheme.colors
                                                 // Over the video: the media scrim and white text in every theme (a light
@@ -1567,7 +1562,7 @@ private fun DockUnavailable(
                 onClick = onNext,
                 icon = CinemaIcons.SkipNext,
                 label = nextLabel,
-                tint = CinemaTheme.colors.onMedia,
+                tone = TextTone.OnMedia,
             )
         }
     }
@@ -1581,7 +1576,7 @@ private enum class SwipeReveal { CLOSED, FAVORITE_ACTIONS, DELETE_ACTION }
 private fun SwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
-    tint: Color,
+    fill: Color,
     onClick: () -> Unit,
 ) {
     Box(
@@ -1589,16 +1584,16 @@ private fun SwipeActionButton(
             Modifier
                 .size(MobileDimensions.swipeActionCircleSize)
                 .clip(CinemaTheme.shapes.control)
-                .background(tint)
+                .background(fill)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        CinemaIcon(
             imageVector = icon,
             contentDescription = contentDescription,
-            // Contrasts against the tinted circle behind it — `tint` here would put a same-hue icon
+            // Contrasts against the filled circle behind it — `fill` here would put a same-hue icon
             // on a same-hue background, all but invisible.
-            tint = CinemaTheme.colors.textPrimary,
+            tone = TextTone.Primary,
             modifier = Modifier.size(MobileDimensions.iconDefault),
         )
     }
@@ -1684,7 +1679,7 @@ private fun CategoryChipRow(
                     onClick = { showingAll = true },
                     icon = CinemaIcons.List,
                     label = stringResource(R.string.category_all_title),
-                    tint = CinemaTheme.colors.textSecondary,
+                    tone = TextTone.Secondary,
                 )
             }
             LazyRow(
@@ -1725,7 +1720,7 @@ private fun CategoryChipRow(
                     onClick = onGuideClick,
                     icon = CinemaIcons.DateRange,
                     label = stringResource(R.string.common_tv_guide),
-                    tint = CinemaTheme.colors.textSecondary,
+                    tone = TextTone.Secondary,
                 )
             }
         }
@@ -1773,7 +1768,7 @@ private fun AllCategoriesDialog(
                             leading = sourceNames[category.providerId]?.let { name -> { SourceBadge(name) } },
                             trailing =
                                 if (category.key == selectedCategoryKey) {
-                                    { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) }
+                                    { CinemaIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) }
                                 } else {
                                     {}
                                 },
@@ -2191,7 +2186,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
                                             ),
-                                        tint = CinemaTheme.colors.success,
+                                        fill = CinemaTheme.colors.success,
                                         onClick = {
                                             onToggleFavorite(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2214,7 +2209,7 @@ private fun StreamsList(
                                                         R.string.watched_mark_show
                                                     },
                                                 ),
-                                            tint = CinemaTheme.colors.accent,
+                                            fill = CinemaTheme.colors.accent,
                                             onClick = {
                                                 onSetShowWatched(showSeriesId, isShowWatched != true, item.providerId)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2227,7 +2222,7 @@ private fun StreamsList(
                                                 stringResource(
                                                     if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
                                                 ),
-                                            tint = CinemaTheme.colors.accent,
+                                            fill = CinemaTheme.colors.accent,
                                             onClick = {
                                                 onToggleWatched(item)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2260,7 +2255,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
                                             ),
-                                        tint = CinemaTheme.colors.danger,
+                                        fill = CinemaTheme.colors.danger,
                                         onClick = {
                                             if (isRecentList) onRemoveItem?.invoke(item) else onRemoveFavorite?.invoke(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -2617,10 +2612,10 @@ internal fun StreamCard(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
                 ) {
                     if (isWatched) {
-                        Icon(
+                        CinemaIcon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaTheme.colors.success,
+                            tone = TextTone.Success,
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }

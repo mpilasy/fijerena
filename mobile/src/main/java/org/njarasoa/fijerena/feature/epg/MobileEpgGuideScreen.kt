@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -71,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -169,18 +171,18 @@ fun MobileEpgGuideScreen(
                 subtitle = (state as? EpgViewModel.UiState.Ready)?.let { statusLine(it) },
                 onBack = onBack,
             ) {
-                IconButton(onClick = onSearch) {
-                    Icon(CinemaIcons.Search, stringResource(R.string.common_search))
-                }
-                IconButton(
-                    onClick = { viewModel.forceRefresh() },
-                    enabled = !isRefreshing,
-                ) {
-                    if (isRefreshing) {
+                IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
+                if (isRefreshing) {
+                    // Where the button was, at its size.
+                    Box(modifier = Modifier.minimumInteractiveComponentSize(), contentAlignment = Alignment.Center) {
                         CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                    } else {
-                        Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
                     }
+                } else {
+                    IconAction(
+                        onClick = { viewModel.forceRefresh() },
+                        icon = CinemaIcons.Refresh,
+                        label = stringResource(R.string.provider_refresh_button),
+                    )
                 }
             }
         },

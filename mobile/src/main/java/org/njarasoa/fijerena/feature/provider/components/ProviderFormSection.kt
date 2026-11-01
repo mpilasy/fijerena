@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 @Composable
 fun ColumnScope.ProviderFormSection(
@@ -114,9 +115,7 @@ fun ColumnScope.ProviderFormSection(
                         } else {
                             stringResource(R.string.provider_show_password)
                         }
-                    IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
-                        Icon(imageVector = image, contentDescription = description)
-                    }
+                    IconAction(onClick = { onPasswordVisibleChange(!passwordVisible) }, icon = image, label = description)
                 },
                 keyboardOptions = FieldKeyboards.Password,
                 modifier = Modifier.fillMaxWidth(),
@@ -189,9 +188,7 @@ fun ColumnScope.ProviderFormSection(
                         } else {
                             stringResource(R.string.provider_show_password)
                         }
-                    IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
-                        Icon(imageVector = image, contentDescription = description)
-                    }
+                    IconAction(onClick = { onPasswordVisibleChange(!passwordVisible) }, icon = image, label = description)
                 },
                 keyboardOptions = FieldKeyboards.Password,
                 modifier = Modifier.fillMaxWidth(),
@@ -291,9 +288,7 @@ fun ColumnScope.ProviderFormSection(
                         } else {
                             stringResource(R.string.provider_show_password)
                         }
-                    IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
-                        Icon(imageVector = image, contentDescription = description)
-                    }
+                    IconAction(onClick = { onPasswordVisibleChange(!passwordVisible) }, icon = image, label = description)
                 },
                 keyboardOptions = FieldKeyboards.Password,
                 modifier = Modifier.fillMaxWidth(),

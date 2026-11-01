@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.expiringSources
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -51,10 +52,10 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(
+            TvIcon(
                 imageVector = CinemaIcons.Warning,
                 contentDescription = null,
-                tint = CinemaTheme.colors.onDanger,
+                tone = TextTone.OnDanger,
                 modifier = Modifier.size(TvDimensions.iconSmall),
             )
             Column {

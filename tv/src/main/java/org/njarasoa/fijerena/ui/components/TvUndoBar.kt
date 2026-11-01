@@ -28,6 +28,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -169,10 +170,10 @@ fun TvUndoBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Icon(
+        TvIcon(
             imageVector = CinemaIcons.Delete,
             contentDescription = null,
-            tint = CinemaTheme.colors.textPrimary,
+            tone = TextTone.Primary,
             modifier = Modifier.size(TvDimensions.iconSmall),
         )
         CinemaText( // the panels are narrow: "Hold OK or press Menu to undo" must not be cut off

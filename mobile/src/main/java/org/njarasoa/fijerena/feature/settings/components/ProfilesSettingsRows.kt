@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
@@ -85,7 +86,7 @@ fun ProfilesSettingsRows(
         SettingsListRow(
             title = stringResource(R.string.settings_pin_nudge_title),
             summary = stringResource(R.string.settings_pin_nudge_desc),
-            leading = { Icon(CinemaIcons.Lock, contentDescription = null, tint = CinemaTheme.colors.textSecondary) },
+            leading = { CinemaIcon(CinemaIcons.Lock, contentDescription = null, tone = TextTone.Secondary) },
             onClick = { choosingPin = true },
         )
     }
@@ -128,7 +129,7 @@ fun ProfilesSettingsRows(
     if (canAddProfile) {
         SettingsListRow(
             title = stringResource(R.string.settings_profiles_add),
-            leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTheme.colors.textSecondary) },
+            leading = { CinemaIcon(CinemaIcons.Add, contentDescription = null, tone = TextTone.Secondary) },
             trailing = {},
             onClick = {
                 onDismissMessage()

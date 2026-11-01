@@ -73,11 +73,11 @@ internal fun DetailsMoreMenu(
                     },
                     modifier = firstFocus(!removes).fillMaxWidth(),
                     leadingContent = {
-                        Icon(
+                        TvIcon(
                             imageVector = icon,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTheme.colors.accent,
+                            tone = TextTone.Accent,
                         )
                     },
                     headlineContent = {
@@ -89,11 +89,11 @@ internal fun DetailsMoreMenu(
                     onClick = onDismiss,
                     modifier = firstFocus(removes).fillMaxWidth(),
                     leadingContent = {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTheme.colors.textSecondary,
+                            tone = TextTone.Secondary,
                         )
                     },
                     headlineContent = {
