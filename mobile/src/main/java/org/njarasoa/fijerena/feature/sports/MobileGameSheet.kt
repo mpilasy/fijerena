@@ -89,8 +89,7 @@ fun MobileGameSheet(
                     text =
                         listOfNotNull(
                             game.competition.name.takeIf { it.isNotBlank() },
-                            DateText.shortDayLabel(resources, day),
-                            TimeFormat.formatTime(game.startEpochSec),
+                            DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
                         ).joinToString(" · "),
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,

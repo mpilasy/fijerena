@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -19,9 +20,9 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
- * How the phone's bottom bar ([MobileBottomBar]) looks, in one place: a floating bar lifted off the
- * screen's edges, its corners from the Display style, the tab in use in a lighter pill with its icon and name in the
- * accent (under Console a solid accent block), the others white.
+ * How the phone's bottom bar ([MobileBottomBar]) looks, in one place: a floating opaque bar lifted
+ * off the screen's edges, its corners from the Display style, the tab in use in a solid accent pill
+ * with its icon and name in the theme's colour on the accent, the others in the text colour.
  */
 object MobileDockStyle {
     /** Space between the bar and the screen's sides, and under it (above the system bar). */
@@ -32,9 +33,11 @@ object MobileDockStyle {
     val barShape: Shape
         @Composable @ReadOnlyComposable
         get() = cornerShape(LocalUiStyle.current.shapes.button)
+
+    /** Opaque, also when the theme's raised surface is see-through: the page under it must not show through its labels. */
     val barContainer: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.surfaceRaised.copy(alpha = BAR_ALPHA)
+        get() = CinemaTheme.colors.surfaceRaised.compositeOver(CinemaTheme.colors.background)
     val barOutline: Color
         @Composable @ReadOnlyComposable
         get() = CinemaTheme.colors.textPrimary.copy(alpha = OUTLINE_ALPHA)
@@ -49,27 +52,23 @@ object MobileDockStyle {
         get() = cornerShape((LocalUiStyle.current.shapes.button - barPadding).coerceAtLeast(0.dp))
     val tabVerticalPadding: Dp = 8.dp
 
-    /** Under a Look with a frame (Console) the tab in use is a solid accent block, its content dark. */
+    /**
+     * The tab in use: a solid accent pill, its content in the theme's colour on the accent, so it
+     * reads in every theme (an accent label on a tinted pill does not on a dark-red theme).
+     */
     val selectedTabContainer: Color
         @Composable @ReadOnlyComposable
-        get() =
-            if (LocalUiStyle.current.frame != null) {
-                CinemaTheme.colors.accent
-            } else {
-                CinemaTheme.colors.textPrimary.copy(alpha = SELECTED_FILL_ALPHA)
-            }
+        get() = CinemaTheme.colors.accent
     val selectedContent: Color
         @Composable @ReadOnlyComposable
-        get() = if (LocalUiStyle.current.frame != null) CinemaTheme.colors.onAccent else CinemaTheme.colors.accent
+        get() = CinemaTheme.colors.onAccent
     val content: Color
         @Composable @ReadOnlyComposable
         get() = CinemaTheme.colors.textPrimary
     val iconSize: Dp = 26.dp
     val iconToLabel: Dp = 2.dp
 
-    private const val BAR_ALPHA = 0.88f
     private const val OUTLINE_ALPHA = 0.08f
-    private const val SELECTED_FILL_ALPHA = 0.10f
 }
 
 /** The bar's fill and outline, in [MobileDockStyle.barShape]. */

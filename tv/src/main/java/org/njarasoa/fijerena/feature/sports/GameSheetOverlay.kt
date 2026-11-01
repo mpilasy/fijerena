@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.sports
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -75,8 +77,6 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
-import java.time.Instant
-import java.time.ZoneId
 
 /**
  * A game's sheet over its page (the sports teams plan → Game sheet): the game, its competition, day
@@ -112,16 +112,18 @@ fun GameSheetOverlay(
     LaunchedEffect(channels != null) {
         if (returnFocus.key?.startsWith(RETURN_SHEET_PREFIX) != true) firstRow.requestFocusWithRetry()
     }
-    val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
+    val day = DateText.day(game.startEpochSec)
     val subtitle =
         listOfNotNull(
             game.competition.name.takeIf { it.isNotBlank() },
-            DateText.shortDayLabel(resources, day),
-            TimeFormat.formatTime(game.startEpochSec),
+            DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
         ).joinToString(" · ")
     val first = Modifier.focusRequester(firstRow)
 
-    LazyColumn(
+    // The ground hides the page; on it, a bounded panel. Its header stays at the top while the
+    // channels scroll under it, and its inner space keeps a focused row (which grows) inside the
+    // panel, clear of the rail.
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
@@ -134,27 +136,39 @@ fun GameSheetOverlay(
                         false
                     }
                 }.focusProperties { onExit = { cancelFocusChange() } }
-                .focusGroup(),
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .focusGroup()
+                .padding(contentPadding),
     ) {
-        item(key = "header") { TvScreenHeader(title = gameTitle(resources, game), subtitle = subtitle, actions = actions) }
-        if (channels.isNullOrEmpty()) {
-            item(key = "no_channel") {
-                TextRow(text = noChannelNote(resources, channels), modifier = first)
-            }
-        } else {
-            item(key = "channels_heading") { TvSportsHeading(stringResource(R.string.sports_channels_heading)) }
-            itemsIndexed(channels, key = { _, channel -> channelKey(channel) }) { index, channel ->
-                val key = RETURN_SHEET_PREFIX + channelKey(channel)
-                ChannelRow(
-                    channel = channel,
-                    onClick = {
-                        returnFocus.leaveFrom(key)
-                        if (asksBeforeWatching(game, System.currentTimeMillis() / 1000)) asking = channel else onPlay(channel)
-                    },
-                    modifier = (if (index == 0) first else Modifier).navReturnFocusTarget(returnFocus, key),
-                )
+        Column(modifier = Modifier.fillMaxSize().panel(PanelFill.Surface, PanelCorner.Card).padding(vertical = Spacing.md)) {
+            TvScreenHeader(
+                title = gameTitle(resources, game),
+                subtitle = subtitle,
+                actions = actions,
+                modifier = Modifier.padding(horizontal = Spacing.lg),
+            )
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (channels.isNullOrEmpty()) {
+                    item(key = "no_channel") {
+                        TextRow(text = noChannelNote(resources, channels), modifier = first)
+                    }
+                } else {
+                    item(key = "channels_heading") { TvSportsHeading(stringResource(R.string.sports_channels_heading)) }
+                    itemsIndexed(channels, key = { _, channel -> channelKey(channel) }) { index, channel ->
+                        val key = RETURN_SHEET_PREFIX + channelKey(channel)
+                        ChannelRow(
+                            channel = channel,
+                            onClick = {
+                                returnFocus.leaveFrom(key)
+                                if (asksBeforeWatching(game, System.currentTimeMillis() / 1000)) asking = channel else onPlay(channel)
+                            },
+                            modifier = (if (index == 0) first else Modifier).navReturnFocusTarget(returnFocus, key),
+                        )
+                    }
+                }
             }
         }
     }

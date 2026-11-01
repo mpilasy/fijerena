@@ -40,6 +40,15 @@ object DateText {
         locale: Locale = Locale.getDefault(),
     ): String = relativeDay(resources, date, today) ?: shortDate(date, locale)
 
+    /**
+     * "Tue 3 Nov · 14:00": [day] and [time] as one unit. Its spaces are no-break spaces, so a line
+     * that wraps moves the unit to the next line and never leaves "·" at the end of a line.
+     */
+    fun dayAndTime(
+        day: String,
+        time: String,
+    ): String = "$day · $time".replace(' ', NO_BREAK_SPACE)
+
     /** "Tuesday, 3 November 2026" in the app language. */
     fun fullDate(
         date: LocalDate,
@@ -150,6 +159,8 @@ object DateText {
         }
 
     private const val MALAGASY = "mg"
+
+    private const val NO_BREAK_SPACE = '\u00A0'
 
     private val MALAGASY_DAYS = listOf("Alatsinainy", "Talata", "Alarobia", "Alakamisy", "Zoma", "Asabotsy", "Alahady")
 

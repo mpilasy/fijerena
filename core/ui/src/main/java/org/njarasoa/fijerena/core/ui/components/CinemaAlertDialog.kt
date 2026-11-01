@@ -188,7 +188,9 @@ fun CinemaAlertDialog(
                                         ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                     }
                                 }
-                                Spacer(Modifier.height(CinemaSpacing.lg))
+                                // No space under a body with no buttons after it (a list dialog
+                                // whose last row is Cancel).
+                                if (actions.isNotEmpty()) Spacer(Modifier.height(CinemaSpacing.lg))
                             }
                             actionArea()
                         }
@@ -274,7 +276,7 @@ fun CinemaAlertDialog(
                                     ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                 }
                             }
-                            Spacer(Modifier.height(CinemaSpacing.md))
+                            if (actions.isNotEmpty()) Spacer(Modifier.height(CinemaSpacing.md))
                         }
                         actionArea()
                         Spacer(Modifier.height(CinemaSpacing.md))
@@ -343,9 +345,18 @@ private fun DialogActionArea(
                 full -> List(measurables.size) { width }
                 else -> List(measurables.size) { labels.max().coerceAtMost(width) }
             }
+        // Every button as tall as the tallest, so a label that wraps does not make one button
+        // taller than the others.
+        val buttonHeight =
+            measurables
+                .mapIndexed { i, it -> it.minIntrinsicHeight(widths[i]) }
+                .max()
+                .coerceAtMost(constraints.maxHeight)
         val placeables =
             measurables.mapIndexed { i, it ->
-                it.measure(Constraints(minWidth = widths[i], maxWidth = widths[i], maxHeight = constraints.maxHeight))
+                it.measure(
+                    Constraints(minWidth = widths[i], maxWidth = widths[i], minHeight = buttonHeight, maxHeight = constraints.maxHeight),
+                )
             }
         val height = if (inRow) placeables.maxOf { it.height } else placeables.sumOf { it.height } + gaps
         layout(width, height) {

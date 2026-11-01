@@ -106,4 +106,10 @@ class DateTextTest {
         assertEquals("11 Oct 2026, 18:25", DateText.dateTime(at(11, 18, 25) * 1000L, chicago, english, clock24))
         assertEquals("11 Oktobra 2026, 18:25", DateText.dateTime(at(11, 18, 25) * 1000L, chicago, malagasy, clock24))
     }
+
+    @Test
+    fun `day and time is one unit that a line never breaks`() {
+        assertEquals("Talata\u00A03\u00A0Nov\u00A0·\u00A014:00", DateText.dayAndTime("Talata 3 Nov", "14:00"))
+        assertEquals("Tue\u00A03\u00A0Nov\u00A0·\u00A02:30\u00A0PM", DateText.dayAndTime("Tue 3 Nov", "2:30 PM"))
+    }
 }
