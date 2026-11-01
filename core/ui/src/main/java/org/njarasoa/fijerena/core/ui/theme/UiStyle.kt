@@ -296,6 +296,66 @@ val MeadowStyle =
         icon = UiIconTokens(style = IconStyle.FILLED),
     )
 
+/** Inter throughout, bold titles, small 4 dp corners, a white focus outline: a streaming-service look. */
+val BoldStyle =
+    UiStyle(
+        id = "bold",
+        nameRes = R.string.ui_style_bold,
+        shapes = UiShapeTokens(card = 4.dp, button = 4.dp, chip = 4.dp, dialog = 8.dp),
+        type =
+            UiTypeTokens(
+                fontFamily = UiFonts.Inter,
+                weightRegular = 400,
+                weightEmphasis = 700,
+                trackingTitleSp = -0.5f,
+                trackingBodySp = 0f,
+                titleWeight = 800,
+            ),
+        dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
+        grid = UiGridTokens(spacing = 8.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = false),
+        icon = UiIconTokens(style = IconStyle.FILLED),
+    )
+
+/** Manrope throughout, pill buttons and chips, 8 dp cards, bottom-sheet dialogs: a music-app look. */
+val GrooveStyle =
+    UiStyle(
+        id = "groove",
+        nameRes = R.string.ui_style_groove,
+        shapes = UiShapeTokens(card = 8.dp, button = 100.dp, chip = 100.dp, dialog = 12.dp),
+        type =
+            UiTypeTokens(
+                fontFamily = UiFonts.Manrope,
+                weightRegular = 400,
+                weightEmphasis = 700,
+                trackingTitleSp = -0.4f,
+                trackingBodySp = 0f,
+                titleWeight = 800,
+            ),
+        dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.6f),
+        grid = UiGridTokens(spacing = 8.dp, focusScale = 1.05f, focusUsesOutline = true, focusUsesShadow = false),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
+    )
+
+/** Nunito throughout, labels in spaced capitals, 6 dp corners, a focus outline with a lift and a glow: a family streaming look. */
+val SpotlightStyle =
+    UiStyle(
+        id = "spotlight",
+        nameRes = R.string.ui_style_spotlight,
+        shapes = UiShapeTokens(card = 6.dp, button = 6.dp, chip = 6.dp, dialog = 12.dp),
+        type =
+            UiTypeTokens(
+                fontFamily = UiFonts.Nunito,
+                weightRegular = 400,
+                weightEmphasis = 700,
+                trackingTitleSp = 0f,
+                trackingBodySp = 0.3f,
+                capsLabels = true,
+            ),
+        dialog = UiDialogTokens(cornerRadius = 12.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.6f),
+        grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = true),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
+    )
+
 val AllUiStyles: List<UiStyle> =
     listOf(
         MaterialStyle,
@@ -308,6 +368,9 @@ val AllUiStyles: List<UiStyle> =
         GroteskStyle,
         ConsoleStyle,
         MeadowStyle,
+        BoldStyle,
+        GrooveStyle,
+        SpotlightStyle,
     )
 
 /** Looks no longer offered, and the one each profile that had it now gets: Serif went 2026-10-19. */

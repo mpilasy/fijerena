@@ -1,5 +1,14 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Four streaming-style UI themes:** pick them on a profile's page (Look → UI Theme). TV and phone.
+  - **Crimson:** near-black with a red accent, bold titles and small corners (new Look and Feel **Bold**).
+  - **Forest:** black and dark greys with a bright green accent, pill buttons and chips, and dialogs from the bottom (new Look and Feel **Groove**).
+  - **Aurora:** near-black with a neon green accent, on the Modern Look and Feel.
+  - **Royal:** a deep navy ground with a royal blue accent; buttons in spaced capitals, and on TV a focused card gets an outline, grows and glows (new Look and Feel **Spotlight**).
+- **Forest and Aurora colour themes changed:** they now have the new greens above. A profile that used them keeps them with the new colours.
+
 ## Version: 0.9.20261101021447
 
 - **Sync catches up after an update:** when an update teaches the app a new kind of synced data (such as followed teams), the device downloads the sync group's data again once, so it also gets what other devices sent before it updated. Only changes that are newer than what the device has are applied. TV and phone.

@@ -60,8 +60,11 @@ abstract class ButtonStyle {
     @ReadOnlyComposable
     open fun content(kind: ButtonKind): Color =
         when (kind) {
-            ButtonKind.Main -> contentOn(CinemaTheme.colors.accent)
+            // The theme's own colour on its accent (Forest's green takes black, which the luminance rule misses).
+            ButtonKind.Main -> CinemaTheme.colors.onAccent
+
             ButtonKind.Other -> CinemaTheme.colors.textPrimary
+
             ButtonKind.Danger -> contentOn(CinemaTheme.colors.danger)
         }
 

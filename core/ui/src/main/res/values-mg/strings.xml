@@ -1471,6 +1471,9 @@
     <string name="ui_style_grotesk">Grotesk</string>
     <string name="ui_style_console">Konsoly</string>
     <string name="ui_style_meadow">Saha</string>
+    <string name="ui_style_bold">Mahery</string>
+    <string name="ui_style_groove">Gadona</string>
+    <string name="ui_style_spotlight">Jiro</string>
     <string name="theme_midnight">Misasakalina</string>
     <string name="theme_ember">Vainafo</string>
     <string name="theme_aurora">Aorora</string>
@@ -1479,6 +1482,8 @@
     <string name="theme_meadow">Saha</string>
     <string name="theme_meadow_dusk">Saha hariva</string>
     <string name="theme_slate">Solaitra</string>
+    <string name="theme_crimson">Mena</string>
+    <string name="theme_royal">Manga</string>
     <string name="parental_controls_title">Fanaraha-maso ny ray aman-dreny</string>
     <string name="parental_controls_desc">Izay hitan\'ny mombamomba ankizy, amin\'ny loharano rehetra. Mitovy ho an\'ny ankohonana iray manontolo: tonga amin\'ny fitaovana rehetra ny fanovana.</string>
     <string name="parental_list_kids_categories">Sokajy ho an\'ny ankizy</string>

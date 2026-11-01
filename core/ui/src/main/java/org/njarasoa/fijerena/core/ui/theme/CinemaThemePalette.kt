@@ -157,32 +157,35 @@ val AmethystPalette =
         groundEnd = Color(0xFF08060D),
     )
 
+/** Black and dark greys with a bright green accent: a music-app look (until 2026-11-01, a green-tinted ground with a jade accent). */
 val ForestPalette =
     CinemaThemePalette(
         id = "forest",
         nameRes = R.string.theme_forest,
         isLight = false,
-        accent = Color(0xFF2EBD85),
-        accentDark = Color(0xFF1E8A5F),
-        accentLight = Color(0xFF7FE0B8),
-        orange = Color(0xFFFF6D00),
-        orangeDark = Color(0xFFE65100),
-        orangeLight = Color(0xFFFFAB40),
-        background = Color(0xFF0E1311),
-        surface = Color(0xFF141B18),
-        surfaceVariant = Color(0xFF1B2420),
-        surfaceLight = Color(0xFF26322D),
-        glassBackground = Color(0xBF0E1311),
-        glassBorder = Color(0x142EBD85),
-        success = Color(0xFF4CAF50),
-        warning = Color(0xFFFFC107),
-        error = Color(0xFFF44336),
+        accent = Color(0xFF1DB954),
+        accentDark = Color(0xFF1AA34A),
+        accentLight = Color(0xFF1ED760),
+        orange = Color(0xFFF59B23),
+        orangeDark = Color(0xFFD97E0E),
+        orangeLight = Color(0xFFFFC266),
+        background = Color(0xFF121212),
+        surface = Color(0xFF181818),
+        surfaceVariant = Color(0xFF282828),
+        surfaceLight = Color(0xFF3E3E3E),
+        glassBackground = Color(0xBF121212),
+        glassBorder = Color(0x141DB954),
+        success = Color(0xFF1DB954),
+        warning = Color(0xFFFFA42B),
+        error = Color(0xFFE91429),
         live = Color(0xFFFF6D00),
         textPrimary = Color(0xFFFFFFFF),
-        textSecondary = Color(0xFFB0B8B4),
-        textTertiary = Color(0xFF808A85),
-        textDisabled = Color(0xFF5E6762),
-        scrim = Color(0x80000000),
+        textSecondary = Color(0xFFB3B3B3),
+        textTertiary = Color(0xFF7A7A7A),
+        textDisabled = Color(0xFF535353),
+        scrim = Color(0x99000000),
+        // The luminance rule gives white, which does not read on this green.
+        onAccentOverride = Color(0xFF000000),
     )
 
 /**
@@ -284,35 +287,33 @@ val EmberPalette =
         groundEnd = Color(0xFF0B0909),
     )
 
-/** Deep teal fading to violet, mint accent. */
+/** Near-black with a neon green accent: a streaming-service look (until 2026-11-01, deep teal fading to violet with a mint accent). */
 val AuroraPalette =
     CinemaThemePalette(
         id = "aurora",
         nameRes = R.string.theme_aurora,
         isLight = false,
-        accent = Color(0xFF5EF0C4),
-        accentDark = Color(0xFF1FBF92),
-        accentLight = Color(0xFFA6F7DF),
-        orange = Color(0xFFC792EA),
-        orangeDark = Color(0xFF9C64C9),
-        orangeLight = Color(0xFFE1C4F5),
-        background = Color(0xFF0A1820),
-        surface = Color(0xFF0E1F26),
-        surfaceVariant = Color(0xFF152A32),
-        surfaceLight = Color(0xFF1F3A44),
-        glassBackground = Color(0xBF0A1820),
-        glassBorder = Color(0x145EF0C4),
-        success = Color(0xFF4CAF50),
+        accent = Color(0xFF1CE783),
+        accentDark = Color(0xFF15B868),
+        accentLight = Color(0xFF6CF2B0),
+        orange = Color(0xFFFFB547),
+        orangeDark = Color(0xFFE0922A),
+        orangeLight = Color(0xFFFFD08A),
+        background = Color(0xFF0B0C0F),
+        surface = Color(0xFF16181D),
+        surfaceVariant = Color(0xFF1F2228),
+        surfaceLight = Color(0xFF2A2E36),
+        glassBackground = Color(0xBF0B0C0F),
+        glassBorder = Color(0x141CE783),
+        success = Color(0xFF1CE783),
         warning = Color(0xFFFFC107),
         error = Color(0xFFF44336),
         live = Color(0xFFFF6D00),
-        textPrimary = Color(0xFFEAFAF6),
-        textSecondary = Color(0xFF9CC4BB),
-        textTertiary = Color(0xFF6C9289),
-        textDisabled = Color(0xFF4C6962),
-        scrim = Color(0x80000000),
-        groundGlow = Color(0xFF0F3A44),
-        groundEnd = Color(0xFF1E1238),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFA7ADB8),
+        textTertiary = Color(0xFF7C828C),
+        textDisabled = Color(0xFF545862),
+        scrim = Color(0x99000000),
     )
 
 /** Neutral greys, lime accent (electric blue until 2026-10-19, too close to Deep night's). */
@@ -487,6 +488,67 @@ val MeadowPalette =
             ),
     )
 
+/** Near-black with a strong red accent and white text: a streaming-service look. */
+val CrimsonPalette =
+    CinemaThemePalette(
+        id = "crimson",
+        nameRes = R.string.theme_crimson,
+        isLight = false,
+        accent = Color(0xFFE8141C),
+        accentDark = Color(0xFFB20710),
+        accentLight = Color(0xFFFF4D55),
+        orange = Color(0xFFF5A623),
+        orangeDark = Color(0xFFC77F0A),
+        orangeLight = Color(0xFFFFC966),
+        background = Color(0xFF141414),
+        surface = Color(0xFF1C1C1C),
+        surfaceVariant = Color(0xFF262626),
+        surfaceLight = Color(0xFF333333),
+        glassBackground = Color(0xBF141414),
+        glassBorder = Color(0x14FFFFFF),
+        success = Color(0xFF46D369),
+        warning = Color(0xFFFFC107),
+        // Orange, not red: red is the accent.
+        error = Color(0xFFE87C03),
+        live = Color(0xFFE8141C),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB3B3B3),
+        textTertiary = Color(0xFF808080),
+        textDisabled = Color(0xFF595959),
+        scrim = Color(0x99000000),
+    )
+
+/** A deep navy ground fading to black, with a royal blue accent: a family streaming look. */
+val RoyalPalette =
+    CinemaThemePalette(
+        id = "royal",
+        nameRes = R.string.theme_royal,
+        isLight = false,
+        accent = Color(0xFF1F6FEB),
+        accentDark = Color(0xFF0050C0),
+        accentLight = Color(0xFF4D97FF),
+        orange = Color(0xFFF9C74F),
+        orangeDark = Color(0xFFD9A72E),
+        orangeLight = Color(0xFFFFDD8A),
+        background = Color(0xFF0F1322),
+        surface = Color(0xFF1A1D29),
+        surfaceVariant = Color(0xFF252836),
+        surfaceLight = Color(0xFF31343F),
+        glassBackground = Color(0xBF0F1322),
+        glassBorder = Color(0x144D97FF),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFF9F9F9),
+        textSecondary = Color(0xFFCACACA),
+        textTertiary = Color(0xFF8D8F99),
+        textDisabled = Color(0xFF5A5C66),
+        scrim = Color(0x99000000),
+        groundGlow = Color(0xFF1E2A4F),
+        groundEnd = Color(0xFF040714),
+    )
+
 val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
@@ -495,6 +557,8 @@ val AllPalettes: List<CinemaThemePalette> =
         AuroraPalette,
         GraphitePalette,
         SlatePalette,
+        CrimsonPalette,
+        RoyalPalette,
         AmoledBlackPalette,
         AmethystPalette,
         ForestPalette,
