@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261101095809
 
 - **New UI theme Clay:** a warm charcoal ground, a terracotta accent and warm off-white text, with serif titles (new Look and Feel **Calm**: soft corners, a quiet focus outline). Pick it on a profile's page (Look → UI Theme). TV and phone.
 - **Malagasy:** a channel made for one game ("PPV 3: Arsenal v Chelsea") is now "Fantsona manokana" on Sports. TV and phone.
