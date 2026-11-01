@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **A clearer question before watching:** the question on a game's channel and on a guide programme that is not on yet is shorter. Its title gives the start ("Starts Thu 5 Nov · 11:45"), then the channel's name on one line and, on a device with more than one source, the source it is on. **Watch now** is the main button in the theme's colour, and the buttons stand one under the other, all the same width, Cancel last. Malagasy "kalandrie" is now "alimanaka". TV and phone.
+- **One word for each thing:** the English app now says "film" and "show" everywhere: the Movies section is **Films**, and "Series Cast" is "Show Cast". Each action has one name on every screen: **Watch now**, **Start over**, **Add to Favourites** (the player too), **Mark as watched** and **Mark season as watched**. Buttons are in sentence case ("Remind me", "▶ Play film"). Delete Guide Source shows the same message on TV and phone, errors start with "Couldn't", empty lists end with a full stop, and the empty-guide message names Settings → Sources & Guide → Guide Sources. French and Malagasy have the same fixes where they had the same mix. Text that the app did not show any more is removed. TV and phone.
 
 ## Version: 0.9.20261101162711
 

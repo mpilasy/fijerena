@@ -245,7 +245,7 @@ fun TvGameReminderBanner(
                     state.close(current)
                     onWatch(current)
                 },
-                text = stringResource(R.string.game_reminder_watch),
+                text = stringResource(R.string.epg_browser_watch_now_btn),
                 modifier = Modifier.focusRequester(state.watchFocus).focusProperties { canFocus = state.armed },
             )
         }

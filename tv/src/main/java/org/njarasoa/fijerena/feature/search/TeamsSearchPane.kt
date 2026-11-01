@@ -187,7 +187,7 @@ internal fun TeamsSearchPane(
                     if (shown.isEmpty) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CinemaText(
-                                text = stringResource(R.string.search_no_results_query_format_tv, shown.query),
+                                text = stringResource(R.string.search_no_results_query_format, shown.query),
                                 tone = TextTone.Secondary,
                             )
                         }

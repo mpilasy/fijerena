@@ -637,7 +637,7 @@ fun TvEpgManagementScreen(
             text = {
                 CinemaText(
                     stringResource(
-                        R.string.epg_delete_source_message_tv,
+                        R.string.epg_delete_source_confirm_message,
                         source.label.ifBlank {
                             source.url
                         },

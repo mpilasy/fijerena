@@ -41,8 +41,8 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
             down("Terms of Use / Who is responsible for the sources you add"),
             down("Open-Source Licences / The libraries and fonts the app is built with"),
             // TMDB's attribution: one focusable row, last.
-            down("Film and Series Data / TMDB logo"),
-            down("Film and Series Data / TMDB logo"),
+            down("Film and Show Data / TMDB logo"),
+            down("Film and Show Data / TMDB logo"),
             up("Open-Source Licences"),
             back("About"),
         )
@@ -59,8 +59,8 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
             down("Terms of Use"),
             down("Open-Source Licences"),
             // No Shrink Database without Expert mode.
-            down("Film and Series Data / TMDB logo"),
-            down("Film and Series Data / TMDB logo"),
+            down("Film and Show Data / TMDB logo"),
+            down("Film and Show Data / TMDB logo"),
             left("About"),
         )
     }

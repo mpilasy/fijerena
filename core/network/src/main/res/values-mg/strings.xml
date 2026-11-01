@@ -21,7 +21,6 @@
     <string name="error_invalid_playlist">Tsy lisitra M3U no hita amin\'io adiresy io. Jereo ny URL.</string>
     <string name="error_catalog_sync_failed">Tsy nahomby ny fanavaozana ny lisitra. %1$s</string>
     <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
-    <string name="sync_error_upload_failed">Tsy nahomby ny fandefasana</string>
 
     <!-- Settings export/import -->
     <string name="settings_export_error_read_file">Tsy afaka namaky ny rakitra</string>

@@ -12,8 +12,8 @@
 # Phase 3: Left on the header's first item goes to the rail, Right comes back.
 # Phase 4: the card focused last (Live TV), not the rightmost.
 # Phase 3: Left on the first focusable tile goes to the rail, Right comes back.
-# Up from Movies: whichever header button is above it (geometric) — not asserted.
-# Phase 4: back down to the card focused last (Movies).
+# Up from Films: whichever header button is above it (geometric) — not asserted.
+# Phase 4: back down to the card focused last (Films).
 # 2026-10-09: the section tiles are gone (the rail opens the sections); Up from the first row reaches the header, Down from the header the first row.
 # Multi-source Phase 6 (part 2): the source pill is gone. The header's first item is the sources'
 # summary line ("Your sources", focusable only while a source syncs its catalogue), else Search

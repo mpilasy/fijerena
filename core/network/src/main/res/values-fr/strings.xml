@@ -23,13 +23,12 @@
     <string name="error_invalid_playlist">Cette adresse ne mène pas à une playlist M3U. Vérifiez l\'URL.</string>
     <string name="error_catalog_sync_failed">Échec de la synchronisation du catalogue. %1$s</string>
     <string name="sync_error_download_failed">Échec du téléchargement</string>
-    <string name="sync_error_upload_failed">Échec de l\'envoi</string>
 
     <!-- Settings export/import -->
     <string name="settings_export_error_read_file">Impossible de lire le fichier</string>
-    <string name="settings_export_error_import_failed">Échec de l\'importation</string>
+    <string name="settings_export_error_import_failed">Impossible d\'importer les paramètres</string>
     <string name="settings_export_error_invalid_format">Format de fichier de paramètres invalide</string>
-    <string name="settings_export_summary_import_failed_format">Échec de l\'importation : %1$s</string>
+    <string name="settings_export_summary_import_failed_format">Impossible d\'importer les paramètres : %1$s</string>
     <string name="settings_export_summary_providers_format">Sources : %1$s</string>
     <string name="settings_export_item_added_format">%1$d ajouté(s)</string>
     <string name="settings_export_item_overwritten_format">%1$d écrasé(s)</string>

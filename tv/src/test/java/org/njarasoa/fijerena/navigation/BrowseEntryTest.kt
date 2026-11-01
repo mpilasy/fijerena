@@ -68,7 +68,7 @@ class BrowseEntryTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Movies").assertIsFocused()
+        composeTestRule.onNodeWithText("Films").assertIsFocused()
         composeTestRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
         composeTestRule.waitForIdle()
 

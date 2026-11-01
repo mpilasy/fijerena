@@ -447,7 +447,7 @@ private fun MovieDetailsContent(
                         if (hasResume) {
                             DetailIconAction(
                                 icon = CinemaIcons.Replay,
-                                label = stringResource(R.string.movie_start_beginning),
+                                label = stringResource(R.string.player_osd_start_over),
                                 onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
                             )
                         }

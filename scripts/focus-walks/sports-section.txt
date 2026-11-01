@@ -2,11 +2,11 @@
 # profile following at least one team and one league (follow them from Search → Teams first). The
 # followed names, games and channels change, so rows are unasserted; only the fixed controls are.
 # Start: Home, Left to the rail, Down to Sports, OK; focus on the first followed logo.
-# Covers: Up from the logos → Find Teams; Down → the first logo again; Down → the first game; Right
-# → its bell (Remind Me, or Reminder Set when one is set); Left → the game; OK → its sheet; Back →
+# Covers: Up from the logos → Find teams; Down → the first logo again; Down → the first game; Right
+# → its bell (Remind me, or Reminder set when one is set); Left → the game; OK → its sheet; Back →
 # the game again.
 # Written 2026-10-31 from the focus tests; re-record with -r on the emulator before relying on it.
-UP	Find Teams
+UP	Find teams
 DOWN
 DOWN
 WAIT 5

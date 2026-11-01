@@ -109,7 +109,7 @@ fun TvUpNextOverlay(
                     )
                     CinemaPrimaryButton(
                         onClick = onPlayNow,
-                        text = stringResource(R.string.player_up_next_play_now),
+                        text = stringResource(R.string.epg_browser_watch_now_btn),
                         modifier = Modifier.focusRequester(playNowFocus),
                     )
                     CinemaSecondaryButton(

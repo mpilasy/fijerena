@@ -28,7 +28,7 @@ LEFT	Home
 # Admin's rail: the avatar, Home, the fake source's three sections, Sports (Admin's Sports switch
 # is on by default), Search, Settings.
 DOWN	Live TV
-DOWN	Movies
+DOWN	Films
 DOWN	TV Shows
 DOWN	Sports
 DOWN	Search
@@ -126,7 +126,7 @@ DOWN	Show Clock
 DOWN	Manage Sources
 DOWN	Guide Sources
 DOWN	Guide Data Maintenance
-DOWN	Film and Series Details (TMDB)
+DOWN	Film and Show Details (TMDB)
 DOWN	TMDB Charts
 DOWN	Refresh Charts
 DOWN	Sports

@@ -49,8 +49,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The TV Sports section (the sports teams plan → Sports section): focus on the first followed
  * logo, Right along the logos, Down to the games (a game of a followed team in a followed league
- * once), Right to its bell, which sets the reminder; Up from the logos to Find Teams and Down back;
- * OK on a game opens its sheet, whose bell is above its first channel. Nothing followed: Find Teams
+ * once), Right to its bell, which sets the reminder; Up from the logos to Find teams and Down back;
+ * OK on a game opens its sheet, whose bell is above its first channel. Nothing followed: Find teams
  * has focus.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -149,21 +149,21 @@ class SportsSectionFocusTest {
             down("A / C / Arsenal v Chelsea"),
             down("L / A / Liverpool v Arsenal"),
             up("A / C / Arsenal v Chelsea"),
-            right("Remind Me"),
+            right("Remind me"),
         )
         walk.press(Key.DirectionCenter)
-        walk.awaitFocused("Reminder Set")
+        walk.awaitFocused("Reminder set")
         assertEquals(setOf("espn/1"), bells.reminded.value.games)
         walk.run(left("A / C / Arsenal v Chelsea"))
     }
 
     @Test
-    fun `Up from the logos reaches Find Teams, and Down comes back to the first logo`() {
+    fun `Up from the logos reaches Find teams, and Down comes back to the first logo`() {
         var searches = 0
         setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)), onFindTeams = { searches++ })
 
         walk.awaitFocused("A / Arsenal")
-        walk.run(up("Find Teams"), down("A / Arsenal"), up("Find Teams"))
+        walk.run(up("Find teams"), down("A / Arsenal"), up("Find teams"))
         walk.press(Key.DirectionCenter)
         assertEquals(1, searches)
     }
@@ -177,18 +177,18 @@ class SportsSectionFocusTest {
         walk.run(
             down("A / C / Arsenal v Chelsea"),
             center("S / Sky Sports Main Event / UK"),
-            up("Remind Me"),
+            up("Remind me"),
             down("S / Sky Sports Main Event / UK"),
             back("A / C / Arsenal v Chelsea"),
         )
     }
 
     @Test
-    fun `Right from Find Teams goes nowhere, not to a game's bell`() {
+    fun `Right from Find teams goes nowhere, not to a game's bell`() {
         setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)))
 
         walk.awaitFocused("A / Arsenal")
-        walk.run(up("Find Teams"), right("Find Teams"), down("A / Arsenal"))
+        walk.run(up("Find teams"), right("Find teams"), down("A / Arsenal"))
     }
 
     @Test
@@ -238,11 +238,11 @@ class SportsSectionFocusTest {
     }
 
     @Test
-    fun `nothing followed - Find Teams has focus`() {
+    fun `nothing followed - Find teams has focus`() {
         var searches = 0
         setSection(FollowedSports.Followed(), onFindTeams = { searches++ })
 
-        walk.awaitFocused("Find Teams")
+        walk.awaitFocused("Find teams")
         walk.press(Key.DirectionCenter)
         assertEquals(1, searches)
     }

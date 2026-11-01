@@ -1652,7 +1652,7 @@ private fun ProgramDetailsDialog(
                         onClick = onWatchFromStart,
                         modifier = Modifier.focusRequester(fromStartRequester),
                         kind = ButtonKind.Main,
-                    ) { CinemaText(stringResource(R.string.epg_details_watch_from_start), role = TextRole.Label, tone = TextTone.Inherit) }
+                    ) { CinemaText(stringResource(R.string.player_osd_start_over), role = TextRole.Label, tone = TextTone.Inherit) }
                 }
                 CinemaButton(
                     onClick = onWatchChannel,

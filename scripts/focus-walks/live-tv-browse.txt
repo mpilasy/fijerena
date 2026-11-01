@@ -29,7 +29,7 @@ UP	Recent
 RIGHT	Favourites
 LEFT	Recent
 # Left on the first tab: the categories pane, on its first category (none picked yet).
-LEFT	Movies / Hold OK or press Menu for actions
+LEFT	Films / Hold OK or press Menu for actions
 # Right from a category enters the item pane on the remembered row: Recent opened again under its
 # tab, so the row is its current channel (the channel played last), not the row focused before.
 RIGHT	1KZN TV, SD, Hold OK or press Menu for actions
@@ -37,10 +37,10 @@ RIGHT	1KZN TV, SD, Hold OK or press Menu for actions
 RIGHT	1KZN TV, SD, Hold OK or press Menu for actions
 DOWN	Arena Sport 1, Hold OK or press Menu for actions
 # Left from an item lands on the picked category (here the first, none picked).
-LEFT	Movies / Hold OK or press Menu for actions
-# Left from a category goes to the rail, on the current section: Movies here, as Browse iptv sits
-# over the Movies section ("Live TV" from Home → Live TV). Right returns to the category.
-LEFT	Movies
-RIGHT	Movies / Hold OK or press Menu for actions
+LEFT	Films / Hold OK or press Menu for actions
+# Left from a category goes to the rail, on the current section: Films here, as Browse iptv sits
+# over the Films section ("Live TV" from Home → Live TV). Right returns to the category.
+LEFT	Films
+RIGHT	Films / Hold OK or press Menu for actions
 # F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
 # length varies per source.

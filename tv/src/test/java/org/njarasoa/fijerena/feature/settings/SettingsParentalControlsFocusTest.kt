@@ -38,7 +38,7 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             down("Kids' Film Categories / These also show, for film categories only."),
             down("Adult Categories / A category with one of these words never shows to a child."),
             down("Hidden Titles / A title with one of these words never shows to a child"),
-            down("Exceptions / A film or series with one of these words shows to a child"),
+            down("Exceptions / A film or show with one of these words shows to a child"),
             down("Check a Source"),
             down("Content Filters of Each Profile / Set on each profile's page, in Profiles"),
             // This Device follows on the same page.
@@ -53,7 +53,7 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             up("pokemon"),
             up("Add a word"),
             // Left leaves the list, focus back on its row.
-            left("Exceptions / A film or series with one of these words shows to a child"),
+            left("Exceptions / A film or show with one of these words shows to a child"),
             center("Add a word"),
             // Back leaves it too.
             back("Exceptions"),

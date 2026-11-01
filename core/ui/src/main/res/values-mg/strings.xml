@@ -11,17 +11,16 @@
     <string name="epg_no_stale_sources">Tsy misy mila havaozina.</string>
     <string name="epg_no_failed_sources">Tsy nisy maty ny fangalana vaovao.</string>
     <string name="epg_cache_cleaned">Nodiovina ny tahiry %1$d, nahazoana %2$s</string>
-    <string name="epg_no_stray_files">Tsy misy rakitra tsy manan-tompo tavela</string>
+    <string name="epg_no_stray_files">Tsy misy rakitra tsy manan-tompo tavela.</string>
     <string name="epg_data_cleared">Voafafa daholo ny angon\'ny fandaharana</string>
     <string name="epg_purged_programmes">Voafafa ny fandaharana %1$d</string>
-    <string name="epg_no_old_programmes">Tsy misy fandaharana taloha hofafana</string>
+    <string name="epg_no_old_programmes">Tsy misy fandaharana taloha hofafana.</string>
 
     <!-- EPG Management UI -->
     <string name="epg_add_source">Hampiditra loharanon\'ny fitarihana</string>
     <string name="epg_refresh_stale_btn">Havaozy ny lany andro (%1$d)</string>
     <string name="epg_retry_failed_btn">Haverina ny tsy nahomby (%1$d)</string>
     <string name="epg_clear_all_data_btn">Fafao daholo ny angona</string>
-    <string name="epg_maintenance_title">Fikojakojana</string>
     <string name="epg_auto_refresh_title">Fanavaozana ho azy</string>
     <string name="epg_sources_header">Ireo loharanon\'ny fitarihana</string>
     <string name="epg_cleanup_btn">Fafao ny rakitra nalaina tavela</string>
@@ -49,11 +48,11 @@
 
     <!-- Player Common -->
     <string name="player_select_audio">Resaka</string>
-    <string name="player_no_audio">Tsy misy feo azo isafidianana</string>
+    <string name="player_no_audio">Tsy misy feo azo isafidianana.</string>
     <string name="player_select_subtitles">Dikan-teny</string>
-    <string name="player_no_subtitles">Tsy misy dikan-teny azo isafidianana</string>
+    <string name="player_no_subtitles">Tsy misy dikan-teny azo isafidianana.</string>
     <string name="player_select_quality">Kalitao</string>
-    <string name="player_no_quality">Tsy misy kalitao azo isafidianana</string>
+    <string name="player_no_quality">Tsy misy kalitao azo isafidianana.</string>
     <string name="player_quality_auto">Mandeha ho azy (Adaptive)</string>
     <string name="player_subtitles_off">Tsy mandeha</string>
     <string name="player_active">Mandeha</string>
@@ -66,12 +65,12 @@
     <string name="player_back">Miverena</string>
     <string name="player_stats_title">Antsipirihany ara-teknika</string>
     <string name="player_stats_raw_name">Anarana</string>
-    <string name="player_stats_raw_series">Andiany</string>
+    <string name="player_stats_raw_series">Andian-tantara</string>
     <string name="player_stats_source">Loharano</string>
     <string name="player_stats_login">Fidirana</string>
     <string name="player_stats_login_format">%1$d amin\'ny %2$d</string>
     <string name="player_now_playing">Mandeha izao</string>
-    <string name="player_no_channels">Tsy misy fantsona azo jerena</string>
+    <string name="player_no_channels">Tsy misy fantsona azo jerena.</string>
 
     <!-- Settings -->
     <string name="settings_title">Fandrindrana</string>
@@ -89,7 +88,6 @@
     <string name="common_ok">Eny ary</string>
     <string name="common_error">Tsy nety</string>
     <string name="common_retry">Andramo indray</string>
-    <string name="common_no_items_available">Tsy nahita valiny</string>
     <string name="common_search">Tadiavo</string>
     <string name="search_tab_catalogue">Katalaogy</string>
     <string name="search_tab_guide">Fandaharana</string>
@@ -107,7 +105,7 @@
     <string name="sports_unfollow">Aza arahina intsony</string>
     <string name="sports_followed">Arahina</string>
     <string name="sports_load_error">Tsy voaangona ny lalao</string>
-    <string name="sports_no_games">Tsy misy lalao amin\'ny andro ho avy</string>
+    <string name="sports_no_games">Tsy misy lalao amin\'ny andro ho avy.</string>
     <string name="sports_not_found">Tsy hita amin\'ny fantsonao</string>
     <string name="sports_on_broadcaster">Ao amin\'ny %1$s</string>
     <string name="sports_in_guide">Ao amin\'ny fandaharana</string>
@@ -142,8 +140,6 @@
     <string name="sport_volleyball">Volley</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Ny loharano rehetra</string>
-    <!-- Phone Search: the filter icon in the field that opens the source menu -->
-    <string name="search_source_filter_label">Sivano araka ny loharano</string>
     <!-- Phone Search: under the field while one source is chosen; %1$s is its name -->
     <string name="search_source_only_format">%1$s ihany</string>
     <string name="search_filter_label">Sivana</string>
@@ -171,14 +167,11 @@
     <string name="epg_now_prefix">Izao: %1$s</string>
 
     <!-- EPG Guide UI -->
-    <string name="epg_guide_title_format">Fandaharana - %1$s</string>
     <string name="epg_loading_guide">Ao ary jerena ny fandaharana…</string>
     <string name="epg_error_loading">Tsy nahomby ny fakana ny fandaharana</string>
     <string name="epg_prev_day">Iray andro mialoha</string>
     <string name="epg_next_day">Iray andro manaraka</string>
     <string name="epg_jump_to_now">Izao</string>
-    <string name="epg_no_program_found">Tsy nahitana fandaharana</string>
-    <string name="epg_system_status">Toetry ny rafitra</string>
     <string name="epg_database_label">Tahirin-kevitra: %1$s</string>
     <string name="epg_database_empty">Tsy misy</string>
     <string name="epg_database_indexing">Mandahatra io…</string>
@@ -194,7 +187,6 @@
     <string name="epg_last_run_stats">Fandehanana farany: vita tamin\'ny %1$s • loharanon\'ny fitarihana %2$d tao anatin\'ny %3$s%4$s</string>
     <string name="epg_last_run_errors"> (fahadisoana %1$d)</string>
     <string name="epg_maintenance_desc">Ny rakitra sy fandaharan\'ny fitarihana voatahiry amin\'ity fitaovana ity</string>
-    <string name="epg_maintenance_desc_tv">Ny rakitra sy fandaharan\'ny fitarihana voatahiry amin\'ity fitaovana ity</string>
     <string name="epg_automation_freq_daily">Isan\'andro</string>
     <string name="epg_automation_freq_hours">Isaky ny %1$d ora</string>
     <string name="epg_automation_freq_weekly">Isan-kerinandro</string>
@@ -223,7 +215,7 @@
     <string name="epg_clear_db_confirm_message">Hofafana daholo ny fandaharana sy ny fantsona voatahiry. Hotehirizina ny URL-n\'ny loharanon\'ny fitarihana.</string>
     <string name="epg_clear_everything_btn">Fafao daholo</string>
     <string name="epg_delete_source_confirm_title">Hofafana ve ity loharanon\'ny fitarihana ity?</string>
-    <string name="epg_delete_source_confirm_message">Hesorina ve i \'%1$s\'? Hofafana ny angon\'ny fandaharana avy aminy.</string>
+    <string name="epg_delete_source_confirm_message">Hofafana ve i \"%1$s\"? Hofafana ny angon\'ny fandaharana avy aminy.</string>
 
     <!-- Category -->
     <string name="category_select_category">Misafidiana sokajy</string>
@@ -237,23 +229,16 @@
     <string name="watched_unmark">Mariho ho mbola tsy nojerena</string>
     <string name="watched_mark_season">Mariho ho efa nojerena ny vanim-potoana</string>
     <string name="watched_unmark_season">Mariho ho mbola tsy nojerena ny vanim-potoana</string>
-    <string name="watched_mark_show">Mariho ho efa nojerena ny andiany</string>
-    <string name="watched_unmark_show">Mariho ho mbola tsy nojerena ny andiany</string>
+    <string name="watched_mark_show">Mariho ho efa nojerena ny andian-tantara</string>
+    <string name="watched_unmark_show">Mariho ho mbola tsy nojerena ny andian-tantara</string>
     <string name="watched_mark_many_failed">Tsy nahomby ny fanovana ny marika efa nojerena</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
-    <string name="login_sign_in_title">Midira mba hanohy</string>
     <string name="browse_sign_in_ask_admin">Mbola tsy tafiditra ity loharano ity. Angataho ny mpitantana hampiditra azy.</string>
-    <string name="login_xtream_title">Fidirana Xtream</string>
     <string name="login_server_url_label">URL-n\'ny mpizara</string>
-    <string name="login_server_url_placeholder">http://example.com:8080</string>
     <string name="login_username_label">Anaran\'ny mpampiasa</string>
     <string name="login_password_label">Tenimiafina</string>
-    <string name="login_remember_me">Tadidio aho</string>
-    <string name="login_button">Hiditra</string>
-    <string name="login_success_toast">Tafiditra soa aman-tsara!</string>
-    <string name="login_footer_text">Angataho amin\'ny mpamatsy IPTV anao ny fidirana</string>
 
     <!-- Provider Setup -->
     <string name="provider_add_title">Hampiditra loharano</string>
@@ -272,8 +257,6 @@
     <string name="provider_delete_button">Fafao</string>
     <string name="provider_refresh_button">Havaozy</string>
     <string name="provider_quick_connect_title">Quick Connect</string>
-    <string name="provider_data_management_title">Fitantanana angona</string>
-    <string name="provider_settings_title">Fandrindrana ny loharano</string>
     <string name="provider_name_placeholder_xtream">o.h. IPTV-ko</string>
     <string name="provider_name_placeholder_jellyfin">o.h. Mpizara Jellyfin-ko</string>
     <string name="provider_name_placeholder_smb">o.h. Media NAS</string>
@@ -303,7 +286,6 @@
     <string name="provider_clear_button">Fafao</string>
     <string name="provider_clear_favorites_title">Hofafana daholo ve ny ankafizina?</string>
     <string name="provider_clear_favorites_message">Hofafana daholo ny ankafizina ao amin\'ny TV mivantana, Sarimihetsika ary Andian-tantara. Tsy azo averina intsony izany.</string>
-    <string name="provider_clear_progress_label">Fafao ny fandrosoan\'ny filalaovana</string>
     <string name="provider_clear_progress_title">Hofafana daholo ve ny fandrosoan\'ny filalaovana?</string>
     <string name="provider_clear_progress_message">Hofafana avokoa ny toerana voatahiry amin\'ny filalaovana. Hanomboka hatrany am-piandohana ianao rehefa mijery VOD.</string>
     <string name="provider_filter_mode_label">Fomba fanivanana:</string>
@@ -342,8 +324,6 @@
     <string name="provider_m3u_url_label">URL-n\'ny lisitra M3U</string>
     <string name="provider_m3u_url_placeholder">https://example.com/playlist.m3u</string>
     <string name="provider_edit_button">Ovay</string>
-    <string name="provider_queue_size_label">Haben\'ny filaharana</string>
-    <string name="provider_max_size_label">Habe fara-tampony</string>
     <string name="provider_clear_favorites_desc">Hofafana daholo ny ankafizina</string>
     <string name="provider_clear_favorites_button">Fafao daholo ny ankafizina</string>
     <string name="provider_clear_progress_desc">Fafao ny toerana voatahiry rehetra (ho foana ny Tohizo ny fijerena)</string>
@@ -367,7 +347,7 @@
     <string name="provider_movies_label">Sarimihetsika</string>
     <string name="provider_movies_stats">Sokajy %1$s · Sarimihetsika %2$s</string>
     <string name="provider_tv_shows_label">Andian-tantara</string>
-    <string name="provider_tv_shows_stats">Sokajy %1$s · Andiany %2$s · Fizarana %3$s</string>
+    <string name="provider_tv_shows_stats">Sokajy %1$s · Andian-tantara %2$s · Fizarana %3$s</string>
     <string name="provider_epg_stats">Fandaharana: fantsona %1$s</string>
     <string name="provider_qc_init_failed">Tsy nahomby ny fanombohana ny Quick Connect</string>
     <string name="provider_qc_poll_failed">Tsy nahomby ny fanamarinana: %1$s</string>
@@ -380,8 +360,7 @@
 
     <!-- Provider Selection -->
     <string name="provider_selection_title">Loharano</string>
-    <string name="provider_loading">Maka ny loharano…</string>
-    <string name="provider_no_providers">Tsy misy loharano voalamina</string>
+    <string name="provider_no_providers">Tsy misy loharano voalamina.</string>
     <string name="provider_delete_confirm_title">Hofafana ve ny loharano?</string>
     <string name="provider_delete_confirm_message">Hofafana ve i \"%1$s\"? Hofafana daholo ny angona voatahirin\'ity loharano ity.</string>
     <string name="provider_active_label">Ampiasaina izao</string>
@@ -401,33 +380,23 @@
     <string name="provider_duplicate_result_format">Voadika ho \"%1$s\".</string>
 
     <!-- More Common -->
-    <string name="common_select">Safidio</string>
     <string name="common_add">Ampio</string>
-    <string name="common_update">Havaozy</string>
-    <string name="common_all">Ny rehetra</string>
     <string name="common_back">Hiverina</string>
-    <string name="common_got_it">Azoko!</string>
-    <string name="common_dont_show_again">Aza aseho intsony</string>
     <string name="common_off">Tsy mandeha</string>
 
 
     <!-- Movie Details -->
-    <string name="movie_details_title">Antsipirian\'ny sarimihetsika</string>
     <string name="movie_refresh_info">Havaozy ny antsipirian\'ny sarimihetsika</string>
     <string name="movie_ends_at_format">Mifarana amin\'ny %1$s</string>
     <string name="movie_resume_from_format">▶ Tohizo amin\'ny %1$s</string>
-    <string name="movie_start_beginning">Atombohy hatrany am-piandohana</string>
     <string name="movie_play_action">▶ Alefaso ny sarimihetsika</string>
-    <string name="movie_released_format">Navoaka: %1$s</string>
-    <string name="movie_cast_format">Mpilalao: %1$s</string>
     <string name="movie_director_format">Mpanatontosa: %1$s</string>
     <string name="movie_loading_details">Maka ny antsipirian\'ny sarimihetsika…</string>
     <string name="movie_error_loading">Tsy nahomby ny fakana ny sarimihetsika</string>
     <string name="movie_back_to_movies">Hiverina amin\'ny Sarimihetsika</string>
 
     <!-- Episode Selection -->
-    <string name="series_error_load_failed">Tsy nahomby ny fakana ny antsipirian\'ny andiany</string>
-    <string name="series_refresh_info">Havaozy ny antsipirian\'ny andiany</string>
+    <string name="series_refresh_info">Havaozy ny antsipirian\'ny andian-tantara</string>
     <string name="series_season_name_format">Vanim-potoana %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
     <string name="series_total_episodes_format">Fizarana %1$d</string>
@@ -436,8 +405,7 @@
     <string name="series_bitrate_format">Tahan\'ny bit: %1$s kbps</string>
     <string name="series_loading_episodes">Maka ny fizarana…</string>
     <string name="series_error_loading">Tsy nahomby ny fakana ny fizarana</string>
-    <string name="series_back_to_list">Hiverina amin\'ny lisitry ny andiany</string>
-    <string name="series_rating_format">Naoty: %1$s</string>
+    <string name="series_back_to_list">Hiverina amin\'ny Andian-tantara</string>
     <string name="series_season_label">Vanim-potoana %1$d</string>
     <string name="series_episode_label">Fizarana %1$d</string>
     <string name="series_continue_watching_badge">Tohizo ny fijerena</string>
@@ -480,13 +448,9 @@
     <string name="player_pause">Atsaharo</string>
     <string name="player_stats_hint">Tsindrio indroa OK hanafenana • BACK hivoahana</string>
     <string name="player_quality_auto_subtitle">Ampifanaraho ho azy amin\'ny tambajotra ny kalitao</string>
-    <string name="player_no_chapters">Tsy misy toko</string>
+    <string name="player_no_chapters">Tsy misy toko.</string>
     <string name="player_prev_episode">⏮ Teo aloha</string>
     <string name="player_next_episode">Manaraka ⏭</string>
-    <string name="player_favorited">Ao amin\'ny ankafizina</string>
-    <string name="player_favorite">Ankafizina</string>
-    <string name="player_add_favorite">Ampidiro amin\'ny ankafizina</string>
-    <string name="player_remove_favorite">Esory amin\'ny ankafizina</string>
 
     <!-- Settings: Provider Card -->
     <string name="settings_provider_section_title">Loharano</string>
@@ -495,7 +459,6 @@
     <!-- EPG Management extras -->
     <string name="epg_source_phase_format">%1$s…</string>
     <string name="epg_source_progress_percent">%1$d%%</string>
-    <string name="epg_delete_source_title">Hofafana ve ity loharanon\'ny fitarihana ity?</string>
     <string name="epg_database_ready">Vonona (fandaharana %1$s)</string>
     <string name="epg_database_optimizing">Manatsara ny fanondroana fikarohana…</string>
     <string name="epg_database_error_prefixed">Olana amin\'ny tahirin\'ny fandaharana: %1$s</string>
@@ -514,7 +477,6 @@
     <string name="epg_browser_watch_now_btn">Hijery izao</string>
     <string name="epg_browser_add_calendar_btn">Ampidiro ao amin\'ny alimanaka</string>
     <string name="epg_browser_no_calendar_app">Tsy misy rindrankajy alimanaka hita amin\'ity fitaovana ity</string>
-    <string name="epg_browser_watch_description">Hijery</string>
     <string name="epg_browser_show_less">Ahena</string>
     <string name="epg_browser_show_more">Ampio</string>
     <string name="epg_browser_show_more_count">%1$d fandaharana hafa</string>
@@ -525,13 +487,11 @@
     <string name="epg_browser_remove_description">Esory</string>
 
     <!-- EPG Settings Card -->
-    <string name="epg_summary_no_sources">Tsy misy loharanon\'ny fitarihana voalamina</string>
+    <string name="epg_summary_no_sources">Tsy misy loharanon\'ny fitarihana voalamina.</string>
 
     <!-- Player Controls extras -->
     <string name="player_rewind_1min_description">Miverina 1 min</string>
     <string name="player_fast_forward_5min_description">Mihoatra 5 min</string>
-    <string name="player_rewind_label">-1m</string>
-    <string name="player_forward_label">+5m</string>
     <string name="player_play">Alefaso</string>
     <string name="player_quality_dimensions_format">%1$dx%2$d - %3$d fps</string>
 
@@ -581,7 +541,6 @@
     <string name="settings_developer_mode_last">Io ihany no mpitantana, ka mijanona ho mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="settings_export_import_section_title">Tahiry</string>
     <string name="settings_export_import_desc">Ny loharano sy ny fidirana, ny ankafizina, ny tantaran\'ny fijerena ary ny fikirana</string>
-    <string name="common_export">Alefa</string>
     <string name="common_import">Ampidiro</string>
     <string name="settings_quick_import_not_found">Tsy hita ao amin\'ny Downloads na ny lakilasin\'ny rindrankajy ny rakitry ny fandrindrana</string>
     <string name="settings_quick_import_button">Avereno avy amin\'ny Downloads</string>
@@ -601,7 +560,6 @@
     <string name="settings_watch_delay_range_format">%1$d–%2$d segondra</string>
     <string name="settings_theme_section_title">Endrika</string>
     <string name="settings_theme_desc">Safidio ny endriky ny loko ho an\'ny rindrankajy</string>
-    <string name="settings_ui_style_desc">Safidio ny fomba fisehony</string>
 
     <!-- Content Type Selection -->
     <string name="home_source_updating">Manavao…</string>
@@ -634,11 +592,8 @@
     <string name="provider_filter_rules_placeholder">o.h. XXX, Adult, 18+</string>
     <string name="provider_filter_choose_match_type_prompt">Safidio ny karazam-pifanarahana:</string>
 
-    <!-- EPG Management (TV) -->
-    <string name="epg_delete_source_message_tv">Hesorina ny \"%1$s\" sy ny angona voatahiry rehetra momba azy.</string>
 
     <!-- EPG Browser (TV) -->
-    <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">fandaharana %1$s, fantsona %2$s</string>
     <string name="epg_browser_dev_stats_format">Fandaharana: %1$s</string>
     <string name="epg_browser_enter_programme_placeholder">Ampidiro ny lohatenin\'ny fandaharana…</string>
@@ -649,7 +604,6 @@
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Miverina any amin\'ny sokajy</string>
-    <string name="stats_overlay_move_hint">Ampiasao ny tsindry lalana hamindrana</string>
 
     <!-- TV Settings: About Card -->
     <string name="settings_about_version_format">Fijerena v%1$s</string>
@@ -667,12 +621,9 @@
     <string name="settings_ui_style_desc_tv">Safidio ny endrika mifanaraka aminao</string>
 
     <!-- TV Category/Search misc -->
-    <string name="category_refresh_description">Havaozy ny sokajy</string>
     <string name="category_refresh_streams_description">Havaozy ny fantsakana</string>
     <string name="common_edit_field_description_format">Ovay %1$s</string>
     <string name="common_loading">Eo am-panentanana…</string>
-    <string name="search_stream_name_placeholder">Ampidiro ny anaran\'ny fantsakana…</string>
-    <string name="search_result_category_format">Sokajy: %1$s</string>
     <string name="details_category_format">Sokajy: %1$s</string>
 
     <!-- EPG phase labels -->
@@ -685,11 +636,8 @@
 
     <!-- Search content-type audit fixes -->
     <string name="content_type_all_label">Ny rehetra</string>
-    <string name="search_title_format">Tadiavo %1$s</string>
-    <string name="search_no_results_query_format">Tsy nahita valiny ho an\'ny \'%1$s\'\nAndramo teny hafa</string>
-    <string name="search_no_results_type_format">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'\nAndramo teny hafa</string>
-    <string name="search_no_results_query_format_tv">Tsy nahita valiny ho an\'ny \'%1$s\'. Andramo teny hafa.</string>
-    <string name="search_no_results_type_format_tv">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'. Andramo teny hafa.</string>
+    <string name="search_no_results_query_format">Tsy nahita valiny ho an\'ny \"%1$s\". Andramo teny hafa.</string>
+    <string name="search_no_results_type_format">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \"%2$s\". Andramo teny hafa.</string>
     <string name="search_everything">Mitady amin\'ny rehetra</string>
     <plurals name="search_results_count">
         <item quantity="one">Valiny %1$d</item>
@@ -712,48 +660,28 @@
     <string name="provider_error_account_inactive_format">Tsy mavitrika ny kaonty: %1$s</string>
     <string name="provider_error_connection_failed">Tsy nahomby ny fifandraisana</string>
     <string name="category_select_to_view_channels">Misafidiana sokajy hijerena ny fantsona</string>
-    <string name="category_no_channels">Tsy misy fantsona amin\'ity sokajy ity</string>
-    <string name="category_filtered_of_total_format">%1$d amin\'ny %2$d sokajy</string>
+    <string name="category_no_channels">Tsy misy fantsona amin\'ity sokajy ity.</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fantsona: %1$s</string>
-    <string name="epg_error_no_channels_in_category">Tsy nisy fantsona hita amin\'ity sokajy ity</string>
+    <string name="epg_error_no_channels_in_category">Tsy nisy fantsona hita amin\'ity sokajy ity.</string>
     <string name="epg_error_load_data_format">Tsy azo ny fandaharana: %1$s</string>
-    <string name="stream_error_initialization_failed">Tsy nahomby ny fanombohana</string>
-    <string name="stream_error_resolve_failed">Tsy nahomby ny fikarohana ny fantsakana</string>
-    <string name="stream_error_unknown">Nisy fahadisoana tsy fantatra teo am-pakana ny fantsakana</string>
 
     <!-- ViewModel error-fallback audit fixes -->
-    <string name="login_error_timeout">Ela loatra ny fifandraisana. Jereo ny tambajotra na ny adiresin\'ny mpizara.</string>
-    <string name="login_error_invalid_credentials">Diso ny anarana na ny tenimiafina.</string>
-    <string name="login_error_server_not_found">Tsy hita ny mpizara. Jereo ny adiresinao.</string>
-    <string name="login_error_account_inactive">Tsy mavitrika ny kaonty</string>
-    <string name="login_error_generic_format">Tsy nahomby ny fidirana: %1$s</string>
-    <string name="error_generic_unknown">Fahadisoana tsy fantatra</string>
     <string name="category_error_connection_failed_format">Tsy nahomby ny fifandraisana: %1$s</string>
-    <string name="category_error_load_failed">Tsy nahomby ny fakana ny sokajy</string>
     <string name="category_favorite_categories_label">Sokajy ankafizina</string>
     <string name="category_recent_categories_label">Sokajy vao haingana</string>
     <string name="category_recent_label">Vao haingana</string>
     <string name="search_error_session_expired">Tapitra ny fotoana. Midira indray azafady.</string>
-    <string name="search_error_failed">Tsy nahomby ny fikarohana</string>
     <string name="epg_error_file_too_large">Lehibe loatra ny fandaharana hikarohana toy izao. Andramo fikarohana mazava kokoa.</string>
-    <string name="epg_browser_no_matched_results_format">Tsy nahita valiny mifanandrify amin\'ny \'%1$s\'</string>
-    <string name="epg_browser_no_results_format">Tsy nahita valiny ho an\'ny \'%1$s\'</string>
-    <string name="epg_browser_busy_refreshing_format">Eo am-panavaozana ny fandaharana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
-    <string name="epg_browser_busy_rebuilding_format">Eo am-panamboarana indray ny fanondroana fikarohana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
+    <string name="epg_browser_no_matched_results_format">Tsy nahita valiny mifanandrify amin\'ny \"%1$s\".</string>
+    <string name="epg_browser_no_results_format">Tsy nahita valiny ho an\'ny \"%1$s\".</string>
+    <string name="epg_browser_busy_refreshing_format">Eo am-panavaozana ny fandaharana. Hotanterahina rehefa vonona izy ny fikarohanao \"%1$s\".</string>
+    <string name="epg_browser_busy_rebuilding_format">Eo am-panamboarana indray ny fanondroana fikarohana. Hotanterahina rehefa vonona izy ny fikarohanao \"%1$s\".</string>
     <string name="epg_browser_partial_results_note">Eo am-panavaozana ny fandaharana: fikarohana amin\'ny lohateny ihany no aseho, mety tsy feno. Havaozina ny valiny rehefa vita.</string>
-    <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny loharano</string>
-    <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny loharano</string>
-    <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny loharano</string>
-    <string name="provider_error_update_failed">Tsy nahomby ny fanavaozana ny loharano</string>
-    <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny loharano</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Alefaso ho azy ny fizarana manaraka</string>
     <string name="settings_autoplay_next_episode_desc">Rehefa ho tapitra ny fizarana iray, aroso ny manaraka ary manomboka ho azy rehefa vita izy.</string>
-    <string name="player_up_next_title">Manaraka</string>
-    <string name="player_up_next_countdown_format">Manomboka afaka %1$d s</string>
-    <string name="player_up_next_play_now">Alefaso izao</string>
     <string name="player_up_next_compact_format">Manaraka · %1$s · %2$s</string>
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->
@@ -803,11 +731,11 @@
     <string name="epg_guide_source_native">fandaharan\'ny loharano</string>
     <string name="epg_guide_updated_unknown">tsy fantatra</string>
     <string name="epg_guide_no_listings_title">Tsy misy fandaharana</string>
-    <string name="epg_guide_no_listings_index_empty">Tsy misy na inona na inona ho an\'ireto fantsona ireto ao amin\'ny fitarihana. Havaozy ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
+    <string name="epg_guide_no_listings_index_empty">Tsy misy na inona na inona ho an\'ireto fantsona ireto ao amin\'ny fitarihana. Havaozy ny fitarihana ao amin\'ny Fandrindrana → Loharano sy fitarihana → Loharanon\'ny fitarihana.</string>
     <string name="epg_guide_no_listings_stale_format">Tsy misy ho an\'ity andro ity: %1$s, nohavaozina %2$s, tsy mahatratra azy.</string>
     <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
     <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
-    <string name="epg_guide_no_channels">Tsy misy fantsona hasehoana fitarihana</string>
+    <string name="epg_guide_no_channels">Tsy misy fantsona hasehoana fitarihana.</string>
     <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Fifandraisana</string>
@@ -857,10 +785,9 @@
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · fanavaozana farany %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · mbola tsy nohavaozina</string>
-    <string name="provider_more_actions">Asa hafa</string>
     <string name="provider_more_actions_for_format">Asa hafa ho an\'ny %1$s</string>
     <!-- LT2 -->
-    <string name="live_panel_no_favorites">Mbola tsy misy ankafizina — tazony ny OK amin\'ny fantsona iray hanampiana azy</string>
+    <string name="live_panel_no_favorites">Mbola tsy misy ankafizina — tazony ny OK amin\'ny fantsona iray hanampiana azy.</string>
     <!-- Phase 4 -->
     <!-- M5 -->
     <string name="settings_guide_maintenance_title">Fikojakojana ny angon\'ny fitarihana</string>
@@ -870,7 +797,6 @@
     <string name="epg_tab_tomorrow">Rahampitso</string>
     <string name="epg_tab_yesterday">Omaly</string>
     <string name="epg_details_watch_channel">Hijery ny fantsona</string>
-    <string name="epg_details_watch_from_start">Hijery hatrany am-piandohana</string>
     <string name="epg_replayable">Azo averina jerena</string>
     <!-- A channel row's catch-up badge: how many days its archive keeps. -->
     <string name="catchup_badge_days">%1$d andro</string>
@@ -888,13 +814,8 @@
     <string name="epg_guide_status_partial_format">%1$d amin\'ny %2$d fantsona voavaky no manana fandaharana · %3$d raha atambatra · %4$s · nohavaozina %5$s</string>
     <string name="epg_guide_listings_end_format">Mifarana amin\'ny %1$s ny fandaharana</string>
     <!-- Translations backfill 2026-10-03 -->
-    <string name="settings_section_provider_playback">Loharano sy filalaovana</string>
-    <string name="settings_section_appearance">Endrika</string>
-    <string name="settings_section_data_sync">Angona sy fampifanarahana</string>
-    <string name="provider_category_filters_profile">Ireto no sivana an\'i %1$s. Samy manana ny azy ny mombamomba tsirairay.</string>
     <string name="details_watch_trailer">▶ Topi-maso</string>
     <string name="details_watch_trailer_description">Hijery ny topi-maso</string>
-    <string name="details_community_rating">Naoty avy amin\'ny mpijery</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">Tsy misy</string>
     <string name="details_open_other_copy">Sokafy dika hafa</string>
@@ -904,15 +825,12 @@
     <string name="episode_guest_stars">Mpilalao vahiny</string>
     <string name="episode_series_cast">Mpilalao ao amin\'ny andian-tantara</string>
     <string name="details_tab_details">Antsipiriany</string>
-    <string name="details_tab_seasons">Vanim-potoana</string>
     <string name="details_saved_copy">Antsipiriany voatahiry: tsy tratra ny loharano</string>
     <string name="details_saved_copy_tv">Antsipiriany voatahiry: tsy tratra ny loharano. Havaozy amin\'ny menio Fanampiny.</string>
     <string name="details_more_like_this">Mitovitovy amin\'ity</string>
     <string name="details_no_link_handler">Tsy misy rindrankajy amin\'ity fitaovana ity afaka manokatra io rohy io</string>
     <string name="trailer_unavailable">Tsy misy amin\'ny YouTube intsony io topi-maso io</string>
-    <string name="series_details_title">Antsipirian\'ny andiany</string>
     <string name="series_seasons_and_episodes_format">Vanim-potoana %1$d · fizarana %2$d</string>
-    <string name="series_resume_episode_format">▶ Tohizo S%1$d:E%2$d</string>
     <string name="series_resume_episode_time_format">▶ Tohizo S%1$d:E%2$d (%3$s)</string>
     <string name="series_play_episode_format">▶ Alefaso S%1$d:E%2$d</string>
     <string name="series_episodes_header">Fizarana</string>
@@ -959,7 +877,6 @@
     <string name="player_stats_rebuf_time_format">%1$d.%2$ds</string>
     <string name="player_stats_dropped_format">%1$d / %2$d</string>
     <string name="player_category_channels">Fantsona ao amin\'ny sokajy</string>
-    <string name="player_no_last_watched">Mbola tsy misy fantsona vao nojerena</string>
     <string name="player_audio_format_hint">%1$dch • %2$dkHz</string>
     <string name="player_nav_hint">D-pad hivezivezy • OK hisafidy • BACK hanafoana</string>
     <string name="player_stats_drop_rate_recent">Tahan-pahaverezana (10s)</string>
@@ -971,7 +888,7 @@
     <string name="player_stats_ui_skipped">Sarin\'ny UI tsy naseho</string>
     <string name="settings_diagnostics_title">Tatitra</string>
     <string name="settings_diagnostics_desc">Ireo fianjerana sy fahadisoana voarakitra tamin\'ity fitaovana ity, sy ny antony nikatonan\'ny rindrankajy farany</string>
-    <string name="settings_diagnostics_empty">Tsy misy voarakitra</string>
+    <string name="settings_diagnostics_empty">Tsy misy voarakitra.</string>
     <string name="settings_diagnostics_clear">Fafao ny tatitra</string>
     <string name="settings_diagnostics_share">Zarao</string>
     <string name="settings_diagnostics_copy_hint">Tsindrio ela ny andalana iray raha hanao kopia azy.</string>
@@ -1149,8 +1066,6 @@
     <string name="sync_error_code_expired">Lany daty na efa nampiasaina ny kaody. Mampisehoa kaody vaovao.</string>
     <string name="sync_error_not_a_code">Tsy kaody fampifandraisana Fijerena io.</string>
     <!-- Phase 6 -->
-    <string name="details_action_favorite">Ankafizina</string>
-    <string name="details_action_watched">Hita</string>
     <string name="details_action_more">Hafa</string>
     <string name="series_play_next_format">▶ Alefa: %1$s</string>
     <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
@@ -1166,7 +1081,7 @@
     <!-- GD5 -->
     <string name="player_osd_guide">Fandaharana</string>
     <string name="epg_browser_in_category_only_format">Ao amin\'ny %1$s ihany</string>
-    <string name="epg_browser_no_results_in_category_format">Tsy nahitana valiny ho an\'ny \'%1$s\' ao amin\'ny %2$s</string>
+    <string name="epg_browser_no_results_in_category_format">Tsy nahitana valiny ho an\'ny \"%1$s\" ao amin\'ny %2$s.</string>
     <!-- Device info: network and power (P3) -->
     <string name="device_info_section_network">Tambajotra</string>
     <string name="device_info_section_power">Herinaratra sy asa ao ambadika</string>
@@ -1255,15 +1170,15 @@
         <item quantity="one">Andian-tantara %1$d</item>
         <item quantity="other">Andian-tantara %1$d</item>
     </plurals>
-    <string name="browse_no_films">Tsy misy sarimihetsika amin\'ity sokajy ity</string>
+    <string name="browse_no_films">Tsy misy sarimihetsika amin\'ity sokajy ity.</string>
     <string name="browse_recent_empty">Eto no miseho izay jerenao.</string>
     <string name="browse_favorites_empty">Tazony ny OK amin\'ny lohateny na fantsona iray hampidirana azy amin\'ny ankafizina.</string>
     <string name="browse_favorites_empty_phone">Ahodino miankavanana ny lohateny na fantsona iray, na tsindrio ela, hampidirana azy amin\'ny ankafizina.</string>
     <string name="browse_open_categories">Hijery ny sokajy</string>
     <string name="category_all_title">Sokajy rehetra</string>
     <string name="category_all_filter">Hitady sokajy</string>
-    <string name="category_all_none">Tsy misy sokajy manana izany amin\'ny anarany</string>
-    <string name="browse_no_shows">Tsy misy andian-tantara amin\'ity sokajy ity</string>
+    <string name="category_all_none">Tsy misy sokajy manana izany amin\'ny anarany.</string>
+    <string name="browse_no_shows">Tsy misy andian-tantara amin\'ity sokajy ity.</string>
     <string name="browse_select_to_view_films">Misafidiana sokajy hijerena ny sarimihetsika</string>
     <string name="browse_select_to_view_shows">Misafidiana sokajy hijerena ny andian-tantara</string>
     <!-- /TV polish: browse and Live TV -->
@@ -1433,8 +1348,6 @@
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Fafao</string>
     <string name="pin_last_expert_warning">Io ihany no mpitantana: raha hadino ny PIN-ny, ny famafana ny angon\'ny fampiharana ihany no mamerina ny fitantanana.</string>
-    <string name="pin_set_done">Voapetraka ny PIN</string>
-    <string name="pin_removed">Voaesotra ny PIN</string>
     <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba mpitantana</string>
     <string name="pin_use_phone">Ampiasao ny findaiko</string>
     <string name="pin_use_tv">Ampiasao ny fahitalavitra</string>
@@ -1546,9 +1459,6 @@
     <string name="removed_format">Voaesotra %1$s</string>
     <string name="undo_action">Averina</string>
     <!-- Settings flow review, Phase 2 -->
-    <string name="common_on">Mandeha</string>
-    <string name="settings_theme_and_look_title">Loko sy endrika</string>
-    <string name="settings_profile_row_desc">Amin’ny pejin’ny mombamomba anao</string>
     <string name="chart_trending_movies">Sarimihetsika miely</string>
     <string name="chart_trending_shows">Andian-tantara miely</string>
     <string name="chart_popular_movies">Sarimihetsika malaza</string>
@@ -1582,7 +1492,6 @@
     <string name="sports_switch_desc">Mitady ekipa sy ligy, ny lalao manaraka ataony ary ireo fantsonao mandefa azy. Avy amin\'ny tolotra fanatanjahantena maimaim-poana (ESPN, NHL, MLB) ny angona. Ity fitaovana ity ihany.</string>
 
     <!-- Game reminder banner (TV, TvGameReminderBanner) -->
-    <string name="game_reminder_watch">Hijery</string>
     <string name="game_reminder_dismiss">Hanilika</string>
     <string name="game_reminder_banner_hint">Tazony ny OK na tsindrio Menu hisafidianana</string>
     <!-- The question before a channel that has not started: its title and the channel's source -->

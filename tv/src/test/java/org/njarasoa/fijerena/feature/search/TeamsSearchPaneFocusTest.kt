@@ -173,7 +173,7 @@ class TeamsSearchPaneFocusTest {
                 .fetchSemanticsNode()
                 .boundsInRoot.right
         assertEquals(before, after)
-        walk.run(right("Remind Me of Every Game"), left("Unfollow"), left(BEST))
+        walk.run(right("Remind me of every game"), left("Unfollow"), left(BEST))
     }
 
     private companion object {

@@ -171,7 +171,7 @@ class SportsPagesFocusTest {
             }
         }
         walk.awaitFocused("C / Arsenal v Chelsea")
-        walk.run(right("Remind Me"), down("Remind Me"), left("L / Liverpool v Arsenal"), up("C / Arsenal v Chelsea"), up("Follow"))
+        walk.run(right("Remind me"), down("Remind me"), left("L / Liverpool v Arsenal"), up("C / Arsenal v Chelsea"), up("Follow"))
         val followRight =
             rule
                 .onNodeWithContentDescription("Follow")
@@ -187,9 +187,9 @@ class SportsPagesFocusTest {
                 .fetchSemanticsNode()
                 .boundsInRoot.right,
         )
-        walk.run(right("Remind Me of Every Game"))
+        walk.run(right("Remind me of every game"))
         walk.press(Key.DirectionCenter)
-        walk.awaitFocused("Reminders Set for Every Game")
+        walk.awaitFocused("Reminders set for every game")
         assertEquals(setOf("espn:soccer/359"), bells.reminded.value.teams)
         walk.run(down("C / Arsenal v Chelsea"))
     }

@@ -655,7 +655,7 @@ fun MobileControlsOverlay(
                                         imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                         contentDescription =
                                             stringResource(
-                                                if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
+                                                if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
                                             ),
                                         tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                                     )

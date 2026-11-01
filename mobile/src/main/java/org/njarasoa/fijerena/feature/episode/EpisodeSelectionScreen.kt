@@ -940,7 +940,7 @@ private fun EpisodeListContent(
                     if (hasResume) {
                         DetailIconAction(
                             icon = CinemaIcons.Replay,
-                            label = stringResource(R.string.movie_start_beginning),
+                            label = stringResource(R.string.player_osd_start_over),
                             onClick = {
                                 anchorEpisode?.let { ep ->
                                     onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", true)
@@ -1436,7 +1436,7 @@ private fun EpisodeDetailContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 CinemaText(
-                    stringResource(R.string.movie_start_beginning),
+                    stringResource(R.string.player_osd_start_over),
                     role = TextRole.Label,
                     tone = TextTone.Inherit,
                 )

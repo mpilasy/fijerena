@@ -74,7 +74,7 @@ fun GuideMaintenanceRow(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     SettingsRow(
         title = stringResource(R.string.settings_guide_maintenance_title),
-        description = stringResource(R.string.epg_maintenance_desc_tv),
+        description = stringResource(R.string.epg_maintenance_desc),
         value = databaseStatusText(indexState),
         onClick = onOpen,
         focusRequester = focusRequester,
@@ -102,7 +102,7 @@ fun GuideMaintenancePane(
     SettingsSubPane(title = stringResource(R.string.settings_guide_maintenance_title), onBack = onBack) {
         GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
         CinemaText(
-            stringResource(R.string.epg_maintenance_desc_tv),
+            stringResource(R.string.epg_maintenance_desc),
             role = TextRole.BodySmall,
             tone = TextTone.Secondary,
         )

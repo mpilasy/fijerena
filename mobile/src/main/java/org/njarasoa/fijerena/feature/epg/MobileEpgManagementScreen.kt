@@ -574,7 +574,7 @@ private fun EpgSourceCard(
             },
             title = {
                 CinemaText(
-                    stringResource(R.string.epg_delete_source_title),
+                    stringResource(R.string.epg_delete_source_confirm_title),
                     role = TextRole.Title,
                     tone = TextTone.Inherit,
                 )

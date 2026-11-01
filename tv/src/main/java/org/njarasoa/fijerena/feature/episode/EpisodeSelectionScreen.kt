@@ -1191,7 +1191,7 @@ internal fun EpisodeListContent(
                                     icon = {
                                         Icon(
                                             imageVector = CinemaIcons.Replay,
-                                            contentDescription = stringResource(R.string.movie_start_beginning),
+                                            contentDescription = stringResource(R.string.player_osd_start_over),
                                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                         )
                                     },
@@ -2040,7 +2040,7 @@ private fun EpisodeDetailPanel(
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Replay,
-                                contentDescription = stringResource(R.string.movie_start_beginning),
+                                contentDescription = stringResource(R.string.player_osd_start_over),
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         },

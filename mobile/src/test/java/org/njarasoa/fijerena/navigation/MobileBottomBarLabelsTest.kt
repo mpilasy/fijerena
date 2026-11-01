@@ -29,24 +29,24 @@ class MobileBottomBarLabelsTest {
     @Config(qualifiers = "w411dp-h891dp")
     fun `a wide phone shows each tab's name`() {
         setBar()
-        composeTestRule.onAllNodesWithText("Movies").assertCountEquals(1)
-        composeTestRule.onAllNodesWithContentDescription("Movies").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Films").assertCountEquals(1)
+        composeTestRule.onAllNodesWithContentDescription("Films").assertCountEquals(0)
     }
 
     @Test
     @Config(qualifiers = "w360dp-h720dp")
     fun `a compact phone shows icons only, each named for screen readers`() {
         setBar()
-        composeTestRule.onAllNodesWithText("Movies").assertCountEquals(0)
-        composeTestRule.onAllNodesWithContentDescription("Movies").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Films").assertCountEquals(0)
+        composeTestRule.onAllNodesWithContentDescription("Films").assertCountEquals(1)
     }
 
     @Test
     @Config(qualifiers = "w360dp-h720dp")
     fun `a long-press on an icon shows its name`() {
         setBar()
-        composeTestRule.onNodeWithContentDescription("Movies").performTouchInput { longClick() }
+        composeTestRule.onNodeWithContentDescription("Films").performTouchInput { longClick() }
         composeTestRule.waitForIdle()
-        composeTestRule.onAllNodesWithText("Movies").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Films").assertCountEquals(1)
     }
 }

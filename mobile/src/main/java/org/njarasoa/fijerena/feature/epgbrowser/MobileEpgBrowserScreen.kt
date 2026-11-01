@@ -876,7 +876,7 @@ private fun MobileAiringRow(
         if (isMatched) {
             Icon(
                 imageVector = CinemaIcons.PlayArrow,
-                contentDescription = stringResource(R.string.epg_browser_watch_description),
+                contentDescription = stringResource(R.string.epg_browser_watch_now_btn),
                 modifier = Modifier.size(CinemaSpacing.lg),
                 tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accent,
             )
