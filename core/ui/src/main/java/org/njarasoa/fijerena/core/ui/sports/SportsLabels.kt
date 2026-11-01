@@ -1,19 +1,11 @@
 package org.njarasoa.fijerena.core.ui.sports
 
 import android.content.res.Resources
-import androidx.compose.runtime.Composable
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.theme.TimeFormat
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
 
 // The words of the sports screens, the same on TV and phone (the sports teams plan → Screens).
 
@@ -46,37 +38,6 @@ fun teamDetails(
     resources: Resources,
     team: SportsTeam,
 ): String = listOfNotNull(sportLabel(resources, team.sport), team.leagueName?.takeIf { it.isNotBlank() }).joinToString(" · ")
-
-/** "Today", "Tomorrow", else the day's full date in the app language. */
-fun gameDayLabel(
-    resources: Resources,
-    date: LocalDate,
-    today: LocalDate = LocalDate.now(),
-    locale: Locale = Locale.getDefault(),
-): String =
-    when (date) {
-        today -> {
-            resources.getString(R.string.epg_tab_today)
-        }
-
-        today.plusDays(1) -> {
-            resources.getString(R.string.epg_tab_tomorrow)
-        }
-
-        // The system has no Malagasy day or month names (see displayDate).
-        else -> {
-            if (locale.language ==
-                "mg"
-            ) {
-                malagasyDate(date)
-            } else {
-                date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale))
-            }
-        }
-    }
-
-private fun malagasyDate(date: LocalDate): String =
-    "${MALAGASY_DAYS[date.dayOfWeek.value - 1]} ${date.dayOfMonth} ${MALAGASY_MONTHS[date.monthValue - 1]}"
 
 /** A game's title: "Arsenal v Chelsea", or the one name of an event with no second team. */
 fun gameTitle(
@@ -132,24 +93,6 @@ fun noChannelNote(
     resources: Resources,
     channels: List<GameChannel>?,
 ): String = resources.getString(if (channels == null) R.string.sports_matching else R.string.sports_not_found)
-
-private val MALAGASY_DAYS = listOf("Alatsinainy", "Talata", "Alarobia", "Alakamisy", "Zoma", "Asabotsy", "Alahady")
-
-private val MALAGASY_MONTHS =
-    listOf(
-        "Janoary",
-        "Febroary",
-        "Martsa",
-        "Aprily",
-        "Mey",
-        "Jona",
-        "Jolay",
-        "Aogositra",
-        "Septambra",
-        "Oktobra",
-        "Novambra",
-        "Desambra",
-    )
 
 /** Whether a tap on one of [game]'s channels asks first (Watch now or Remind Me): the game has not started. */
 fun asksBeforeWatching(

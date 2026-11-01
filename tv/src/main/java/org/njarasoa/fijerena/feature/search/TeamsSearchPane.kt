@@ -46,7 +46,6 @@ import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.TeamsSearchViewModel
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.followKey
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
@@ -57,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.feature.sports.GameSheetOverlay
 import org.njarasoa.fijerena.feature.sports.TvBestTeamRow
 import org.njarasoa.fijerena.feature.sports.TvGameBell
@@ -303,7 +303,7 @@ private fun LazyListScope.bestGameRows(
             for (day in gamesByDay(games.games)) {
                 stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
                     TvSportsHeading(
-                        gameDayLabel(LocalResources.current, day.date),
+                        DateText.dayLabel(LocalResources.current, day.date),
                         modifier =
                             Modifier.dayHeadingBand(pinnedDay == "best_day:${day.date}"),
                     )

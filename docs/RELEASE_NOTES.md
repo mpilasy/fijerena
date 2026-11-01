@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **One way to write dates and times:** days and times read the same on every screen. Day headings in Search the Guide, Sports and the TV Guide say Today, Tomorrow or Yesterday, else the full date; Search the Guide said "Today" and "Tomorrow" in English in every language. Guide date tabs, game times, programme details and catch-up say the same words, else the short date ("Tue 3 Nov"). A programme that ends after midnight shows the day it ends ("23:30 – Mon 01:00") in the TV Guide too. Guide source dates follow the device's 12/24-hour clock and the app language. Malagasy days and months have their Malagasy names everywhere. TV and phone.
 - **A clearer question before watching:** the question on a game's channel and on a guide programme that is not on yet is shorter. Its title gives the start ("Starts Thu 5 Nov · 11:45"), then the channel's name on one line and, on a device with more than one source, the source it is on. **Watch now** is the main button in the theme's colour, and the buttons stand one under the other, all the same width, Cancel last. Malagasy "kalandrie" is now "alimanaka". TV and phone.
 
 ## Version: 0.9.20261101162711

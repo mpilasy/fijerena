@@ -1,8 +1,6 @@
 package org.njarasoa.fijerena.core.ui.utils
 
 import android.content.Context
-import android.text.format.DateFormat
-import java.util.Date
 import java.util.Locale
 
 object NumberUtils {
@@ -47,17 +45,12 @@ object NumberUtils {
         java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(millis))
 
     /**
-     * Format a timestamp to a medium date/time string.
+     * Format a timestamp to a medium date/time string ("3 Nov 2026, 14:30"), see [DateText.dateTime].
      */
     fun formatTimestamp(
         context: Context,
         millis: Long,
-    ): String {
-        val dateFormat = DateFormat.getMediumDateFormat(context)
-        val timeFormat = DateFormat.getTimeFormat(context)
-        val date = Date(millis)
-        return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
-    }
+    ): String = DateText.dateTime(context, millis)
 
     /**
      * Format epoch seconds to a medium date/time string.

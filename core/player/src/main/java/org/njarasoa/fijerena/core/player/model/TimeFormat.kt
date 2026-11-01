@@ -32,12 +32,6 @@ object TimeFormat {
         return localTime.format(if (DateFormat.is24HourFormat(context)) formatter24 else formatter12)
     }
 
-    fun formatTimeRange(
-        context: Context,
-        startEpochSeconds: Long,
-        endEpochSeconds: Long,
-    ): String = "${formatTime(context, startEpochSeconds)} - ${formatTime(context, endEpochSeconds)}"
-
     fun formatClockTime(
         context: Context,
         date: Date,

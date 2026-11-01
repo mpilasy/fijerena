@@ -5,6 +5,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.DateText
 
 /**
  * One source as the Sources list describes it under its name: its kind, and the subscription facts
@@ -53,15 +54,6 @@ private fun formatExpiryDate(
         }
 
         else -> {
-            expDate.toLongOrNull()?.let { epoch ->
-                java.time.Instant
-                    .ofEpochSecond(epoch)
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate()
-                    .format(
-                        java.time.format.DateTimeFormatter
-                            .ofPattern("MMM d, yyyy"),
-                    )
-            } ?: expDate
+            expDate.toLongOrNull()?.let { epoch -> DateText.mediumDate(DateText.day(epoch)) } ?: expDate
         }
     }

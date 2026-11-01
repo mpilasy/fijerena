@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import java.util.Date
 import org.njarasoa.fijerena.core.player.model.TimeFormat as CoreTimeFormat
 
@@ -27,6 +28,7 @@ object TimeFormat {
         return remember(context, epochSeconds) { CoreTimeFormat.formatTime(context, epochSeconds) }
     }
 
+    /** "18:25 – 19:30", with the end's day when it ends on another day ([DateText.timeRange]). */
     @Composable
     fun formatTimeRange(
         startEpochSeconds: Long,
@@ -34,7 +36,7 @@ object TimeFormat {
     ): String {
         val context = LocalContext.current
         return remember(context, startEpochSeconds, endEpochSeconds) {
-            CoreTimeFormat.formatTimeRange(context, startEpochSeconds, endEpochSeconds)
+            DateText.timeRange(context, startEpochSeconds, endEpochSeconds)
         }
     }
 

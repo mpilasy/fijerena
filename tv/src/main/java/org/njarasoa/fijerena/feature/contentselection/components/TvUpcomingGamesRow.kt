@@ -27,10 +27,10 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
-import org.njarasoa.fijerena.core.ui.sports.gameDayLabel
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -91,7 +91,7 @@ private fun TvUpcomingGameCard(
                 CinemaText(text = team.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CinemaText(
-                text = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
+                text = "${DateText.shortDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
                 maxLines = 1,

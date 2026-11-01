@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -431,18 +432,14 @@ private fun EpgSourceCard(
                 run {
                     val lastIngested =
                         if (source.lastIngestedAtMs > 0) {
-                            java.text
-                                .SimpleDateFormat("MMM dd, HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
-                                .format(java.util.Date(source.lastIngestedAtMs))
+                            DateText.dateTime(LocalContext.current, source.lastIngestedAtMs)
                         } else {
                             stringResource(R.string.epg_source_never)
                         }
 
                     val latestProgStr =
                         if (latestProgrammeTime > 0) {
-                            java.text
-                                .SimpleDateFormat("MMM dd, HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
-                                .format(java.util.Date(latestProgrammeTime * 1000L))
+                            DateText.dateTime(LocalContext.current, latestProgrammeTime * 1000L)
                         } else {
                             stringResource(R.string.epg_source_none)
                         }

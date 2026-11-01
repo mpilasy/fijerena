@@ -14,10 +14,8 @@ import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xtream.db.WantedTitleEntity
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.DateText
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
 
 /**
  * One title of the Wanted list as Home's row and the Wanted lists show it (wanted titles plan →
@@ -62,7 +60,7 @@ data class WantedCard(
 
 /** The short line under a title no source has: Coming 14 Mar 2027, In cinemas, Out on digital… */
 fun ReleaseStatus.label(resources: Resources): String {
-    val day = date?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+    val day = date?.let { DateText.mediumDate(it) }
     return when (stage) {
         ReleaseStage.COMING -> {
             resources.getString(R.string.wanted_coming, day)
