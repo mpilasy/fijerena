@@ -126,6 +126,17 @@ class SyncAccountStore(
         putStringSet(KEY_DEFERRED, deferred)
     } ?: Unit
 
+    /** The [SyncKind.KEPT] of the build that last started a full pull here; null before the first. */
+    val knownKinds: Set<String>?
+        get() = prefs?.getStringSet(KEY_KNOWN_KINDS, null)
+
+    /** The next pull starts from the server's first record; [knownKinds] becomes [kinds]. */
+    fun startOver(kinds: Set<String>) =
+        prefs?.edit(commit = true) {
+            putLong(KEY_CURSOR, 0)
+            putStringSet(KEY_KNOWN_KINDS, kinds)
+        } ?: Unit
+
     var lastSyncAt: Long
         get() = prefs?.getLong(KEY_LAST_SYNC, 0) ?: 0
         set(value) = prefs?.edit(commit = true) { putLong(KEY_LAST_SYNC, value) } ?: Unit
@@ -145,6 +156,7 @@ class SyncAccountStore(
         const val KEY_CURSOR = "cursor"
         const val KEY_SEEDED = "seeded"
         const val KEY_DEFERRED = "deferred"
+        const val KEY_KNOWN_KINDS = "known_kinds"
         const val KEY_LAST_SYNC = "last_sync_at"
         const val KEY_LAST_ERROR = "last_error"
     }

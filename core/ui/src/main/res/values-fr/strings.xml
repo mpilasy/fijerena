@@ -938,6 +938,7 @@
     <string name="live_sync_status_failed">La dernière synchronisation a échoué. Elle est relancée automatiquement.</string>
     <string name="live_sync_server_line">Serveur : %1$s</string>
     <string name="live_sync_now">Synchroniser</string>
+    <string name="live_sync_full_resync">Tout resynchroniser</string>
     <string name="live_sync_add_device">Ajouter un appareil</string>
     <string name="live_sync_scan_code">Scanner un code</string>
     <string name="live_sync_devices_title">Appareils</string>

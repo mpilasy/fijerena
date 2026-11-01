@@ -84,6 +84,27 @@ object SyncKind {
     /** The `providerId` of [FOLLOWED_SPORT] rows in `xtream_v2.db`'s `sync_version` and `sync_tombstone`. */
     const val FOLLOWED_SPORT_PROVIDER_ID = 0L
 
+    /**
+     * The kinds this build keeps (every kind but [VOLATILE]). Add each new kept kind here: an older
+     * build skips a kind it doesn't know and moves past it, so a device whose last pass knew fewer
+     * kinds pulls everything again once ([SyncEngine.syncNow]) and gets what it skipped.
+     */
+    val KEPT =
+        setOf(
+            WATCH,
+            FAVORITE_STREAM,
+            FAVORITE_CATEGORY,
+            WATCH_CLEAR,
+            PROVIDER,
+            PROFILE,
+            PROVIDER_LOGIN,
+            CATEGORY_FILTERS,
+            EPG_SOURCE,
+            SETTING,
+            WANTED,
+            FOLLOWED_SPORT,
+        )
+
     /** The profile slot of anything the whole household shares. */
     const val SHARED = "shared"
 

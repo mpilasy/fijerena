@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Sync catches up after an update:** when an update teaches the app a new kind of synced data (such as followed teams), the device downloads the sync group's data again once, so it also gets what other devices sent before it updated. Only changes that are newer than what the device has are applied. TV and phone.
+- **Full resync:** Settings → Live sync has a **Full resync** button next to Sync now. It downloads all the sync group's data again without leaving the group. TV and phone.
+
 ## Version: 0.9.20261031225716
 
 - **Profile before the title:** on the phone, the profile avatar now leads each tab's title, with the guide and search icons on the same line, and the clock keeps its top-right corner as on every screen. Neither moves from tab to tab. Phone.

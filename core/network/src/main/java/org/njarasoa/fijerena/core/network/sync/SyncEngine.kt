@@ -60,6 +60,12 @@ class SyncEngine(
         mutex.withLock {
             val link = store.link ?: return@withLock null
             val crypto = AccountKeyCrypto(link.accountKey)
+            if (store.knownKinds?.containsAll(SyncKind.KEPT) != true) {
+                // An older build skipped the kinds it didn't know and moved past them: get them now.
+                // Everything is applied against local versions, so only real changes land.
+                Log.i(TAG, "This build keeps kinds the last full pull didn't know; pulling everything")
+                store.startOver(SyncKind.KEPT)
+            }
             try {
                 val pull = pull(link, crypto, listener)
                 if (!store.seeded) {
@@ -75,6 +81,12 @@ class SyncEngine(
                 if (e.status == 401) Log.w(TAG, "Device token refused — revoked from another device?")
                 throw e
             }
+        }
+
+    /** Full Resync: the next pass pulls everything from the server's first record again. */
+    suspend fun startOver() =
+        mutex.withLock {
+            if (isLinked) store.startOver(SyncKind.KEPT)
         }
 
     private data class PullOutcome(

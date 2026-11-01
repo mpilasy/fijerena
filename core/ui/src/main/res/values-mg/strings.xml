@@ -1107,6 +1107,7 @@
     <string name="live_sync_status_failed">Tsy nahomby ny fampifanarahana farany. Haverina ho azy izy.</string>
     <string name="live_sync_server_line">Mpizara: %1$s</string>
     <string name="live_sync_now">Ampifanaraho izao</string>
+    <string name="live_sync_full_resync">Ampifanaraho daholo</string>
     <string name="live_sync_add_device">Hampiditra fitaovana</string>
     <string name="live_sync_scan_code">Vakio kaody</string>
     <string name="live_sync_devices_title">Fitaovana</string>

@@ -159,6 +159,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         devMode = viewModel.devMode,
                         busy = ui.busy,
                         onSyncNow = viewModel::syncNow,
+                        onResyncAll = viewModel::resyncAll,
                         onAddDevice = viewModel::showInvite,
                         onScan = { scanning = true },
                     )
@@ -308,6 +309,7 @@ private fun LinkedPanel(
     devMode: Boolean,
     busy: Boolean,
     onSyncNow: () -> Unit,
+    onResyncAll: () -> Unit,
     onAddDevice: () -> Unit,
     onScan: () -> Unit,
 ) {
@@ -335,8 +337,13 @@ private fun LinkedPanel(
                 }
             }
             // Same weight as Scan a code: one primary (Add a device) per card (M-11).
-            CinemaOutlinedButton(onClick = onSyncNow, enabled = !status.syncing, modifier = Modifier.fillMaxWidth()) {
-                CinemaText(stringResource(R.string.live_sync_now), role = TextRole.Label, tone = TextTone.Inherit)
+            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                CinemaOutlinedButton(onClick = onSyncNow, enabled = !status.syncing, modifier = Modifier.weight(1f)) {
+                    CinemaText(stringResource(R.string.live_sync_now), role = TextRole.Label, tone = TextTone.Inherit)
+                }
+                CinemaOutlinedButton(onClick = onResyncAll, enabled = !status.syncing, modifier = Modifier.weight(1f)) {
+                    CinemaText(stringResource(R.string.live_sync_full_resync), role = TextRole.Label, tone = TextTone.Inherit)
+                }
             }
         }
     }

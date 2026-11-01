@@ -40,6 +40,7 @@ class SyncEnginePaginationTest {
     // The store's state, as the engine leaves it.
     private var cursor = 0L
     private var deferred = emptySet<String>()
+    private var knownKinds: Set<String>? = SyncKind.KEPT
 
     /** Every batch the applier was given, in order. */
     private val applied = mutableListOf<List<SyncRecord>>()
@@ -68,6 +69,11 @@ class SyncEnginePaginationTest {
         every { store.deferred } answers { deferred }
         every { store.cursor = any() } answers { cursor = firstArg() }
         every { store.deferred = any() } answers { deferred = firstArg() }
+        every { store.knownKinds } answers { knownKinds }
+        every { store.startOver(any()) } answers {
+            cursor = 0
+            knownKinds = firstArg()
+        }
         every { store.savePullProgress(any(), any()) } answers {
             cursor = firstArg()
             deferred = secondArg()
@@ -196,4 +202,74 @@ class SyncEnginePaginationTest {
             assertEquals(setOf("huge", "small"), sent.toSet())
             assertEquals(1, outcome?.pushed)
         }
+
+    @Test
+    fun `a build that keeps a kind the last full pull didn't know pulls everything again, once`() =
+        runBlocking {
+            // Synced on an older build: it skipped followed teams and moved past them.
+            cursor = 2
+            knownKinds = SyncKind.KEPT - SyncKind.FOLLOWED_SPORT
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 2, more = false, records = listOf(wire("a", 1), wire("b", 2)))
+            coEvery { api.pull(any(), any(), 2L, any()) } returns SyncWire.PullResponse(head = 2, more = false)
+
+            engine().syncNow()
+
+            assertEquals(listOf("a", "b"), applied.single().map { it.key.itemId })
+            assertEquals(SyncKind.KEPT, knownKinds)
+            assertEquals(2L, cursor)
+
+            engine().syncNow()
+
+            coVerify(exactly = 1) { api.pull(any(), any(), 0L, any()) }
+        }
+
+    @Test
+    fun `a device that never stored its kinds pulls everything once`() =
+        runBlocking {
+            cursor = 5
+            knownKinds = null
+            coEvery { api.pull(any(), any(), any(), any()) } returns SyncWire.PullResponse(head = 5, more = false)
+
+            engine().syncNow()
+
+            coVerify(exactly = 1) { api.pull(any(), any(), 0L, any()) }
+            assertEquals(SyncKind.KEPT, knownKinds)
+        }
+
+    @Test
+    fun `a pass with the same kinds keeps its place`() =
+        runBlocking {
+            cursor = 5
+            coEvery { api.pull(any(), any(), any(), any()) } returns SyncWire.PullResponse(head = 5, more = false)
+
+            engine().syncNow()
+
+            coVerify(exactly = 0) { api.pull(any(), any(), 0L, any()) }
+            coVerify(exactly = 1) { api.pull(any(), any(), 5L, any()) }
+        }
+
+    @Test
+    fun `Full Resync pulls everything from the first record again`() =
+        runBlocking {
+            cursor = 5
+            coEvery { api.pull(any(), any(), any(), any()) } returns SyncWire.PullResponse(head = 5, more = false)
+
+            engine().startOver()
+            engine().syncNow()
+
+            coVerify(exactly = 1) { api.pull(any(), any(), 0L, any()) }
+        }
+
+    @Test
+    fun `every kept kind is in KEPT`() {
+        val kinds =
+            SyncKind::class.java.declaredFields
+                .filter {
+                    java.lang.reflect.Modifier
+                        .isStatic(it.modifiers) && it.type == String::class.java
+                }.map { it.get(null) as String }
+                .toSet()
+        assertEquals(kinds - SyncKind.VOLATILE - SyncKind.SHARED, SyncKind.KEPT)
+    }
 }

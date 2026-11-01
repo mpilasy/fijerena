@@ -976,6 +976,7 @@
     <string name="live_sync_status_failed">The last sync failed. It is retried automatically.</string>
     <string name="live_sync_server_line">Server: %1$s</string>
     <string name="live_sync_now">Sync now</string>
+    <string name="live_sync_full_resync">Full resync</string>
     <string name="live_sync_add_device">Add a device</string>
     <string name="live_sync_scan_code">Scan a code</string>
     <string name="live_sync_devices_title">Devices</string>

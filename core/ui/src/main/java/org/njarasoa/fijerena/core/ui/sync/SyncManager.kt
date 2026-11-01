@@ -246,6 +246,15 @@ class SyncManager internal constructor(
         }
     }
 
+    /** Full Resync: a pass now that pulls everything from the server again ([SyncEngine.startOver]). */
+    fun resyncAll() {
+        if (!engine.isLinked) return
+        scope.launch {
+            engine.startOver()
+            requestSync(0)
+        }
+    }
+
     /**
      * One pass now, waited for — a last push before unlinking. Best effort: a failure is only
      * logged, since nothing must stop the device leaving.

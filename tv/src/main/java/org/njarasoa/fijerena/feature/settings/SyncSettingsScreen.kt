@@ -128,6 +128,7 @@ fun SyncSettingsScreen() {
                 status = status,
                 devMode = viewModel.devMode,
                 onSyncNow = viewModel::syncNow,
+                onResyncAll = viewModel::resyncAll,
                 syncNowFocus = syncNowFocus,
             )
             CinemaPrimaryButton(
@@ -306,6 +307,7 @@ private fun LinkedPanel(
     status: SyncManager.Status,
     devMode: Boolean,
     onSyncNow: () -> Unit,
+    onResyncAll: () -> Unit,
     syncNowFocus: FocusRequester,
 ) {
     val scale = LocalUiScale.current
@@ -325,12 +327,19 @@ private fun LinkedPanel(
                 tone = TextTone.Secondary,
             )
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
-            CinemaSecondaryButton(
-                onClick = onSyncNow,
-                text = stringResource(R.string.live_sync_now),
-                enabled = !status.syncing,
-                modifier = Modifier.focusRequester(syncNowFocus).leftToRail(),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                CinemaSecondaryButton(
+                    onClick = onSyncNow,
+                    text = stringResource(R.string.live_sync_now),
+                    enabled = !status.syncing,
+                    modifier = Modifier.focusRequester(syncNowFocus).leftToRail(),
+                )
+                CinemaSecondaryButton(
+                    onClick = onResyncAll,
+                    text = stringResource(R.string.live_sync_full_resync),
+                    enabled = !status.syncing,
+                )
+            }
         }
     }
 }

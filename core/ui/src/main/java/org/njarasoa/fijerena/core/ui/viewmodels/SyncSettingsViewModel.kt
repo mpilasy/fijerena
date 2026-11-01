@@ -315,6 +315,8 @@ class SyncSettingsViewModel(
 
     fun syncNow() = manager.requestSync(0)
 
+    fun resyncAll() = manager.resyncAll()
+
     /** Leaves the account; local data stays. */
     fun leave() =
         action {
