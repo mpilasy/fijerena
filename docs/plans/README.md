@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-11-01 | [Consistency](./20261101_consistency-plan.md) | One behaviour and one word for each thing on TV and phone: errors and empty states, words (films, shows, one name per action), one date helper, phone Clear Recent and Favourites order, the wishlist question | Planned 2026-11-01; decisions C-D1 to C-D5 taken |
 | 2026-11-01 | [Style layout tokens](./20261101_style-layout-tokens-plan.md) | Layout from the Look and Feel, not the screen: dialog actions, sheets, phone top bars, icons, panels and rows, spacing per style; the design-system gate covers them | Planned 2026-11-01; 7 phases |
 | 2026-11-01 | [Home row order](./20261101_home-row-order-plan.md) | Each profile orders (and may hide) its Home rows on TV and phone; the order syncs to every device of the profile | Planned 2026-11-01; open questions HO-Q1 to HO-Q3 |
 | 2026-10-31 | [Jellyfin in the merged lists](./20261031_jellyfin-merge-plan.md) | A Jellyfin source's films and shows in the merged lists, Search and Home rows from a local copy of its library; watch history and favourites kept current with the Jellyfin server both ways | Planned 2026-10-31; open questions JM-Q1 (storage) and JM-Q2 (shared login) |
