@@ -151,7 +151,8 @@ class TmdbApiService(
      * As [getMovieDetails] or [getTvDetails], with the cast and crew and the videos in the same call
      * (a TMDB page). Videos in the app language, English or none, since most trailers are English.
      * A film's cast and crew come in `credits`; a show's in `aggregate_credits`, which covers all its
-     * seasons (CT-D3). [TmdbRecommendation.anyCredits] gives either.
+     * seasons (CT-D3), and in `credits`, which gives its series regulars (the regulars apart from
+     * the guest stars). [TmdbRecommendation.anyCredits] gives a film's or a show's full cast.
      */
     suspend fun getDetailsWithCredits(
         movie: Boolean,
@@ -161,7 +162,7 @@ class TmdbApiService(
             if (movie) "movie/$id" else "tv/$id",
             Language.APP,
             mapOf(
-                "append_to_response" to if (movie) "credits,videos" else "aggregate_credits,videos",
+                "append_to_response" to if (movie) "credits,videos" else "aggregate_credits,credits,videos",
                 "include_video_language" to "${appLanguage()},en,null",
             ),
         ).body()

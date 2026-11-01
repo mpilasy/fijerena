@@ -62,7 +62,9 @@ class TitleCreditsTest {
 
         val credits = titleCredits(show, movie = false)
 
-        assertEquals(listOf("Lead", null), credits.cast.map { it.character })
+        assertEquals(listOf("Lead"), credits.cast.map { it.character })
+        // One episode of 42: a guest star.
+        assertEquals(listOf(null), credits.guests.map { it.character })
         assertNull(credits.cast.first().photoUrl)
         assertEquals(CrewLine(CrewRole.CREATOR, listOf(CrewPerson("300", "Cree Ator"))), credits.crew[0])
         assertEquals(CrewRole.WRITER, credits.crew[1].role)
@@ -82,5 +84,39 @@ class TitleCreditsTest {
         assertEquals(7656, castMoreCount(shown = 10, total = 7666))
         assertEquals(2, castMoreCount(shown = 10, total = 12))
         assertEquals(0, castMoreCount(shown = 40, total = 40))
+    }
+
+    @Test
+    fun `a show's cast splits into its regulars and its guest stars`() {
+        fun actor(
+            id: Int,
+            episodes: Int,
+        ) = """{"id":$id,"name":"Actor $id","total_episode_count":$episodes,"roles":[{"character":"Role $id","episode_count":$episodes}]}"""
+        val show =
+            json.decodeFromString<TmdbRecommendation>(
+                """
+                {"id":1,"name":"Long Show",
+                 "aggregate_credits":{"cast":[${actor(
+                    1,
+                    100,
+                )},${actor(2, 90)},${actor(3, 30)},${actor(4, 2)},${actor(5, 1)},${actor(6, 4)}]},
+                 "credits":{"cast":[{"id":1,"name":"Actor 1"},{"id":6,"name":"Actor 6"}]}}
+                """.trimIndent(),
+            )
+        val credits = titleCredits(show, movie = false)
+        // 1 and 6: series regulars; 2 and 3: a quarter of the most episodes or more (left before the latest season).
+        assertEquals(listOf("1", "2", "3", "6"), credits.cast.map { it.personId })
+        assertEquals(listOf("4", "5"), credits.guests.map { it.personId })
+    }
+
+    @Test
+    fun `a show without episode counts or regulars keeps one cast list`() {
+        val show =
+            json.decodeFromString<TmdbRecommendation>(
+                """{"id":1,"name":"Bare","aggregate_credits":{"cast":[{"id":1,"name":"A"},{"id":2,"name":"B"}]}}""",
+            )
+        val credits = titleCredits(show, movie = false)
+        assertEquals(listOf("1", "2"), credits.cast.map { it.personId })
+        assertEquals(emptyList<CastMember>(), credits.guests)
     }
 }

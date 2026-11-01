@@ -176,7 +176,8 @@ data class TmdbRecommendation(
     // A show's makers.
     @SerialName("created_by")
     val createdBy: List<TmdbCreator> = emptyList(),
-    // Only with `append_to_response=credits` (a film's, from getDetailsWithCredits).
+    // Only with `append_to_response=credits` (from getDetailsWithCredits): a film's cast and crew;
+    // for a show, the series regulars of its latest season.
     @SerialName("credits")
     val credits: TmdbCredits? = null,
     // Only with `append_to_response=aggregate_credits` (a show's, from getDetailsWithCredits): the
@@ -247,9 +248,9 @@ data class TmdbRecommendation(
     val year: Int?
         get() = (releaseDate ?: firstAirDate)?.take(4)?.toIntOrNull()
 
-    /** The credits a details response has: a film's [credits], else a show's [aggregateCredits]. */
+    /** The credits a details response has: a show's [aggregateCredits], else a film's [credits]. */
     val anyCredits: TmdbCredits?
-        get() = credits ?: aggregateCredits
+        get() = aggregateCredits ?: credits
 }
 
 /** The collection a movie belongs to, as embedded in a `/movie/{id}` response. */

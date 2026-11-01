@@ -4,12 +4,15 @@ package org.njarasoa.fijerena.core.network.tmdb
  * The people of a film or show that the Cast tab shows (docs/plans/20261030_cast-tab-plan.md):
  * the crew lines at the top, then the cast cards. Made by [titleCredits]. [cast] is TMDB's full
  * cast in billing order; the tab shows the first [MAX_CAST_CARDS] until the user asks for more.
+ * For a show, [cast] is its regular cast and [guests] the guest stars of all seasons, each its own
+ * row (user, 2026-11-01); a film has no [guests].
  */
 data class TitleCredits(
     val cast: List<CastMember>,
     val crew: List<CrewLine>,
+    val guests: List<CastMember> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = cast.isEmpty() && crew.isEmpty()
+    val isEmpty: Boolean get() = cast.isEmpty() && crew.isEmpty() && guests.isEmpty()
 }
 
 /** One cast card. [character] is the role; for a show, the role in the most episodes. */
@@ -107,7 +110,35 @@ fun titleCredits(
                     .take(MAX_WRITERS)
             listOf(CrewLine(CrewRole.CREATOR, creators.distinctBy { it.personId }), CrewLine(CrewRole.WRITER, writers))
         }
-    return TitleCredits(cast, crew.filter { it.people.isNotEmpty() })
+    val (regulars, guests) = if (movie) cast to emptyList() else splitRegulars(cast, credits.cast, details.credits?.cast.orEmpty())
+    return TitleCredits(regulars, crew.filter { it.people.isNotEmpty() }, guests)
+}
+
+/** The fewest episodes that make a show's actor a regular, whatever the share. */
+private const val REGULAR_MIN_EPISODES = 3
+
+/**
+ * A show's [cast] as its regulars and its guest stars, each in billing order. A regular is in TMDB's
+ * series regulars ([seriesRegulars], the latest season's), or played in at least a quarter as many
+ * episodes as the actor with the most, and in [REGULAR_MIN_EPISODES] or more: a main actor who left
+ * before the latest season stays a regular. Without either (no episode counts, no regulars), all are
+ * regulars.
+ */
+private fun splitRegulars(
+    cast: List<CastMember>,
+    allSeasons: List<TmdbCastMember>,
+    seriesRegulars: List<TmdbCastMember>,
+): Pair<List<CastMember>, List<CastMember>> {
+    val episodes =
+        allSeasons
+            .mapNotNull { m ->
+                m.id?.let { it.toString() to (m.totalEpisodeCount ?: m.roles.sumOf { r -> r.episodeCount }) }
+            }.toMap()
+    val most = episodes.values.maxOrNull() ?: 0
+    val regularIds = seriesRegulars.mapNotNullTo(HashSet()) { it.id?.toString() }
+    if (regularIds.isEmpty() && most == 0) return cast to emptyList()
+    val bar = maxOf(REGULAR_MIN_EPISODES, (most + 3) / 4)
+    return cast.partition { it.personId in regularIds || (episodes[it.personId] ?: 0) >= bar }
 }
 
 /**

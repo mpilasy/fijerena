@@ -68,8 +68,15 @@ fun MobileCreditsTabContent(
                 }
             }
         }
+        // A show with guest stars: its regulars and its guest stars apart, each under a heading.
+        val headed = credits.guests.isNotEmpty()
         if (credits.cast.isNotEmpty()) {
+            if (headed) CinemaText(text = stringResource(R.string.episode_series_cast), role = TextRole.Heading)
             CastCardGrid(cast = credits.cast, section = section, onPersonSelected = onPersonSelected)
+        }
+        if (headed) {
+            CinemaText(text = stringResource(R.string.episode_guest_stars), role = TextRole.Heading)
+            CastCardGrid(cast = credits.guests, section = section, onPersonSelected = onPersonSelected)
         }
     }
 }
