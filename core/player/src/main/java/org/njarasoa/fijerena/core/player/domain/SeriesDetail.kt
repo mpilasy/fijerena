@@ -72,6 +72,17 @@ fun SeriesDetail.flattenedEpisodes(sortedSeasons: List<SeasonInfo>): List<Episod
     return result
 }
 
+/**
+ * True when the show is watched to the end: the last episode in [sortedSeasons] order (the last
+ * episode of the last season, so a season 0 of specials counts only when it is the only season)
+ * is in [watchedEpisodeIds]. False for a show with no episodes. The Wishlist question (consistency
+ * plan, C-D4) uses it.
+ */
+fun SeriesDetail.isWatchedToEnd(
+    sortedSeasons: List<SeasonInfo>,
+    watchedEpisodeIds: Set<String>,
+): Boolean = flattenedEpisodes(sortedSeasons).lastOrNull()?.id?.let { it in watchedEpisodeIds } == true
+
 /** The season number containing [episodeId], or null if not found. */
 fun SeriesDetail.seasonNumberContaining(episodeId: String): Int? =
     episodes.entries
