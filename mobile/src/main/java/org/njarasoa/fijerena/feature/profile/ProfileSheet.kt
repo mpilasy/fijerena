@@ -112,7 +112,6 @@ fun ProfileSheet(
                 browse.forEach { source ->
                     SettingsListRow(
                         title = stringResource(R.string.browse_source, source.name),
-                        titleRole = TextRole.Heading,
                         leading = { CinemaIcon(CinemaIcons.Folder, contentDescription = null, tone = TextTone.Secondary) },
                         onClick = {
                             onDismiss()

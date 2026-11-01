@@ -157,18 +157,18 @@ private fun HeaderBar(
     }
 }
 
-/** Back: a plain icon action on a page; over artwork, a filled button on a dark disc so it reads. */
+/** Back: a plain icon action on a solid bar; over artwork, a filled button on a dark disc so it reads. */
 @Composable
 private fun HeaderBack(
     onBack: () -> Unit,
     ground: HeaderGround,
 ) {
     val label = stringResource(R.string.common_back)
-    if (ground == HeaderGround.Page) {
+    if (ground != HeaderGround.Artwork) {
         IconAction(onClick = onBack, icon = CinemaIcons.ArrowBack, label = label)
     } else {
         CinemaIconButton(
-            modifier = Modifier.detailBackBacking(solid = ground == HeaderGround.Covered),
+            modifier = Modifier.detailBackBacking(),
             onClick = onBack,
             icon = { CinemaIcon(CinemaIcons.ArrowBack, label, tone = TextTone.Primary) },
         )

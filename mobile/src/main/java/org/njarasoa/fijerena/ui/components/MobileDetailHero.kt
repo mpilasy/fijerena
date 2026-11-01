@@ -99,12 +99,11 @@ fun MobileDetailHero(
 }
 
 /**
- * The back button's backing on the film or show page: a dark disc while the top bar is clear, so
- * the arrow reads over bright art; nothing once the bar is [solid].
+ * The back button's backing on the film or show page while the top bar is clear: a dark disc, so
+ * the arrow reads over bright art.
  */
 @Composable
-fun Modifier.detailBackBacking(solid: Boolean): Modifier =
-    if (solid) this else background(CinemaTheme.colors.scrim, CinemaTheme.shapes.control)
+fun Modifier.detailBackBacking(): Modifier = background(CinemaTheme.colors.scrim, CinemaTheme.shapes.control)
 
 /** Taller than 16:9, so the picture reaches up under the status bar and the top bar. */
 private const val HERO_ASPECT = 4f / 3f
