@@ -808,6 +808,21 @@ fun MobileCategoryListScreen(
 
     // Undo of a removal from Recent, Favourites or the Wishlist (wishlist UX plan, U-D4).
     val undo = rememberUndoSnackbar()
+    // Clear Recent asks once, as on TV (consistency plan, C-D3).
+    var confirmClearRecent by remember { mutableStateOf(false) }
+    if (confirmClearRecent) {
+        CinemaAlertDialog(
+            onDismissRequest = { confirmClearRecent = false },
+            title = { CinemaText(stringResource(R.string.recent_clear_confirm_title), role = TextRole.Title) },
+            text = { CinemaText(stringResource(R.string.recent_clear_confirm_message), tone = TextTone.Secondary) },
+            danger =
+                DialogAction(stringResource(R.string.recent_clear)) {
+                    confirmClearRecent = false
+                    viewModel.clearRecent()
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmClearRecent = false },
+        )
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
         Scaffold(
@@ -996,6 +1011,16 @@ fun MobileCategoryListScreen(
                                                         )
                                                     }
                                                 }
+                                            } else {
+                                                null
+                                            },
+                                        // As on TV: on every source of the profile, after one confirmation.
+                                        onClearRecent =
+                                            if (state.selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID &&
+                                                viewModel.supportsRemoveFromRecent &&
+                                                !state.streams.isNullOrEmpty()
+                                            ) {
+                                                { confirmClearRecent = true }
                                             } else {
                                                 null
                                             },
@@ -1614,6 +1639,8 @@ private fun CategoryChipRow(
     onCategorySelected: (categoryId: String, source: Long) -> Unit,
     /** Opens the selected category's TV Guide from the row's end; null shows no button. */
     onGuideClick: (() -> Unit)? = null,
+    /** Asks to clear this section's Recent, from the row's end; null shows no button. */
+    onClearRecent: (() -> Unit)? = null,
 ) {
     val (virtualCategories, regularCategories) =
         remember(categories) {
@@ -1714,6 +1741,14 @@ private fun CategoryChipRow(
                             },
                     )
                 }
+            }
+            if (onClearRecent != null) {
+                IconAction(
+                    onClick = onClearRecent,
+                    icon = CinemaIcons.DeleteForever,
+                    label = stringResource(R.string.recent_clear),
+                    tone = TextTone.Danger,
+                )
             }
             if (onGuideClick != null) {
                 IconAction(
