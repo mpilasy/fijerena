@@ -111,7 +111,7 @@
     <string name="sports_not_found">Tsy hita amin\'ny fantsonao</string>
     <string name="sports_on_broadcaster">Ao amin\'ny %1$s</string>
     <string name="sports_in_guide">Ao amin\'ny fandaharana</string>
-    <string name="sports_event_channel">Fantsona hetsika</string>
+    <string name="sports_event_channel">Fantsona manokana</string>
     <string name="sports_starts_at">Manomboka amin\'ny %1$s</string>
     <string name="sports_matching">Mitady fantsona…</string>
     <string name="sports_game_format">%1$s – %2$s</string>
@@ -1474,6 +1474,7 @@
     <string name="ui_style_bold">Mahery</string>
     <string name="ui_style_groove">Gadona</string>
     <string name="ui_style_spotlight">Jiro</string>
+    <string name="ui_style_calm">Milamina</string>
     <string name="theme_midnight">Misasakalina</string>
     <string name="theme_ember">Vainafo</string>
     <string name="theme_aurora">Aorora</string>
@@ -1484,6 +1485,7 @@
     <string name="theme_slate">Solaitra</string>
     <string name="theme_crimson">Mena</string>
     <string name="theme_royal">Manga</string>
+    <string name="theme_clay">Tanimanga</string>
     <string name="parental_controls_title">Fanaraha-maso ny ray aman-dreny</string>
     <string name="parental_controls_desc">Izay hitan\'ny mombamomba ankizy, amin\'ny loharano rehetra. Mitovy ho an\'ny ankohonana iray manontolo: tonga amin\'ny fitaovana rehetra ny fanovana.</string>
     <string name="parental_list_kids_categories">Sokajy ho an\'ny ankizy</string>

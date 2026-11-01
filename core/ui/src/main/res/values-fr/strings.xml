@@ -1483,6 +1483,7 @@
     <string name="ui_style_bold">Affirmé</string>
     <string name="ui_style_groove">Groove</string>
     <string name="ui_style_spotlight">Projecteur</string>
+    <string name="ui_style_calm">Calme</string>
     <string name="theme_midnight">Minuit</string>
     <string name="theme_ember">Braise</string>
     <string name="theme_aurora">Aurore</string>
@@ -1493,6 +1494,7 @@
     <string name="theme_slate">Ardoise</string>
     <string name="theme_crimson">Cramoisi</string>
     <string name="theme_royal">Bleu roi</string>
+    <string name="theme_clay">Argile</string>
     <string name="parental_controls_title">Contrôle parental</string>
     <string name="parental_controls_desc">Ce que voient les profils enfants, sur chaque source. Le même pour tout le foyer : un changement arrive sur chaque appareil.</string>
     <string name="parental_list_kids_categories">Catégories pour enfants</string>

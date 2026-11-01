@@ -356,6 +356,27 @@ val SpotlightStyle =
         icon = UiIconTokens(style = IconStyle.OUTLINED),
     )
 
+/** DM Serif Display titles over Inter, soft 10 dp corners, a quiet outline on focus with little zoom: a calm, paper-like look. */
+val CalmStyle =
+    UiStyle(
+        id = "calm",
+        nameRes = R.string.ui_style_calm,
+        shapes = UiShapeTokens(card = 10.dp, button = 10.dp, chip = 8.dp, dialog = 14.dp),
+        type =
+            UiTypeTokens(
+                fontFamily = UiFonts.Inter,
+                weightRegular = 400,
+                weightEmphasis = 500,
+                trackingTitleSp = 0f,
+                trackingBodySp = 0.1f,
+                titleFontFamily = UiFonts.DmSerifDisplay,
+                titleWeight = 400,
+            ),
+        dialog = UiDialogTokens(cornerRadius = 14.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.5f),
+        grid = UiGridTokens(spacing = 10.dp, focusScale = 1.03f, focusUsesOutline = true, focusUsesShadow = false),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
+    )
+
 val AllUiStyles: List<UiStyle> =
     listOf(
         MaterialStyle,
@@ -371,6 +392,7 @@ val AllUiStyles: List<UiStyle> =
         BoldStyle,
         GrooveStyle,
         SpotlightStyle,
+        CalmStyle,
     )
 
 /** Looks no longer offered, and the one each profile that had it now gets: Serif went 2026-10-19. */

@@ -1480,6 +1480,7 @@
     <string name="ui_style_bold">Bold</string>
     <string name="ui_style_groove">Groove</string>
     <string name="ui_style_spotlight">Spotlight</string>
+    <string name="ui_style_calm">Calm</string>
     <string name="theme_midnight">Midnight</string>
     <string name="theme_ember">Ember</string>
     <string name="theme_aurora">Aurora</string>
@@ -1490,6 +1491,7 @@
     <string name="theme_slate">Slate</string>
     <string name="theme_crimson">Crimson</string>
     <string name="theme_royal">Royal</string>
+    <string name="theme_clay">Clay</string>
     <string name="parental_controls_title">Parental Controls</string>
     <string name="parental_controls_desc">What child profiles see, on every source. The same for the whole household: a change reaches every device.</string>
     <string name="parental_list_kids_categories">Kids\' Categories</string>

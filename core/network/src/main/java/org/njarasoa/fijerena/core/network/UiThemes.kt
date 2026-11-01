@@ -40,6 +40,8 @@ object UiThemes {
             PackagedUiTheme("forest", themeId = "forest", uiStyleId = "groove"),
             PackagedUiTheme("aurora", themeId = "aurora", uiStyleId = "modern"),
             PackagedUiTheme("royal", themeId = "royal", uiStyleId = "spotlight"),
+            // A calm, paper-like look: terracotta on warm charcoal, serif titles.
+            PackagedUiTheme("clay", themeId = "clay", uiStyleId = "calm"),
             PackagedUiTheme("rounded", themeId = "midnight", uiStyleId = "cupertino"),
             PackagedUiTheme("sharp", themeId = "amethyst", uiStyleId = "roku"),
             PackagedUiTheme("balanced", themeId = "amoled_black", uiStyleId = "bravia"),

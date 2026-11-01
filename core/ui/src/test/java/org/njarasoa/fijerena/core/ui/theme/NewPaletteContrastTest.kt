@@ -5,10 +5,20 @@ import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Console, Meadow, Meadow dusk, Slate, Crimson, Forest, Aurora and Royal: text reads on every surface and on the painted sky (4.5:1). */
+/** Console, Meadow, Meadow dusk, Slate, Crimson, Forest, Aurora, Royal and Clay: text reads on every surface and on the painted sky (4.5:1). */
 class NewPaletteContrastTest {
     private val palettes =
-        listOf(ConsolePalette, MeadowPalette, MeadowDuskPalette, SlatePalette, CrimsonPalette, ForestPalette, AuroraPalette, RoyalPalette)
+        listOf(
+            ConsolePalette,
+            MeadowPalette,
+            MeadowDuskPalette,
+            SlatePalette,
+            CrimsonPalette,
+            ForestPalette,
+            AuroraPalette,
+            RoyalPalette,
+            ClayPalette,
+        )
 
     private fun contrast(
         a: Color,
@@ -50,7 +60,7 @@ class NewPaletteContrastTest {
 
     @Test
     fun `the streaming looks' accent text reads on the ground`() {
-        listOf(CrimsonPalette, ForestPalette, AuroraPalette, RoyalPalette).forEach { p ->
+        listOf(CrimsonPalette, ForestPalette, AuroraPalette, RoyalPalette, ClayPalette).forEach { p ->
             val ratio = contrast(p.accent, p.background)
             assertTrue("${p.id} accent on ground: $ratio", ratio >= 3.9f)
         }

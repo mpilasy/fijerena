@@ -549,6 +549,39 @@ val RoyalPalette =
         groundEnd = Color(0xFF040714),
     )
 
+/** A warm charcoal ground with a terracotta accent and warm off-white text: a calm, paper-like look. */
+val ClayPalette =
+    CinemaThemePalette(
+        id = "clay",
+        nameRes = R.string.theme_clay,
+        isLight = false,
+        accent = Color(0xFFD97757),
+        accentDark = Color(0xFFC15F3C),
+        accentLight = Color(0xFFE8A288),
+        orange = Color(0xFFE3B085),
+        orangeDark = Color(0xFFC8935F),
+        orangeLight = Color(0xFFF0CBA8),
+        background = Color(0xFF262624),
+        surface = Color(0xFF30302E),
+        surfaceVariant = Color(0xFF3A3936),
+        surfaceLight = Color(0xFF45443F),
+        glassBackground = Color(0xBF262624),
+        glassBorder = Color(0x14FFFFFF),
+        success = Color(0xFF7FB069),
+        warning = Color(0xFFE3B341),
+        error = Color(0xFFE5484D),
+        live = Color(0xFFE5484D),
+        textPrimary = Color(0xFFFAF9F5),
+        textSecondary = Color(0xFFC2C0B6),
+        textTertiary = Color(0xFF8F8D86),
+        textDisabled = Color(0xFF5E5D59),
+        scrim = Color(0x99000000),
+        groundGlow = Color(0xFF332D29),
+        groundEnd = Color(0xFF1C1B1A),
+        // White on the terracotta reads at 3:1 only; the warm near-black reads at 5.5:1.
+        onAccentOverride = Color(0xFF1F1E1D),
+    )
+
 val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
@@ -559,6 +592,7 @@ val AllPalettes: List<CinemaThemePalette> =
         SlatePalette,
         CrimsonPalette,
         RoyalPalette,
+        ClayPalette,
         AmoledBlackPalette,
         AmethystPalette,
         ForestPalette,
