@@ -16,9 +16,9 @@ import org.njarasoa.fijerena.core.network.R
 import java.util.Date
 
 /**
- * The "Game reminders" notification (both apps; on TV only while the app is not on screen, else
- * the banner shows). Its text is "<home> v <away> starts at <time>", then the best channel ("On
- * Sky Sports 1") or the competition. Tapping it opens the app, which tunes the best channel when
+ * The "Reminders" notification of games and guide programmes (both apps; on TV only while the app
+ * is not on screen, else the banner shows). Its text is "<home> v <away> starts at <time>" ("<title>
+ * starts at <time>" for a programme), then the best channel ("On Sky Sports 1") or the competition. Tapping it opens the app, which tunes the best channel when
  * there is one ([GameReminderAlerts.handleLaunchIntent]).
  */
 object GameReminderNotifications {
@@ -81,11 +81,10 @@ object GameReminderNotifications {
 
     private fun ensureChannel(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-            manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, context.getString(R.string.game_reminder_channel), NotificationManager.IMPORTANCE_HIGH),
-            )
-        }
+        // Created, or renamed ("Game reminders" became "Reminders"); the user's importance is kept.
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, context.getString(R.string.game_reminder_channel), NotificationManager.IMPORTANCE_HIGH),
+        )
     }
 
     // One notification per game: two profiles' reminders of one game show once.

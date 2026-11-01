@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.addGameToCalendar
 import org.njarasoa.fijerena.core.ui.sports.asksBeforeWatching
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
@@ -48,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.sports.watchGameQuestion
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -58,8 +61,8 @@ import java.time.ZoneId
  * and time; then only the profile's channels that show it, in the matcher's order; "Not found on
  * your channels" when there is none. A tap on a channel calls [onPlay] (the channel's mini-player,
  * as a guide result); the sheet stays, for Back from the channel. Before the game starts, the tap
- * asks first: Watch now, or Remind Me ([bells]), as a guide result that is not on yet. Dismissing it
- * calls [onDismiss].
+ * asks first: Watch now, Remind Me ([bells]) or Add to calendar, as a guide result that is not on
+ * yet. Dismissing it calls [onDismiss].
  *
  * [actions]: icon actions beside the title (the reminder bell, [MobileGameBell]).
  */
@@ -126,7 +129,7 @@ fun MobileGameSheet(
     }
 }
 
-/** Watch a game's channel before the game starts, or set the game's reminder (when it has none). */
+/** Watch a game's channel before the game starts, set the game's reminder (when it has none), or add it to the calendar (when the device has a calendar app). */
 @Composable
 private fun WatchOrRemindDialog(
     game: SportsGame,
@@ -137,6 +140,8 @@ private fun WatchOrRemindDialog(
 ) {
     val resources = LocalResources.current
     val canSetReminder = canRemind(game, System.currentTimeMillis() / 1000) && !bells.reminded.has(game)
+    val context = LocalContext.current
+    val canCalendar = remember { canOpenCalendar(context) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -154,6 +159,14 @@ private fun WatchOrRemindDialog(
                         onDismiss()
                     }, kind = ButtonKind.Other) {
                         CinemaText(stringResource(R.string.sports_remind_me), role = TextRole.Label, tone = TextTone.Inherit)
+                    }
+                }
+                if (canCalendar) {
+                    CinemaDialogActionButton(onClick = {
+                        addGameToCalendar(context, game, channel)
+                        onDismiss()
+                    }, kind = ButtonKind.Other) {
+                        CinemaText(stringResource(R.string.epg_browser_add_calendar_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
             }

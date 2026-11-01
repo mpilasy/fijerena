@@ -90,6 +90,8 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
+import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -636,6 +638,8 @@ private fun MobileProgramCard(
     var expanded by remember { mutableStateOf(false) }
     val showExpander = program.airings.size > 3
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
+    // Out of the dialog: closing it must not cancel the reminder it sets.
+    val bells = rememberGameBells()
 
     CinemaCard(
         modifier =
@@ -705,6 +709,7 @@ private fun MobileProgramCard(
             val matched = pending?.matchedStream
             if (pending != null && matched != null) {
                 val airingContext = LocalContext.current
+                val reminder = programmeReminderOf(program.title, pending, nowEpoch)?.takeUnless { bells.reminded.hasProgramme(it) }
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
                     title = {
@@ -742,6 +747,22 @@ private fun MobileProgramCard(
                                     role = TextRole.Label,
                                     tone = TextTone.Inherit,
                                 )
+                            }
+
+                            if (reminder != null) {
+                                CinemaDialogActionButton(
+                                    onClick = {
+                                        pendingConfirmAiring = null
+                                        bells.remindProgramme(reminder)
+                                    },
+                                    kind = ButtonKind.Other,
+                                ) {
+                                    CinemaText(
+                                        stringResource(R.string.sports_remind_me),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
                             }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {

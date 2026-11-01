@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.GameReminders
 import org.njarasoa.fijerena.core.network.sports.GameState
+import org.njarasoa.fijerena.core.network.sports.ProgrammeReminder
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
@@ -31,6 +32,8 @@ interface GameBellStore {
     suspend fun setForTeam(team: SportsTeam)
 
     suspend fun clearForTeam(team: SportsTeam)
+
+    suspend fun setProgramme(programme: ProgrammeReminder) {}
 }
 
 /** The real [GameBellStore]: [GameReminders] for the profile in use. */
@@ -52,6 +55,10 @@ class AppGameBellStore(
     override suspend fun setForTeam(team: SportsTeam) = reminders.setForTeam(profileId, team)
 
     override suspend fun clearForTeam(team: SportsTeam) = reminders.clearForTeam(profileId, team)
+
+    override suspend fun setProgramme(programme: ProgrammeReminder) {
+        reminders.setProgramme(profileId, programme)
+    }
 }
 
 /** The store the bells use; null: the app's ([AppGameBellStore]). The tests give a fake. */
@@ -59,7 +66,7 @@ val LocalGameBellStore = staticCompositionLocalOf<GameBellStore?> { null }
 
 /**
  * A screen's bells: what has a reminder ([reminded]), and the bell's tap for a game ([toggle]) or
- * for every game of a team ([toggleTeam]). Setting one asks for the notification permission first
+ * for every game of a team ([toggleTeam]); a guide programme's Remind Me ([remindProgramme]). Setting one asks for the notification permission first
  * when the app does not have it ([rememberGameReminderPermission]).
  */
 @Stable
@@ -67,10 +74,13 @@ class GameBells internal constructor(
     val reminded: GameReminders.Reminded,
     private val onToggle: (SportsGame) -> Unit,
     private val onToggleTeam: (SportsTeam) -> Unit,
+    private val onRemindProgramme: (ProgrammeReminder) -> Unit = {},
 ) {
     fun toggle(game: SportsGame) = onToggle(game)
 
     fun toggleTeam(team: SportsTeam) = onToggleTeam(team)
+
+    fun remindProgramme(programme: ProgrammeReminder) = onRemindProgramme(programme)
 }
 
 /** Whether [game] may have a bell at [nowSec]: it has not started, and is not postponed, cancelled or over. */
@@ -99,6 +109,10 @@ fun rememberGameBells(): GameBells {
                 val on = reminded.hasTeam(team)
                 if (!on) askNotifications()
                 scope.launchGuarded("GameBells.toggleTeam") { if (on) store.clearForTeam(team) else store.setForTeam(team) }
+            },
+            onRemindProgramme = { programme ->
+                askNotifications()
+                scope.launchGuarded("GameBells.remindProgramme") { store.setProgramme(programme) }
             },
         )
     }

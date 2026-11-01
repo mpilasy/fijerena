@@ -19,6 +19,10 @@ import androidx.room.Index
  * team whose bell was cleared stays as a muted row, its start stored negative and no alarm, so the
  * team's next refresh does not add it again.
  *
+ * A guide programme's reminder has [source] `guide` (`GameReminders.PROGRAMME_SOURCE`), [gameId]
+ * `<providerId>:<streamId>:<start>`, the programme title in [homeName], the channel name in
+ * [competitionName] and the channel to tune in [lookupTeam], as JSON (`ReminderChannel`).
+ *
  * `GameReminders` in the sports package reads and writes it.
  */
 @Entity(

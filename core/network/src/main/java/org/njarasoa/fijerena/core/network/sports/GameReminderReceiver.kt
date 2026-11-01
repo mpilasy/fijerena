@@ -61,7 +61,8 @@ class GameReminderReceiver : BroadcastReceiver() {
             val outcome = GameReminders.getInstance(context).onAlarm(profileId, source, gameId)
             if (outcome !is GameReminders.AlarmOutcome.Ring) return
             val reminder = outcome.reminder
-            val game = outcome.game ?: gameOf(reminder)
+            val programme = reminder.source == GameReminders.PROGRAMME_SOURCE
+            val game = if (programme) null else outcome.game ?: gameOf(reminder)
             val alert =
                 GameReminderAlert(
                     profileId = reminder.profileId,
@@ -71,7 +72,12 @@ class GameReminderReceiver : BroadcastReceiver() {
                     awayName = reminder.awayName,
                     competitionName = reminder.competitionName,
                     startEpochSec = reminder.startEpoch,
-                    channel = game?.let { ReminderChannelFinder.find(context, reminder.profileId, it) },
+                    channel =
+                        if (programme) {
+                            ReminderChannel.decode(reminder.lookupTeam)
+                        } else {
+                            game?.let { ReminderChannelFinder.find(context, reminder.profileId, it) }
+                        },
                 )
             if (!GameReminderAlerts.showBanner(alert)) GameReminderNotifications.post(context, alert)
         }

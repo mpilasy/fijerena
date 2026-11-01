@@ -4,15 +4,43 @@ import android.content.Intent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
 
 /** The live channel a reminder tunes: a stream of the profile's sources. */
+@Serializable
 data class ReminderChannel(
     val providerId: Long,
     val streamId: Int,
     val categoryId: String,
     val name: String,
-)
+) {
+    fun encode(): String = json.encodeToString(serializer(), this)
+
+    companion object {
+        private val json = Json { ignoreUnknownKeys = true }
+
+        /** [text] read back; null when it is not a stored channel. */
+        fun decode(text: String): ReminderChannel? =
+            try {
+                json.decodeFromString(serializer(), text)
+            } catch (e: IllegalArgumentException) {
+                // cancellation-ok: not a suspend call
+                null
+            }
+    }
+}
+
+/** A guide programme to be reminded of: it rings as a game does, and tunes [channel]. */
+data class ProgrammeReminder(
+    val title: String,
+    val startEpochSec: Long,
+    val channel: ReminderChannel,
+) {
+    /** The programme's id among the reminders: its channel and start. */
+    val id: String get() = "${channel.providerId}:${channel.streamId}:$startEpochSec"
+}
 
 /** A reminder that rang: the game, and its best channel when one was found. */
 data class GameReminderAlert(

@@ -32,6 +32,9 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
  *   ([reread], from the cache when fresh): a moved game gets a new alarm instead of ringing.
  *
  * A reminder that rang, or whose game is over, is deleted. Writes are serialised by one lock.
+ *
+ * A guide programme's reminder ([setProgramme]) is a row of [PROGRAMME_SOURCE]: it rings at its
+ * stored start, with or without the Sports switch, and tunes its own channel.
  */
 class GameReminders internal constructor(
     private val db: XtreamDatabase,
@@ -50,6 +53,8 @@ class GameReminders internal constructor(
         fun has(game: SportsGame): Boolean = key(game.source.id, game.id) in games
 
         fun hasTeam(team: SportsTeam): Boolean = GameReminderEntity.teamKey(team.source.id, team.id) in teams
+
+        fun hasProgramme(programme: ProgrammeReminder): Boolean = key(PROGRAMME_SOURCE, programme.id) in games
     }
 
     /** What the alarm did. [Ring] carries the alert to show. */
@@ -94,6 +99,26 @@ class GameReminders internal constructor(
         lock.withLock {
             val reminder = entityOf(profileId, game, teamKey = null, lookup = game.home)
             schedule(reminder)
+        }
+
+    /** Sets a reminder for a guide programme. False, and nothing stored, when it has started. */
+    suspend fun setProgramme(
+        profileId: String,
+        programme: ProgrammeReminder,
+    ): Boolean =
+        lock.withLock {
+            schedule(
+                GameReminderEntity(
+                    profileId = profileId,
+                    source = PROGRAMME_SOURCE,
+                    gameId = programme.id,
+                    startEpoch = programme.startEpochSec,
+                    homeName = programme.title,
+                    competitionName = programme.channel.name,
+                    lookupTeam = programme.channel.encode(),
+                    createdAt = now(),
+                ),
+            )
         }
 
     /**
@@ -260,6 +285,15 @@ class GameReminders internal constructor(
     ): AlarmOutcome {
         // A muted reminder's alarm was cancelled; one firing anyway does nothing.
         val reminder = dao.get(profileId, source, gameId)?.takeIf { it.startEpoch > 0 } ?: return AlarmOutcome.Dropped
+        if (source == PROGRAMME_SOURCE) {
+            // A guide programme is not read again: it rings at its stored start.
+            return lock.withLock {
+                val decision = ReminderSchedule.decide(reminder.startEpoch, null, now())
+                remove(reminder)
+                updateRescheduleReceiver()
+                if (decision is ReminderSchedule.Decision.Ring) AlarmOutcome.Ring(reminder, null) else AlarmOutcome.Dropped
+            }
+        }
         if (!enabled()) {
             lock.withLock { remove(reminder) }
             return AlarmOutcome.Dropped
@@ -372,6 +406,9 @@ class GameReminders internal constructor(
 
     companion object {
         private const val TAG = "GameReminders"
+
+        /** The `game_reminder.source` of a guide programme's reminder; its channel is in `lookupTeam`. */
+        const val PROGRAMME_SOURCE = "guide"
         private const val REREAD_TIMEOUT_MS = 5_000L
 
         internal fun key(

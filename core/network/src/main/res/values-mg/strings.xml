@@ -67,7 +67,7 @@
     <string name="error_guide_login_missing">Ny fidiran\'ny loharano no ilaina hakana ity fitarihana ity, nefa tsy misy ny tenimiafiny amin\'ity fitaovana ity. Ovay ny loharano ary ampidiro ny tenimiafina.</string>
 
     <!-- Game reminders (GameReminderNotifications) -->
-    <string name="game_reminder_channel">Fampahatsiahivana lalao</string>
+    <string name="game_reminder_channel">Fampahatsiahivana</string>
     <string name="game_reminder_title_vs">Hanomboka amin\'ny %3$s ny %1$s sy %2$s</string>
     <string name="game_reminder_title_one">Hanomboka amin\'ny %2$s ny %1$s</string>
     <string name="game_reminder_on_channel">Ao amin\'ny %1$s</string>

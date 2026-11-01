@@ -256,6 +256,35 @@ class GameRemindersTest {
             assertEquals(GameReminders.AlarmOutcome.Dropped, reminders.onAlarm(P1, "espn", "g1"))
         }
 
+    private fun programme(inSec: Long) =
+        ProgrammeReminder("Match of the Day", nowMs / 1000 + inSec, ReminderChannel(1, 7, "sport", "BBC One"))
+
+    @Test
+    fun `a guide programme's reminder rings 10 minutes before it, with its channel, Sports switch off too`() =
+        runBlocking {
+            val p = programme(inSec = 3_600)
+            assertTrue(reminders.setProgramme(P1, p))
+            assertEquals((p.startEpochSec - 600) * 1000, alarms.set["$P1/${p.id}"])
+            assertTrue(reminders.observe(P1).first().hasProgramme(p))
+            enabled = false
+            nowMs = (p.startEpochSec - 600) * 1000
+            val outcome = reminders.onAlarm(P1, GameReminders.PROGRAMME_SOURCE, p.id) as GameReminders.AlarmOutcome.Ring
+            assertEquals("Match of the Day", outcome.reminder.homeName)
+            assertEquals(p.channel, ReminderChannel.decode(outcome.reminder.lookupTeam))
+            assertFalse(reminders.observe(P1).first().hasProgramme(p))
+            assertFalse(alarms.receiverOn)
+        }
+
+    @Test
+    fun `a guide programme that has started gets no reminder, and a late alarm does not ring`() =
+        runBlocking {
+            assertFalse(reminders.setProgramme(P1, programme(inSec = -60)))
+            val p = programme(inSec = 3_600)
+            reminders.setProgramme(P1, p)
+            nowMs = (p.startEpochSec + 3_600) * 1000
+            assertEquals(GameReminders.AlarmOutcome.Dropped, reminders.onAlarm(P1, GameReminders.PROGRAMME_SOURCE, p.id))
+        }
+
     private companion object {
         const val P1 = "p1"
     }

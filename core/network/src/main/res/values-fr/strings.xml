@@ -66,7 +66,7 @@
     <string name="epg_error_source_not_found">Source de guide introuvable</string>
 
     <!-- Game reminders (GameReminderNotifications) -->
-    <string name="game_reminder_channel">Rappels de matchs</string>
+    <string name="game_reminder_channel">Rappels</string>
     <string name="game_reminder_title_vs">%1$s – %2$s commence à %3$s</string>
     <string name="game_reminder_title_one">%1$s commence à %2$s</string>
     <string name="game_reminder_on_channel">Sur %1$s</string>

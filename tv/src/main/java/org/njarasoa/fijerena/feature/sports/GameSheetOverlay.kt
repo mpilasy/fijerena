@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.sports.GameBells
+import org.njarasoa.fijerena.core.ui.sports.addGameToCalendar
 import org.njarasoa.fijerena.core.ui.sports.asksBeforeWatching
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
@@ -56,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.sports.watchGameQuestion
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.cards.TvCard
@@ -75,8 +78,8 @@ import java.time.ZoneId
  * and time; then only the profile's channels that show it, in the matcher's order (guide
  * programmes first, then event channels, then networks' channels); "Not found on your channels"
  * when there is none. OK on a channel calls [onPlay] (the channel's preview, as a guide result);
- * before the game starts, it asks first: Watch now, or Remind Me ([bells]), as a guide result that is
- * not on yet.
+ * before the game starts, it asks first: Watch now, Remind Me ([bells]) or Add to calendar, as a
+ * guide result that is not on yet.
  * Back calls [onClose], and the page gives focus back to the game. An in-tree overlay: focus stays
  * in it.
  *
@@ -164,7 +167,7 @@ fun GameSheetOverlay(
     }
 }
 
-/** Watch a game's channel before the game starts, or set the game's reminder (when it has none). */
+/** Watch a game's channel before the game starts, set the game's reminder (when it has none), or add it to the calendar (when the device has a calendar app). */
 @Composable
 private fun WatchOrRemindDialog(
     game: SportsGame,
@@ -175,6 +178,8 @@ private fun WatchOrRemindDialog(
 ) {
     val resources = LocalResources.current
     val canSetReminder = canRemind(game, System.currentTimeMillis() / 1000) && !bells.reminded.has(game)
+    val context = LocalContext.current
+    val canCalendar = remember { canOpenCalendar(context) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { CinemaText(stringResource(R.string.epg_browser_watch_confirm_title), role = TextRole.Title) },
@@ -190,6 +195,14 @@ private fun WatchOrRemindDialog(
                         onDismiss()
                     }) {
                         CinemaText(stringResource(R.string.sports_remind_me), role = TextRole.Label, tone = TextTone.Inherit)
+                    }
+                }
+                if (canCalendar) {
+                    CinemaButton(onClick = {
+                        addGameToCalendar(context, game, channel)
+                        onDismiss()
+                    }) {
+                        CinemaText(stringResource(R.string.epg_browser_add_calendar_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
             }
