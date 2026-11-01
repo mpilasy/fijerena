@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261101215357
 
 - **Each Look and Feel sets the whole look:** dialogs, sheets, top bars, icons, panels, list rows and spacing now come from the Look and Feel, not from each screen. A dialog's buttons are laid out by the Look (a row or a stack, label or full width, Cancel last), and its main action is in the theme's colour. Sheets on the phone are a bottom sheet, a centred panel or full screen by Look. Phone screens share one header, whose height, title position and line come from the Look. Icons take their colour from the theme. The phone's spacing is a little denser in Sharp, Console and Grotesk, and a little roomier in Soft, Meadow, Calm, Rounded and Spotlight. TV and phone.
 - **Easier to read in every Look and Feel:** a centred phone sheet (Balanced) is now wide, at most most of the screen's height with its list scrolling in it, and dims the whole screen. The phone's bottom bar is opaque, and the tab in use is a solid accent pill whose name reads in every theme (Crimson too). The four Search tabs fit the phone's width, so "Catalogue" is no longer cut. "Tue 3 Nov · 14:00" no longer breaks after "·". Stacked dialog buttons are all the same height. On TV, the open rail is opaque, a game's sheet is a panel whose title stays at the top and whose rows stay clear of the rail, the More menu has no empty space under Cancel, and a focused Settings row in Rounded no longer touches the panel's edge. TV and phone.
