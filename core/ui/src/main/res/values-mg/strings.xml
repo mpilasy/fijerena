@@ -123,6 +123,7 @@
     <string name="home_upcoming_games">Lalao ho avy</string>
     <string name="sports_remind_me">Ampahatsiahivo aho</string>
     <string name="sports_reminder_set">Voatendry ny fampahatsiahivana</string>
+    <string name="sports_watch_confirm_message">Manomboka ity lalao ity: %1$s.\nHijery ny %2$s izao?</string>
     <string name="sports_remind_team">Ampahatsiahivo aho isaky ny lalao</string>
     <string name="sports_remind_team_set">Voatendry ny fampahatsiahivana isaky ny lalao</string>
     <string name="sport_soccer">Baolina kitra</string>

@@ -201,6 +201,7 @@ fun MobileSportsSectionScreen(
             game = sheetGame,
             channels = loaded?.channelsOf(sheetGame),
             onPlay = { channel -> onPlay(channel.liveRoute()) },
+            bells = bells,
             onDismiss = { openGame = null },
             actions = { MobileGameBell(sheetGame, bells, nowSec) },
         )

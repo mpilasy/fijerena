@@ -327,6 +327,7 @@ fun SportsSectionScreen(
                 channels = loaded?.channelsOf(sheetGame),
                 returnFocus = returnFocus,
                 onPlay = { channel: GameChannel -> onPlay(channel.liveRoute()) },
+                bells = bells,
                 onClose = {
                     closedGame = "game:${sheetGame.key}"
                     openGame = null

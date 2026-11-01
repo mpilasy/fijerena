@@ -477,6 +477,7 @@ fun MobileHomeScreen(
             game = sheetGame.game,
             channels = sheetGame.channels,
             onPlay = { channel -> onGameChannel(channel.liveRoute()) },
+            bells = bells,
             onDismiss = { openGame = null },
             actions = { MobileGameBell(sheetGame.game, bells, nowSec) },
         )

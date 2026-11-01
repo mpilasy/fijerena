@@ -83,6 +83,7 @@ class UpcomingGamesRowFocusTest {
                                 channels = game.channels,
                                 returnFocus = returnFocus,
                                 onPlay = {},
+                                bells = gameBells,
                                 onClose = {
                                     closed = game.game.id
                                     open = null

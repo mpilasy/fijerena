@@ -255,6 +255,7 @@ internal fun MobileTeamsSearchPane(
             game = sheetGame,
             channels = sheetGames?.channelsOf(sheetGame),
             onPlay = { channel -> onPlay(channel.liveRoute()) },
+            bells = bells,
             onDismiss = { openGame = null },
             actions = { MobileGameBell(sheetGame, bells, nowSec) },
         )

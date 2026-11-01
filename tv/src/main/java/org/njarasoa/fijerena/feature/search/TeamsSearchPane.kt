@@ -237,6 +237,7 @@ internal fun TeamsSearchPane(
                 channels = sheetGames?.channelsOf(sheetGame),
                 returnFocus = returnFocus,
                 onPlay = { channel -> onPlay(channel.liveRoute()) },
+                bells = bells,
                 onClose = {
                     closedGame = "game:${sheetGame.key}"
                     openGame = null

@@ -1,12 +1,16 @@
 package org.njarasoa.fijerena.core.ui.sports
 
 import android.content.res.Resources
+import androidx.compose.runtime.Composable
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -146,3 +150,21 @@ private val MALAGASY_MONTHS =
         "Novambra",
         "Desambra",
     )
+
+/** Whether a tap on one of [game]'s channels asks first (Watch now or Remind Me): the game has not started. */
+fun asksBeforeWatching(
+    game: SportsGame,
+    nowSec: Long,
+): Boolean = game.startEpochSec > nowSec
+
+/** The question before a channel of a game that has not started: "This game starts: Today · 19:30. Watch Sky Sports now?" */
+@Composable
+fun watchGameQuestion(
+    resources: Resources,
+    game: SportsGame,
+    channel: GameChannel,
+): String {
+    val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
+    val start = "${gameDayLabel(resources, day)} · ${TimeFormat.formatTime(game.startEpochSec)}"
+    return resources.getString(R.string.sports_watch_confirm_message, start, shownChannelName(channel.stream.name))
+}

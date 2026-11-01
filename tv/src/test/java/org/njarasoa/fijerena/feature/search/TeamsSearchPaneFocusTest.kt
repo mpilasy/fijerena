@@ -144,6 +144,10 @@ class TeamsSearchPaneFocusTest {
             up("C / Arsenal v Chelsea"),
             center("P / PPV 3: Arsenal v Chelsea / UK"),
         )
+        // The game has not started: OK asks first, and Watch now plays the channel.
+        walk.press(Key.DirectionCenter)
+        walk.awaitFocused("Cancel")
+        walk.run(right("Watch now"))
         walk.press(Key.DirectionCenter)
         assertEquals(listOf("7"), played.map { it.initialStreamId })
 

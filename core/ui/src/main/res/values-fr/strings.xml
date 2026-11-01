@@ -123,6 +123,7 @@
     <string name="home_upcoming_games">Matchs à venir</string>
     <string name="sports_remind_me">Rappel</string>
     <string name="sports_reminder_set">Rappel activé</string>
+    <string name="sports_watch_confirm_message">Ce match commence : %1$s.\nRegarder %2$s maintenant ?</string>
     <string name="sports_remind_team">Rappel pour chaque match</string>
     <string name="sports_remind_team_set">Rappels activés pour chaque match</string>
     <string name="sport_soccer">Football</string>

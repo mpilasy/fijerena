@@ -126,6 +126,7 @@
     <string name="home_upcoming_games">Upcoming Games</string>
     <string name="sports_remind_me">Remind Me</string>
     <string name="sports_reminder_set">Reminder Set</string>
+    <string name="sports_watch_confirm_message">This game starts: %1$s.\nWatch %2$s now?</string>
     <string name="sports_remind_team">Remind Me of Every Game</string>
     <string name="sports_remind_team_set">Reminders Set for Every Game</string>
     <string name="sport_soccer">Football</string>

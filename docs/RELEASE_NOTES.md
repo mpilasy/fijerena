@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Watch now or later:** on a game's sheet, a channel of a game that has not started now asks first, as the guide does for a programme that is not on yet: **Watch now** opens the channel, **Remind Me** sets the game's reminder (shown only when the game has none). A game that has started still opens its channel at once. TV and phone.
+
 ## Version: 0.9.20261101120335
 
 - **The day stays on top:** in Sports, on league and team pages and in Teams search, a day's heading stays pinned at the top while you scroll its games, until the next day's heading takes its place. TV and phone.
