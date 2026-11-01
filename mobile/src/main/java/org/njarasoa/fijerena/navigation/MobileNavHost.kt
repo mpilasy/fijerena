@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.navigation
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -30,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.core.ui.sports.teamsSearch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -120,15 +121,19 @@ import org.njarasoa.fijerena.feature.sports.MobileSportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsTeamScreen
 import org.njarasoa.fijerena.feature.wanted.MobileTmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.CinemaSnackbarHost
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.LocalMobileClock
 import org.njarasoa.fijerena.ui.components.MobileClockOverlay
 import org.njarasoa.fijerena.ui.components.MobileClockState
 import org.njarasoa.fijerena.ui.components.PinDialog
+import org.njarasoa.fijerena.ui.components.rememberCinemaSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
 fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     // The profile in use has Expert mode: only then does it add sources (a tab's Add Source, the gate below).
     val expert by remember { appSettings.observeDevMode().map { it.second } }
@@ -461,7 +466,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         if (expert) {
             leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
         } else {
-            Toast.makeText(context, R.string.browse_sign_in_ask_admin, Toast.LENGTH_LONG).show()
+            AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
         }
 
     // The top bar of [tab]'s root: the section's name over the sources' sync summary; Search the
@@ -499,7 +504,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             if (expert) {
                                 navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
                             } else {
-                                Toast.makeText(context, R.string.browse_sign_in_ask_admin, Toast.LENGTH_LONG).show()
+                                AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
                             }
                         }
 
@@ -612,6 +617,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else CinemaSpacing.none
+    // The one snackbar over every screen; an Undo acts on its own screen, so it goes with it.
+    val snackbar = rememberCinemaSnackbar()
+    LaunchedEffect(entry?.id) { snackbar.dismissUndo() }
     // Back never leaves the app (household UX plan, 2026-10-19): on a tab's start it goes to Home,
     // on Home it does nothing — a child pressing Back stays in. On Settings' start it goes to the
     // tab Settings was opened from. Composed before the NavHost, so the NavHost's own Back (popping
@@ -627,6 +635,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Surface)) {
         CompositionLocalProvider(
             LocalDockInset provides dockInset,
+            LocalCinemaSnackbar provides snackbar,
             LocalOpenWanted provides { navController.navigateOnce(it) },
             LocalMobileClock provides clock,
         ) {
@@ -1343,6 +1352,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     )
                 }
             }
+            CinemaSnackbarHost(snackbar)
         }
         // After the NavHost, so it draws over the screen.
         MobileClockOverlay(clock)

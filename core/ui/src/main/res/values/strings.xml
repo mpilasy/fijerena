@@ -1419,7 +1419,6 @@
     <string name="parental_entry_hint">Whole words, any case, accents ignored. End with * for any ending: barn* finds Barnefilmer.</string>
     <string name="parental_entry_matches">Matches %1$d</string>
     <string name="parental_entry_matches_none">Matches nothing on your sources</string>
-    <string name="parental_entry_removed">Removed %1$s</string>
     <string name="parental_list_reset">Reset to the app\'s list</string>
     <string name="parental_list_reset_confirm">Replace this list with the app\'s words? Your changes to this list are lost.</string>
     <string name="parental_check_title">Check a Source</string>
@@ -1431,7 +1430,6 @@
     <string name="parental_check_none">A child sees no category on this source. Add the words of its kids\' categories to Kids\' Categories.</string>
     <string name="parental_no_sources">No source to check yet.</string>
     <string name="parental_entry_remove">Remove %1$s</string>
-    <string name="parental_entry_undo">Undo</string>
     <!-- Wanted titles: the wanted titles plan -->
     <string name="wanted_title">Wishlist</string>
     <string name="wanted_add">Add to Wishlist</string>

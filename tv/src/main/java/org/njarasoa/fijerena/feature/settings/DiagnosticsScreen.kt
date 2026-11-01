@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -114,11 +115,7 @@ fun DiagnosticsScreen() {
         val loaded = entries
         if (loaded != null && loaded.isEmpty()) {
             item {
-                CinemaText(
-                    stringResource(R.string.settings_diagnostics_empty),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
+                TvEmptyState(message = stringResource(R.string.settings_diagnostics_empty))
             }
         }
         itemsIndexed(loaded.orEmpty()) { index, entry ->

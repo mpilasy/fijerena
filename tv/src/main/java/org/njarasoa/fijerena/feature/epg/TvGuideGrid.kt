@@ -392,80 +392,82 @@ fun TvGuideGrid(
 
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-            when {
-                state is EpgViewModel.UiState.Ready -> {
-                    GuideBody(
-                        state = state,
-                        focus = focus,
-                        scrollState = scrollState,
-                        verticalListState = verticalListState,
-                        returnFocus = returnFocus,
-                        onProgramSelected = onProgramSelected,
-                        onWatchFromStart = onWatchFromStart,
-                        onChannelSelected = onChannelSelected,
-                        onRowsVisible = onRowsVisible,
-                        isFavoriteChannel = isFavoriteChannel,
-                        // A favourite removed in the Favourites guide, and Remove from Recent: the rows
-                        // reload without the channel, so its cell goes: focus lands again, as on first
-                        // open, on the row that took its place. Both removals come with an Undo
-                        // (plan → A), which reloads them with the channel back in its place.
-                        onToggleFavorite = { channel, wasFavorite ->
-                            if (onToggleFavorite(channel)) entryFocusDone = false
-                            if (wasFavorite) {
-                                undoBar.show(parseDisplayTitle(channel.name).title.ifBlank { channel.name }) {
-                                    if (onRestoreFavorite(channel)) entryFocusDone = false
-                                }
-                            }
-                        },
-                        onRemoveFromRecent =
-                            onRemoveFromRecent?.let { remove ->
-                                { channel ->
-                                    entryFocusDone = false
-                                    val undo = remove(channel)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    state is EpgViewModel.UiState.Ready -> {
+                        GuideBody(
+                            state = state,
+                            focus = focus,
+                            scrollState = scrollState,
+                            verticalListState = verticalListState,
+                            returnFocus = returnFocus,
+                            onProgramSelected = onProgramSelected,
+                            onWatchFromStart = onWatchFromStart,
+                            onChannelSelected = onChannelSelected,
+                            onRowsVisible = onRowsVisible,
+                            isFavoriteChannel = isFavoriteChannel,
+                            // A favourite removed in the Favourites guide, and Remove from Recent: the rows
+                            // reload without the channel, so its cell goes: focus lands again, as on first
+                            // open, on the row that took its place. Both removals come with an Undo
+                            // (plan → A), which reloads them with the channel back in its place.
+                            onToggleFavorite = { channel, wasFavorite ->
+                                if (onToggleFavorite(channel)) entryFocusDone = false
+                                if (wasFavorite) {
                                     undoBar.show(parseDisplayTitle(channel.name).title.ifBlank { channel.name }) {
-                                        entryFocusDone = false
-                                        undo()
+                                        if (onRestoreFavorite(channel)) entryFocusDone = false
                                     }
                                 }
                             },
-                    )
-                    LaunchedEffect(state) {
-                        // Back from a preview or the browser: NavReturnFocus hands focus to the cell
-                        // or the Search button that opened it.
-                        if (returnFocus.key != null) return@LaunchedEffect
-                        if (!entryFocusDone) {
-                            entryFocusDone = true
-                            focus.focusNow(animate = false)
-                        } else if (jumpToNowPending && state.selectedDate == today) {
-                            jumpToNowPending = false
-                            focus.focusNow(animate = true)
+                            onRemoveFromRecent =
+                                onRemoveFromRecent?.let { remove ->
+                                    { channel ->
+                                        entryFocusDone = false
+                                        val undo = remove(channel)
+                                        undoBar.show(parseDisplayTitle(channel.name).title.ifBlank { channel.name }) {
+                                            entryFocusDone = false
+                                            undo()
+                                        }
+                                    }
+                                },
+                        )
+                        LaunchedEffect(state) {
+                            // Back from a preview or the browser: NavReturnFocus hands focus to the cell
+                            // or the Search button that opened it.
+                            if (returnFocus.key != null) return@LaunchedEffect
+                            if (!entryFocusDone) {
+                                entryFocusDone = true
+                                focus.focusNow(animate = false)
+                            } else if (jumpToNowPending && state.selectedDate == today) {
+                                jumpToNowPending = false
+                                focus.focusNow(animate = true)
+                            }
                         }
                     }
-                }
 
-                state is EpgViewModel.UiState.NoListings -> {
-                    // GuideBody's hand-back is not composed here: Back from the browser lands on Search.
-                    NavReturnFocusEffect(returnFocus)
-                    NoListingsBody(
-                        state = state,
-                        refreshRequester = noListingsRefreshRequester,
-                        // This button goes away with the reload, so whatever comes back takes focus again.
-                        onRefresh = {
-                            entryFocusDone = false
-                            onRefresh()
-                        },
-                        takeFocus = !entryFocusDone,
-                        onFocusTaken = { entryFocusDone = true },
-                    )
-                }
+                    state is EpgViewModel.UiState.NoListings -> {
+                        // GuideBody's hand-back is not composed here: Back from the browser lands on Search.
+                        NavReturnFocusEffect(returnFocus)
+                        NoListingsBody(
+                            state = state,
+                            refreshRequester = noListingsRefreshRequester,
+                            // This button goes away with the reload, so whatever comes back takes focus again.
+                            onRefresh = {
+                                entryFocusDone = false
+                                onRefresh()
+                            },
+                            takeFocus = !entryFocusDone,
+                            onFocusTaken = { entryFocusDone = true },
+                        )
+                    }
 
-                else -> {
-                    LoadingBody()
+                    else -> {
+                        LoadingBody()
+                    }
                 }
             }
+            // Under the grid, taking its own room.
+            TvUndoBar(undoBar)
         }
-        // Over the screen, not inside its padded column: kept off the overscan edge here.
-        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.tvSafeMarginVertical))
     }
 }
 

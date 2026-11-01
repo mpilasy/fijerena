@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.sports.league
 import org.njarasoa.fijerena.core.ui.sports.team
 import org.njarasoa.fijerena.core.ui.sports.teamsSearch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -103,6 +105,7 @@ import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
 import org.njarasoa.fijerena.ui.components.TvClockState
 import org.njarasoa.fijerena.ui.components.TvGameReminderBanner
+import org.njarasoa.fijerena.ui.components.TvNoticeHost
 import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
@@ -120,6 +123,7 @@ fun TvNavHost(
     onUiScaleChanged: (Float?) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     // Which screen a dead D-pad happened on, for Diagnostics (DeadKeyDetector).
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { entry ->
@@ -359,9 +363,7 @@ fun TvNavHost(
                     if (expert) {
                         navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
                     } else {
-                        android.widget.Toast
-                            .makeText(context, R.string.browse_sign_in_ask_admin, android.widget.Toast.LENGTH_LONG)
-                            .show()
+                        AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
                     }
                 }
 
@@ -1416,6 +1418,8 @@ fun TvNavHost(
                         )
                     }
                 }
+                // The app's plain messages (AppNotices), over the screens; never focused.
+                TvNoticeHost()
                 // A game reminder while the app is on screen, over everything; it takes focus only on
                 // Menu or a held OK. Watch tunes as a tapped reminder notification does (below).
                 TvGameReminderBanner(

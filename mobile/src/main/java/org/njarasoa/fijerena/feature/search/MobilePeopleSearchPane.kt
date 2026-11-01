@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.PeopleSearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -157,12 +158,7 @@ internal fun MobilePeopleSearchPane(
 
             is PeopleSearchViewModel.State.Loaded -> {
                 if (shown.results.isEmpty) {
-                    CinemaText(
-                        text = stringResource(R.string.search_no_results_query_format, shown.query),
-                        modifier = Modifier.align(Alignment.Center),
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                    )
+                    MobileEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
                 } else {
                     PeopleResultsList(
                         listState = listState,

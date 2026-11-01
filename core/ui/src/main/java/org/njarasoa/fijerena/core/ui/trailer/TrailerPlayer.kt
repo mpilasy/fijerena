@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.ui.trailer
 import android.content.res.Configuration
 import android.view.KeyEvent
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import java.net.HttpURLConnection
 import java.net.URI
@@ -232,7 +232,7 @@ fun TrailerHost(content: @Composable () -> Unit) {
                         }
 
                         error in VIDEO_GONE -> {
-                            Toast.makeText(context, unavailable, Toast.LENGTH_LONG).show()
+                            AppNotices.show(unavailable)
                         }
 
                         else -> {

@@ -164,12 +164,7 @@ internal fun PeopleSearchPane(
 
             is PeopleSearchViewModel.State.Loaded -> {
                 if (shown.results.isEmpty) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CinemaText(
-                            text = stringResource(R.string.search_no_results_query_format, shown.query),
-                            tone = TextTone.Secondary,
-                        )
-                    }
+                    TvEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
                 } else {
                     PeopleResultsList(
                         results = shown.results,

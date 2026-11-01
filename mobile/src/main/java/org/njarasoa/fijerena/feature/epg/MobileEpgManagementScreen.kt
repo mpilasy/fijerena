@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -97,9 +98,7 @@ fun MobileEpgManagementScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.userMessage.collect { message ->
-                android.widget.Toast
-                    .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
-                    .show()
+                AppNotices.show(message.asString(context))
             }
         }
     }

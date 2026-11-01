@@ -69,5 +69,6 @@ private fun showStoppedFrom(
     stop: RemoteCommands.Stop,
 ) {
     val from = stop.fromDeviceName.ifBlank { context.getString(R.string.live_sync_stopped_from_another_device) }
+    // look-ok: the app can be behind another app here (audio plays on); only a Toast shows over it, not AppNotices.
     Toast.makeText(context, context.getString(R.string.live_sync_stopped_from, from), Toast.LENGTH_LONG).show()
 }

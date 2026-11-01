@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.settings
 
 import android.app.Application
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -156,7 +156,7 @@ fun MobileSettingsScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             epgViewModel.userMessage.collect { message ->
-                Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
+                AppNotices.show(message.asString(context))
             }
         }
     }

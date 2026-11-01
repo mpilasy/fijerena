@@ -248,7 +248,7 @@ internal fun LiveTvChannelPanel(
                 rowActions = rowActions,
             )
             // Below the rows, taking its own room, not over the last row.
-            TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
+            TvUndoBar(undoBar)
         }
     }
 }

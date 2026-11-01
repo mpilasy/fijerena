@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Undo and messages in one place:** on the phone, removing a favourite from a Search result's menu or a category's menu now offers Undo, as on TV. Every phone message shows above the bottom bar in the same snackbar, not as a system toast; on TV in a small bar at the bottom of the screen. TV's Undo bar is now always under the list, the Guide and Search too. "No results" screens and empty Diagnostics have the same layout as the other empty lists. TV and phone.
 - **One look for the long-press menu:** on the phone, a title's or channel's menu shows every action as a row of the same look: Add to Favourites first, then Mark as watched and the others, then the removals just above Cancel. Before, it mixed buttons of three kinds and widths. The TMDB key dialog gives Test and Remove key as dialog actions. Phone.
 - **The phone bottom bar is see-through again:** a little of the page shows through it, by the same amount in every theme. The tab in use keeps its solid accent pill. Phone.
 

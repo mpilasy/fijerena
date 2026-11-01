@@ -12,13 +12,11 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +26,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
@@ -41,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
@@ -60,7 +58,6 @@ import java.time.ZoneId
 @Composable
 fun ColumnScope.ProviderLoginsSection(
     providerId: Long,
-    snackbarHostState: SnackbarHostState,
     onMainLoginChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -69,7 +66,6 @@ fun ColumnScope.ProviderLoginsSection(
     val rows by loginsViewModel.rows.collectAsStateWithLifecycle()
     val busy by loginsViewModel.busy.collectAsStateWithLifecycle()
     val message by loginsViewModel.message.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
     // Today, for the expiry colours: yellow at 15 days or fewer, red at 7 or fewer and once expired.
     val now = remember { Instant.now() }
     val zone = remember { ZoneId.systemDefault() }
@@ -86,7 +82,7 @@ fun ColumnScope.ProviderLoginsSection(
             if (showAddDialog) {
                 addDialogMessage = text
             } else {
-                scope.launch { snackbarHostState.showSnackbar(text) }
+                AppNotices.show(text)
             }
             loginsViewModel.clearMessage()
         }
@@ -98,7 +94,7 @@ fun ColumnScope.ProviderLoginsSection(
         if (added != null && rows.any { it.username == added }) {
             showAddDialog = false
             pendingAdd = null
-            addDialogMessage?.let { text -> scope.launch { snackbarHostState.showSnackbar(text) } }
+            addDialogMessage?.let(AppNotices::show)
             addDialogMessage = null
         }
     }

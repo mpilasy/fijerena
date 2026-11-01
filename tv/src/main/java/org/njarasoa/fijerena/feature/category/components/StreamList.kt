@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -110,6 +109,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
 import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
@@ -272,7 +272,6 @@ internal fun StreamList(
             onDismiss = { goneMenu = null },
         )
     }
-    val goneContext = LocalContext.current
     val goneResources = LocalResources.current
     wantedMenuItem?.let { item ->
         DetailsMoreMenu(
@@ -337,7 +336,7 @@ internal fun StreamList(
                     showMarkId?.let { seriesId ->
                         {
                             categoryViewModel.setShowWatched(seriesId, isShowWatched != true, item.providerId) { message ->
-                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                AppNotices.show(message)
                             }
                         }
                     },
@@ -610,12 +609,7 @@ internal fun StreamList(
                                                         goneMenu = item to gone
                                                     } else {
                                                         val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
-                                                        Toast
-                                                            .makeText(
-                                                                goneContext,
-                                                                goneResources.getString(R.string.favorite_gone_message, name),
-                                                                Toast.LENGTH_LONG,
-                                                            ).show()
+                                                        AppNotices.show(goneResources.getString(R.string.favorite_gone_message, name))
                                                     }
                                                 }
 

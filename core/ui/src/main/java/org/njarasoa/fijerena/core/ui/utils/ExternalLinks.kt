@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.CalendarContract
-import android.widget.Toast
 import org.njarasoa.fijerena.core.ui.R
 
 /**
@@ -22,7 +21,7 @@ fun openExternalUrl(
     try {
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, context.getString(R.string.details_no_link_handler), Toast.LENGTH_LONG).show()
+        AppNotices.show(context.getString(R.string.details_no_link_handler))
     }
 }
 
@@ -55,6 +54,6 @@ fun openAddToCalendarEvent(
     try {
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, context.getString(R.string.epg_browser_no_calendar_app), Toast.LENGTH_LONG).show()
+        AppNotices.show(context.getString(R.string.epg_browser_no_calendar_app))
     }
 }

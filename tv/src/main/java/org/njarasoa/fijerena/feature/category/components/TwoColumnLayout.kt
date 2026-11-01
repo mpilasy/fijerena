@@ -392,7 +392,7 @@ internal fun TwoColumnLayout(
                             .fillMaxHeight(),
                 )
             }
-            TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
+            TvUndoBar(undoBar)
         }
     }
 }
