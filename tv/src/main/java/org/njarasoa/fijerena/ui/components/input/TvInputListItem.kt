@@ -72,7 +72,7 @@ private fun listItemScale(
         when {
             !enabled -> TvFocusTokens.defaultScale
             pressed -> TvFocusTokens.pressedScaleSubtle
-            focused -> TvFocusTokens.focusedScaleSubtle
+            focused -> TvFocusTokens.focusedScaleRow
             else -> TvFocusTokens.defaultScale
         }
     val scale by animateFloatAsState(

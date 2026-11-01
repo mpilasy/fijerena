@@ -484,8 +484,7 @@ private fun ProgramDetailsSheet(
             BadgedTitle(selection.channel.name, role = TextRole.Body, tone = TextTone.Secondary)
             CinemaText(
                 text =
-                    dayLabel(startDay, today) + " · " +
-                        TimeFormat.formatTimeRange(program.startTime, program.endTime),
+                    DateText.dayAndTime(dayLabel(startDay, today), TimeFormat.formatTimeRange(program.startTime, program.endTime)),
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
             )

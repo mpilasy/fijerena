@@ -1,11 +1,16 @@
 package org.njarasoa.fijerena.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
@@ -19,6 +24,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -33,6 +39,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The phone sheet: a list or a detail over the screen. The Look and Feel decides how it opens
@@ -87,15 +94,41 @@ fun CinemaSheet(
         }
 
         DialogPosition.CENTERED -> {
+            // The window covers the whole screen (under the system bars too), so the scrim dims all of
+            // it. The panel is most of the screen's width and at most most of its height: a long list
+            // scrolls in it. A tap on the scrim around the panel closes it.
             Dialog(
                 onDismissRequest = dismiss,
-                properties = DialogProperties(dismissOnBackPress = dismissible, dismissOnClickOutside = dismissible),
+                properties =
+                    DialogProperties(
+                        dismissOnBackPress = dismissible,
+                        dismissOnClickOutside = false,
+                        usePlatformDefaultWidth = false,
+                        decorFitsSystemWindows = false,
+                    ),
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
                 ProvideUiScaledDensity {
-                    Surface(modifier = modifier, shape = cornerShape(tokens.cornerRadius), color = color) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = CinemaSpacing.md)) {
-                            content(onDismissRequest)
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(modifier = Modifier.matchParentSize().pointerInput(onDismissRequest) { detectTapGestures { dismiss() } })
+                        Surface(
+                            modifier =
+                                modifier
+                                    .width(
+                                        minOf(
+                                            maxWidth * MobileDimensions.SHEET_CENTRED_WIDTH_FRACTION,
+                                            MobileDimensions.sheetCentredMaxWidth,
+                                        ),
+                                    ).heightIn(max = maxHeight * MobileDimensions.SHEET_CENTRED_HEIGHT_FRACTION),
+                            shape = cornerShape(tokens.cornerRadius),
+                            color = color,
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = CinemaSpacing.md)) {
+                                content(onDismissRequest)
+                            }
                         }
                     }
                 }

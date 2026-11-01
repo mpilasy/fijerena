@@ -377,7 +377,7 @@ fun MobileUpcomingGameCard(
                 CinemaText(text = team.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CinemaText(
-                text = "${DateText.shortDayLabel(resources, day)} · ${TimeFormat.formatTime(start)}",
+                text = DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(start)),
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
                 maxLines = 1,

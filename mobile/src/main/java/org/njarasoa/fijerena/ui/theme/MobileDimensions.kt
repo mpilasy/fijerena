@@ -77,4 +77,16 @@ object MobileDimensions {
     /** The gear badge on the profile's avatar that opens the profile menu and Settings, and its icon. */
     val profileSettingsBadge: Dp = 14.dp
     val profileSettingsBadgeIcon: Dp = 10.dp
+
+    /**
+     * A centred sheet (`CinemaSheet`, `UiDialogTokens.sheet` = CENTERED): this part of the screen's
+     * width, at most [sheetCentredMaxWidth] wide, and at most this part of its height; a longer
+     * list scrolls in it.
+     */
+    const val SHEET_CENTRED_WIDTH_FRACTION = 0.9f
+    const val SHEET_CENTRED_HEIGHT_FRACTION = 0.85f
+    val sheetCentredMaxWidth: Dp = 560.dp
+
+    /** A tab of a scrolling tab row is as wide as its label: no minimum width. */
+    val scrollableTabMinWidth: Dp = 0.dp
 }

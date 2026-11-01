@@ -28,7 +28,7 @@ fun watchQuestionTitle(startEpochSec: Long): String {
     val over = startEpochSec <= System.currentTimeMillis() / 1000
     return stringResource(
         if (over) R.string.watch_question_aired else R.string.watch_question_starts,
-        "${DateText.shortDayLabel(resources, day)} · ${TimeFormat.formatTime(startEpochSec)}",
+        DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(startEpochSec)),
     )
 }
 

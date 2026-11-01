@@ -88,7 +88,7 @@ object TvInputDefaults {
     fun scale(): ListItemScale =
         ListItemDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleSubtle,
+            focusedScale = TvFocusTokens.focusedScaleRow,
             selectedScale = TvFocusTokens.defaultScale,
             pressedScale = TvFocusTokens.pressedScaleSubtle,
         )

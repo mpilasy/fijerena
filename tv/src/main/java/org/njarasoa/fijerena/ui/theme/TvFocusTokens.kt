@@ -42,6 +42,17 @@ object TvFocusTokens {
         @Composable @ReadOnlyComposable
         get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f
 
+    /**
+     * A full-width list row (Settings rows, switch rows, list dialogs): [focusedScaleSubtle], but
+     * at most [MAX_ROW_LIFT] larger. A wide row grows by many pixels at its sides, and a Look that
+     * scales much (Rounded) pushed it onto its panel's edge.
+     */
+    val focusedScaleRow: Float
+        @Composable @ReadOnlyComposable
+        get() = focusedScaleSubtle.coerceAtMost(1f + MAX_ROW_LIFT)
+
+    private const val MAX_ROW_LIFT = 0.02f
+
     val focusedScaleContent: Float
         @Composable @ReadOnlyComposable
         get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f

@@ -43,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -100,7 +101,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  *   top safe margin down, so the avatar lines up with the screens' headers; Settings sits at the
  *   bottom. [TvNavRailState.current] is white with the accent bar (`Modifier.currentIndicator`).
  * - **Focused** (focus anywhere in it sets [TvNavRailState.expanded]): slides out over the content
- *   to [TvNavRailDefaults.expandedWidth], icons and labels on a near-opaque surface, and a scrim
+ *   to [TvNavRailDefaults.expandedWidth], icons and labels on an opaque surface, and a scrim
  *   dims the rest of the screen. Focus enters at [TvNavRailState.entry], on the current item (the
  *   first when there is none); a geometric Left into the rail is sent there too, and Up / Down from
  *   the content never enter it. Up / Down stop at
@@ -207,7 +208,9 @@ private fun RailOverlay(
         Brush.horizontalGradient(
             listOf(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.imageOverlay), CinemaTheme.colors.clear),
         )
-    val panel = CinemaTheme.colors.surface.copy(alpha = CinemaAlpha.overlayHeavy)
+    // Opaque, also when the theme's surface is see-through: the open rail's labels sit over the
+    // screen's own text, which must not show through them.
+    val panel = CinemaTheme.colors.surface.compositeOver(CinemaTheme.colors.background)
     val entryItem = railEntryItem(state.current, items)
 
     // The Look's frame (Console): in the safe margins, so it shows and hides with the rail.

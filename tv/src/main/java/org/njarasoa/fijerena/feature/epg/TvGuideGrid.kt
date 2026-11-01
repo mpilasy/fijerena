@@ -1624,7 +1624,7 @@ private fun ProgramDetailsDialog(
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 BadgedTitle(channel.name, tone = TextTone.Secondary)
                 CinemaText(
-                    text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
+                    text = DateText.dayAndTime(dayLabel, TimeFormat.formatTimeRange(program.startTime, program.endTime)),
                     role = TextRole.Body,
                     tone = TextTone.Secondary,
                 )
