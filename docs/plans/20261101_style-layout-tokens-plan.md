@@ -1,6 +1,6 @@
 # Style layout tokens: layout from the style, not from the screen
 
-**Status:** Planned 2026-11-01. The user said "do all of those".
+**Status:** In progress 2026-11-01 (Phases 1, 3, 4).
 
 ## Goal
 
@@ -67,10 +67,10 @@ switches. It does not see these:
 
 | # | Phase | State |
 |---|---|---|
-| 1 | Dialog actions: the token, the `CinemaAlertDialog` actions API, all 81 dialogs moved, gate | Not started |
+| 1 | Dialog actions: the token, the `CinemaAlertDialog` actions API, all 81 dialogs moved, gate | In progress |
 | 2 | Sheets and dialog windows: phone sheet and TV overlay components, the 4 sheets, 4 raw dialogs and the TV player selectors moved, gate | Not started |
-| 3 | Phone top bar: `MobileScreenHeader` and `UiStyle.topBar`, 22 screens moved, gate | Not started |
-| 4 | Icons: icon buttons and icon tones, 35 + 71 sites moved, gate | Not started |
+| 3 | Phone top bar: `MobileScreenHeader` and `UiStyle.topBar`, 22 screens moved, gate | In progress |
+| 4 | Icons: icon buttons and icon tones, 35 + 71 sites moved, gate | In progress |
 | 5 | Panels, list rows and focus fills: `CinemaPanel`, row components, 10 + 5 + 73 sites moved, gate | Not started |
 | 6 | Leftovers: alpha and type values, spacing per style, gate | Not started |
 | 7 | Walk both emulators in every Look and Feel (dialogs, sheets, top bars, icons, rows); docs (CONTRIBUTING rules, FEATURES, RELEASE_NOTES, design system plan) | Not started |
