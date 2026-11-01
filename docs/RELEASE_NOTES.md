@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Guide follows a new server address:** when you change an Xtream source's URL in Edit Source, its own guide source (`<host> (Bulk)`) moves to the new server and is downloaded again, and an old one on the previous server is removed with its guide data. Before, the old entry stayed and a second one could be added. TV and phone.
+
 ## Version: 0.9.20261101112508
 
 - **A better serif for titles:** the Cinema and Calm Look and Feel (and the Clay UI theme) set their titles in Source Serif 4, a calm, readable serif, in place of DM Serif Display, which the app no longer includes. TV and phone.

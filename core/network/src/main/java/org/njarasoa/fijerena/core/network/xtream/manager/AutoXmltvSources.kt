@@ -337,11 +337,15 @@ object AutoXmltvSources {
      * [reconcile] for one Xtream source from what this device holds (its login and catalogue),
      * after the viewer flips "Provides a guide". Off disables the automatic source; on re-enables
      * it, or adds it when there is none and the catalogue has live channels (otherwise the next
-     * login does), and refreshes it.
+     * login does), and refreshes it. Also after Edit Source changes the source's server
+     * ([previousProviderUrl], the old one): the automatic source moves to the new server's
+     * `xmltv.php` (its label and guide state with it) and any left on the old server go, so the
+     * guide is not read from an old address or kept twice.
      */
     suspend fun reconcileStored(
         context: Context,
         providerId: Long,
+        previousProviderUrl: String? = null,
     ) {
         withContext(Dispatchers.IO) {
             val repository = ProviderRepository(context)
@@ -365,6 +369,7 @@ object AutoXmltvSources {
                         providerUrl = provider.url,
                         currentUrl = if (login.username.isNotEmpty() && login.password.isNotEmpty()) storedUrl(provider.url) else null,
                         hasLiveChannels = hasLive,
+                        previousProviderUrl = previousProviderUrl,
                         providesGuide = providesGuide,
                         enableKept = providesGuide,
                     )

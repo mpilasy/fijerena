@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 
@@ -350,6 +351,11 @@ class ProviderRepository(
         // The password lives outside the row, so no trigger sees it change: the login is part of
         // the provider record, for every type.
         SettingsSyncQueue.provider(context, id)
+        // A new server for an Xtream source: its automatic guide source moves with it, the old
+        // server's goes (AutoXmltvSources.reconcileStored).
+        if (effectiveType == "XTREAM" && existing.url.trim().trimEnd('/') != url.trim().trimEnd('/')) {
+            AutoXmltvSources.reconcileStored(context, id, previousProviderUrl = existing.url)
+        }
         // If Jellyfin credentials changed, discard the cached session token so the
         // provider re-authenticates with the new username/password on next use.
         if (effectiveType == "JELLYFIN") {

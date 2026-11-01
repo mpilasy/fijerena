@@ -211,6 +211,30 @@ class AutoXmltvSourcesTest {
             assertEquals("new.example (Bulk)", row.label)
         }
 
+    @Test
+    fun `an edited server moves the source and drops the old server's duplicate, live channels unknown`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += stored(1)
+            dao.rows += auto(2, "test")
+            dao.rows += source(3, "http://other.example/guide.xml", label = "Mine")
+            val newServer = "http://new.example:8080"
+            // As Edit Source does it (reconcileStored): the catalogue may not know the live channels yet.
+            AutoXmltvSources.reconcile(
+                dao,
+                {},
+                1,
+                newServer,
+                currentUrl = "$newServer/xmltv.php",
+                hasLiveChannels = null,
+                previousProviderUrl = server,
+            )
+            assertEquals(listOf(1L, 3L), dao.rows.map { it.id }.sorted())
+            val moved = dao.rows.single { it.id == 1L }
+            assertEquals("$newServer/xmltv.php", moved.url)
+            assertEquals("new.example (Bulk)", moved.label)
+        }
+
     // --- Provides a guide (plan D1) ---
 
     @Test
