@@ -34,7 +34,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
  * @param delayMillis pause at each end before reversing
  */
 fun Modifier.bounceMarquee(
-    velocity: Dp = CinemaSpacing.xl - CinemaSpacing.xxxs,
+    velocity: Dp = CinemaSpacing.Base.xl - CinemaSpacing.Base.xxxs,
     delayMillis: Int = 1200,
 ): Modifier = this then BounceMarqueeElement(velocity, delayMillis)
 

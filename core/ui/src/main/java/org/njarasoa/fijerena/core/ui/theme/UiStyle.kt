@@ -131,6 +131,11 @@ data class UiStyle(
     val frame: UiFrameTokens? = null,
     /** The phone's top bar. */
     val topBar: UiTopBarTokens = UiTopBarTokens(),
+    /**
+     * The phone's spacing density: each [CinemaSpacing] step is its base step times this. Below 1.0
+     * is denser, above 1.0 roomier; 1.0 keeps the base steps. The TV keeps 1.0 in every Look.
+     */
+    val spacing: Float = 1f,
 )
 
 /** The system font throughout, 16–20 dp corners: the device's own look. */
@@ -178,6 +183,7 @@ val CupertinoStyle =
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.09f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(height = 52.dp, titleRole = TextRole.Heading, centredTitle = true, divider = true),
+        spacing = 1.05f,
     )
 
 /** Barlow Condensed titles over Barlow, square corners, wide tracking, full-screen dialogs: broadcast TV. */
@@ -207,6 +213,7 @@ val RokuStyle =
         grid = UiGridTokens(spacing = 4.dp, focusScale = 1.0f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.FILLED),
         topBar = UiTopBarTokens(height = 56.dp, divider = true),
+        spacing = 0.9f,
     )
 
 /** IBM Plex Sans throughout, even 8 dp corners: neutral and precise. */
@@ -302,6 +309,7 @@ val SoftStyle =
             ),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
+        spacing = 1.1f,
     )
 
 /** Space Grotesk throughout, square corners: bold and technical. */
@@ -329,6 +337,7 @@ val GroteskStyle =
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.04f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
         topBar = UiTopBarTokens(height = 56.dp, filled = false, divider = true),
+        spacing = 0.95f,
     )
 
 /**
@@ -362,6 +371,7 @@ val ConsoleStyle =
         grid = UiGridTokens(spacing = 6.dp, focusScale = 1.0f, focusUsesOutline = false, focusUsesShadow = false, flat = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
         frame = ConsoleFrame,
+        spacing = 0.9f,
     )
 
 /** A hand-painted look (docs/plans/20261021_meadow-look-plan.md): Klee One titles over Zen Maru Gothic, round 20 dp corners, a gentle lift. */
@@ -390,6 +400,7 @@ val MeadowStyle =
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.05f, focusUsesOutline = false, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.FILLED),
         topBar = UiTopBarTokens(centredTitle = true, filled = false),
+        spacing = 1.1f,
     )
 
 /** Inter throughout, bold titles, small 4 dp corners, a white focus outline: a streaming-service look. */
@@ -471,6 +482,7 @@ val SpotlightStyle =
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.08f, focusUsesOutline = true, focusUsesShadow = true),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(height = 56.dp, centredTitle = true, filled = false),
+        spacing = 1.05f,
     )
 
 /** Source Serif 4 titles over Inter, soft 10 dp corners, a quiet outline on focus with little zoom: a calm, paper-like look. */
@@ -493,6 +505,7 @@ val CalmStyle =
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.03f, focusUsesOutline = true, focusUsesShadow = false),
         icon = UiIconTokens(style = IconStyle.OUTLINED),
         topBar = UiTopBarTokens(centredTitle = true, divider = true),
+        spacing = 1.1f,
     )
 
 val AllUiStyles: List<UiStyle> =

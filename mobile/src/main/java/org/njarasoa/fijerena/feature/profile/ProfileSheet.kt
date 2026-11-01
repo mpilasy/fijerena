@@ -22,7 +22,6 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -78,7 +77,7 @@ fun ProfileSheet(
                                 name = profile.name,
                                 colorIndex = profile.colorIndex,
                                 size = MobileDimensions.iconLarge,
-                                fontSize = textStyleOf(TextRole.Label).fontSize,
+                                initialRole = TextRole.Label,
                             )
                         },
                         // The active profile's check; no chevron on the others: a tap switches, it opens no page.

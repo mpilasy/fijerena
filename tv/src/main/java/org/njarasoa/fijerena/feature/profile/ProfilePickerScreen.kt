@@ -40,7 +40,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -129,7 +128,8 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                             name = profile.name,
                             colorIndex = profile.colorIndex,
                             size = TvDimensions.profilePickerAvatarSize,
-                            fontSize = textStyleOf(TextRole.Display).fontSize * PICKER_INITIAL_SCALE,
+                            initialRole = TextRole.Display,
+                            initialScale = PICKER_INITIAL_SCALE,
                         )
                     }
                 }

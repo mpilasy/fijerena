@@ -60,10 +60,10 @@ fun cinemaMaterialColorScheme(colors: CinemaColorRoles): ColorScheme =
 /** The Look and Feel's corners handed to Material 3 ([Shapes]), for both apps. */
 fun cinemaMaterialShapes(style: UiStyle): Shapes =
     Shapes(
-        extraSmall = style.shapes.shape(CinemaSpacing.xxs),
+        extraSmall = style.shapes.shape(CinemaSpacing.Base.xxs),
         small = style.shapes.shape(style.shapes.chip),
         medium = style.shapes.shape(style.shapes.card),
-        large = style.shapes.shape(style.shapes.card + CinemaSpacing.xxs),
+        large = style.shapes.shape(style.shapes.card + CinemaSpacing.Base.xxs),
         extraLarge = style.shapes.shape(style.shapes.dialog),
     )
 

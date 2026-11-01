@@ -48,6 +48,6 @@ fun WatchedBadge(
     }
 }
 
-private val RING_WIDTH = CinemaSpacing.xxxs
+private val RING_WIDTH = CinemaSpacing.Base.xxxs
 private const val RING_ALPHA = 0.55f
 private const val GLYPH_FRACTION = 0.68f

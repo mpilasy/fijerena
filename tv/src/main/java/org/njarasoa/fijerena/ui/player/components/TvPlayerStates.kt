@@ -30,16 +30,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaCodeText
 import org.njarasoa.fijerena.core.ui.components.CinemaPanel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
@@ -47,9 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.colorOf
 import org.njarasoa.fijerena.core.ui.components.panel
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -172,12 +169,11 @@ fun ErrorContent(
                                 },
                             )
 
-                        // look-ok: developer-mode stack trace, monospace; its size and colour are the theme's roles
-                        Text(
+                        // Developer-mode stack trace.
+                        CinemaCodeText(
                             text = errorDetails,
-                            color = colorOf(TextTone.Secondary),
-                            style = textStyleOf(TextRole.Caption),
-                            fontFamily = FontFamily.Monospace,
+                            role = TextRole.Caption,
+                            tone = TextTone.Secondary,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()

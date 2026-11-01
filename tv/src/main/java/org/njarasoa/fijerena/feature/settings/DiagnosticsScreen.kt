@@ -22,19 +22,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaCodeText
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.colorOf
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -143,18 +139,16 @@ fun DiagnosticsScreen() {
                 Row(Modifier.padding(Spacing.md.scaled(scale)), horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                         CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
-                        // look-ok: the detail is raw log text (stack traces), set in monospace; size and colour are the Body role's
-                        Text(
+                        // The detail is raw log text (stack traces).
+                        CinemaCodeText(
                             text =
                                 when {
                                     causes == null -> entry.detail
                                     expanded -> causes.chain.joinToString("\n")
                                     else -> causes.rootCause
                                 },
-                            style = textStyleOf(TextRole.Body).copy(fontFamily = FontFamily.Monospace),
-                            color = colorOf(TextTone.Primary),
+                            role = TextRole.Body,
                             maxLines = if (causes != null && !expanded) 1 else DETAIL_MAX_LINES,
-                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     if (causes != null) {

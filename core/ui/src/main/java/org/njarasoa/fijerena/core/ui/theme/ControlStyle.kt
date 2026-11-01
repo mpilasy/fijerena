@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -11,7 +13,9 @@ import androidx.compose.ui.unit.dp
  */
 object ControlStyle {
     /** Space between a control and its label in a labelled row. */
-    val labelGap: Dp = CinemaSpacing.sm
+    val labelGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.sm
 
     /** A field's outline when it is not focused, and focused. */
     val fieldOutline: Dp = 1.dp
@@ -25,15 +29,21 @@ object ControlStyle {
 
     /** A title's logo art where it replaces the title, and the plate behind a dark logo. */
     val titleLogoHeight: Dp = 56.dp
-    val logoPlatePaddingHorizontal: Dp = CinemaSpacing.sm
-    val logoPlatePaddingVertical: Dp = CinemaSpacing.xs
-    val logoPlateCorner: Dp = CinemaSpacing.xs
+    val logoPlatePaddingHorizontal: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.sm
+    val logoPlatePaddingVertical: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.xs
+    val logoPlateCorner: Dp = CinemaSpacing.Base.xs
 
     /** A section panel's tint: its section's colour, faint ([org.njarasoa.fijerena.core.ui.components.SectionPanel]). */
     const val SECTION_TINT_ALPHA = 0.10f
 
     /** A section panel's inner padding, top and bottom. */
-    val sectionPanelPadding: Dp = CinemaSpacing.md
+    val sectionPanelPadding: Dp
+        @Composable @ReadOnlyComposable
+        get() = CinemaSpacing.md
     const val PROGRESS_TRACK_ALPHA = 0.25f
     const val PROGRESS_TRACK_ALPHA_HIGHLIGHTED = 0.4f
 }

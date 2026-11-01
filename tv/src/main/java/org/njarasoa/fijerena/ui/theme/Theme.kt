@@ -38,10 +38,10 @@ import org.njarasoa.fijerena.core.ui.theme.styleById
 
 private fun cinemaShapes(tokens: UiShapeTokens) =
     Shapes(
-        extraSmall = tokens.shape(CinemaSpacing.xxs),
+        extraSmall = tokens.shape(CinemaSpacing.Base.xxs),
         small = tokens.shape(tokens.chip),
         medium = tokens.shape(tokens.card),
-        large = tokens.shape(tokens.card + CinemaSpacing.xxs),
+        large = tokens.shape(tokens.card + CinemaSpacing.Base.xxs),
         extraLarge = tokens.shape(tokens.dialog),
     )
 

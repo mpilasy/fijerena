@@ -129,7 +129,7 @@ fun TvDetailHero(
                 remember(palette.background) {
                     Brush.horizontalGradient(
                         0f to palette.background,
-                        CinemaAlpha.heroScrimFadeStop to palette.background.copy(alpha = 0f),
+                        CinemaAlpha.heroScrimFadeStop to palette.background.copy(alpha = CinemaAlpha.none),
                     )
                 }
             Box(modifier = Modifier.matchParentSize().background(scrimBrush))
@@ -139,7 +139,7 @@ fun TvDetailHero(
             val bottomScrimBrush =
                 remember(palette.background) {
                     Brush.verticalGradient(
-                        BOTTOM_FADE_START to palette.background.copy(alpha = 0f),
+                        BOTTOM_FADE_START to palette.background.copy(alpha = CinemaAlpha.none),
                         1f to palette.background,
                     )
                 }

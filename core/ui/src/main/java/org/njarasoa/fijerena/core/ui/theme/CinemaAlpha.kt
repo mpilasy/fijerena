@@ -4,6 +4,10 @@ package org.njarasoa.fijerena.core.ui.theme
  * Centralizes all alpha values used across the app for consistent transparency.
  */
 object CinemaAlpha {
+    // Ends of the range
+    const val none = 0f // Fully clear: the colour's own hue at the clear end of a fade
+    const val opaque = 1f // Fully solid
+
     // Text
     const val textHigh = 0.87f // Primary readable text
     const val textMedium = 0.7f // Secondary labels

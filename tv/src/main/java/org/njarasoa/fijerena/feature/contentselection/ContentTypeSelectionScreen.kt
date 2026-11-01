@@ -137,7 +137,6 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.initialOf
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
-import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -1218,7 +1217,7 @@ fun ContentTypeSelectionScreen(
                                 name = initialOf(childProfile.name),
                                 colorIndex = childProfile.colorIndex,
                                 size = TvDimensions.iconLarge,
-                                fontSize = textStyleOf(TextRole.Title).fontSize,
+                                initialRole = TextRole.Title,
                             )
                             CinemaText(text = childProfile.name, role = TextRole.Title)
                         } else if (!child) {
