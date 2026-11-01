@@ -3,7 +3,9 @@ package org.njarasoa.fijerena.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -15,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -50,7 +53,10 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  *     // a row's removal:
  *     val undo = viewModel.removeFromRecent(item.id, contentType)
  *     undoBar.show(item.name, undo)
- *     TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
+ *     Column {
+ *         List(Modifier.weight(1f))
+ *         TvUndoBar(undoBar)
+ *     }
  * }
  * ```
  *
@@ -145,8 +151,11 @@ fun Modifier.undoOnRemoteKeys(state: UndoBarState): Modifier =
     }
 
 /**
- * A small bar, "Removed 24Hrs TV · Hold OK or press Menu to undo", for [state]'s last removal; place it at
- * the bottom centre of the screen or panel. Not focusable — see [undoOnRemoteKeys].
+ * A small bar, "Removed 24Hrs TV · Hold OK or press Menu to undo", for [state]'s last removal. Not
+ * focusable — see [undoOnRemoteKeys]. It places itself: put it in the screen's (or the panel's)
+ * column, under the list, which gives it its own room — it never covers the last row. The list
+ * above it takes the rest of the column (`Modifier.weight(1f)`). Callers give it no alignment or
+ * padding.
  */
 @Composable
 fun TvUndoBar(
@@ -158,6 +167,18 @@ fun TvUndoBar(
         delay(CinemaAnimation.undoBarDismissMs)
         state.expire(entry)
     }
+    Box(modifier.fillMaxWidth().padding(top = Spacing.sm), contentAlignment = Alignment.Center) {
+        TvMessageBar(icon = CinemaIcons.Delete, text = stringResource(R.string.undo_removed_format, entry.name))
+    }
+}
+
+/** The look of [TvUndoBar] and [TvNoticeHost]: an icon and up to two lines on a panel. */
+@Composable
+internal fun TvMessageBar(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     val radius = CornerRadius.medium
     val shape = cornerShape(radius)
     Row(
@@ -171,14 +192,14 @@ fun TvUndoBar(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         TvIcon(
-            imageVector = CinemaIcons.Delete,
+            imageVector = icon,
             contentDescription = null,
             tone = TextTone.Primary,
             modifier = Modifier.size(TvDimensions.iconSmall),
         )
         CinemaText( // the panels are narrow: "Hold OK or press Menu to undo" must not be cut off
             overflow = TextOverflow.Ellipsis,
-            text = stringResource(R.string.undo_removed_format, entry.name),
+            text = text,
             maxLines = 2,
         )
     }

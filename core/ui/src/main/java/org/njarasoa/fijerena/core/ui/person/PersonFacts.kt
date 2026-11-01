@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.core.ui.person
 
 import android.content.Context
 import android.content.res.Resources
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -13,6 +12,7 @@ import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
 import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPerson
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.displayDate
 
 /** "Born 3 Jul 1962 • Died … • Syracuse, New York, USA": the facts under a person's name; null when TMDB has none. */
@@ -75,7 +75,7 @@ fun showMissingNote(
 ) {
     target.missing?.let { line ->
         val text = context.getString(R.string.person_not_in_source, appearanceCode(context.resources, line))
-        Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+        AppNotices.show(text)
     }
 }
 

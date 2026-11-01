@@ -170,6 +170,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
@@ -685,9 +686,7 @@ fun ContentTypeSelectionScreen(
 
             gone != null -> {
                 val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
-                android.widget.Toast
-                    .makeText(context, resources.getString(R.string.favorite_gone_message, name), android.widget.Toast.LENGTH_LONG)
-                    .show()
+                AppNotices.show(resources.getString(R.string.favorite_gone_message, name))
             }
 
             else -> {
@@ -1066,9 +1065,7 @@ fun ContentTypeSelectionScreen(
                                     .onSuccess { reloadContinueWatching(merged, null) }
                                     .onFailure { e ->
                                         val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isDevMode)
-                                        android.widget.Toast
-                                            .makeText(context, message, android.widget.Toast.LENGTH_LONG)
-                                            .show()
+                                        AppNotices.show(message)
                                     }
                             }
                         }
@@ -1662,7 +1659,7 @@ fun ContentTypeSelectionScreen(
                     }
                 }
                 // Under the rows, taking its own room, not over the bottom row's cards.
-                TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
+                TvUndoBar(undoBar)
             }
 
             if (showSourcesSheet) {

@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.feature.category
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -201,6 +200,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
@@ -226,11 +226,11 @@ import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.RequestOrientation
-import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -238,7 +238,6 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
-import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import kotlin.math.roundToInt
@@ -808,7 +807,7 @@ fun MobileCategoryListScreen(
     }
 
     // Undo of a removal from Recent, Favourites or the Wishlist (wishlist UX plan, U-D4).
-    val undo = rememberUndoSnackbar()
+    val undo = LocalCinemaSnackbar.current
     // Clear Recent asks once, as on TV (consistency plan, C-D3).
     var confirmClearRecent by remember { mutableStateOf(false) }
     if (confirmClearRecent) {
@@ -828,7 +827,6 @@ fun MobileCategoryListScreen(
         AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
         Scaffold(
             containerColor = CinemaTheme.colors.clear,
-            snackbarHost = { UndoSnackbarHost(undo) },
             topBar = {
                 // Hidden in the landscape split — the title/EPG/search row eats vertical space the
                 // video pane needs, and none of its actions (EPG, search, category nav) apply while
@@ -1154,12 +1152,7 @@ fun MobileCategoryListScreen(
 
                                                             gone != null -> {
                                                                 val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
-                                                                Toast
-                                                                    .makeText(
-                                                                        context,
-                                                                        resources.getString(R.string.favorite_gone_message, name),
-                                                                        Toast.LENGTH_LONG,
-                                                                    ).show()
+                                                                AppNotices.show(resources.getString(R.string.favorite_gone_message, name))
                                                             }
 
                                                             // A Wanted row: its source copy, else its TMDB page.
@@ -1208,7 +1201,12 @@ fun MobileCategoryListScreen(
                                                     },
                                                     contentType = contentType,
                                                     favoriteIds = favoriteIds,
-                                                    onToggleFavorite = toggleFavorite,
+                                                    // Remove from Favourites (row menu, swipe star): at once, with an Undo.
+                                                    onToggleFavorite = { item ->
+                                                        val removing = item.sourceKey in favoriteIds
+                                                        toggleFavorite(item)
+                                                        if (removing) undo.show(item.name) { toggleFavorite(item) }
+                                                    },
                                                     onToggleWatched = { toggled ->
                                                         viewModel.toggleWatchedStream(toggled.id, contentType, toggled.providerId)
                                                     },
@@ -1216,7 +1214,7 @@ fun MobileCategoryListScreen(
                                                     showWatchState = viewModel::showWatchState,
                                                     onSetShowWatched = { seriesId, watched, rowSource ->
                                                         viewModel.setShowWatched(seriesId, watched, rowSource) { message ->
-                                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                                            AppNotices.show(message)
                                                         }
                                                     },
                                                     onRemoveItem =
@@ -1229,7 +1227,7 @@ fun MobileCategoryListScreen(
                                                                         item.seriesId,
                                                                         item.providerId,
                                                                     )
-                                                                undo.show(item.name, undoRemoval)
+                                                                undo.show(item.name, undo = undoRemoval)
                                                             }
                                                         } else {
                                                             null
@@ -1245,7 +1243,7 @@ fun MobileCategoryListScreen(
                                                                 viewModel
                                                                     .wantedCardOf(
                                                                         item,
-                                                                    )?.let { undo.show(item.name, viewModel.removeWanted(it)) }
+                                                                    )?.let { undo.show(item.name, undo = viewModel.removeWanted(it)) }
                                                             }
                                                         } else {
                                                             null
@@ -1616,6 +1614,7 @@ private fun CategoryChipRow(
         }
 
     val listState = rememberLazyListState()
+    val undo = LocalCinemaSnackbar.current
     val chipColors =
         FilterChipDefaults.filterChipColors(
             selectedContainerColor = CinemaTheme.colors.accent,
@@ -1695,8 +1694,18 @@ private fun CategoryChipRow(
                         isFavorite = category.key in favoriteCategoryIds,
                         onClick = { onCategorySelected(category.id, category.providerId) },
                         onToggleFavorite = {
-                            // On the category's own source.
-                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
+                            // On the category's own source; a removal at once, with an Undo.
+                            val toggle = {
+                                categoryViewModel.toggleFavoriteCategory(
+                                    category.id,
+                                    category.name,
+                                    contentType,
+                                    category.providerId,
+                                )
+                            }
+                            val removing = category.key in favoriteCategoryIds
+                            toggle()
+                            if (removing) undo.show(category.name, isTitle = false, undo = toggle)
                         },
                         colors = chipColors,
                         modifier =

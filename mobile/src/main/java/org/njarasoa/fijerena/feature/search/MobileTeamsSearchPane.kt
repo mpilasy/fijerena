@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.feature.sports.MobileSportsItemCard
 import org.njarasoa.fijerena.feature.sports.sportsCardColors
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -172,12 +173,7 @@ internal fun MobileTeamsSearchPane(
 
             is TeamsSearchViewModel.State.Loaded -> {
                 if (shown.isEmpty) {
-                    CinemaText(
-                        text = stringResource(R.string.search_no_results_query_format, shown.query),
-                        modifier = Modifier.align(Alignment.Center),
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                    )
+                    MobileEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
                 } else {
                     val cardColors = sportsCardColors()
                     LazyColumn(

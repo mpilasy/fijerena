@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.home
 
 import android.text.format.DateUtils
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +83,7 @@ import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
@@ -100,12 +100,11 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CardLines
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.PosterCard
-import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.homeCardClicks
-import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -215,7 +214,7 @@ fun MobileHomeScreen(
 
             found != null -> {
                 val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
-                Toast.makeText(context, resources.getString(R.string.favorite_gone_message, name), Toast.LENGTH_LONG).show()
+                AppNotices.show(resources.getString(R.string.favorite_gone_message, name))
             }
 
             else -> {
@@ -288,7 +287,7 @@ fun MobileHomeScreen(
 
     // Long-press on a card: its menu, as on TV Home, each removal with the Undo snackbar (wishlist
     // UX plan, Phase 6). None on a child's Home.
-    val undo = rememberUndoSnackbar()
+    val undo = LocalCinemaSnackbar.current
     val child = remember { AppSettings(context.applicationContext).let { it.isChildProfile(it.activeProfileId) } }
     var homeMenu by remember { mutableStateOf<HomeMenu?>(null) }
     homeMenu?.let { menu ->
@@ -403,7 +402,6 @@ fun MobileHomeScreen(
         AmbientBackdrop(modifier = Modifier.fillMaxSize())
         Scaffold(
             containerColor = CinemaTheme.colors.clear,
-            snackbarHost = { UndoSnackbarHost(undo) },
             topBar = { sourceTopBar(onSearch) },
         ) { padding ->
             val loaded = rows ?: return@Scaffold

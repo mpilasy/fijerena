@@ -15,26 +15,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.ParentalControlsRepository
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
@@ -54,6 +47,7 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -173,9 +167,7 @@ internal fun ParentalListContent(
     onReset: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val resources = LocalResources.current
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val undo = LocalCinemaSnackbar.current
     var newEntry by rememberSaveable { mutableStateOf("") }
     var confirmReset by remember { mutableStateOf(false) }
     val addEntry = {
@@ -194,7 +186,6 @@ internal fun ParentalListContent(
     ParentalScaffold(
         title = stringResource(list.titleRes),
         onBack = onBack,
-        snackbarHostState = snackbarHostState,
         actions = {
             IconAction(
                 onClick = { confirmReset = true },
@@ -245,17 +236,7 @@ internal fun ParentalListContent(
                         IconAction(
                             onClick = {
                                 onRemove(entry)
-                                scope.launch {
-                                    // A new removal takes the place of the one shown; that one stays removed.
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    val result =
-                                        snackbarHostState.showSnackbar(
-                                            message = resources.getString(R.string.parental_entry_removed, entry),
-                                            actionLabel = resources.getString(R.string.parental_entry_undo),
-                                            duration = SnackbarDuration.Long,
-                                        )
-                                    if (result == SnackbarResult.ActionPerformed) onUndo(entry, index)
-                                }
+                                undo.show(entry, isTitle = false) { onUndo(entry, index) }
                             },
                             icon = CinemaIcons.Delete,
                             label = stringResource(R.string.parental_entry_remove, entry),
@@ -360,17 +341,12 @@ private fun ParentalText(
 private fun ParentalScaffold(
     title: String,
     onBack: () -> Unit,
-    snackbarHostState: SnackbarHostState? = null,
     actions: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         topBar = {
             MobileScreenHeader(title = title, onBack = onBack, actions = { actions() })
-        },
-        // Over the bottom bar, which Settings' screens keep.
-        snackbarHost = {
-            snackbarHostState?.let { SnackbarHost(it, Modifier.padding(bottom = LocalDockInset.current)) }
         },
         content = content,
     )

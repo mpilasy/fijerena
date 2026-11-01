@@ -86,6 +86,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
@@ -114,6 +115,8 @@ import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -231,7 +234,6 @@ fun MobileSearchScreen(
     val activeTab = activeSearchTab(selectedTab, tabs)
     val guideActive = activeTab == SearchTab.GUIDE
     val currentOtherTab by rememberUpdatedState(activeTab != SearchTab.CATALOGUE)
-    val snackbarHostState = remember { SnackbarHostState() }
     // Scope filter selection lives here, not inside SearchResults — performSearch() emits a
     // transitional UiState.Loading on every debounced re-search (not just the first), which
     // unmounts SearchResults entirely. A plain rememberSaveable inside it doesn't survive that
@@ -249,6 +251,8 @@ fun MobileSearchScreen(
     // The menu's result's source: its Favourite and Mark show watched act there.
     var favoriteMenuSource by remember { mutableLongStateOf(0L) }
 
+    // A favourite removed from a result's menu: at once, with an Undo, as on TV.
+    val undo = LocalCinemaSnackbar.current
     favoriteMenuTarget?.let { target ->
         val source = favoriteMenuSource
         MobileSearchFavoriteDialog(
@@ -263,6 +267,11 @@ fun MobileSearchScreen(
                             target.contentType,
                             target.isFavorite,
                         )
+                        if (target.isFavorite) {
+                            undo.show(target.categoryName, isTitle = false) {
+                                viewModel.toggleFavoriteCategory(source, target.categoryId, target.categoryName, target.contentType, false)
+                            }
+                        }
                     }
 
                     is FavoriteMenuTarget.Stream -> {
@@ -274,6 +283,18 @@ fun MobileSearchScreen(
                             target.contentType,
                             target.isFavorite,
                         )
+                        if (target.isFavorite) {
+                            undo.show(target.itemName) {
+                                viewModel.toggleFavorite(
+                                    source,
+                                    target.itemId,
+                                    target.itemName,
+                                    target.categoryId,
+                                    target.contentType,
+                                    false,
+                                )
+                            }
+                        }
                     }
                 }
             },
@@ -288,9 +309,7 @@ fun MobileSearchScreen(
                 (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
                     {
                         viewModel.setShowWatched(source, target.itemId, !isShowWatched) { message ->
-                            android.widget.Toast
-                                .makeText(context, message, android.widget.Toast.LENGTH_LONG)
-                                .show()
+                            AppNotices.show(message)
                         }
                     }
                 },
@@ -325,8 +344,6 @@ fun MobileSearchScreen(
                 onBack = onBack,
             )
         },
-        // Above the floating bottom bar, not behind it.
-        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = LocalDockInset.current)) },
     ) { paddingValues ->
         Column(
             modifier =
@@ -357,7 +374,6 @@ fun MobileSearchScreen(
                         onResultOpening(searchQuery, null)
                         onGuideResult(it)
                     },
-                    snackbarHostState = snackbarHostState,
                 )
                 return@Column
             }
@@ -745,13 +761,12 @@ private fun MobileSearchGuideTab(
     query: String,
     onQueryChange: (String) -> Unit,
     onGuideResult: (EpgBrowserMatchedStream) -> Unit,
-    snackbarHostState: SnackbarHostState,
 ) {
     val context = LocalContext.current
     val guideViewModel: EpgBrowserViewModel =
         viewModel(factory = remember { EpgBrowserViewModelFactory(context.applicationContext, null, 0L) })
     LaunchedEffect(guideViewModel) {
-        guideViewModel.userMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+        guideViewModel.userMessage.collect { AppNotices.show(it.asString(context)) }
     }
     // Shown with text it last ran another query for (or none): run it here (D3).
     LaunchedEffect(guideViewModel) {
@@ -845,19 +860,16 @@ private fun SearchResults(
             }
         }
     } else if (!isSearching && categoryResults.isEmpty() && results.isEmpty() && notInSources.isEmpty() && notInSourcesError == null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CinemaText(
-                text =
+        // No "Search everything" here, as TV has: the phone's Search always looks in every section
+        // (a section's chip shows all when the section has nothing), so nothing found is nothing anywhere.
+        Box(modifier = Modifier.fillMaxSize()) {
+            MobileEmptyState(
+                message =
                     if (queryContentType == "ALL") {
                         stringResource(R.string.search_no_results_query_format, query)
                     } else {
                         stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
                     },
-                role = TextRole.Body,
-                tone = TextTone.Secondary,
             )
             if (sourceErrors.isNotEmpty()) {
                 CinemaText(

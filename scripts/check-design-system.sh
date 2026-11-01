@@ -36,7 +36,10 @@
 # CinemaAlertDialog (ui/components/CinemaAlertDialog.kt), which gives it the app's buttons; the
 # phone's dialog button (CinemaDialogActionButton) called outside the phone's components: a dialog
 # takes its actions as data, a list of actions is rows (CinemaChoiceRow), and a page uses the
-# CinemaButton family.
+# CinemaButton family. Feedback and empty states: a SnackbarHost or a Toast outside ui/components
+# (a plain message goes through AppNotices, an Undo through the phone's LocalCinemaSnackbar or
+# TvUndoBar); TvUndoBar given an alignment or a padding (it places itself); a CinemaText of a
+# *_no_results* / *_empty* string outside the *EmptyState components.
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -160,6 +163,56 @@ while IFS= read -r hit; do
     echo "$hit: CinemaDialogActionButton outside ui/components — give the dialog DialogAction data, use rows for a list of actions, or the CinemaButton family on a page."
     failures=$((failures + 1))
 done < <(grep -rn --include='*.kt' 'CinemaDialogActionButton(' mobile/src/main | grep -v '/ui/components/' | cut -d: -f1,2 || true)
+
+# Feedback and empty states (docs/plans/20261101_consistency-round-2-plan.md, Phase 3). Lines are
+# file:line hits of Kotlin code (not comments, not lines marked `// look-ok: <reason>` or under one).
+code_hits() {
+    local pat="$1"
+    shift
+    find "$@" -name '*.kt' | sort | while IFS= read -r f; do
+        PAT="$pat" awk '
+            BEGIN { pat = ENVIRON["PAT"] }
+            /\/\/ look-ok:/ { marked = FNR }
+            $0 ~ /^[[:space:]]*(\/\/|\*|\/\*)/ { next }
+            {
+                line = $0
+                sub(/\/\/.*/, "", line)
+                if (marked > 0 && FNR - marked <= 1) next
+                if (line ~ pat) print FILENAME ":" FNR
+            }
+        ' "$f"
+    done
+}
+
+# One snackbar host per app and no Toast: a plain message goes through AppNotices, an Undo through
+# the phone's LocalCinemaSnackbar or the TV's TvUndoBar; only the components draw a host.
+while IFS= read -r hit; do
+    echo "$hit: SnackbarHost or Toast outside ui/components — send AppNotices.show(text), or an Undo to LocalCinemaSnackbar (phone) / TvUndoBar (TV)."
+    failures=$((failures + 1))
+done < <(code_hits '(^|[^A-Za-z0-9_])SnackbarHost\(|Toast[[:space:]]*\.makeText|^[[:space:]]*\.makeText\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java |
+    grep -v '/ui/components/' || true)
+
+# TvUndoBar places itself, under the list in the screen's column: callers give it no alignment or padding.
+while IFS= read -r hit; do
+    echo "$hit: TvUndoBar given an alignment or a padding — it places itself; put it in the column under the list."
+    failures=$((failures + 1))
+done < <(code_hits 'TvUndoBar\(.*\.(align|padding)\(' tv/src/main/java || true)
+
+# "Nothing here" is MobileEmptyState / TvEmptyState: no CinemaText of a *_no_results* / *_empty*
+# string outside the *EmptyState components (the string on the CinemaText's line or in its call).
+while IFS= read -r hit; do
+    echo "$hit: an empty-state text built by hand — use MobileEmptyState (phone) or TvEmptyState (TV)."
+    failures=$((failures + 1))
+done < <(find tv/src/main/java mobile/src/main/java -name '*.kt' -not -name '*EmptyState*' | sort | while IFS= read -r f; do
+    awk '
+        $0 ~ /^[[:space:]]*(\/\/|\*|\/\*)/ { next }
+        /(^|[^A-Za-z0-9_])CinemaText\(/ { open = FNR }
+        open > 0 && /R\.string\.[a-z0-9_]*(no_results|_empty)(_[a-z_]*format|_phone)?([^a-z0-9_]|$)/ { print FILENAME ":" FNR; open = 0; next }
+        # The call ends: on its own line, or on the CinemaText line itself.
+        open == FNR && /\)[[:space:]]*,?[[:space:]]*$/ { open = 0 }
+        open > 0 && FNR > open && (/^[[:space:]]*\)/ || FNR - open > 8) { open = 0 }
+    ' "$f"
+done || true)
 
 if [ "$failures" -gt 0 ]; then
     echo

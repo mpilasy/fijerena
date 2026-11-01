@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.settings
 
 import android.text.format.DateUtils
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
@@ -90,7 +90,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     LaunchedEffect(ui.scanDone) {
         val done = ui.scanDone ?: return@LaunchedEffect
         val message = if (done == SyncSettingsViewModel.ScanResult.JOINED) R.string.live_sync_joined else R.string.live_sync_handed_over
-        Toast.makeText(context, resources.getString(message), Toast.LENGTH_SHORT).show()
+        AppNotices.show(resources.getString(message))
         viewModel.consumeScanDone()
     }
 

@@ -1413,7 +1413,6 @@
     <string name="parental_entry_hint">Teny feno, tsy miraharaha soratra lehibe sy marika. Farano amin\'ny * ho an\'ny fiafarana rehetra: mahita Barnefilmer ny barn*.</string>
     <string name="parental_entry_matches">Mahita %1$d</string>
     <string name="parental_entry_matches_none">Tsy mahita na inona na inona amin\'ny loharanonao</string>
-    <string name="parental_entry_removed">Nesorina ny %1$s</string>
     <string name="parental_list_reset">Hiverina amin\'ny lisitry ny app</string>
     <string name="parental_list_reset_confirm">Hosoloina ny tenin\'ny app ve ity lisitra ity? Ho very ny fanovanao tamin\'ity lisitra ity.</string>
     <string name="parental_check_title">Hanamarina loharano</string>
@@ -1425,7 +1424,6 @@
     <string name="parental_check_none">Tsy mahita sokajy ny ankizy amin\'ity loharano ity. Ampio ao amin\'ny Sokajy ho an\'ny ankizy ny tenin\'ireo sokajy ho an\'ny ankizy ao aminy.</string>
     <string name="parental_no_sources">Mbola tsy misy loharano hanamarinana.</string>
     <string name="parental_entry_remove">Esory ny %1$s</string>
-    <string name="parental_entry_undo">Avereno</string>
     <!-- Wanted titles: the wanted titles plan -->
     <string name="wanted_title">Lisitry ny irina</string>
     <string name="wanted_add">Ampidiro amin\'ny lisitry ny irina</string>

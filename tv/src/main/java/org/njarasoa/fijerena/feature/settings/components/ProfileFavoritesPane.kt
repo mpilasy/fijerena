@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -149,15 +150,13 @@ internal fun ProfileFavoritesPane(
             }
 
             rows.isEmpty() -> {
-                CinemaText(
-                    if (query.isBlank()) {
-                        stringResource(R.string.profile_favorites_none)
-                    } else {
-                        stringResource(R.string.profile_favorites_no_results, profile.name)
-                    },
-                    modifier = Modifier.padding(Spacing.xs),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
+                TvEmptyState(
+                    message =
+                        if (query.isBlank()) {
+                            stringResource(R.string.profile_favorites_none)
+                        } else {
+                            stringResource(R.string.profile_favorites_no_results, profile.name)
+                        },
                 )
             }
 

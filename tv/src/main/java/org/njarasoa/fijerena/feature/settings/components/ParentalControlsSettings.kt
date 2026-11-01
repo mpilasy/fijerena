@@ -262,7 +262,7 @@ internal fun ParentalListContent(
                 )
             }
         }
-        TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally))
+        TvUndoBar(undoBar)
     }
 
     if (confirmReset) {

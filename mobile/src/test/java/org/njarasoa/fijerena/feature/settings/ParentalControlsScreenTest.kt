@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,6 +15,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.provider.ParentalControlsRepository.CheckedCategory
 import org.njarasoa.fijerena.core.network.provider.ParentalList
+import org.njarasoa.fijerena.ui.components.CinemaSnackbarHost
+import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
+import org.njarasoa.fijerena.ui.components.rememberCinemaSnackbar
 import org.robolectric.RobolectricTestRunner
 
 /**
@@ -81,16 +85,21 @@ class ParentalControlsScreenTest {
     ) {
         composeTestRule.setContent {
             var entries by remember { mutableStateOf(initial) }
-            ParentalListContent(
-                list = ParentalList.KIDS_CATEGORIES,
-                entries = entries,
-                countOf = { counts[it] },
-                onAdd = { entries = entries + it },
-                onRemove = { entries = entries - it },
-                onUndo = onUndo,
-                onReset = onReset,
-                onBack = {},
-            )
+            // The app's one snackbar, as the screens have it from MobileNavHost.
+            val snackbar = rememberCinemaSnackbar()
+            CompositionLocalProvider(LocalCinemaSnackbar provides snackbar) {
+                ParentalListContent(
+                    list = ParentalList.KIDS_CATEGORIES,
+                    entries = entries,
+                    countOf = { counts[it] },
+                    onAdd = { entries = entries + it },
+                    onRemove = { entries = entries - it },
+                    onUndo = onUndo,
+                    onReset = onReset,
+                    onBack = {},
+                )
+                CinemaSnackbarHost(snackbar)
+            }
         }
     }
 }

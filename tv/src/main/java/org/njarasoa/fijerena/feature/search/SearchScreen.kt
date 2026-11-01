@@ -2,7 +2,6 @@
 
 package org.njarasoa.fijerena.feature.search
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
@@ -121,6 +120,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
@@ -383,7 +383,7 @@ fun SearchScreen(
                 (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
                     {
                         viewModel.setShowWatched(source, target.itemId, !isShowWatched) { message ->
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            AppNotices.show(message)
                         }
                     }
                 },
@@ -421,178 +421,186 @@ fun SearchScreen(
                 )
             }
 
-            if (activeTab == SearchTab.PEOPLE) {
-                PeopleSearchPane(
-                    query = fieldText,
-                    onQueryChange = { fieldText = it },
-                    holdFocus = holdFocus,
-                    fieldModifier = fieldModifier,
-                    returnFocus = returnFocus,
-                    wishlistKeys = wishlistKeys,
-                    onPersonSelected = onPersonSelected,
-                    onTitleSelected = { item, type -> onStreamSelected(item.id, item.name, item.categoryId, type, item.providerId) },
-                    onTmdbTitleSelected = onTmdbTitleSelected,
-                    onTmdbTitleActions = { tmdbMenu = it },
-                )
-            } else if (activeTab == SearchTab.TEAMS) {
-                TeamsSearchPane(
-                    query = fieldText,
-                    onQueryChange = { fieldText = it },
-                    holdFocus = holdFocus,
-                    fieldModifier = fieldModifier,
-                    returnFocus = returnFocus,
-                    onTeamSelected = onTeamSelected,
-                    onLeagueSelected = onLeagueSelected,
-                    onPlay = onPlayChannel,
-                )
-            } else if (activeTab == SearchTab.GUIDE) {
-                GuideTab(
-                    query = fieldText,
-                    onQueryChange = { fieldText = it },
-                    onGuideResult = onGuideResult,
-                    holdFocus = holdFocus,
-                    fieldModifier = fieldModifier,
-                )
-            } else {
-                // Shown again with a query it hasn't run: run it here (D3).
-                LaunchedEffect(Unit) {
-                    queryToRunOnTabSwitch(fieldText, (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query)
-                        ?.let { viewModel.performSearch(it) }
-                }
-                when (val state = uiState) {
-                    is SearchViewModel.UiState.Loading -> {
-                        LoadingView(message = state.message)
+            Column(Modifier.weight(1f).fillMaxWidth()) {
+                if (activeTab == SearchTab.PEOPLE) {
+                    PeopleSearchPane(
+                        query = fieldText,
+                        onQueryChange = { fieldText = it },
+                        holdFocus = holdFocus,
+                        fieldModifier = fieldModifier,
+                        returnFocus = returnFocus,
+                        wishlistKeys = wishlistKeys,
+                        onPersonSelected = onPersonSelected,
+                        onTitleSelected = { item, type -> onStreamSelected(item.id, item.name, item.categoryId, type, item.providerId) },
+                        onTmdbTitleSelected = onTmdbTitleSelected,
+                        onTmdbTitleActions = { tmdbMenu = it },
+                    )
+                } else if (activeTab == SearchTab.TEAMS) {
+                    TeamsSearchPane(
+                        query = fieldText,
+                        onQueryChange = { fieldText = it },
+                        holdFocus = holdFocus,
+                        fieldModifier = fieldModifier,
+                        returnFocus = returnFocus,
+                        onTeamSelected = onTeamSelected,
+                        onLeagueSelected = onLeagueSelected,
+                        onPlay = onPlayChannel,
+                    )
+                } else if (activeTab == SearchTab.GUIDE) {
+                    GuideTab(
+                        query = fieldText,
+                        onQueryChange = { fieldText = it },
+                        onGuideResult = onGuideResult,
+                        holdFocus = holdFocus,
+                        fieldModifier = fieldModifier,
+                    )
+                } else {
+                    // Shown again with a query it hasn't run: run it here (D3).
+                    LaunchedEffect(Unit) {
+                        queryToRunOnTabSwitch(fieldText, (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query)
+                            ?.let { viewModel.performSearch(it) }
                     }
+                    when (val state = uiState) {
+                        is SearchViewModel.UiState.Loading -> {
+                            LoadingView(message = state.message)
+                        }
 
-                    is SearchViewModel.UiState.Error -> {
-                        TvErrorState(message = state.message, onRetry = { viewModel.performSearch(fieldText) })
-                    }
+                        is SearchViewModel.UiState.Error -> {
+                            TvErrorState(message = state.message, onRetry = { viewModel.performSearch(fieldText) })
+                        }
 
-                    is SearchViewModel.UiState.Success -> {
-                        val successState = state
-                        val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
-                        val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
-                        val devStats =
-                            if (appSettings.isDevMode && successState.searchDataSize != null) {
-                                "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
-                            } else {
-                                null
-                            }
-                        // Sources left out because their search failed: raw, developer mode only.
-                        val sourceErrors =
-                            successState.sourceErrors
-                                .takeIf { appSettings.isDevMode && it.isNotEmpty() }
-                                ?.joinToString("\n")
-                        // Expert mode only, as the source badges: without it results don't name their source.
-                        val showSources = LocalShowSourceBadges.current
-                        val categoryResults = if (child) emptyList() else successState.categoryResults
-                        val streamResults =
-                            if (child) {
-                                successState.filteredResults.filter { it.contentType != ContentType.LIVE_TV }
-                            } else {
-                                successState.filteredResults
-                            }
-                        val sources =
-                            remember(categoryResults, streamResults, showSources) {
-                                if (showSources) {
-                                    searchSourceCounts(
-                                        categoryResults,
-                                        streamResults,
-                                    )
+                        is SearchViewModel.UiState.Success -> {
+                            val successState = state
+                            val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
+                            val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
+                            val devStats =
+                                if (appSettings.isDevMode && successState.searchDataSize != null) {
+                                    "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
                                 } else {
-                                    emptyList()
+                                    null
                                 }
-                            }
-                        val source = effectiveSourceFilter(selectedSource, sources)
-                        // TMDB's films and shows no source has: never for a child, nor when one source is
-                        // chosen ("not in your sources" would be wrong for what another source has).
-                        val tmdbSection = notInSources?.takeIf { !child && source == null && it.query == successState.query }
-                        val sourceResults = remember(streamResults, source) { streamResults.fromSource(source) }
-                        val tmdbTitles = tmdbSection?.titles.orEmpty()
-                        val facetChoice = effectiveFacetChoice(selectedFacets, sourceResults, tmdbTitles)
-                        val facets =
-                            remember(sourceResults, tmdbTitles, facetChoice) { searchFacets(sourceResults, tmdbTitles, facetChoice) }
-                        SearchContent(
-                            query = successState.query,
-                            fieldText = fieldText,
-                            onFieldTextChange = { fieldText = it },
-                            holdFocus = holdFocus,
-                            fieldModifier = fieldModifier,
-                            // Categories have no year or genre: a decade or genre choice leaves them out.
-                            categoryResults = if (facetChoice.isActive) emptyList() else categoryResults.fromSource(source),
-                            results = sourceResults.filter { it.matches(facetChoice) },
-                            notInSources = tmdbTitles.filter { it.matches(facetChoice) },
-                            notInSourcesError = tmdbSection?.devError,
-                            onTmdbTitleClick = onTmdbTitleSelected,
-                            onTmdbTitleActions = { tmdbMenu = it },
-                            wishlistKeys = wishlistKeys,
-                            sources = sources,
-                            selectedSource = source,
-                            onSourceChange = { selectedSource = it },
-                            facets = facets,
-                            facetChoice = facetChoice,
-                            onFacetChoiceChange = { selectedFacets = it },
-                            selectedTypeFilter = selectedTypeFilter,
-                            onTypeFilterChange = { selectedTypeFilter = it },
-                            excludedCountByType = if (child) emptyMap() else successState.excludedCountByType,
-                            isSearching = successState.isSearching,
-                            searchProgress = successState.searchProgress ?: "",
-                            devStats = devStats,
-                            sourceErrors = sourceErrors,
-                            contentType = contentType,
-                            child = child,
-                            searchHistory = searchHistory,
-                            returnFocus = returnFocus,
-                            // A "more like this" arrival is already searching; don't cover it with the keyboard.
-                            mayOpenKeyboard = initialQuery.isNullOrBlank(),
-                            onSearchSubmit = { viewModel.performSearch(it) },
-                            onHistoryItemClick = { term ->
-                                viewModel.performSearch(term)
-                            },
-                            onHistoryItemRemove = { term ->
-                                viewModel.removeSearchHistoryEntry(term)
-                            },
-                            onClearHistory = { viewModel.clearSearchHistory() },
-                            onClearSearch = { viewModel.clearSearch() },
-                            onResultClick = { result ->
-                                onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType, result.providerId)
-                            },
-                            onResultLongPress = { result ->
-                                if (child) return@SearchContent
-                                // Favourite, Mark watched (a film or an episode) or Mark show watched (a
-                                // show), on the result's own source: the menu waits for one watch-state read.
-                                longPressScope.launch {
-                                    val target = viewModel.menuTarget(result)
-                                    favoriteMenuSource = result.providerId
-                                    favoriteMenuTarget = target
+                            // Sources left out because their search failed: raw, developer mode only.
+                            val sourceErrors =
+                                successState.sourceErrors
+                                    .takeIf { appSettings.isDevMode && it.isNotEmpty() }
+                                    ?.joinToString("\n")
+                            // Expert mode only, as the source badges: without it results don't name their source.
+                            val showSources = LocalShowSourceBadges.current
+                            val categoryResults = if (child) emptyList() else successState.categoryResults
+                            val streamResults =
+                                if (child) {
+                                    successState.filteredResults.filter { it.contentType != ContentType.LIVE_TV }
+                                } else {
+                                    successState.filteredResults
                                 }
-                            },
-                            onCategoryClick = { catResult ->
-                                onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
-                            },
-                            onSearchEverything = onSearchEverything,
-                            onCategoryLongPress = { catResult ->
-                                favoriteMenuSource = catResult.providerId
-                                favoriteMenuTarget =
-                                    FavoriteMenuTarget.Category(
-                                        categoryId = catResult.categoryId,
-                                        categoryName = catResult.categoryName,
-                                        contentType = catResult.contentType,
-                                        isFavorite =
-                                            viewModel.isFavoriteCategory(
-                                                catResult.providerId,
-                                                catResult.categoryId,
-                                                catResult.contentType,
-                                            ),
+                            val sources =
+                                remember(categoryResults, streamResults, showSources) {
+                                    if (showSources) {
+                                        searchSourceCounts(
+                                            categoryResults,
+                                            streamResults,
+                                        )
+                                    } else {
+                                        emptyList()
+                                    }
+                                }
+                            val source = effectiveSourceFilter(selectedSource, sources)
+                            // TMDB's films and shows no source has: never for a child, nor when one source is
+                            // chosen ("not in your sources" would be wrong for what another source has).
+                            val tmdbSection = notInSources?.takeIf { !child && source == null && it.query == successState.query }
+                            val sourceResults = remember(streamResults, source) { streamResults.fromSource(source) }
+                            val tmdbTitles = tmdbSection?.titles.orEmpty()
+                            val facetChoice = effectiveFacetChoice(selectedFacets, sourceResults, tmdbTitles)
+                            val facets =
+                                remember(sourceResults, tmdbTitles, facetChoice) { searchFacets(sourceResults, tmdbTitles, facetChoice) }
+                            SearchContent(
+                                query = successState.query,
+                                fieldText = fieldText,
+                                onFieldTextChange = { fieldText = it },
+                                holdFocus = holdFocus,
+                                fieldModifier = fieldModifier,
+                                // Categories have no year or genre: a decade or genre choice leaves them out.
+                                categoryResults = if (facetChoice.isActive) emptyList() else categoryResults.fromSource(source),
+                                results = sourceResults.filter { it.matches(facetChoice) },
+                                notInSources = tmdbTitles.filter { it.matches(facetChoice) },
+                                notInSourcesError = tmdbSection?.devError,
+                                onTmdbTitleClick = onTmdbTitleSelected,
+                                onTmdbTitleActions = { tmdbMenu = it },
+                                wishlistKeys = wishlistKeys,
+                                sources = sources,
+                                selectedSource = source,
+                                onSourceChange = { selectedSource = it },
+                                facets = facets,
+                                facetChoice = facetChoice,
+                                onFacetChoiceChange = { selectedFacets = it },
+                                selectedTypeFilter = selectedTypeFilter,
+                                onTypeFilterChange = { selectedTypeFilter = it },
+                                excludedCountByType = if (child) emptyMap() else successState.excludedCountByType,
+                                isSearching = successState.isSearching,
+                                searchProgress = successState.searchProgress ?: "",
+                                devStats = devStats,
+                                sourceErrors = sourceErrors,
+                                contentType = contentType,
+                                child = child,
+                                searchHistory = searchHistory,
+                                returnFocus = returnFocus,
+                                // A "more like this" arrival is already searching; don't cover it with the keyboard.
+                                mayOpenKeyboard = initialQuery.isNullOrBlank(),
+                                onSearchSubmit = { viewModel.performSearch(it) },
+                                onHistoryItemClick = { term ->
+                                    viewModel.performSearch(term)
+                                },
+                                onHistoryItemRemove = { term ->
+                                    viewModel.removeSearchHistoryEntry(term)
+                                },
+                                onClearHistory = { viewModel.clearSearchHistory() },
+                                onClearSearch = { viewModel.clearSearch() },
+                                onResultClick = { result ->
+                                    onStreamSelected(
+                                        result.itemId,
+                                        result.streamName,
+                                        result.categoryId,
+                                        result.contentType,
+                                        result.providerId,
                                     )
-                            },
-                        )
+                                },
+                                onResultLongPress = { result ->
+                                    if (child) return@SearchContent
+                                    // Favourite, Mark watched (a film or an episode) or Mark show watched (a
+                                    // show), on the result's own source: the menu waits for one watch-state read.
+                                    longPressScope.launch {
+                                        val target = viewModel.menuTarget(result)
+                                        favoriteMenuSource = result.providerId
+                                        favoriteMenuTarget = target
+                                    }
+                                },
+                                onCategoryClick = { catResult ->
+                                    onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
+                                },
+                                onSearchEverything = onSearchEverything,
+                                onCategoryLongPress = { catResult ->
+                                    favoriteMenuSource = catResult.providerId
+                                    favoriteMenuTarget =
+                                        FavoriteMenuTarget.Category(
+                                            categoryId = catResult.categoryId,
+                                            categoryName = catResult.categoryName,
+                                            contentType = catResult.contentType,
+                                            isFavorite =
+                                                viewModel.isFavoriteCategory(
+                                                    catResult.providerId,
+                                                    catResult.categoryId,
+                                                    catResult.contentType,
+                                                ),
+                                        )
+                                },
+                            )
+                        }
                     }
                 }
             }
+            // Under the results, taking its own room.
+            TvUndoBar(undoBar)
         }
-        // Over the screen, not inside its padded column: kept off the overscan edge here.
-        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.tvSafeMarginVertical))
     }
 }
 
@@ -1154,31 +1162,21 @@ private fun SearchResultsList(
             )
         }
     } else if (catalogueEmpty && notInSources.isEmpty() && notInSourcesError == null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                CinemaText(
-                    text =
-                        if (queryContentType == "ALL") {
-                            stringResource(R.string.search_no_results_query_format, query)
-                        } else {
-                            stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
-                        },
-                    tone = TextTone.Secondary,
-                )
-                // A section's Search (from its rail item) found nothing: one press widens it.
-                if (queryContentType != "ALL" && onSearchEverything != null) {
-                    CinemaSecondaryButton(
-                        onClick = { onSearchEverything(query) },
-                        text = stringResource(R.string.search_everything),
-                    )
-                }
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            // A section's Search (from its rail item) found nothing: one press widens it. The
+            // button does not take focus: the results change as the user types in the field.
+            val widen = onSearchEverything?.takeIf { queryContentType != "ALL" }
+            TvEmptyState(
+                message =
+                    if (queryContentType == "ALL") {
+                        stringResource(R.string.search_no_results_query_format, query)
+                    } else {
+                        stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
+                    },
+                actionLabel = widen?.let { stringResource(R.string.search_everything) },
+                onAction = widen?.let { { it(query) } },
+                takeFocus = false,
+            )
             sourceErrors?.let { SourceErrorsLine(it, Modifier.align(Alignment.BottomCenter)) }
         }
     } else {

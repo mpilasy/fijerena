@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.ui.utils
 
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,6 +43,6 @@ fun rememberDeveloperModeTapHandler(
                 }
             }
         taps = if (expertExists || outcome == DeveloperModeTaps.Outcome.Enable) 0 else taps + 1
-        message?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        message?.let(AppNotices::show)
     }
 }

@@ -38,8 +38,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -100,6 +98,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -161,9 +160,8 @@ fun MobileEpgBrowserScreen(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
 
-    val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
-        viewModel.userMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+        viewModel.userMessage.collect { AppNotices.show(it.asString(context)) }
     }
 
     val isRefreshing =
@@ -207,7 +205,6 @@ fun MobileEpgBrowserScreen(
             }
         },
         // Above the floating bottom bar, not behind it.
-        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = LocalDockInset.current)) },
     ) { paddingValues ->
         MobileGuideSearchPane(
             viewModel = viewModel,

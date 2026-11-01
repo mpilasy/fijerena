@@ -1422,7 +1422,6 @@
     <string name="parental_entry_hint">Mots entiers, majuscules et accents ignorés. Finir par * pour toute fin : barn* trouve Barnefilmer.</string>
     <string name="parental_entry_matches">Trouve %1$d</string>
     <string name="parental_entry_matches_none">Ne trouve rien sur vos sources</string>
-    <string name="parental_entry_removed">%1$s retiré</string>
     <string name="parental_list_reset">Revenir à la liste de l\'app</string>
     <string name="parental_list_reset_confirm">Remplacer cette liste par les mots de l\'app ? Vos changements de cette liste seront perdus.</string>
     <string name="parental_check_title">Vérifier une source</string>
@@ -1434,7 +1433,6 @@
     <string name="parental_check_none">Un enfant ne voit aucune catégorie sur cette source. Ajoutez les mots de ses catégories pour enfants à Catégories pour enfants.</string>
     <string name="parental_no_sources">Aucune source à vérifier pour l\'instant.</string>
     <string name="parental_entry_remove">Retirer %1$s</string>
-    <string name="parental_entry_undo">Annuler</string>
     <!-- Wanted titles: the wanted titles plan -->
     <string name="wanted_title">Liste de souhaits</string>
     <string name="wanted_add">Ajouter à la liste de souhaits</string>

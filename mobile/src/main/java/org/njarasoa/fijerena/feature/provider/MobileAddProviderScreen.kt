@@ -23,8 +23,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -141,7 +139,6 @@ fun MobileAddProviderScreen(
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
 
@@ -341,7 +338,6 @@ fun MobileAddProviderScreen(
         }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             MobileScreenHeader(
                 title = if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),
@@ -487,7 +483,6 @@ fun MobileAddProviderScreen(
             if (isEditMode && editedType == ProviderType.XTREAM) {
                 ProviderLoginsSection(
                     providerId = editId,
-                    snackbarHostState = snackbarHostState,
                     onMainLoginChanged = reloadMainLogin,
                 )
             }

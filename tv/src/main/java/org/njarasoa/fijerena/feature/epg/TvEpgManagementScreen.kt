@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -106,9 +107,7 @@ fun TvEpgManagementScreen(
 
     LaunchedEffect(Unit) {
         viewModel.userMessage.collect { message ->
-            android.widget.Toast
-                .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
-                .show()
+            AppNotices.show(message.asString(context))
         }
     }
 
