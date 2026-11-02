@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.player.domain.subtitleDetail
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 
@@ -37,7 +38,7 @@ fun SubtitleSelectorDialog(
                     TvSelectorOption(
                         title = track.label,
                         selected = track.isSelected,
-                        subtitle = track.mimeType.substringAfterLast("/").uppercase(),
+                        subtitle = subtitleDetail(track),
                         onSelect = {
                             viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
                             onDismiss()

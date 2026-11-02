@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.player.domain.subtitleDetail
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -61,6 +62,7 @@ fun AudioTrackSelectorDialog(
                             },
                             label = track.label,
                             supportingText = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
+                            labelMaxLines = 2,
                         )
                     }
                 }
@@ -102,7 +104,8 @@ fun SubtitleSelectorDialog(
                             onDismiss()
                         },
                         label = track.label,
-                        supportingText = track.mimeType.substringAfterLast("/").uppercase(),
+                        supportingText = subtitleDetail(track),
+                        labelMaxLines = 2,
                     )
                 }
             }

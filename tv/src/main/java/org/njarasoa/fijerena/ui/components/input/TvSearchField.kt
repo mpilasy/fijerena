@@ -91,7 +91,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
  *
  * One TV text field look (consistency round 2, finding 32): at rest it is drawn as the open field
  * ([CinemaTextField], as every TV field while it is edited) is: the field's corner, the theme's
- * outline and no fill, with the accent outline while focused.
+ * outline and no fill, with the white focus outline of every TV row while focused (one TV focus
+ * look); the open field keeps the accent outline, so typing reads as a different state.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -225,7 +226,7 @@ fun TvSearchField(
                             ),
                         focusedBorder =
                             Border(
-                                BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.accent),
+                                BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), TvFocusTokens.focusedRowOutline),
                                 shape = CinemaTheme.shapes.field,
                             ),
                     ),

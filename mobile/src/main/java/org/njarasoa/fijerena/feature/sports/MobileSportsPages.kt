@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileDayHeading
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -245,11 +246,9 @@ private fun MobileSportsPage(
                 is GamesState.Loaded -> {
                     if (games.games.isEmpty()) {
                         item(key = "no_games") {
-                            CinemaText(
-                                text = stringResource(R.string.sports_no_games),
-                                role = TextRole.Body,
-                                tone = TextTone.Secondary,
-                                modifier = Modifier.padding(vertical = Spacing.md),
+                            MobileEmptyState(
+                                message = stringResource(R.string.sports_no_games),
+                                icon = CinemaIcons.DateRange,
                             )
                         }
                     }

@@ -375,6 +375,8 @@ internal fun TvGuideSearchPane(
                     query = query,
                     onQueryChange = onQueryChange,
                     fieldModifier = fieldModifier,
+                    guideOutOfDate = staleSourceCount > 0,
+                    onRefreshGuide = { viewModel.refreshStale() },
                 )
             }
         }
@@ -401,6 +403,9 @@ private fun EpgBrowserContent(
     query: String,
     onQueryChange: (String) -> Unit,
     fieldModifier: Modifier = Modifier,
+    // A guide source is out of date: a search with no results says so, with Refresh.
+    guideOutOfDate: Boolean = false,
+    onRefreshGuide: () -> Unit = {},
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -598,6 +603,8 @@ private fun EpgBrowserContent(
                     returnFocus = returnFocus,
                     contextName = contextName.takeIf { inContextOnly },
                     contextChannels = contextChannels,
+                    guideOutOfDate = guideOutOfDate,
+                    onRefreshGuide = onRefreshGuide,
                 )
             }
 
@@ -698,6 +705,8 @@ private fun ResultsContent(
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
     contextChannels: List<GuideChannels>? = null,
+    guideOutOfDate: Boolean = false,
+    onRefreshGuide: () -> Unit = {},
 ) {
     val scale = LocalUiScale.current
 
@@ -724,9 +733,15 @@ private fun ResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
+            // An out-of-date guide may simply not have the programme yet: say so, with Refresh. The
+            // button does not take focus: the results change as the viewer types.
             TvEmptyState(
                 message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
                 icon = CinemaIcons.Search,
+                secondary = if (guideOutOfDate) stringResource(R.string.epg_search_no_results_stale) else null,
+                actionLabel = if (guideOutOfDate) stringResource(R.string.common_refresh) else null,
+                onAction = if (guideOutOfDate) onRefreshGuide else null,
+                takeFocus = false,
             )
         } else {
             // Build index-to-dateLabel mapping for sticky header

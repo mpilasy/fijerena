@@ -30,6 +30,9 @@ object CinemaAlpha {
     // Player controls over the video (user, 2026-10-21: a lot lighter than 0.6 and 1)
     const val osdPanel = 0.3f // The controls panel: a share of the theme's glass colour
     const val osdScrim = 0.1f // The tint over the whole video while the controls show
+    const val osdTextScrim = 0.55f // Behind the controls' text, at its light end: legible over a bright frame
+    const val osdTextScrimDeep = 0.75f // Behind the controls' text, at the screen edge
+    const val osdTextFadeStop = 0.7f // Where the top text scrim starts to fade out, as a fraction of its height
 
     // Image overlays
     const val imageOverlay = 0.8f // Gradient over poster for text legibility

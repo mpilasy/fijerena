@@ -290,17 +290,17 @@ fun TvPlayerControlsOverlay(
                 .panel(PanelFill.Osd),
     ) {
         // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's
-        // logo (Live TV) with the developer-mode resolution/codec line under it, on a soft gradient
-        // rather than a band. Hidden while a side panel is open since they would collide with the
-        // panel's own tab row.
+        // logo (Live TV) with the developer-mode resolution/codec line under it, on a scrim that
+        // fades out below the text ([PanelFill.OsdTop]), so the text reads over a bright frame.
+        // Hidden while a side panel is open since they would collide with the panel's own tab row.
         if (!hideTopBars) {
             Box(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
-                        .panel(PanelFill.TopFade)
-                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+                        .panel(PanelFill.OsdTop)
+                        .padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xl, bottom = Spacing.xxl),
             ) {
                 // Self-ticking so only this leaf recomposes each second.
                 TvClockText(modifier = Modifier.align(Alignment.TopEnd))
@@ -388,6 +388,9 @@ fun TvPlayerControlsOverlay(
                 Modifier
                     .align(BottomCenter)
                     .fillMaxWidth()
+                    // A scrim behind the glass, so the title, the overview and the times read over
+                    // a bright frame.
+                    .panel(PanelFill.OsdBottom)
                     .onSizeChanged { onPanelHeightChanged(it.height) },
             backgroundAlpha = if (hideTopBars) 0.92f else CinemaAlpha.osdPanel,
         ) {

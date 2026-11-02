@@ -110,6 +110,10 @@ typealias DialogActionButton = @Composable (action: DialogAction, kind: ButtonKi
  *
  * [wide]: a centred panel as wide as its content asks (with [modifier]), not the platform's
  * dialog width — for a big form, such as the TV category filter.
+ *
+ * [stackActions]: the actions are always a stack, never a row. Give it to a dialog whose number of
+ * actions changes with its data (the TV Guide's programme panel: Start over only when the programme
+ * replays), so the panel keeps one layout.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,6 +135,7 @@ fun CinemaAlertDialog(
     textContentColor: Color = AlertDialogDefaults.textContentColor,
     properties: DialogProperties = DialogProperties(),
     wide: Boolean = false,
+    stackActions: Boolean = false,
 ) {
     val tokens = LocalUiStyle.current.dialog
     val shape = cornerShape(tokens.cornerRadius)
@@ -155,7 +160,7 @@ fun CinemaAlertDialog(
     // A form (a body with an input) opens on its first input, not on a button: see [DialogFirstField].
     val firstField = remember { DialogFirstField() }
     val actionArea: @Composable () -> Unit = {
-        DialogActionArea(actions, tokens.actions, actionButton) { action ->
+        DialogActionArea(actions, tokens.actions, actionButton, stackActions) { action ->
             Modifier
                 .then(if (action === focusedAction) Modifier.focusRequester(buttonFocusRequester) else Modifier)
                 .then(action.focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
@@ -367,14 +372,15 @@ private fun dialogActions(
 
 /**
  * The dialog's buttons as [tokens] say. A stack puts the first action on top; a row puts it at
- * the end and goes to a stack of full-width buttons when it has more than two actions or its labels
- * do not fit.
+ * the end and goes to a stack of full-width buttons when it has more than two actions, its labels
+ * do not fit or [stackActions] is set.
  */
 @Composable
 private fun DialogActionArea(
     actions: List<KindedAction>,
     tokens: UiDialogActionTokens,
     actionButton: DialogActionButton,
+    stackActions: Boolean,
     modifierFor: (DialogAction) -> Modifier,
 ) {
     if (actions.isEmpty()) return
@@ -390,7 +396,8 @@ private fun DialogActionArea(
         val share = (width - gaps) / measurables.size
         val full = tokens.width == DialogActionWidth.FULL
         val inRow =
-            tokens.arrangement == DialogActionArrangement.ROW &&
+            !stackActions &&
+                tokens.arrangement == DialogActionArrangement.ROW &&
                 measurables.size <= 2 &&
                 if (full) labels.max() <= share else labels.sum() + gaps <= width
         // A row that cannot hold its buttons becomes a stack of full-width buttons, so every stack

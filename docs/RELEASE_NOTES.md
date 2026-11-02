@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- TV walk fixes on both apps: the TV Guide's programme panel keeps one layout; the player's text has a scrim, so it reads over bright video; the live header names the channel being tuned; audio and subtitle panels keep their title in view, cut long names after two lines and no longer show a format code; empty guide, games and out-of-date guide search pages say what to do; guide cells cut text with "…" or hide it; one white focus ring on guide cells, followed teams, switches and search fields; full-row focus on Sources; the rail lights the Browse entry and Sports where they are open; "…" in place of three dots.
+
 ## Version: 0.9.20261102025243
 
 - **The final TV walk's findings:** an episode row's hold OK or Menu (a long press on the phone) opens its action menu instead of marking it at once; a form dialog opens on its first field (Add Guide Source too, which now uses the same value rows as other forms); the guide maintenance status is a focus stop; every TV tab has one look (no fill at rest), and a list's current tab shows its name; crew names are chips; the "Titles not in your sources" eye is struck out when off; a Trending row's switch sits in its header, so its cards line up with the other rows; one icon each for Mark as watched and Mark as unwatched in every menu; TV no-results states show the Search icon.

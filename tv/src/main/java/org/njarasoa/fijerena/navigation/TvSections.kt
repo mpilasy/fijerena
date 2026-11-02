@@ -81,12 +81,14 @@ internal fun railItems(
     }
 
 /** What is on top of the back stack, as far as the rail's lit item cares. */
-internal enum class TopScreen { HOME, SEARCH, SETTINGS, OTHER }
+internal enum class TopScreen { HOME, SEARCH, SETTINGS, SPORTS, OTHER }
 
 /**
  * The rail item lit at rest: Home on Home, Settings while one of its screens is on top, Search
- * while Search is; otherwise the section whose stack this is ([section]), or Home for what Home
- * opened outside the sections (a title from Continue Watching, Search's results).
+ * while Search is, Sports while a team's or a league's page is (from wherever it was opened: a
+ * game on Home, Search's Teams, a Live TV channel); otherwise the section whose stack this is
+ * ([section]), or Home for what Home opened outside the sections (a title from Continue Watching,
+ * Search's results).
  */
 internal fun railCurrent(
     top: TopScreen,
@@ -96,6 +98,7 @@ internal fun railCurrent(
         TopScreen.HOME -> RailItem.HOME
         TopScreen.SEARCH -> RailItem.SEARCH
         TopScreen.SETTINGS -> RailItem.SETTINGS
+        TopScreen.SPORTS -> RailItem.SPORTS
         TopScreen.OTHER -> section?.item ?: RailItem.HOME
     }
 
@@ -104,6 +107,7 @@ internal fun NavDestination.topScreen(): TopScreen =
         hasRoute<Screen.ContentTypeSelection>() -> TopScreen.HOME
         hasRoute<Screen.Search>() -> TopScreen.SEARCH
         isSettingsTree() -> TopScreen.SETTINGS
+        hasRoute<Screen.SportsTeam>() || hasRoute<Screen.SportsLeague>() -> TopScreen.SPORTS
         else -> TopScreen.OTHER
     }
 
@@ -146,6 +150,17 @@ private fun NavController.isOnBackStack(route: Screen): Boolean =
 private suspend fun loadRailSource(context: Context): ProfileSections? = ProfileSections.load(context).takeUnless { it.hasNoSources }
 
 /**
+ * The Browse entry lit for a list on top of the back stack: the source of that list
+ * ([categoryListSource], null when the top is not a list) when it is one of the rail's Browse
+ * entries ([browseSources]). A section's own lists are of its Xtream sources, never a Browse
+ * entry's, so a section under the list does not matter.
+ */
+internal fun litBrowse(
+    categoryListSource: Long?,
+    browseSources: Collection<Long>,
+): Long? = categoryListSource?.takeIf { it in browseSources }
+
+/**
  * The rail over the nav host: its items from the profile's sources (the merged sections, then a
  * Browse entry per other source), the profile's initial, and the lit
  * item from the back stack. The sources and profile are re-read on every destination change — a
@@ -178,13 +193,13 @@ internal fun TvSectionRail(
         val section = navController.currentSection()
         homeOnStack = navController.isOnBackStack(Screen.ContentTypeSelection)
         source = loadRailSource(context)
-        // A Browse entry's list on top (outside the sections): that entry is lit, not Home.
+        // A Browse entry's list on top: that entry is lit, not Home, and not the section it was
+        // pushed over (Browse opens over where you are, so a section's root can be under it).
         val browsed =
-            entry
-                ?.takeIf { section == null && destination.hasRoute<Screen.CategoryList>() }
-                ?.toRoute<Screen.CategoryList>()
-                ?.providerId
-                ?.takeIf { id -> source?.browse.orEmpty().any { it.providerId == id } }
+            litBrowse(
+                entry?.takeIf { destination.hasRoute<Screen.CategoryList>() }?.toRoute<Screen.CategoryList>()?.providerId,
+                source?.browse.orEmpty().map { it.providerId },
+            )
         rail.currentBrowse = browsed
         rail.current = if (browsed != null) null else railCurrent(destination.topScreen(), section)
         withContext(Dispatchers.IO) {

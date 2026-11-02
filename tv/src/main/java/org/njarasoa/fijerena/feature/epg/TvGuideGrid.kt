@@ -1647,6 +1647,9 @@ private fun ProgramDetailsDialog(
             },
         others = if (onWatchFromStart != null) listOf(watchChannel) else emptyList(),
         cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
+        // Two or three actions: always a stack, so the panel keeps one layout whether or not the
+        // programme replays.
+        stackActions = true,
     )
 }
 
@@ -1794,12 +1797,17 @@ private fun ProgramCell(
                             .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
                     contentAlignment = Alignment.Center,
                 ) {
+                    // A time that does not fit whole is not shown: "09:0" reads as a wrong time.
+                    var timeFits by remember { mutableStateOf(true) }
                     CinemaText(
                         text = shortTime(cell.program.startTime),
                         emphasis = phase == CellPhase.ON_AIR,
                         tone = if (phase == CellPhase.ON_AIR) TextTone.AccentSoft else TextTone.Secondary,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Clip,
+                        onTextLayout = { timeFits = !it.hasVisualOverflow },
+                        modifier = Modifier.alpha(if (timeFits) CinemaAlpha.opaque else CinemaAlpha.none),
                     )
                 }
             } else if (cell.labelFits) {
@@ -1812,7 +1820,11 @@ private fun ProgramCell(
                             .fillMaxSize()
                             .graphicsLayer {
                                 val hidden = scrollState.value - cell.x
-                                translationX = hidden.coerceIn(0f, (cell.width - size.width * LABEL_MIN_SHARE).coerceAtLeast(0f))
+                                val maxShift = (cell.width - size.width * LABEL_MIN_SHARE).coerceAtLeast(0f)
+                                translationX = hidden.coerceIn(0f, maxShift)
+                                // Too little of the cell left on screen for the label: no label, never
+                                // the middle of a title cut at the left ("iga: (").
+                                alpha = if (hidden > maxShift) CinemaAlpha.none else CinemaAlpha.opaque
                             }.padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale))
                             .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
                     verticalArrangement = Arrangement.Center,
@@ -1843,7 +1855,7 @@ private fun ProgramCell(
                         role = TextRole.Caption,
                         tone = TextTone.Secondary,
                         maxLines = 1,
-                        overflow = TextOverflow.Clip,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

@@ -23,7 +23,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * calls [onToggle]; the switch inside is an inert indicator.
  *
  * P5: checked keeps the resting container and shows the switch in the current colour; only focus
- * lifts it, with an accent outline in the control corner.
+ * lifts it, with the white focus outline of every TV row in the control corner (one TV focus look).
  */
 @Composable
 fun TvSwitchButton(
@@ -59,11 +59,11 @@ fun TvSwitchButton(
                 border = Border.None,
                 focusedBorder =
                     Border(
-                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTheme.colors.accentSoft),
+                        border = BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline),
                         shape = shape,
                     ),
             ),
-        glow = SelectableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
+        glow = SelectableSurfaceDefaults.glow(),
         shape = SelectableSurfaceDefaults.shape(shape = shape),
     ) {
         Box(

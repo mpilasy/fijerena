@@ -2,9 +2,7 @@
 
 package org.njarasoa.fijerena.ui.player.components.dialogs
 
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -67,14 +65,32 @@ fun TvSelectorDialog(
     }
 
     // In the player's own tree, not a Dialog window, which can break the video surface under it.
-    TvOverlayPanel(onDismiss = onDismiss) {
-        CinemaText(
-            text = title,
-            role = TextRole.Title,
-            tone = TextTone.Primary,
-            emphasis = true,
-        )
+    // The title and the Cancel button stay put; only the rows scroll.
+    TvOverlayPanel(
+        onDismiss = onDismiss,
+        title = title,
+        footer = {
+            CinemaSecondaryButton(
+                onClick = onDismiss,
+                text = stringResource(R.string.common_cancel),
+                modifier =
+                    Modifier
+                        .align(CenterHorizontally)
+                        .width(TvDimensions.selectionListWidth)
+                        .then(
+                            if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                        ),
+            )
 
+            CinemaText(
+                text = stringResource(R.string.player_nav_hint),
+                role = TextRole.BodySmall,
+                tone = TextTone.Disabled,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+    ) {
         if (options.isEmpty() && emptyText != null) {
             CinemaText(
                 text = emptyText,
@@ -90,6 +106,8 @@ fun TvSelectorDialog(
                 onClick = option.onSelect,
                 label = option.title,
                 description = option.subtitle,
+                // A long track name (a file name) takes two lines, then "…".
+                labelMaxLines = 2,
                 modifier =
                     if (index == selectedIndex) {
                         Modifier.focusRequester(initialFocusRequester)
@@ -98,27 +116,5 @@ fun TvSelectorDialog(
                     },
             )
         }
-
-        Spacer(modifier = Modifier.height(Spacing.xs))
-
-        CinemaSecondaryButton(
-            onClick = onDismiss,
-            text = stringResource(R.string.common_cancel),
-            modifier =
-                Modifier
-                    .align(CenterHorizontally)
-                    .width(TvDimensions.selectionListWidth)
-                    .then(
-                        if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
-                    ),
-        )
-
-        CinemaText(
-            text = stringResource(R.string.player_nav_hint),
-            role = TextRole.BodySmall,
-            tone = TextTone.Disabled,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }

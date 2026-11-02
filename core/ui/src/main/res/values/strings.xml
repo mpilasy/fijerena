@@ -5,11 +5,11 @@
     <string name="slow_connection_banner">Connection too slow for this video</string>
 
     <!-- EPG Management -->
-    <string name="epg_refresh_in_queue">Refresh already in queue...</string>
+    <string name="epg_refresh_in_queue">Refresh already in queue…</string>
     <string name="epg_up_to_date">The guide is up to date.</string>
     <plurals name="epg_refreshing_stale">
-        <item quantity="one">Refreshing %1$d stale guide source...</item>
-        <item quantity="other">Refreshing %1$d stale guide sources...</item>
+        <item quantity="one">Refreshing %1$d stale guide source…</item>
+        <item quantity="other">Refreshing %1$d stale guide sources…</item>
     </plurals>
     <string name="epg_no_stale_sources">No stale guide sources need refreshing.</string>
     <string name="epg_no_failed_sources">No failed guide sources found.</string>
@@ -568,7 +568,7 @@
     <string name="epg_browser_indexing_label">Indexing…</string>
     <string name="epg_browser_optimizing_label">Optimising…</string>
     <string name="epg_browser_hint_search_titles">Search programme titles</string>
-    <string name="epg_browser_no_file_message">No guide yet.\nAdd a guide source in Edit Source → Guide Sources.</string>
+    <string name="epg_browser_no_file_message">No guide yet.\nAdd a guide source in Settings → Sources &amp; Guide → Guide Sources.</string>
     <string name="epg_browser_watch_now_btn">Watch now</string>
     <string name="epg_browser_add_calendar_btn">Add to calendar</string>
     <string name="epg_browser_no_calendar_app">No calendar app found on this device</string>
@@ -1036,7 +1036,8 @@
     <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
     <string name="epg_guide_no_guide_title">No guide</string>
     <string name="epg_guide_no_channels">No channels to show a guide for.</string>
-    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Edit Source → Guide Sources.</string>
+    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Settings → Sources &amp; Guide → Guide Sources.</string>
+    <string name="epg_search_no_results_stale">The guide is out of date, so it may not have this programme yet. Refresh it, then search again.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connection</string>
     <string name="provider_save_connection_button">Save connection</string>
@@ -1081,7 +1082,7 @@
     <string name="provider_logins_as_of_format">%1$s · as of %2$s</string>
     <string name="provider_logins_main_format">Main login · %1$s</string>
     <string name="epg_source_use_label">Use this guide</string>
-    <string name="epg_source_own_guide_hint">This source\'s own guide: its switch is Provides a guide in Edit Source.</string>
+    <string name="epg_source_own_guide_hint">This source\'s own guide. Turn it on or off with Provides a Guide in Edit Source.</string>
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · last refresh %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · never refreshed</string>

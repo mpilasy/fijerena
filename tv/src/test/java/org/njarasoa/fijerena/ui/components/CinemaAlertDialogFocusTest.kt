@@ -35,6 +35,7 @@ class CinemaAlertDialogFocusTest {
         main: Boolean = true,
         others: List<String> = emptyList(),
         danger: Boolean = false,
+        stackActions: Boolean = false,
     ) {
         val style = ModernStyle.copy(dialog = ModernStyle.dialog.copy(actions = UiDialogActionTokens(arrangement)))
         rule.setContent {
@@ -45,6 +46,7 @@ class CinemaAlertDialogFocusTest {
                     others = others.map { DialogAction(it) {} },
                     danger = if (danger) DialogAction("Delete") {} else null,
                     cancel = DialogAction("Cancel") {},
+                    stackActions = stackActions,
                 )
             }
         }
@@ -80,5 +82,15 @@ class CinemaAlertDialogFocusTest {
 
         walk.assertFocused("Save")
         walk.run(down("Remind me"), down("Cancel"))
+    }
+
+    @Test
+    fun `stackActions keeps two actions in a stack, as three, with focus on the main action`() {
+        // The TV Guide's programme panel: Watch channel and Close stack as Start over, Watch
+        // channel and Close do, so the panel keeps one layout.
+        setDialog(stackActions = true)
+
+        walk.assertFocused("Save")
+        walk.run(down("Cancel"), up("Save"))
     }
 }

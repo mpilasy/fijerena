@@ -451,6 +451,8 @@ internal fun MobileGuideSearchPane(
                     onNavigateToPlayer = onNavigateToPlayer,
                     contextName = contextName.takeIf { inContextOnly },
                     contextChannels = contextChannels,
+                    guideOutOfDate = staleSourceCount > 0,
+                    onRefreshGuide = { viewModel.refreshStale() },
                 )
             }
 
@@ -472,6 +474,9 @@ private fun MobileResultsContent(
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
     contextChannels: List<GuideChannels>? = null,
+    // A guide source is out of date: a search with no results says so, with Refresh.
+    guideOutOfDate: Boolean = false,
+    onRefreshGuide: () -> Unit = {},
 ) {
     // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
     val contextFilter = contextChannels?.takeIf { contextName != null }
@@ -505,9 +510,13 @@ private fun MobileResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
+            // An out-of-date guide may simply not have the programme yet: say so, with Refresh.
             MobileEmptyState(
                 message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
                 icon = CinemaIcons.Search,
+                secondary = if (guideOutOfDate) stringResource(R.string.epg_search_no_results_stale) else null,
+                actionLabel = if (guideOutOfDate) stringResource(R.string.common_refresh) else null,
+                onAction = if (guideOutOfDate) onRefreshGuide else null,
             )
         } else {
             LazyColumn(
