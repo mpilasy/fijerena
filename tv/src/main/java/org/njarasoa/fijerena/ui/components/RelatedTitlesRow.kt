@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.rowDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -219,7 +220,7 @@ private fun RelatedTitleCard(
         // audit X4). A fixed height of two style line heights cut a Look's taller font to one line.
         CinemaText(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
-            text = item.listTitle ?: parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
+            text = item.listTitle ?: rowDisplayTitle(parsedTitle, item.name, null) ?: stringResource(R.string.content_untitled),
             role = TextRole.Heading,
             maxLines = 2,
             minLines = 2,

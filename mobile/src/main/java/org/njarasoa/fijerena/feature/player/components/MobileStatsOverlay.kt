@@ -363,7 +363,7 @@ fun MobileStatsOverlay(
                         icon = CinemaIcons.Close,
                         label = stringResource(R.string.common_close),
                         buttonSize = MobileDimensions.iconLarge,
-                        tone = TextTone.Secondary,
+                        tone = TextTone.Primary,
                         iconModifier = Modifier.size(MobileDimensions.iconSmall),
                     )
                 }

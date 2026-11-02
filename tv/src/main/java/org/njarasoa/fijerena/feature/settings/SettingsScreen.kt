@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
@@ -746,7 +747,7 @@ fun SettingsScreen(
                                                                                 },
                                                                             ),
                                                                         // An action, not a page.
-                                                                        chevron = false,
+                                                                        kind = SettingsRowKind.Action,
                                                                         onClick = {
                                                                             coroutineScope.launch {
                                                                                 ChartRows.refresh(chartsContext.applicationContext)

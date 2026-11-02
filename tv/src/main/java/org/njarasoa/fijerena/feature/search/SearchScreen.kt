@@ -96,12 +96,14 @@ import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.player.domain.categoryNameAsTag
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SectionHeader
@@ -551,7 +553,7 @@ fun SearchScreen(
                                 onTypeFilterChange = { selectedTypeFilter = it },
                                 excludedCountByType = if (child) emptyMap() else successState.excludedCountByType,
                                 isSearching = successState.isSearching,
-                                searchProgress = successState.searchProgress ?: "",
+                                searchProgress = successState.searchProgress?.takeIf { it.isNotBlank() },
                                 devStats = devStats,
                                 sourceErrors = sourceErrors,
                                 contentType = contentType,
@@ -1582,9 +1584,14 @@ internal fun SearchResultItem(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TitleBadges(parsedTitle)
+                    // A category named by one tag ("en", "4k") is its badge, as on the list rows.
+                    val categoryTag = remember(result.categoryName) { categoryNameAsTag(result.categoryName) }
+                    categoryTag?.let { LanguageBadge(it) }
                     CinemaText(
                         // The year the title gave, before the category, so a long category can't push it off.
-                        text = listOfNotNull(parsedTitle.year?.toString(), result.categoryName).joinToString(" · "),
+                        text =
+                            listOfNotNull(parsedTitle.year?.toString(), result.categoryName.takeIf { categoryTag == null })
+                                .joinToString(" · "),
                         role = TextRole.Body,
                         tone = TextTone.Secondary,
                         maxLines = 1,

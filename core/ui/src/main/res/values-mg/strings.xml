@@ -989,6 +989,9 @@
     <string name="settings_shrink_database_desc">Esory ny angona sisa tavela avy amin\'ny loharano voafafa ary ampitomboy ny toerana malalaka</string>
     <string name="settings_shrink_database_button">Ahenao ny tahirin-kevitra</string>
     <string name="settings_shrink_database_button_running">Mampihena…</string>
+    <string name="settings_shrink_database_confirm_title">Hahena ny tahirin-kevitra?</string>
+    <string name="settings_shrink_database_confirm_message">Esorina ny angona navelan\'ny loharano voafafa ary ahena ny tahirin-kevitra. Mety haharitra iray minitra izany, ary mety ho miadana ny fampiharana mandra-pahavitany. Tsy voakitika ny loharanonao, ny ankafizinao ary ny tantaran\'ny fijerenao.</string>
+    <string name="settings_shrink_database_confirm_action">Ahenao</string>
     <plurals name="settings_shrink_database_result_format">
         <item quantity="one">Andalana sisa %1$d no nesorina, nahazoana %2$s</item>
         <item quantity="other">Andalana sisa %1$d no nesorina, nahazoana %2$s</item>

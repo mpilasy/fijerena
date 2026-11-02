@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
@@ -145,7 +146,7 @@ internal fun SourcesStatusSheet(
                         title = if (isDevMode) "${state.name} (${sourceTypeName(state.type)})" else state.name,
                         description = null,
                         onClick = onDismiss,
-                        chevron = false,
+                        kind = SettingsRowKind.Action,
                         focusRequester = if (index == 0) firstRow else null,
                         supporting = detail?.let { { CinemaText(it, role = TextRole.Body, tone = TextTone.Secondary) } },
                     )

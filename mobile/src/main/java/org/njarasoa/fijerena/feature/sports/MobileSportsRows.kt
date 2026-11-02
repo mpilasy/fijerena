@@ -188,6 +188,8 @@ fun MobileFollowActions(
         onClick = onToggleFollow,
         icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
         label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
+        // A switch: the Accent tone while the team is followed, the Primary tone while not.
+        on = followed,
     )
 }
 

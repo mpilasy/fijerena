@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -172,7 +173,7 @@ internal fun ProfileFavoritesPane(
                             title = parseDisplayTitle(item.name).title.ifBlank { item.name },
                             description = stringResource(sectionLabel(item.contentType)),
                             onClick = { toggle(item) },
-                            chevron = false,
+                            kind = SettingsRowKind.Action,
                             focusRequester = if (item.key == rows.first().key) firstRowFocus else null,
                             leading = {
                                 TvIcon(

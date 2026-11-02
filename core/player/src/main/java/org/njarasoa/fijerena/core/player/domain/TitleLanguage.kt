@@ -258,6 +258,21 @@ private fun stripEnding(text: String): Ending {
 }
 
 /**
+ * A list row's title: [parsed]'s title without its year, else with it, else the stream's raw
+ * name ([rawName], when its tags were all the name had), else [categoryName]. Null only when all
+ * of them are blank, where the row says "No title".
+ */
+fun rowDisplayTitle(
+    parsed: ParsedTitle,
+    rawName: String,
+    categoryName: String?,
+): String? =
+    listOf(parsed.titleWithoutYear, parsed.title, rawName, categoryName.orEmpty())
+        .map {
+            it.trim()
+        }.firstOrNull { it.isNotEmpty() }
+
+/**
  * A category whose whole name is one tag: a two-letter code ("en", "PT") or a picture format
  * ("4k", "UHD"). Rows show it as a badge ("EN", "4K"), as they show a title's tags, never as plain
  * text in its place (consistency round 2, finding 30). Null for an ordinary name.

@@ -723,6 +723,9 @@
     <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
     <string name="settings_shrink_database_button">Shrink Database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>
+    <string name="settings_shrink_database_confirm_title">Shrink Database?</string>
+    <string name="settings_shrink_database_confirm_message">This removes the data that deleted sources left behind and compacts the database. It can take a minute, and the app can be slow until it ends. Your sources, favourites and watch history stay.</string>
+    <string name="settings_shrink_database_confirm_action">Shrink</string>
     <plurals name="settings_shrink_database_result_format">
         <item quantity="one">Removed %1$d leftover row, freed %2$s</item>
         <item quantity="other">Removed %1$d leftover rows, freed %2$s</item>

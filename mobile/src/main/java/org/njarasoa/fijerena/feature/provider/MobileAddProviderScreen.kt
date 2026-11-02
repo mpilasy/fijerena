@@ -354,18 +354,14 @@ fun MobileAddProviderScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = LocalDockInset.current),
         ) {
-            // Provider type: a picker row when adding, a disabled field when editing (the type of
-            // an existing source cannot change).
+            // Provider type: the same row when adding and editing; disabled when editing (the type
+            // of an existing source cannot change).
             if (isEditMode) {
                 ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                CinemaTextField(
-                    value = stringResource(selectedType.nameRes),
-                    onValueChange = {},
-                    readOnly = true,
+                SettingsListRow(
+                    title = stringResource(R.string.provider_type_label),
+                    summary = stringResource(selectedType.nameRes),
                     enabled = false,
-                    label = stringResource(R.string.provider_type_label),
-                    modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 // A row like Settings' (as on TV); the types open in a picker.

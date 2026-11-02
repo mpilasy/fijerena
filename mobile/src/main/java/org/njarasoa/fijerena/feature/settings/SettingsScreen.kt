@@ -43,7 +43,9 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PinRequest
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
@@ -75,6 +77,7 @@ import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
@@ -522,6 +525,7 @@ fun MobileSettingsScreen(
                                                 chartsRefreshed = true
                                             }
                                         },
+                                        kind = SettingsRowKind.Action,
                                     )
                                 }
                                 CinemaSwitchRow(
@@ -541,13 +545,13 @@ fun MobileSettingsScreen(
                                 SettingsListRow(
                                     title = stringResource(R.string.settings_export_button),
                                     summary = stringResource(R.string.settings_export_import_desc),
-                                    trailing = {},
+                                    kind = SettingsRowKind.Action,
                                     onClick = { exportLauncher.launch("fijerena_settings.json") },
                                 )
                                 SettingsListRow(
                                     title = stringResource(R.string.settings_import_button),
                                     summary = stringResource(R.string.settings_import_desc),
-                                    trailing = {},
+                                    kind = SettingsRowKind.Action,
                                     onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                                 )
                                 // Only when there is a backup in Downloads to restore (a developer's shortcut).
@@ -556,7 +560,7 @@ fun MobileSettingsScreen(
                                     val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
                                     SettingsListRow(
                                         title = stringResource(R.string.settings_quick_import_button),
-                                        trailing = {},
+                                        kind = SettingsRowKind.Action,
                                         onClick = {
                                             val path = exportManager.getQuickImportPath()
                                             if (path != null) {
@@ -590,6 +594,7 @@ fun MobileSettingsScreen(
                 // The last row, under no header of its own.
                 item {
                     // Housekeeping: the catalogue's leftovers. Shrink Database ends the Admin page.
+                    var confirmShrink by remember { mutableStateOf(false) }
                     SettingsListRow(
                         title =
                             stringResource(
@@ -605,9 +610,29 @@ fun MobileSettingsScreen(
                                 CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                             }
                         },
-                        onClick = viewModel::pruneDatabase,
+                        // Heavy maintenance asks first (rule 7), as on TV.
+                        onClick = { confirmShrink = true },
                         enabled = !uiState.isPruningDatabase,
+                        kind = SettingsRowKind.Action,
                     )
+                    if (confirmShrink) {
+                        CinemaAlertDialog(
+                            onDismissRequest = { confirmShrink = false },
+                            title = stringResource(R.string.settings_shrink_database_confirm_title),
+                            text = {
+                                CinemaText(
+                                    stringResource(R.string.settings_shrink_database_confirm_message),
+                                    tone = TextTone.Secondary,
+                                )
+                            },
+                            main =
+                                DialogAction(stringResource(R.string.settings_shrink_database_confirm_action)) {
+                                    confirmShrink = false
+                                    viewModel.pruneDatabase()
+                                },
+                            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmShrink = false },
+                        )
+                    }
                     uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
                     // Only when the last run found something: "0 records deleted" says nothing.
                     if (uiState.lastShrinkAtMs > 0L &&

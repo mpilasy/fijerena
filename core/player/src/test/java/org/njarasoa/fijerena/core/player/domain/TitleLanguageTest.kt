@@ -348,4 +348,13 @@ class TitleLanguageTest {
         assertEquals(null, categoryNameAsTag("English Series"))
         assertEquals(null, categoryNameAsTag(null))
     }
+
+    @Test
+    fun `a row with no title left shows the raw name, else the category`() {
+        assertEquals("The Godfather", rowDisplayTitle(parseDisplayTitle("EN - The Godfather"), "EN - The Godfather", "Films"))
+        assertEquals("(2023)", rowDisplayTitle(ParsedTitle("(2023)", null, year = 2023), "AF - (2023)", "AF - CINAF TV"))
+        assertEquals("AF - 4K", rowDisplayTitle(ParsedTitle("", "AF"), "AF - 4K", "AF - CINAF TV"))
+        assertEquals("AF - CINAF TV", rowDisplayTitle(ParsedTitle("", null), " ", "AF - CINAF TV"))
+        assertEquals(null, rowDisplayTitle(ParsedTitle("", null), "", null))
+    }
 }

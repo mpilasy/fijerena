@@ -16,7 +16,9 @@ import org.njarasoa.fijerena.core.player.domain.RESUMABLE_SQL
 interface WatchStateDao {
     /**
      * Playback progress upsert. Owns position, duration, completion and `lastPlayedAt`; leaves
-     * metadata columns alone when this call doesn't carry them via `COALESCE`.
+     * metadata columns alone when this call doesn't carry them via `COALESCE`. An empty name
+     * counts as none (`NULLIF`): a player opened without the stream's name must not blank the
+     * stored one, which showed as "No title" in Recent.
      *
      * `isCompleted` is sticky: `MAX` can only raise it, never lower it, so playing two minutes of a
      * film already marked watched can't silently clear the check — only `setWatched(false)` does that.
@@ -34,7 +36,7 @@ interface WatchStateDao {
             "isCompleted = MAX(watch_state.isCompleted, excluded.isCompleted), " +
             "updatedAt = excluded.updatedAt, " +
             "lastPlayedAt = excluded.lastPlayedAt, " +
-            "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
+            "itemName = COALESCE(NULLIF(excluded.itemName, ''), watch_state.itemName), " +
             "seriesId = COALESCE(excluded.seriesId, watch_state.seriesId), " +
             "episodeId = COALESCE(excluded.episodeId, watch_state.episodeId), " +
             "seriesName = COALESCE(excluded.seriesName, watch_state.seriesName), " +
@@ -74,7 +76,7 @@ interface WatchStateDao {
             "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
             "updatedAt = excluded.updatedAt, " +
             "lastPlayedAt = excluded.lastPlayedAt, " +
-            "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
+            "itemName = COALESCE(NULLIF(excluded.itemName, ''), watch_state.itemName), " +
             "seriesId = COALESCE(excluded.seriesId, watch_state.seriesId), " +
             "episodeId = COALESCE(excluded.episodeId, watch_state.episodeId), " +
             "seriesName = COALESCE(excluded.seriesName, watch_state.seriesName), " +

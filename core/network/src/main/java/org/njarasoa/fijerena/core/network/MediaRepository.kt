@@ -103,6 +103,27 @@ fun WatchedItem.resumeProgress(): Float? =
  * (the watched followups plan → Phase 1), and one `removeFromRecent` cleared,
  * whose `updatedAt` is just "removed just now" and must not outrank a genuinely recently-played row.
  */
+
+/**
+ * The title a Recent card names, for [oneRowPerTitle]: a film's or a show's name; null for a
+ * channel or a card for a lone episode (two channels or two episodes can share a name).
+ */
+internal fun recentTitleKey(item: MediaItem): String? =
+    item.name
+        .trim()
+        .lowercase()
+        .takeIf { it.isNotEmpty() && (item.target is BrowseTarget.Movie || item.target is BrowseTarget.Series) }
+
+/**
+ * One Recent card per title of a source: a source can list the same film under two stream ids (two
+ * files, or two libraries), and each play of one wrote its own history entry, so the film showed
+ * twice. The newest entry stays, in its place.
+ */
+internal fun oneRowPerTitle(items: List<MediaItem>): List<MediaItem> {
+    val seen = HashSet<String>()
+    return items.filter { item -> recentTitleKey(item)?.let { seen.add(it) } ?: true }
+}
+
 private fun WatchStateEntity.toWatchedItem(): WatchedItem =
     WatchedItem(
         itemId = itemId,
@@ -1645,7 +1666,10 @@ class MediaRepository(
      * The cap is per content type: an in-progress movie can
      * not be pushed out of its own Recent row by heavy channel surfing on Live TV.
      */
-    internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> {
+    internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> = oneRowPerTitle(recentRows(contentType))
+
+    // Recent's history rows as cards, before [oneRowPerTitle].
+    private suspend fun recentRows(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
         // One size for every source on this device (Settings reorg, D4).
         val limit = appSettings.recentRowSize
@@ -2485,7 +2509,12 @@ class MediaRepository(
     ): RecentRemoval? {
         if (usesServerUserData) return null
         val now = System.currentTimeMillis()
-        val plays = watchStateDao.takeRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
+        val key = seriesId ?: itemId
+        // The card stands for every entry of its title (oneRowPerTitle): all of them leave Recent.
+        val rows = recentRows(contentType)
+        val title = rows.firstOrNull { it.id == key }?.let(::recentTitleKey)
+        val keys = listOf(key) + rows.filter { it.id != key && title != null && recentTitleKey(it) == title }.map { it.id }
+        val plays = keys.distinct().flatMap { watchStateDao.takeRecentSeries(providerId, profileId, it, contentType, now) }
         refreshRecentItems(contentType)
         return RecentRemoval(contentType, plays, providerId)
     }

@@ -25,6 +25,8 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
+import org.njarasoa.fijerena.core.player.model.audioTrackName
+import org.njarasoa.fijerena.core.player.model.playingTitles
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.ServiceDestroyedException
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -411,6 +413,8 @@ class PlaybackViewModel(
         val tracks = controller.currentTracks
         val audioTracks = mutableListOf<AudioTrackInfo>()
 
+        // What plays, by its names: a track label equal to one of them is the file's name, not the track's.
+        val titles = playingTitles(controller)
         for (groupIndex in 0 until tracks.groups.size) {
             val group = tracks.groups[groupIndex]
             if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
@@ -423,13 +427,19 @@ class PlaybackViewModel(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
                             language = format.language ?: context.getString(R.string.player_track_language_unknown),
+                            // A label that only repeats the file's name gives way to language · codec · channels.
                             label =
-                                format.label
-                                    ?: context.getString(
-                                        R.string.player_track_audio_fallback_label_format,
-                                        format.language ?: context.getString(R.string.player_track_generic_label),
-                                        format.channelCount,
-                                    ),
+                                audioTrackName(
+                                    label = format.label,
+                                    language = format.language,
+                                    mimeType = format.sampleMimeType,
+                                    codecs = format.codecs,
+                                    channelCount = format.channelCount,
+                                    titles = titles,
+                                    mono = context.getString(R.string.player_audio_mono),
+                                    stereo = context.getString(R.string.player_audio_stereo),
+                                    fallback = context.getString(R.string.player_track_generic_label),
+                                ),
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,

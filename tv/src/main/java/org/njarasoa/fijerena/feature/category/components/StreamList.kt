@@ -70,6 +70,7 @@ import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.player.domain.categoryNameAsTag
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.rowDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -830,7 +831,7 @@ internal fun StreamItem(
                 item.listTitle?.let { ParsedTitle(it, badge = null, year = parsed.year) } ?: parsed
             }
         // The year goes to the line under it, with the length and rating.
-        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
+        val displayTitle = rowDisplayTitle(parsedTitle, item.name, categoryName) ?: stringResource(R.string.content_untitled)
         // Films and shows: what the row already carries — year · length · rating (TV UI
         // audit #11). The rating is a plain number: a star here means favourite (X9).
         val metaLine =

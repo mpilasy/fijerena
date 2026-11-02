@@ -382,6 +382,20 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(code_hits 'androidx\.compose\.material3\.(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|HorizontalDivider|Text|Icon|Slider|CircularProgressIndicator|LinearProgressIndicator)\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java || true)
 
+# No marquee on the phone: touch has no focus to end one, so it scrolls for as long as the text
+# shows and cuts its start; a long text ends with "…". A marquee is for TV focus only (phone walk A, item 5).
+while IFS= read -r hit; do
+    echo "$hit: a marquee on the phone — let the text end with \"…\" (TextOverflow.Ellipsis); bounceMarquee is for TV focus only."
+    failures=$((failures + 1))
+done < <(code_hits '(bounceMarquee|basicMarquee)\(' mobile/src/main/java || true)
+
+# A Settings row says what it does as data (SettingsRowKind): the chevron is for a row that opens
+# a page or a picker only. An empty trailing slot to hide it (the old way) is not allowed.
+while IFS= read -r hit; do
+    echo "$hit: an empty trailing slot to hide a Settings row's chevron — give kind = SettingsRowKind.Action."
+    failures=$((failures + 1))
+done < <(code_hits 'trailing = \{\}' mobile/src/main/java tv/src/main/java || true)
+
 # Play and Trailer show the play icon, never a "▶" typed into a label (final phone walk, item 9).
 while IFS= read -r hit; do
     echo "$hit: a ▶ glyph in a string — show the play icon (PlayButtonLabel on the phone, CinemaPrimaryButton(icon = CinemaIcons.PlayArrow) on TV)."

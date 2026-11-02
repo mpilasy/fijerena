@@ -207,14 +207,14 @@ private fun ChannelLine(
         Column(modifier = Modifier.weight(1f)) {
             // As in the Live TV list: the name without its tags, the tags as badges before the programme.
             val parsed = remember(stream.name) { parseDisplayTitle(stream.name) }
-            // The source ends the name's line, as on every list row.
+            // The source ends the name's line, in the same place on every row, as on every list row.
             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 CinemaText(
                     text = shownChannelName(stream.name),
                     role = TextRole.Body,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.weight(1f),
                 )
                 rememberSourceName(stream.providerId)?.let { SourceBadge(it, providerId = stream.providerId) }
             }

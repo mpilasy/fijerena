@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.colorOf
@@ -46,9 +47,10 @@ fun SettingsGroupHeader(
 
 /**
  * One preference row: title, current value as [summary] (a String or an [AnnotatedString]),
- * optional [leading] content, and [trailing] content — a chevron when the row navigates
- * ([onClick]) and nothing explicit is given. [titleRole]: [TextRole.Heading] when the
- * title is a name (a profile).
+ * optional [leading] content, and [trailing] content. [kind] says what a tap does: a
+ * [SettingsRowKind.Navigation] row (a page, a picker) ends with a chevron when nothing explicit
+ * is given; a [SettingsRowKind.Action] row (it runs at once, or after a confirm) has none, as on
+ * TV. [titleRole]: [TextRole.Heading] when the title is a name (a profile).
  */
 @Composable
 fun SettingsListRow(
@@ -59,6 +61,7 @@ fun SettingsListRow(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     titleRole: TextRole = TextRole.Body,
+    kind: SettingsRowKind = SettingsRowKind.Navigation,
 ) {
     val titleTone = if (enabled) TextTone.Primary else TextTone.Disabled
     val summaryTone = if (enabled) TextTone.Secondary else TextTone.Disabled
@@ -83,7 +86,7 @@ fun SettingsListRow(
                 trailing()
             }
 
-            onClick != null -> {
+            onClick != null && kind == SettingsRowKind.Navigation -> {
                 CinemaIcon(
                     CinemaIcons.KeyboardArrowRight,
                     contentDescription = null,
