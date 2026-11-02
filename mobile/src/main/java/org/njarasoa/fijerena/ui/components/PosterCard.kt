@@ -2,8 +2,10 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -20,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -53,7 +56,7 @@ fun PosterCard(
     tags: Boolean = true,
     // False: the clean name without its tags as badges (Home's rows: the source and the rating only).
     titleBadges: Boolean = true,
-    // Out of 10; shown after the source when above 0.
+    // Out of 10; shown on the second line when above 0.
     rating: String? = null,
     subtitleLines: Int = 1,
     onClick: () -> Unit,
@@ -92,8 +95,8 @@ fun PosterCard(
 }
 
 /**
- * A card's clean name ("From (2022)", not "ES - From (2022)"), then on one line its source (Expert
- * mode), its [rating], the name's tags as badges ("+N" for those that do not fit, CardBadgeLine) and
+ * A card's clean name ("From (2022)", not "ES - From (2022)") with its source (Expert mode) at the
+ * end of the name's line, then on one line its [rating], the name's tags as badges ("+N" for those that do not fit, CardBadgeLine) and
  * [subtitle] on [subtitleLines] lines — as TV Home's cards and the lists show it.
  * Without [tags], [title] shows as it is and has no badges: a TMDB list's title. Without
  * [titleBadges], the name is clean but its tags do not show: Home's rows.
@@ -113,19 +116,22 @@ internal fun CardLines(
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
-        CinemaText(
-            text = if (tags) parsed.title.ifBlank { title } else title,
-            role = TextRole.Heading,
-            maxLines = titleLines,
-            // Room for every line, so the cards of a row are one height.
-            minLines = titleLines,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            CinemaText(
+                text = if (tags) parsed.title.ifBlank { title } else title,
+                role = TextRole.Heading,
+                maxLines = titleLines,
+                // Room for every line, so the cards of a row are one height.
+                minLines = titleLines,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            // The source (Expert mode) ends the title line, as on the list rows and TV's cards.
+            sourceName?.let { SourceBadge(it, providerId = providerId) }
+        }
         // One line of one height on every card: the badges that do not fit become "+N".
         CardBadgeLine(
             parsed = parsed.takeIf { tags && titleBadges },
-            sourceName = sourceName,
-            providerId = providerId,
             rating = rating,
             modifier = Modifier.heightIn(min = rememberBadgeHeight()),
         ) {

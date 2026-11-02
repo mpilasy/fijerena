@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -45,7 +48,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.components.CinemaTooltip
 
 /**
  * A filled text button: [ButtonKind.Main] unless [kind] says otherwise. Every phone text button
@@ -112,9 +115,29 @@ fun CinemaIconButton(
 }
 
 /**
- * Secondary detail-screen action: a circular icon button with a short caption underneath it —
- * the Plex/Netflix "Favorite / Restart / Trailer" row under a detail screen's primary Play button.
- * Only actions the app actually supports belong in that row (no dead Cast/Shuffle buttons).
+ * A Play or Resume button's content: the play icon, then [text] on one line ("Resume from 12:04").
+ * The play mark is the icon, never a "▶" in the text.
+ */
+@Composable
+fun RowScope.PlayButtonLabel(text: String) {
+    CinemaIcon(imageVector = CinemaIcons.PlayArrow, contentDescription = null, tone = TextTone.Inherit)
+    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+    CinemaText(
+        text = text,
+        role = TextRole.Label,
+        tone = TextTone.Inherit,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f, fill = false),
+    )
+}
+
+/**
+ * Secondary detail-screen action: a filled icon button — the Plex/Netflix "Favorite / Restart /
+ * Trailer" row under a detail screen's primary Play button. As every action icon on the phone, its
+ * [label] is the content description and shows in a tooltip on a long press, never under the icon
+ * (the labels under the icons were cut: "Add to favou…"). Only actions the app actually supports
+ * belong in that row (no dead Cast/Shuffle buttons).
  */
 @Composable
 fun DetailIconAction(
@@ -124,24 +147,10 @@ fun DetailIconAction(
     modifier: Modifier = Modifier,
     tone: TextTone = TextTone.Primary,
 ) {
-    // A capped width and a two-line, centred label: at a large system font size the one-line
-    // labels of a row of actions ran into each other ("Add to FavoritesMark as watched…").
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.widthIn(max = DETAIL_ACTION_MAX_WIDTH),
-    ) {
+    CinemaTooltip(label = label, modifier = modifier) {
         CinemaIconButton(onClick = onClick, icon = {
             CinemaIcon(imageVector = icon, contentDescription = label, tone = tone)
         })
-        CinemaText(
-            text = label,
-            role = TextRole.Caption,
-            tone = TextTone.Secondary,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = CinemaSpacing.xxs),
-        )
     }
 }
 
@@ -172,6 +181,3 @@ fun CinemaDangerIconButton(
         }
     }
 }
-
-/** The widest a labelled detail action gets; its label wraps inside it. */
-private val DETAIL_ACTION_MAX_WIDTH = MobileDimensions.detailActionMaxWidth

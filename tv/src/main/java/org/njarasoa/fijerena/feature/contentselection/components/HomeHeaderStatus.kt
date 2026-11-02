@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.utils.sourceTypeName
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -141,7 +142,7 @@ internal fun SourcesStatusSheet(
                     // A focusable line of status (focus rule 3): OK closes the dialog.
                     val detail = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null }
                     SettingsRow(
-                        title = if (isDevMode) "${state.name} (${state.type})" else state.name,
+                        title = if (isDevMode) "${state.name} (${sourceTypeName(state.type)})" else state.name,
                         description = null,
                         onClick = onDismiss,
                         chevron = false,

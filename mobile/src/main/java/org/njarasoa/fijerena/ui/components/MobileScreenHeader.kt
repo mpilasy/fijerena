@@ -1,18 +1,28 @@
 package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
@@ -21,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -132,15 +143,7 @@ private fun HeaderBar(
         )
     Column(modifier) {
         if (centred) {
-            // look-ok: the component that wraps Material's top bar
-            CenterAlignedTopAppBar(
-                title = title,
-                navigationIcon = navigation,
-                actions = actions,
-                expandedHeight = height,
-                windowInsets = mobileClockTopBarInsets(),
-                colors = colors,
-            )
+            CentredBar(container = container, height = height, title = title, navigation = navigation, actions = actions)
         } else {
             // look-ok: the component that wraps Material's top bar
             TopAppBar(
@@ -156,6 +159,67 @@ private fun HeaderBar(
         if (tokens.divider && ground != HeaderGround.Artwork) CinemaDivider()
     }
 }
+
+/**
+ * A bar with its title in the middle of the screen, not in the middle of the room the clock leaves:
+ * Material's centred bar centred the title in the bar less the clock's room, and moved a long one
+ * to the start, so the titles of Licences or the Guide looked left-aligned. The title is in the
+ * middle of the bar's full width while it fits between Back and the actions, else as near the
+ * middle as it can be; it ends with "…" when the room between them is too small.
+ */
+@Composable
+private fun CentredBar(
+    container: Color,
+    height: Dp,
+    title: @Composable () -> Unit,
+    navigation: @Composable () -> Unit,
+    actions: @Composable RowScope.() -> Unit,
+) {
+    val c = CinemaTheme.colors
+    val insets = mobileClockTopBarInsets()
+    val edge = CinemaSpacing.xxs
+    Layout(
+        content = {
+            Box(Modifier.layoutId(SLOT_NAVIGATION), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides c.textPrimary) { navigation() }
+            }
+            Box(Modifier.layoutId(SLOT_TITLE), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides c.textPrimary) { title() }
+            }
+            Row(Modifier.layoutId(SLOT_ACTIONS), verticalAlignment = Alignment.CenterVertically) {
+                CompositionLocalProvider(LocalContentColor provides c.textSecondary) { actions() }
+            }
+        },
+        // look-ok: the bar component sets its own fill, as Material's bar did
+        modifier = Modifier.fillMaxWidth().background(container),
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val top = insets.getTop(this)
+        val start = insets.getLeft(this, layoutDirection) + edge.roundToPx()
+        val end = width - insets.getRight(this, layoutDirection) - edge.roundToPx()
+        val barHeight = height.roundToPx()
+        val loose = Constraints(maxWidth = (end - start).coerceAtLeast(0), maxHeight = barHeight)
+        val nav = measurables.first { it.layoutId == SLOT_NAVIGATION }.measure(loose)
+        val act =
+            measurables.first { it.layoutId == SLOT_ACTIONS }.measure(
+                loose.copy(maxWidth = (end - start - nav.width).coerceAtLeast(0)),
+            )
+        val titleStart = start + nav.width
+        val titleEnd = end - act.width
+        val titleRoom = (titleEnd - titleStart).coerceAtLeast(0)
+        val titlePlaceable = measurables.first { it.layoutId == SLOT_TITLE }.measure(loose.copy(maxWidth = titleRoom))
+        val titleX = ((width - titlePlaceable.width) / 2).coerceIn(titleStart, (titleEnd - titlePlaceable.width).coerceAtLeast(titleStart))
+        layout(width, top + barHeight) {
+            nav.place(start, top + (barHeight - nav.height) / 2)
+            act.place(titleEnd, top + (barHeight - act.height) / 2)
+            titlePlaceable.place(titleX, top + (barHeight - titlePlaceable.height) / 2)
+        }
+    }
+}
+
+private const val SLOT_NAVIGATION = "navigation"
+private const val SLOT_TITLE = "title"
+private const val SLOT_ACTIONS = "actions"
 
 /** Back: a plain icon action on a solid bar; over artwork, a filled button on a dark disc so it reads. */
 @Composable

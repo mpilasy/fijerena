@@ -150,6 +150,8 @@ class MergedLists(
                     }
                 }.awaitAll()
                 .flatten()
+                // One row per copy: a source and a stream id name one copy.
+                .distinctBy { it.providerId to it.id }
         }
 
     // Every source at once, in [sources] order. A source whose read fails leaves its part out

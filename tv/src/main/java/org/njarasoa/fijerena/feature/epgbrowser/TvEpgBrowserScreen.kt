@@ -154,7 +154,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
-import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -462,14 +462,13 @@ private fun EpgBrowserContent(
             showClearButton = query.isNotEmpty() || hasResults,
         )
 
-        // Opened from a TV Guide: "In <category> only", a chip under the field (TV UI audit #15). A
-        // bare Material3 Checkbox draws focus through LocalIndication, a ripple — invisible without
-        // a pointer on TV — so it is a selectable button. It hands Left to the navigation rail.
+        // Opened from a TV Guide: "In <category> only", an on/off filter under the field: a switch
+        // row, as on the phone (the choice and toggle rows rule). It hands Left to the navigation rail.
         if (contextName != null) {
-            TvSelectableButton(
-                selected = inContextOnly,
-                onSelect = { inContextOnly = !inContextOnly },
-                text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+            TvSwitchRow(
+                checked = inContextOnly,
+                onCheckedChange = { inContextOnly = it },
+                label = stringResource(R.string.epg_browser_in_category_only_format, contextName),
                 modifier = Modifier.padding(top = Spacing.xs).leftToRail().then(downToHistory),
             )
         }
@@ -725,7 +724,10 @@ private fun ResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
-            TvEmptyState(message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }))
+            TvEmptyState(
+                message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
+                icon = CinemaIcons.Search,
+            )
         } else {
             // Build index-to-dateLabel mapping for sticky header
             val headerIndices =

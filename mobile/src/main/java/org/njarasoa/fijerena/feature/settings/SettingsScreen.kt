@@ -350,8 +350,11 @@ fun MobileSettingsScreen(
                 // With Expert mode: Admin, every Expert group on one page.
                 if (uiState.isDevMode) {
                     item {
+                        // Under a heading of its own, as every group: without one it read as a row
+                        // of the Playback group above it.
+                        SettingsGroupHeader(stringResource(R.string.settings_group_admin))
                         SettingsListRow(
-                            title = stringResource(R.string.settings_group_admin),
+                            title = stringResource(R.string.settings_open_admin),
                             summary = stringResource(R.string.settings_group_admin_desc),
                             onClick = { guarded { adminOpen = true } },
                         )
@@ -417,10 +420,8 @@ fun MobileSettingsScreen(
             } else {
                 // Admin: each Expert group under its own header, in TV's rail order.
                 ExpertGroup.visibleFor(admin = true).forEach { group ->
-                    // Parental controls is one row with the same name: no header over it.
-                    if (group != ExpertGroup.PARENTAL_CONTROLS) {
-                        item { SettingsGroupHeader(stringResource(group.titleRes)) }
-                    }
+                    // Every group under its heading, the first one too, so the groups read apart.
+                    item { SettingsGroupHeader(stringResource(group.titleRes)) }
                     when (group) {
                         // The list of every profile; a profile's row opens its page, with its Admin rows.
                         ExpertGroup.PROFILES -> {

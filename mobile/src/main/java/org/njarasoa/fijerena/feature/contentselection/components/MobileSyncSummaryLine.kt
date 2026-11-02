@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.home.syncSummaryText
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.sourceTypeName
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -130,7 +131,7 @@ fun MobileSourcesStatusSheet(
                 states.forEach { state ->
                     Column {
                         CinemaText(
-                            text = if (isDevMode) "${state.name} (${state.type})" else state.name,
+                            text = if (isDevMode) "${state.name} (${sourceTypeName(state.type)})" else state.name,
                             role = TextRole.Heading,
                             tone = TextTone.Inherit,
                             emphasis = true,

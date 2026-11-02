@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GroupHeading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.history.sourceFilterLabel
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -112,7 +113,9 @@ internal fun TvSearchFilterDialog(
                         TvRadioRow(
                             selected = selectedSource == source.providerId,
                             onClick = { onSelectSource(source.providerId) },
-                            label = "${source.name} (${source.count})",
+                            // The source as the badge at the end of the label, as on every row.
+                            label = sourceFilterLabel(source.name, source.count),
+                            sourceName = source.name,
                             modifier = Modifier.entryIf("source_${source.providerId}"),
                         )
                     }

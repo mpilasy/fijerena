@@ -81,7 +81,7 @@ class SettingsAdminTest {
         showSettings(active = ADMIN)
 
         assertOwnRows()
-        scrollTo(text(R.string.settings_group_admin))
+        scrollTo(text(R.string.settings_open_admin))
         scrollTo(text(R.string.settings_about_section_title))
         rule.onNodeWithText(text(R.string.settings_group_display)).assertDoesNotExist()
         // The other profiles are in Admin.
@@ -119,8 +119,8 @@ class SettingsAdminTest {
     fun `Admin asks the PIN, and Cancel stays on the list`() {
         showSettings(active = ADMIN, pins = setOf(ADMIN), locked = true)
 
-        scrollTo(text(R.string.settings_group_admin))
-        rule.onNodeWithText(text(R.string.settings_group_admin)).performClick()
+        scrollTo(text(R.string.settings_open_admin))
+        rule.onNodeWithText(text(R.string.settings_open_admin)).performClick()
         rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertExists()
         rule.onNodeWithText(text(R.string.common_cancel)).performClick()
         rule.waitForIdle()
@@ -168,8 +168,8 @@ class SettingsAdminTest {
             MobileSettingsScreen(onBack = null, onAdminProfile = { opened = it }, onProviderChanged = {})
         }
 
-        scrollTo(text(R.string.settings_group_admin))
-        rule.onNodeWithText(text(R.string.settings_group_admin)).performClick()
+        scrollTo(text(R.string.settings_open_admin))
+        rule.onNodeWithText(text(R.string.settings_open_admin)).performClick()
         rule.waitForIdle()
         listOf(
             R.string.settings_profiles_title,

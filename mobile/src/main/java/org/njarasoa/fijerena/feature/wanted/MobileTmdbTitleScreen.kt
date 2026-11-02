@@ -237,6 +237,8 @@ private fun TmdbTitleTabs(
                     }
                 },
             onSelect = { pickedTab = tabs[it] },
+            // Each tab as wide as its label, as on the film and show pages.
+            scrollable = true,
         )
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
     }

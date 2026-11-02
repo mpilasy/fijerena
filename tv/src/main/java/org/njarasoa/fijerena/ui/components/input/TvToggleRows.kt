@@ -2,10 +2,14 @@
 
 package org.njarasoa.fijerena.ui.components.input
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Checkbox
 import androidx.tv.material3.CheckboxDefaults
 import androidx.tv.material3.MaterialTheme
@@ -18,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -26,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * D-pad toggle rows.
@@ -70,7 +76,8 @@ fun TvCheckRow(
 /**
  * One option of a single choice. [selected] must be driven by what is actually active, never by
  * what holds focus: arrowing through the list must not move the mark. [trailing] is a small static
- * sample at the row's end (a colour theme's colours).
+ * sample at the row's end (a colour theme's colours). [sourceName]: the option's source as the
+ * badge at the end of its label line (a copy of a title); [labelMaxLines]: the label's lines, then "…".
  */
 @Composable
 fun TvRadioRow(
@@ -82,6 +89,8 @@ fun TvRadioRow(
     enabled: Boolean = true,
     labelIsName: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
+    sourceName: String? = null,
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     TvStateRow(
         selected = selected,
@@ -91,6 +100,8 @@ fun TvRadioRow(
         description = description,
         enabled = enabled,
         labelRole = if (labelIsName) TextRole.Heading else TextRole.Body,
+        sourceName = sourceName,
+        labelMaxLines = labelMaxLines,
         leading = {
             CinemaRadioButton(selected = selected, onClick = null, enabled = enabled)
         },
@@ -138,6 +149,8 @@ private fun TvStateRow(
     labelRole: TextRole,
     leading: (@Composable BoxScope.() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    sourceName: String? = null,
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     TvInputListItem(
         selected = selected,
@@ -153,6 +166,16 @@ private fun TvStateRow(
                 }
             },
     ) {
-        CinemaText(text = label, role = labelRole)
+        // The source ends the label line, as on every list row.
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+            CinemaText(
+                text = label,
+                role = labelRole,
+                maxLines = labelMaxLines,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            sourceName?.let { SourceBadge(it) }
+        }
     }
 }

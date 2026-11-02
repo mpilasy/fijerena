@@ -91,6 +91,7 @@ import org.njarasoa.fijerena.ui.components.WishlistRemovePrompt
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
+import org.njarasoa.fijerena.ui.components.buttons.PlayButtonLabel
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -366,11 +367,7 @@ private fun MovieDetailsContent(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            CinemaText(
-                                stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
+                            PlayButtonLabel(stringResource(R.string.movie_resume_from_format, resumeTimeText))
                         }
                     } else {
                         CinemaButton(
@@ -379,11 +376,7 @@ private fun MovieDetailsContent(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            CinemaText(
-                                stringResource(R.string.movie_play_action),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
+                            PlayButtonLabel(stringResource(R.string.movie_play_action))
                         }
                     }
 
@@ -483,6 +476,8 @@ private fun MovieDetailsContent(
                             selectedIndex = tabs.indexOf(selectedTab),
                             labels = tabs.map { movieDetailTabLabel(it) },
                             onSelect = { pickedTab = tabs[it] },
+                            // Each tab as wide as its label: equal widths cut the longer ones ("Antsipi…").
+                            scrollable = true,
                         )
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     }
@@ -752,8 +747,9 @@ private fun StreamNamePicker(
                 role = TextRole.Body,
                 tone = TextTone.Primary,
             )
+            // The "opens a picker" mark of every row (Settings' ›).
             CinemaIcon(
-                imageVector = CinemaIcons.ArrowDropDown,
+                imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tone = TextTone.Accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -764,17 +760,16 @@ private fun StreamNamePicker(
             // sources, each copy's own.
             SettingsPickerDialog(
                 title = stringResource(R.string.details_other_instances),
-                options =
-                    listOf(currentName to null) +
-                        alternates.map { alternate ->
-                            (sourceNames[alternate.providerId]?.let { "${alternate.name} · $it" } ?: alternate.name) to alternate
-                        },
+                options = listOf(currentName to null) + alternates.map { it.name to it },
                 selected = null,
                 onSelect = { alternate ->
                     expanded = false
                     alternate?.let(onSelect)
                 },
                 onDismiss = { expanded = false },
+                // Each copy's source as the badge at the end of its name, as on every row.
+                sourceName = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                labelMaxLines = 2,
             )
         }
     }

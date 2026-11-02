@@ -540,6 +540,7 @@ private fun MovieDetailsContent(
                             CinemaPrimaryButton(
                                 onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                                 text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                                icon = CinemaIcons.PlayArrow,
                                 modifier =
                                     Modifier
                                         .focusRequester(
@@ -561,6 +562,7 @@ private fun MovieDetailsContent(
                             CinemaPrimaryButton(
                                 onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                                 text = stringResource(R.string.movie_play_action),
+                                icon = CinemaIcons.PlayArrow,
                                 modifier =
                                     Modifier
                                         .focusRequester(
@@ -1017,8 +1019,9 @@ private fun StreamNamePicker(
         ) {
             // The value's own font and start, as the other rows; the focus outline hugs it.
             CinemaText(text = currentName)
+            // The "opens a picker" mark of every row (Settings' ›).
             TvIcon(
-                imageVector = CinemaIcons.ArrowDropDown,
+                imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tone = TextTone.Primary,
             )
@@ -1031,9 +1034,11 @@ private fun StreamNamePicker(
                 selected = null,
                 onSelect = { alternate -> alternate?.let(onSelect) },
                 onDismiss = { expanded = false },
-                // With several sources, each copy's own (it opens there).
-                subtitle = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                // With several sources, each copy's own as the badge at the end of its name (it
+                // opens there), as on every row.
+                sourceName = { alternate -> alternate?.let { sourceNames[it.providerId] } },
                 labelIsName = true,
+                labelMaxLines = 2,
             )
         }
     }

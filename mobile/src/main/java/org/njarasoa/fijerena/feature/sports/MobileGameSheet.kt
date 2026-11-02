@@ -28,10 +28,12 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.sports.GameBells
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.addGameToCalendar
@@ -205,7 +207,17 @@ private fun ChannelLine(
         Column(modifier = Modifier.weight(1f)) {
             // As in the Live TV list: the name without its tags, the tags as badges before the programme.
             val parsed = remember(stream.name) { parseDisplayTitle(stream.name) }
-            CinemaText(text = shownChannelName(stream.name), role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // The source ends the name's line, as on every list row.
+            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                CinemaText(
+                    text = shownChannelName(stream.name),
+                    role = TextRole.Body,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                rememberSourceName(stream.providerId)?.let { SourceBadge(it, providerId = stream.providerId) }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 TitleBadges(parsed, maxLines = 1)
                 CinemaText(

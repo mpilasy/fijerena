@@ -4,7 +4,7 @@
 A text call (CinemaText, TvContentText, TvBackdropText; CinemaCodeText always ellipsizes) that
 sets `maxLines` must also set `overflow`: the components clip by default, and a title cut in the middle of a letter
 without "…" read as a bug (Live TV preview, cards; consistency round 2, finding 38). Give
-`overflow = TextOverflow.Ellipsis`, or `TextOverflow.Clip` where the text scrolls (a marquee). A
+`overflow = TextOverflow.Ellipsis`, under a marquee too (bounceMarquee rests with "…"). A
 call with `maxLines = Int.MAX_VALUE` is not cut. A line marked `// look-ok: <reason>` (or the line
 above) is let through.
 
@@ -66,7 +66,7 @@ def main(dirs):
         for p in sorted(pathlib.Path(d).rglob("*.kt")):
             bad += problems(p)
     for b in bad:
-        print(f"{b}: maxLines without overflow — add overflow = TextOverflow.Ellipsis (or Clip under a marquee).")
+        print(f"{b}: maxLines without overflow — add overflow = TextOverflow.Ellipsis (under a marquee too).")
     return 1 if bad else 0
 
 

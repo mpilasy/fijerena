@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,11 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -60,7 +63,9 @@ fun CinemaCheckRow(
 
 /**
  * One option of a single choice (a picker's value, a track, a source). [trailing] is a small static
- * sample at the row's end (a colour theme's colours).
+ * sample at the row's end (a colour theme's colours). [sourceName]: the option's source as the
+ * badge at the end of its label line (a copy of a title, a category); [labelMaxLines]: the label's
+ * lines, then "…".
  */
 @Composable
 fun CinemaRadioRow(
@@ -73,6 +78,8 @@ fun CinemaRadioRow(
     enabled: Boolean = true,
     labelIsName: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
+    sourceName: String? = null,
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     ToggleRow(
         label = label,
@@ -80,6 +87,8 @@ fun CinemaRadioRow(
         icon = icon,
         enabled = enabled,
         labelIsName = labelIsName,
+        sourceName = sourceName,
+        labelMaxLines = labelMaxLines,
         modifier =
             modifier.selectable(
                 selected = selected,
@@ -132,6 +141,8 @@ private fun ToggleRow(
     modifier: Modifier,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    sourceName: String? = null,
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     val labelTone = if (enabled) TextTone.Primary else TextTone.Disabled
     val supportingTone = if (enabled) TextTone.Secondary else TextTone.Disabled
@@ -148,7 +159,18 @@ private fun ToggleRow(
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
         }
         Column(modifier = Modifier.weight(1f)) {
-            CinemaText(label, role = if (labelIsName) TextRole.Heading else TextRole.Body, tone = labelTone)
+            // The source ends the label line, as on every list row.
+            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                CinemaText(
+                    label,
+                    role = if (labelIsName) TextRole.Heading else TextRole.Body,
+                    tone = labelTone,
+                    maxLines = labelMaxLines,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                sourceName?.let { SourceBadge(it) }
+            }
             if (supportingText != null) {
                 CinemaText(supportingText, tone = supportingTone)
             }

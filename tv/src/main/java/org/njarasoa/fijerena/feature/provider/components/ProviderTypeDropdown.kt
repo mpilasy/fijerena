@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.utils.nameRes
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvPickerDialog
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -52,7 +53,7 @@ fun ProviderTypeDropdown(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CinemaText(label, modifier = Modifier.weight(1f), role = TextRole.Heading, tone = TextTone.Secondary)
-            CinemaText(selectedType.displayName, role = TextRole.Body, tone = TextTone.Primary)
+            CinemaText(stringResource(selectedType.nameRes), role = TextRole.Body, tone = TextTone.Primary)
         }
         return
     }
@@ -64,7 +65,7 @@ fun ProviderTypeDropdown(
             onClick = { typeDropdownExpanded = true },
             modifier = Modifier.fillMaxWidth(),
             trailingContent = {
-                TvContentText(text = "${selectedType.displayName} ›", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                TvContentText(text = "${stringResource(selectedType.nameRes)} ›", maxLines = 1, overflow = TextOverflow.Ellipsis)
             },
         ) {
             TvContentText(label, role = TextRole.Heading)
@@ -72,7 +73,7 @@ fun ProviderTypeDropdown(
         if (typeDropdownExpanded) {
             TvPickerDialog(
                 title = label,
-                options = types.map { it.displayName to it },
+                options = types.map { stringResource(it.nameRes) to it },
                 selected = selectedType,
                 onSelect = onTypeSelected,
                 onDismiss = { typeDropdownExpanded = false },

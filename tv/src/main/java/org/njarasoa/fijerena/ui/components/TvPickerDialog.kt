@@ -19,7 +19,8 @@ import org.njarasoa.fijerena.ui.components.input.TvRadioRow
  * Picks one of [options] (`label to value`) in a dialog: one [TvRadioRow] for each, the
  * [selected] one marked, then Cancel. Focus opens on the selected option (else the first, rule 5);
  * OK on an option calls [onSelect] and closes the picker. The TV twin of the phone's
- * `SettingsPickerDialog`. [subtitle] gives an option a second line (a copy's source);
+ * `SettingsPickerDialog`. [subtitle] gives an option a second line; [sourceName] its source as the
+ * badge at the end of its label (a copy of a title); [labelMaxLines] cuts a long label with "…";
  * [labelIsName] when the options are names (Heading).
  */
 @Composable
@@ -31,6 +32,8 @@ fun <T> TvPickerDialog(
     onDismiss: () -> Unit,
     subtitle: (T) -> String? = { null },
     labelIsName: Boolean = false,
+    sourceName: (T) -> String? = { null },
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     val entry = remember { FocusRequester() }
     val entryIndex = options.indexOfFirst { it.second == selected }.coerceAtLeast(0)
@@ -54,6 +57,8 @@ fun <T> TvPickerDialog(
                         modifier = if (index == entryIndex) Modifier.focusRequester(entry) else Modifier,
                         description = subtitle(value),
                         labelIsName = labelIsName,
+                        sourceName = sourceName(value),
+                        labelMaxLines = labelMaxLines,
                     )
                 }
             }

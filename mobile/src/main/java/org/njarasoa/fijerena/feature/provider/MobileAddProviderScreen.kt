@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.nameRes
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
@@ -359,7 +360,7 @@ fun MobileAddProviderScreen(
                 ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 CinemaTextField(
-                    value = selectedType.displayName,
+                    value = stringResource(selectedType.nameRes),
                     onValueChange = {},
                     readOnly = true,
                     enabled = false,
@@ -371,13 +372,13 @@ fun MobileAddProviderScreen(
                 var typePickerOpen by remember { mutableStateOf(false) }
                 SettingsListRow(
                     title = stringResource(R.string.provider_type_label),
-                    summary = selectedType.displayName,
+                    summary = stringResource(selectedType.nameRes),
                     onClick = { typePickerOpen = true },
                 )
                 if (typePickerOpen) {
                     SettingsPickerDialog(
                         title = stringResource(R.string.provider_type_label),
-                        options = addSourceTypes(BuildConfig.DEBUG, editedType).map { it.displayName to it },
+                        options = addSourceTypes(BuildConfig.DEBUG, editedType).map { stringResource(it.nameRes) to it },
                         selected = selectedType,
                         onSelect = { type ->
                             selectedType = type

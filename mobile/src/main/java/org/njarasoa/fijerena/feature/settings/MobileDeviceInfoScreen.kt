@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
+import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -72,37 +73,46 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
             }
         },
     ) { paddingValues ->
+        // The Settings page look: a group heading over each section and its rows on the page,
+        // not bordered cards.
         LazyColumn(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(start = CinemaSpacing.md, top = CinemaSpacing.md, end = CinemaSpacing.md),
-            contentPadding = PaddingValues(bottom = CinemaSpacing.md + LocalDockInset.current),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    .padding(paddingValues),
+            contentPadding = PaddingValues(top = CinemaSpacing.md, bottom = CinemaSpacing.md + LocalDockInset.current),
         ) {
             item {
-                CinemaText(stringResource(R.string.device_info_desc), tone = TextTone.Secondary)
+                CinemaText(
+                    stringResource(R.string.device_info_desc),
+                    tone = TextTone.Secondary,
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md),
+                )
             }
             if (failed) {
                 item {
-                    CinemaText(stringResource(R.string.device_info_load_failed), tone = TextTone.Danger)
+                    CinemaText(
+                        stringResource(R.string.device_info_load_failed),
+                        tone = TextTone.Danger,
+                        modifier = Modifier.padding(horizontal = CinemaSpacing.md),
+                    )
                 }
             }
             items(sections.orEmpty()) { section ->
-                GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
-                        section.rows.forEach { row ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                                CinemaText(
-                                    row.label.asString(),
-                                    role = TextRole.BodySmall,
-                                    tone = TextTone.Secondary,
-                                    modifier = Modifier.weight(LABEL_WEIGHT),
-                                )
-                                CinemaText(row.value.asString(), role = TextRole.BodySmall, modifier = Modifier.weight(VALUE_WEIGHT))
-                            }
+                SettingsGroupHeader(stringResource(section.title))
+                Column(
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                ) {
+                    section.rows.forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                            CinemaText(
+                                row.label.asString(),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                                modifier = Modifier.weight(LABEL_WEIGHT),
+                            )
+                            CinemaText(row.value.asString(), role = TextRole.BodySmall, modifier = Modifier.weight(VALUE_WEIGHT))
                         }
                     }
                 }
