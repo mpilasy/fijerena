@@ -33,16 +33,28 @@
     <string name="settings_export_item_overwritten_format">%1$d overwritten</string>
     <string name="settings_export_item_skipped_format">%1$d skipped</string>
     <string name="settings_export_summary_epg_sources_format">Guide sources: %1$s</string>
-    <string name="settings_export_summary_favorites_format">%1$d favourite(s) restored</string>
-    <string name="settings_export_summary_watch_state_format">%1$d watch history item(s) restored</string>
+    <plurals name="settings_export_summary_favorites_format">
+        <item quantity="one">%1$d favourite restored</item>
+        <item quantity="other">%1$d favourites restored</item>
+    </plurals>
+    <plurals name="settings_export_summary_watch_state_format">
+        <item quantity="one">%1$d watch history item restored</item>
+        <item quantity="other">%1$d watch history items restored</item>
+    </plurals>
     <string name="settings_export_summary_updated">Settings updated</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
 
     <!-- Provider copy/duplicate (ProviderCopyManager) -->
     <string name="provider_copy_result_connection">Connection copied</string>
     <string name="provider_copy_result_settings">Settings copied</string>
-    <string name="provider_copy_result_favorites_format">%1$d favourite(s) copied</string>
-    <string name="provider_copy_result_watch_state_format">%1$d watch history item(s) copied</string>
+    <plurals name="provider_copy_result_favorites_format">
+        <item quantity="one">%1$d favourite copied</item>
+        <item quantity="other">%1$d favourites copied</item>
+    </plurals>
+    <plurals name="provider_copy_result_watch_state_format">
+        <item quantity="one">%1$d watch history item copied</item>
+        <item quantity="other">%1$d watch history items copied</item>
+    </plurals>
     <string name="provider_copy_result_nothing">Nothing to copy</string>
 
     <!-- EPG freshness label (EpgBrowserModels) -->
@@ -53,12 +65,21 @@
     <string name="epg_freshness_minutes_ago_format">%1$dm ago</string>
     <string name="epg_freshness_hours_ago_format">%1$dh ago</string>
     <string name="epg_freshness_days_ago_format">%1$dd ago</string>
-    <string name="epg_freshness_stale_suffix_format"> • %1$d stale</string>
-    <string name="epg_freshness_never_run_suffix_format"> • %1$d never run</string>
+    <plurals name="epg_freshness_stale_count">
+        <item quantity="one">%1$d stale</item>
+        <item quantity="other">%1$d stale</item>
+    </plurals>
+    <plurals name="epg_freshness_never_run_count">
+        <item quantity="one">%1$d never run</item>
+        <item quantity="other">%1$d never run</item>
+    </plurals>
     <string name="epg_freshness_updated_format">Updated %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
-    <string name="epg_error_task_failed_retries_format">Task failed after %1$d retries</string>
+    <plurals name="epg_error_task_failed_retries_format">
+        <item quantity="one">Task failed after %1$d retry</item>
+        <item quantity="other">Task failed after %1$d retries</item>
+    </plurals>
     <string name="epg_error_no_sources">No guide sources to process</string>
     <string name="epg_error_came_back_empty">The guide came back empty (no channels). The next refresh tries again.</string>
     <string name="epg_error_source_not_found">Guide source not found</string>

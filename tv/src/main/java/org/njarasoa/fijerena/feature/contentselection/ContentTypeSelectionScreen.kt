@@ -123,6 +123,7 @@ import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -910,16 +911,12 @@ fun ContentTypeSelectionScreen(
                                 true
                         }
                     }
-                // A favourite show's "Mark show watched / unwatched"
-                // (the season show watched plan Phase 3): null hides it, as on a
+                // A show's "Mark show watched / unwatched" (the season show watched plan Phase 3),
+                // on every card that stands for a show, as in the lists: null hides it, as on a
                 // source that keeps watched state on its server.
                 val isShowWatched =
-                    if ((shelf == HomeShelf.FAVORITE_SHOWS || shelf.chart?.contentType == ContentType.TV_SHOWS) &&
-                        repo.supportsMarkWatched
-                    ) {
-                        repo.episodesWatchState(ref.id, null) == true
-                    } else {
-                        null
+                    ref.showSeriesId?.takeIf { repo.supportsMarkWatched }?.let { seriesId ->
+                        repo.episodesWatchState(seriesId, null) == true
                     }
                 cardMenu =
                     HomeCardMenu(
@@ -1059,10 +1056,11 @@ fun ContentTypeSelectionScreen(
             onToggleShowWatched =
                 menu.target.isShowWatched?.let { isShowWatched ->
                     {
-                        if (repo != null && merged != null) {
+                        val seriesId = ref.showSeriesId
+                        if (repo != null && merged != null && seriesId != null) {
                             coroutineScope.launchGuarded("Home.setShowWatched") {
                                 repo
-                                    .setEpisodesWatched(ref.id, null, !isShowWatched)
+                                    .setEpisodesWatched(seriesId, null, !isShowWatched)
                                     .onSuccess { reloadContinueWatching(merged, null) }
                                     .onFailure { e ->
                                         val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isDevMode)
@@ -1732,13 +1730,18 @@ private class HomeCardItem(
     val providerId: Long,
     /** The card's key in its row ([sourceKey]). */
     val key: String,
+    /**
+     * The show the card stands for (a favourite show, a TV Shows chart card, a show's Continue
+     * Watching card), else null: what Mark show as watched marks, the same on every entry point.
+     */
+    val showSeriesId: String? = null,
 )
 
 /** A Live, favourite movie or favourite show card's menu target. */
 private fun MediaItem.toCardItem(
     contentType: String,
     watchedItemId: String? = null,
-): HomeCardItem = HomeCardItem(id, name, categoryId, contentType, watchedItemId, providerId, sourceKey)
+): HomeCardItem = HomeCardItem(id, name, categoryId, contentType, watchedItemId, providerId, sourceKey, showSeriesId(contentType))
 
 /** A Continue Watching card: Mark as watched on a film and on an episode to resume, not on an "Up next" one. */
 private fun ContinueWatchingItem.toCardItem(): HomeCardItem =
@@ -1755,6 +1758,7 @@ private fun ContinueWatchingItem.toCardItem(): HomeCardItem =
                 is BrowseTarget.Episode -> browseTarget.episodeId.raw
                 else -> id
             }.takeUnless { upNext },
+        showSeriesId = (target as? BrowseTarget.Series)?.seriesId?.raw,
     )
 
 /** The card whose actions menu is open, and what the menu shows. */

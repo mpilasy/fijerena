@@ -214,21 +214,20 @@ private fun RelatedTitleCard(
                 NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
             }
         }
-        val titleStyle = textStyleOf(TextRole.Heading)
-        // Room for two lines on every card, so a one-line title doesn't make its card shorter
-        // than the rest and a long one isn't cut after a word ("Avengers: Age …", TV UI audit X4).
-        val twoLines = with(LocalDensity.current) { (titleStyle.lineHeight * 2).toDp() }
+        // Room for two lines on every card (minLines), so a one-line title doesn't make its card
+        // shorter than the rest and a long one takes its second line before the ellipsis (TV UI
+        // audit X4). A fixed height of two style line heights cut a Look's taller font to one line.
         CinemaText(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
             text = item.listTitle ?: parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
             role = TextRole.Heading,
             maxLines = 2,
+            minLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier
                     .width(TvDimensions.posterWidth)
-                    .padding(Spacing.xs)
-                    .height(twoLines),
+                    .padding(Spacing.xs),
         )
     }
 }

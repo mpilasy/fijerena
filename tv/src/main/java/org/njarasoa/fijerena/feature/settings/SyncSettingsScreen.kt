@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.QrCode
@@ -104,10 +105,21 @@ fun SyncSettingsScreen() {
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        TvScreenHeader(title = stringResource(R.string.live_sync_title))
+        val qr = ui.handoffQr ?: ui.inviteQr
+        // Add a device is an icon action in the header, as Add is on every Settings page.
+        TvScreenHeader(title = stringResource(R.string.live_sync_title)) {
+            if (qr == null && status.linked) {
+                TvIconAction(
+                    onClick = viewModel::showInvite,
+                    icon = CinemaIcons.Add,
+                    label = stringResource(R.string.live_sync_add_device),
+                    enabled = !ui.busy,
+                    modifier = Modifier.focusRequester(addDeviceFocus),
+                )
+            }
+        }
         CinemaText(stringResource(R.string.live_sync_desc), role = TextRole.Body, tone = TextTone.Secondary)
 
-        val qr = ui.handoffQr ?: ui.inviteQr
         if (qr != null) {
             PairingPanel(
                 qr = qr,
@@ -124,19 +136,13 @@ fun SyncSettingsScreen() {
                 onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
             )
         } else if (status.linked) {
-            // T-14 order: status + Sync now → Add a device → share switch → devices → danger zone.
+            // T-14 order: status + Sync now → share switch → devices → danger zone; Add a device in the header.
             LinkedPanel(
                 status = status,
                 devMode = viewModel.devMode,
                 onSyncNow = viewModel::syncNow,
                 onResyncAll = viewModel::resyncAll,
                 syncNowFocus = syncNowFocus,
-            )
-            CinemaPrimaryButton(
-                onClick = viewModel::showInvite,
-                text = stringResource(R.string.live_sync_add_device),
-                enabled = !ui.busy,
-                modifier = Modifier.focusRequester(addDeviceFocus).leftToRail(),
             )
             TvSwitchRow(
                 checked = shareNowPlaying,
@@ -425,23 +431,15 @@ private fun RenameDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.live_sync_device_rename_title, device.name),
         text = {
-            androidx.compose.material3.OutlinedTextField(
+            // The one text field look (CinemaTextField), as every other TV field while it is edited.
+            CinemaTextField(
                 value = name,
                 onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
-                label = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_label)) },
+                label = stringResource(R.string.live_sync_device_name_label),
                 keyboardOptions = FieldKeyboards.Name,
-                supportingText = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_hint)) },
+                supportingText = stringResource(R.string.live_sync_device_name_hint),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().tvDpadEscape(),
-                colors =
-                    androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTheme.colors.textPrimary,
-                        unfocusedTextColor = CinemaTheme.colors.textPrimary,
-                        cursorColor = CinemaTheme.colors.accent,
-                        focusedBorderColor = CinemaTheme.colors.accent,
-                        focusedLabelColor = CinemaTheme.colors.accent,
-                        unfocusedLabelColor = CinemaTheme.colors.textSecondary,
-                    ),
             )
         },
         main = DialogAction(stringResource(R.string.provider_save_button)) { onSave(name) },

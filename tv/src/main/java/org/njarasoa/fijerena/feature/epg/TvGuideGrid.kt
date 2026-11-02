@@ -606,6 +606,7 @@ private fun GuideHeader(
                 role = TextRole.Body,
                 tone = TextTone.Tertiary,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         if (state is EpgViewModel.UiState.Ready) {
@@ -684,6 +685,7 @@ private fun GuideFocusLine(
                 role = TextRole.Body,
                 tone = TextTone.Secondary,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = Spacing.md.scaled(scale)),
             )
         }
@@ -1450,6 +1452,7 @@ private fun TimeRuler(
                                 role = TextRole.Label,
                                 tone = TextTone.Secondary,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(start = Spacing.xxs.scaled(scale)),
                             )
                         }
@@ -1519,6 +1522,7 @@ private fun GuideRow(
                     role = TextRole.Body,
                     tone = TextTone.Tertiary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = Spacing.md),
                 )
             }

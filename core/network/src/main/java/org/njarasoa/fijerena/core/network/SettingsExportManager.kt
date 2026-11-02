@@ -986,13 +986,19 @@ class SettingsExportManager(
 
             val favTotal = favoritesRestored + favoriteCategoriesRestored
             if (favTotal > 0) {
-                parts.add(context.getString(R.string.settings_export_summary_favorites_format, favTotal))
+                parts.add(context.resources.getQuantityString(R.plurals.settings_export_summary_favorites_format, favTotal, favTotal))
             }
 
             // Watch state — counted separately from favorites even though it rides the same
             // import toggle, so the summary doesn't claim more "favorites" than were actually favorited.
             if (watchStateRestored > 0) {
-                parts.add(context.getString(R.string.settings_export_summary_watch_state_format, watchStateRestored))
+                parts.add(
+                    context.resources.getQuantityString(
+                        R.plurals.settings_export_summary_watch_state_format,
+                        watchStateRestored,
+                        watchStateRestored,
+                    ),
+                )
             }
 
             if (parts.isEmpty()) parts.add(context.getString(R.string.settings_export_summary_updated))

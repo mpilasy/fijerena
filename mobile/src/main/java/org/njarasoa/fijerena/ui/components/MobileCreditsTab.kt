@@ -165,8 +165,8 @@ private fun MoreCard(
             CinemaText(text = pluralStringResource(R.plurals.cast_more_count, count, count), role = TextRole.Heading)
         }
         Column(modifier = Modifier.padding(Spacing.xs)) {
-            CinemaText(text = "", role = TextRole.Heading, maxLines = 1)
-            CinemaText(text = "", role = TextRole.BodySmall, maxLines = 2, minLines = 2)
+            CinemaText(text = "", role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            CinemaText(text = "", role = TextRole.BodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
         }
     }
 }

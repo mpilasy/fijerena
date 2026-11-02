@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -41,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -60,11 +62,15 @@ import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.feature.contentselection.components.openActionsOnMenuKey
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
@@ -84,7 +90,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * programmes first, then event channels, then networks' channels); "Not found on your channels"
  * when there is none. OK on a channel calls [onPlay] (the channel's preview, as a guide result);
  * before the game starts, it asks first: Watch now, Remind Me ([bells]) or Add to calendar, as a
- * guide result that is not on yet.
+ * guide result that is not on yet. Long-press OK or the Menu key on a channel opens its action
+ * menu (Watch now, Remind me, Add to calendar), as on every other channel row; a "⋮" on the
+ * focused row is the hint.
  * Back calls [onClose], and the page gives focus back to the game. An in-tree overlay: focus stays
  * in it.
  *
@@ -108,6 +116,7 @@ fun GameSheetOverlay(
     val resources = LocalResources.current
     val firstRow = remember { FocusRequester() }
     var asking by remember { mutableStateOf<GameChannel?>(null) }
+    var menuFor by remember { mutableStateOf<GameChannel?>(null) }
     // The first row on opening, and once the channels replace "Looking for channels…".
     LaunchedEffect(channels != null) {
         if (returnFocus.key?.startsWith(RETURN_SHEET_PREFIX) != true) firstRow.requestFocusWithRetry()
@@ -164,12 +173,25 @@ fun GameSheetOverlay(
                                 returnFocus.leaveFrom(key)
                                 if (asksBeforeWatching(game, System.currentTimeMillis() / 1000)) asking = channel else onPlay(channel)
                             },
+                            onOpenActions = {
+                                returnFocus.leaveFrom(key)
+                                menuFor = channel
+                            },
                             modifier = (if (index == 0) first else Modifier).navReturnFocusTarget(returnFocus, key),
                         )
                     }
                 }
             }
         }
+    }
+    menuFor?.let { channel ->
+        ChannelActionsMenu(
+            game = game,
+            channel = channel,
+            bells = bells,
+            onWatch = { onPlay(channel) },
+            onDismiss = { menuFor = null },
+        )
     }
     asking?.let { channel ->
         WatchOrRemindDialog(
@@ -225,13 +247,53 @@ private fun WatchOrRemindDialog(
     )
 }
 
+/**
+ * A channel row's action menu (long-press OK or Menu): Watch now, Remind me (before the game, when
+ * it has no reminder) and Add to calendar (on a device with a calendar app), as the question before
+ * a game asks.
+ */
+@Composable
+private fun ChannelActionsMenu(
+    game: SportsGame,
+    channel: GameChannel,
+    bells: GameBells,
+    onWatch: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val canSetReminder = canRemind(game, System.currentTimeMillis() / 1000) && !bells.reminded.has(game)
+    val context = LocalContext.current
+    val canCalendar = remember { canOpenCalendar(context) }
+    TvActionMenu(
+        title = shownChannelName(channel.stream.name),
+        actions =
+            listOfNotNull(
+                MenuAction(CinemaIcons.PlayArrow, stringResource(R.string.epg_browser_watch_now_btn), onClick = onWatch),
+                if (canSetReminder) {
+                    MenuAction(CinemaIcons.Bell, stringResource(R.string.sports_remind_me)) { bells.toggle(game) }
+                } else {
+                    null
+                },
+                if (canCalendar) {
+                    MenuAction(CinemaIcons.DateRange, stringResource(R.string.epg_browser_add_calendar_btn)) {
+                        addGameToCalendar(context, game, channel)
+                    }
+                } else {
+                    null
+                },
+            ),
+        onDismiss = onDismiss,
+    )
+}
+
 /** A channel that shows the game: its logo and name, then the programme and when it starts, or how it was found. */
 @Composable
 private fun ChannelRow(
     channel: GameChannel,
     onClick: () -> Unit,
+    onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     val stream = channel.stream
     val resources = LocalResources.current
     val programme = channel.programme
@@ -244,8 +306,14 @@ private fun ChannelRow(
         }
     TvCard(
         onClick = onClick,
+        onLongClick = onOpenActions,
         look = TvCardLooks.listRow(),
-        modifier = modifier.fillMaxWidth().height(TvDimensions.cardHeight),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(TvDimensions.cardHeight)
+                .onFocusChanged { isFocused = it.isFocused }
+                .openActionsOnMenuKey(onOpenActions),
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(Spacing.sm),
@@ -280,6 +348,8 @@ private fun ChannelRow(
                     )
                 }
             }
+            // The row-actions hint, as on the other channel rows: a glyph, not a focus stop.
+            if (isFocused) RowActionsHint()
         }
     }
 }

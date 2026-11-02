@@ -44,6 +44,11 @@
 # (CinemaPullToRefresh), TooltipBox( (CinemaTooltip); and a raw .clickable / .combinedClickable /
 # .toggleable / .selectable in feature code (a row component; `// look-ok: <reason>` for a tap
 # target that is not a row).
+# Consistency round 2, Phase 4b: text cut to a number of lines (maxLines) without an overflow
+# (scripts/check-text-overflow.py: the components clip without "…"); a pane's loading state built
+# from MitadyLoading in a large role (TvLoadingState / MobileLoadingState; MitadyLoading stays for
+# an inline status line); a raw Material control called by its full name (androidx.compose.material3.
+# OutlinedTextField(, …), which the counted patterns above do not see.
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -152,6 +157,11 @@ done < <(files)
 
 # A button's text follows the button's colour (scripts/check-button-text-tone.py).
 if ! python3 "$(dirname "$0")/check-button-text-tone.py" tv/src/main mobile/src/main core/ui/src/main; then
+    failures=$((failures + 1))
+fi
+
+# Text cut to a number of lines ends with an ellipsis (scripts/check-text-overflow.py).
+if ! python3 "$(dirname "$0")/check-text-overflow.py" tv/src/main mobile/src/main core/ui/src/main; then
     failures=$((failures + 1))
 fi
 
@@ -350,6 +360,27 @@ done < <(find mobile/src/main/java -name '*.kt' | sort | while IFS= read -r f; d
         open > 0 && FNR - open > 40 { open = 0 }
     ' "$f"
 done || true)
+
+# A pane's loading state is TvLoadingState / MobileLoadingState: MitadyLoading only as an inline
+# status line (TextRole.Body), never in a large role (consistency round 2, finding 33).
+while IFS= read -r hit; do
+    echo "$hit: a loading state built from MitadyLoading in a large role — use TvLoadingState (TV) or MobileLoadingState (phone)."
+    failures=$((failures + 1))
+done < <(find tv/src/main/java mobile/src/main/java -name '*.kt' | sort | while IFS= read -r f; do
+    awk '
+        $0 ~ /^[[:space:]]*(\/\/|\*|\/\*)/ { next }
+        /(^|[^A-Za-z0-9_])MitadyLoading\(/ { open = FNR }
+        open > 0 && /TextRole\.(Display|Headline|Title|Heading)/ { print FILENAME ":" open; open = 0; next }
+        open > 0 && (/\)[[:space:]]*$/ || FNR - open > 6) { open = 0 }
+    ' "$f"
+done || true)
+
+# A raw Material control called by its full name escapes the counted patterns: none in feature or
+# component code (the core components that wrap one mark it `// look-ok:`).
+while IFS= read -r hit; do
+    echo "$hit: a raw Material control by its full name — use the component (CinemaTextField, CinemaSpinner, CinemaProgressBar, …)."
+    failures=$((failures + 1))
+done < <(code_hits 'androidx\.compose\.material3\.(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|HorizontalDivider|Text|Icon|Slider|CircularProgressIndicator|LinearProgressIndicator)\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java || true)
 
 if [ "$failures" -gt 0 ]; then
     echo

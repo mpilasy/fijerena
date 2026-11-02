@@ -50,9 +50,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -295,6 +297,7 @@ fun MobileHomeScreen(
         val done = { reloads++ }
         when (menu) {
             is HomeMenu.Recent -> {
+                val markShowFailed = stringResource(R.string.watched_mark_many_failed)
                 // The safe action first (UX-D1): Add to Favourites; Remove from Recent stays a plain
                 // action, never the main button.
                 ItemActionsDialog(
@@ -324,7 +327,51 @@ fun MobileHomeScreen(
                     },
                     onDismiss = { homeMenu = null },
                     actions =
-                        listOf(
+                        listOfNotNull(
+                            menu.isShowWatched?.let { showWatched ->
+                                MenuAction(
+                                    if (showWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                    stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                                ) {
+                                    val seriesId = menu.showSeriesId
+                                    if (lists != null && seriesId != null) {
+                                        wantedScope.launchGuarded("Home.setShowWatched") {
+                                            lists
+                                                .repoFor(menu.providerId)
+                                                .setEpisodesWatched(seriesId, null, !showWatched)
+                                                .onSuccess { done() }
+                                                .onFailure { e ->
+                                                    AppNotices.show(
+                                                        markShowFailed + "\n" +
+                                                            friendlyErrorMessage(
+                                                                e,
+                                                                context,
+                                                                AppSettings(context.applicationContext).isDevMode,
+                                                            ),
+                                                    )
+                                                }
+                                        }
+                                    }
+                                }
+                            },
+                            // A film marked watched leaves Continue Watching: a removal, with its Undo.
+                            menu.watchedFilmId?.takeIf { menu.canMarkWatched }?.let { filmId ->
+                                MenuAction(CinemaIcons.Visibility, stringResource(R.string.watched_mark)) {
+                                    if (lists != null) {
+                                        val repo = lists.repoFor(menu.providerId)
+                                        wantedScope.launchGuarded("Home.markWatched") {
+                                            repo.setWatched(filmId, menu.contentType, true)
+                                            done()
+                                            undo.show(menu.name) {
+                                                wantedScope.launchGuarded("Home.undoMarkWatched") {
+                                                    repo.setWatched(filmId, menu.contentType, false)
+                                                    done()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
                             MenuAction(CinemaIcons.Delete, stringResource(R.string.recent_remove), removal = true) {
                                 if (lists != null) {
                                     wantedScope.launchGuarded("Home.removeFromRecent") {
@@ -454,8 +501,14 @@ fun MobileHomeScreen(
                         menu is HomeMenu.Recent -> {
                             merged?.let { lists ->
                                 wantedScope.launchGuarded("Home.openRecentMenu") {
-                                    val isFavorite = lists.repoFor(menu.providerId).isFavoriteSuspend(menu.itemId, menu.contentType)
-                                    homeMenu = menu.copy(isFavorite = isFavorite)
+                                    val repo = lists.repoFor(menu.providerId)
+                                    val isFavorite = repo.isFavoriteSuspend(menu.itemId, menu.contentType)
+                                    // The same watched actions as the card's row in the lists (consistency
+                                    // round 2, finding 24): none where the source keeps them on its server.
+                                    val marks = repo.supportsMarkWatched
+                                    val isShowWatched =
+                                        menu.showSeriesId?.takeIf { marks }?.let { repo.episodesWatchState(it, null) == true }
+                                    homeMenu = menu.copy(isFavorite = isFavorite, isShowWatched = isShowWatched, canMarkWatched = marks)
                                 }
                             }
                         }
@@ -644,7 +697,19 @@ private fun HomeRowsColumn(
                 progress = item.progress.takeUnless { item.upNext },
                 sourceName = rows.sourceNames[item.providerId],
                 providerId = item.providerId,
-                onLongClick = { onMenu(HomeMenu.Recent(item.providerId, item.id, item.contentType, item.name, item.categoryId)) },
+                onLongClick = {
+                    onMenu(
+                        HomeMenu.Recent(
+                            item.providerId,
+                            item.id,
+                            item.contentType,
+                            item.name,
+                            item.categoryId,
+                            showSeriesId = (item.target as? BrowseTarget.Series)?.seriesId?.raw,
+                            watchedFilmId = (item.target as? BrowseTarget.Movie)?.let { item.id },
+                        ),
+                    )
+                },
             ) { onContinueWatching(item) }
         }
         // Recent channels second, alone like Continue Watching (user, 2026-10-30).
@@ -697,6 +762,14 @@ private sealed interface HomeMenu {
         val name: String,
         val categoryId: String,
         val isFavorite: Boolean = false,
+        /** The show a Continue Watching card stands for: Mark show as watched, as in the lists. */
+        val showSeriesId: String? = null,
+        /** A film's own id on a Continue Watching card: Mark as watched, as in the lists. */
+        val watchedFilmId: String? = null,
+        /** Read when the menu opens: null hides Mark show as watched. */
+        val isShowWatched: Boolean? = null,
+        /** Read when the menu opens: whether the source keeps watched marks here. */
+        val canMarkWatched: Boolean = false,
     ) : HomeMenu
 
     class Favorite(

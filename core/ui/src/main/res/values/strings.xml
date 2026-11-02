@@ -7,13 +7,22 @@
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Refresh already in queue...</string>
     <string name="epg_up_to_date">The guide is up to date.</string>
-    <string name="epg_refreshing_stale">Refreshing %1$d stale guide source(s)...</string>
+    <plurals name="epg_refreshing_stale">
+        <item quantity="one">Refreshing %1$d stale guide source...</item>
+        <item quantity="other">Refreshing %1$d stale guide sources...</item>
+    </plurals>
     <string name="epg_no_stale_sources">No stale guide sources need refreshing.</string>
     <string name="epg_no_failed_sources">No failed guide sources found.</string>
-    <string name="epg_cache_cleaned">Cleaned up %1$d file(s), freed %2$s</string>
+    <plurals name="epg_cache_cleaned">
+        <item quantity="one">Cleaned up %1$d file, freed %2$s</item>
+        <item quantity="other">Cleaned up %1$d files, freed %2$s</item>
+    </plurals>
     <string name="epg_no_stray_files">No stray files found.</string>
     <string name="epg_data_cleared">All guide data cleared</string>
-    <string name="epg_purged_programmes">Purged %1$d programme(s)</string>
+    <plurals name="epg_purged_programmes">
+        <item quantity="one">Purged %1$d programme</item>
+        <item quantity="other">Purged %1$d programmes</item>
+    </plurals>
     <string name="epg_no_old_programmes">No old programmes to purge.</string>
 
     <!-- EPG Management UI -->
@@ -177,14 +186,20 @@
     <string name="epg_database_error">Error: %1$s</string>
     <string name="epg_current_status">Current status: %1$s</string>
     <string name="epg_status_idle">Idle</string>
-    <string name="epg_status_tasks_queued">%1$d refresh tasks queued</string>
+    <plurals name="epg_status_tasks_queued">
+        <item quantity="one">%1$d refresh task queued</item>
+        <item quantity="other">%1$d refresh tasks queued</item>
+    </plurals>
     <string name="epg_status_processing">Processing %1$d/%2$d guide sources</string>
     <string name="epg_status_retrying">Trying again at %3$s (attempt %1$d of %2$d)</string>
     <string name="epg_status_finished">Finished run</string>
     <string name="epg_status_finalizing">Finalising (%1$s)…</string>
     <string name="epg_status_clearing">Clearing data…</string>
     <string name="epg_last_run_stats">Last run: finished at %1$s • %2$d guide sources in %3$s%4$s</string>
-    <string name="epg_last_run_errors"> (%1$d errors)</string>
+    <plurals name="epg_last_run_errors">
+        <item quantity="one">(%1$d error)</item>
+        <item quantity="other">(%1$d errors)</item>
+    </plurals>
     <string name="epg_maintenance_desc">The guide\'s downloads and programmes kept on this device</string>
     <string name="epg_automation_freq_daily">Daily</string>
     <string name="epg_automation_freq_hours">Every %1$d hours</string>
@@ -413,8 +428,14 @@
     <string name="series_refresh_info">Refresh show info</string>
     <string name="series_season_name_format">Season %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
-    <string name="series_total_episodes_format">%1$d episodes</string>
-    <string name="series_seasons_and_episodes_format">%1$d seasons · %2$d episodes</string>
+    <plurals name="series_season_count">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
+    </plurals>
+    <plurals name="series_total_episodes_format">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
     <string name="series_play_episode_action">▶ Play episode</string>
     <string name="series_resume_episode_time_format">▶ Resume S%1$d:E%2$d (%3$s)</string>
     <string name="series_play_episode_format">▶ Play S%1$d:E%2$d</string>
@@ -548,11 +569,16 @@
     <string name="epg_browser_no_calendar_app">No calendar app found on this device</string>
     <string name="epg_browser_show_less">Show less</string>
     <string name="epg_browser_show_more">Show more</string>
-    <string name="epg_browser_show_more_count">%1$d more airings</string>
+    <plurals name="epg_browser_show_more_count">
+        <item quantity="one">%1$d more airing</item>
+        <item quantity="other">%1$d more airings</item>
+    </plurals>
     <string name="epg_browser_on_air_badge">ON AIR</string>
     <string name="epg_browser_soon_badge">SOON</string>
     <string name="epg_browser_recent_searches">Recent Searches</string>
     <string name="epg_browser_clear_all_description">Clear all</string>
+    <string name="search_history_clear_confirm_title">Clear Recent Searches?</string>
+    <string name="search_history_clear_confirm_message">Every recent search leaves this list.</string>
     <string name="epg_browser_remove_description">Remove</string>
 
     <!-- EPG Settings Card -->
@@ -633,7 +659,10 @@
     <string name="licenses_title">Open-Source Licences</string>
     <string name="licenses_desc">The libraries and fonts the app is built with, and their licences</string>
     <string name="licenses_no_text">No licence text bundled. See %1$s</string>
-    <string name="licenses_count">%1$d libraries and fonts</string>
+    <plurals name="licenses_count">
+        <item quantity="one">%1$d library and font</item>
+        <item quantity="other">%1$d libraries and fonts</item>
+    </plurals>
     <string name="device_info_yes">Yes</string>
     <string name="device_info_no">No</string>
     <string name="device_info_missing">—</string>
@@ -687,7 +716,10 @@
     <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
     <string name="settings_shrink_database_button">Shrink Database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>
-    <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
+    <plurals name="settings_shrink_database_result_format">
+        <item quantity="one">Removed %1$d leftover row, freed %2$s</item>
+        <item quantity="other">Removed %1$d leftover rows, freed %2$s</item>
+    </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
     <string name="settings_shrink_database_dev_stats_time">Last shrink: Finished at %1$s • Took %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
@@ -779,7 +811,10 @@
     <string name="epg_phase_awaiting_ingestion">Waiting to import</string>
     <string name="epg_phase_rebuilding_indexes">Rebuilding indexes…</string>
     <string name="epg_phase_swapping_primary_guide">Switching to the new guide…</string>
-    <string name="category_count_format">%1$d categories</string>
+    <plurals name="category_count_format">
+        <item quantity="one">%1$d category</item>
+        <item quantity="other">%1$d categories</item>
+    </plurals>
 
     <!-- Search content-type audit fixes -->
     <string name="content_type_all_label">All content</string>
@@ -1347,7 +1382,10 @@
     <string name="pin_mismatch">The two PINs differ: choose one again.</string>
     <string name="pin_enter_current">Enter the current PIN</string>
     <string name="pin_enter_for">Enter %1$s’s PIN</string>
-    <string name="pin_wrong_left">Wrong PIN. %1$d more tries before a wait.</string>
+    <plurals name="pin_wrong_left">
+        <item quantity="one">Wrong PIN. %1$d more try before a wait.</item>
+        <item quantity="other">Wrong PIN. %1$d more tries before a wait.</item>
+    </plurals>
     <string name="pin_wrong_wait">Wrong PIN. Try again in %1$s.</string>
     <string name="pin_waiting">Too many wrong PINs. Try again in %1$s.</string>
     <string name="pin_seconds">%1$d s</string>
@@ -1415,7 +1453,10 @@
     <string name="parental_list_hidden_titles_desc">A title with one of these words never shows to a child, also in a kids\' category.</string>
     <string name="parental_list_exceptions">Exceptions</string>
     <string name="parental_list_exceptions_desc">A film or show with one of these words shows to a child, also from a hidden category.</string>
-    <string name="parental_list_entries">%1$d words</string>
+    <plurals name="parental_list_entries">
+        <item quantity="one">%1$d word</item>
+        <item quantity="other">%1$d words</item>
+    </plurals>
     <string name="parental_entry_add">Add a word</string>
     <string name="parental_entry_hint">Whole words, any case, accents ignored. End with * for any ending: barn* finds Barnefilmer.</string>
     <string name="parental_entry_matches">Matches %1$d</string>

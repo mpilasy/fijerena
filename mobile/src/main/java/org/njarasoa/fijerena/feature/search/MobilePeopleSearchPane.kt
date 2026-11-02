@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
+import org.njarasoa.fijerena.ui.components.MobileLoadingState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -135,16 +136,11 @@ internal fun MobilePeopleSearchPane(
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         when (val shown = state) {
             PeopleSearchViewModel.State.Idle -> {
-                CinemaText(
-                    text = stringResource(R.string.search_people_placeholder),
-                    modifier = Modifier.align(Alignment.Center),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
+                MobileEmptyState(message = stringResource(R.string.search_people_placeholder), icon = CinemaIcons.Search)
             }
 
             is PeopleSearchViewModel.State.Loading -> {
-                MitadyLoading(modifier = Modifier.align(Alignment.Center), role = TextRole.Title, tone = TextTone.Accent)
+                MobileLoadingState()
             }
 
             is PeopleSearchViewModel.State.Failed -> {

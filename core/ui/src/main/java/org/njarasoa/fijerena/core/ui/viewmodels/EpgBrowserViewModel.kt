@@ -305,7 +305,7 @@ class EpgBrowserViewModel(
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
-            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
+            _userMessage.tryEmit(UiText.PluralResource(R.plurals.epg_refreshing_stale, stale.size, stale.size))
             epgFileManager.launchRefreshStale(providerIds)
         }
     }

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +49,7 @@ class ProfilesSettingsRowsTest {
 
         composeTestRule.onNodeWithText("Main").assertExists()
         composeTestRule.onNodeWithText("Kid").assertExists()
-        composeTestRule.onNodeWithText("Add Profile").assertExists()
+        composeTestRule.onNodeWithContentDescription("Add Profile").assertExists()
     }
 
     @Test
@@ -63,13 +64,13 @@ class ProfilesSettingsRowsTest {
     fun `a grown-up without Expert mode gets Add profile`() {
         show(expertMode = false, canAddProfile = true)
 
-        composeTestRule.onNodeWithText("Add Profile").assertExists()
+        composeTestRule.onNodeWithContentDescription("Add Profile").assertExists()
     }
 
     @Test
     fun `a kid gets no Add profile`() {
         show(expertMode = false, canAddProfile = false)
 
-        composeTestRule.onNodeWithText("Add Profile").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Add Profile").assertDoesNotExist()
     }
 }

@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -148,7 +149,6 @@ private fun TvLiveChannelCard(
                 )
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
-                // The provider's "EN - " tag as a badge on the second line, as in the lists.
                 val parsedTitle = remember(entry.item.name) { parseDisplayTitle(entry.item.name) }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -164,16 +164,16 @@ private fun TvLiveChannelCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // The source (Expert mode) ends the title line, as on the list rows.
+                    sourceName?.let { SourceBadge(it, providerId = entry.item.providerId) }
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()
                 }
                 val lastWatched = if (entry.lastWatched) stringResource(R.string.home_live_last_watched) else null
                 val nowLine = now?.let { stringResource(R.string.epg_now_prefix, it.title) }
-                // One line: the source (Expert mode, SourceBadge); Home shows no title tags.
+                // One line: Home shows no title tags.
                 CardBadgeLine(
                     parsed = null,
-                    sourceName = sourceName,
-                    providerId = entry.item.providerId,
                     modifier = Modifier.heightIn(min = rememberBadgeHeight()),
                 ) {
                     CinemaText(

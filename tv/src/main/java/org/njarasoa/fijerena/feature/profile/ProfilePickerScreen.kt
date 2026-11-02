@@ -36,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -100,7 +101,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             switchingTo?.let { name ->
                 // A switch can take a while (it re-applies the profile's category filters): say so,
                 // instead of a list that looks like it ignored the pick.
-                androidx.compose.material3.CircularProgressIndicator(color = CinemaTheme.colors.accentSoft)
+                CinemaSpinner()
                 Spacer(modifier = Modifier.height(Spacing.md))
                 CinemaText(
                     stringResource(R.string.profile_switching, name),

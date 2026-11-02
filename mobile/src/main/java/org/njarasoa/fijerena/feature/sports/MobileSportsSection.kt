@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.MobileDayHeading
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -177,7 +178,7 @@ fun MobileSportsSectionScreen(
                                     key = "day:${day.date}",
                                     contentType = DAY_HEADING,
                                 ) {
-                                    MobileSportsDayHeading(
+                                    MobileDayHeading(
                                         DateText.dayLabel(resources, day.date),
                                         pinned = pinnedDay == "day:${day.date}",
                                     )
@@ -231,7 +232,15 @@ private fun FollowedCard(
                 contentDescription = null,
                 modifier = Modifier.size(MobileDimensions.iconXLarge),
             )
-            CinemaText(text = name, role = TextRole.BodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            // Two lines on every tile, as on TV, so a team's name is read, not cut to a few letters.
+            CinemaText(
+                text = name,
+                role = TextRole.BodySmall,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

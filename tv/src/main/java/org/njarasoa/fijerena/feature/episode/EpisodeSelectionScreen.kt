@@ -77,6 +77,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -159,6 +160,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.seasonsAndEpisodesText
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
@@ -191,6 +193,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvInputDefaults
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -1127,9 +1130,9 @@ internal fun EpisodeListContent(
                         val yearRange = seriesDetail.seriesYearRange(presentLabel)
                         val countText =
                             if (sortedSeasons.size > 1) {
-                                stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                                seasonsAndEpisodesText(sortedSeasons.size, totalEpisodes)
                             } else {
-                                stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                                pluralStringResource(R.plurals.series_total_episodes_format, totalEpisodes, totalEpisodes)
                             }
                         val metaLine =
                             listOfNotNull(
@@ -1196,37 +1199,32 @@ internal fun EpisodeListContent(
                                         .leftToRail(),
                             )
                             if (hasResume) {
-                                CinemaIconButton(
+                                TvIconAction(
                                     onClick = { playAnchor(true) },
+                                    icon = CinemaIcons.Replay,
+                                    label = stringResource(R.string.player_osd_start_over),
                                     modifier = downToTabRow.then(upScrollToTop),
-                                    icon = {
-                                        TvIcon(
-                                            imageVector = CinemaIcons.Replay,
-                                            contentDescription = stringResource(R.string.player_osd_start_over),
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
                                 )
                             }
                             if (onToggleFavorite != null) {
-                                CinemaIconButton(
+                                TvIconAction(
                                     onClick = onToggleFavorite,
+                                    icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                    iconTone = if (isFavorite) TextTone.Accent else TextTone.Primary,
+                                    label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                                     modifier = downToTabRow.then(upScrollToTop),
-                                    icon = {
-                                        TvIcon(
-                                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                            contentDescription =
-                                                if (isFavorite) {
-                                                    stringResource(
-                                                        R.string.favorite_remove,
-                                                    )
-                                                } else {
-                                                    stringResource(R.string.favorite_add)
-                                                },
-                                            tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
+                                )
+                            }
+                            // The same order as the film hero: Play, Start over, Favourite, Watched,
+                            // Wishlist, Trailer, More.
+                            if (canMarkManyWatched) {
+                                val allWatched = showAllWatched == true
+                                TvIconAction(
+                                    onClick = { markEpisodesWatched(null, !allWatched) },
+                                    icon = if (allWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
+                                    iconTone = if (allWatched) TextTone.Accent else TextTone.Primary,
+                                    label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                                    modifier = downToTabRow.then(upScrollToTop),
                                 )
                             }
                             if (wishlist != null) {
@@ -1239,25 +1237,10 @@ internal fun EpisodeListContent(
                                 )
                             }
                             seriesDetail.metadata.trailerUrl?.let { trailer ->
-                                CinemaIconButton(
-                                    onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
-                                    modifier = downToTabRow.then(upScrollToTop),
-                                    icon = {
-                                        TvIcon(
-                                            imageVector = CinemaIcons.Movie,
-                                            contentDescription = stringResource(R.string.details_watch_trailer_description),
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
-                                )
-                            }
-                            if (canMarkManyWatched) {
-                                val allWatched = showAllWatched == true
                                 TvIconAction(
-                                    onClick = { markEpisodesWatched(null, !allWatched) },
-                                    icon = if (allWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
-                                    iconTone = if (allWatched) TextTone.Accent else TextTone.Primary,
-                                    label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                                    onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
+                                    icon = CinemaIcons.Movie,
+                                    label = stringResource(R.string.details_watch_trailer_description),
                                     modifier = downToTabRow.then(upScrollToTop),
                                 )
                             }
@@ -1805,7 +1788,8 @@ private fun CompactEpisodesHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
-        CinemaSecondaryButton(onClick = onPlay, text = playLabel, modifier = playModifier)
+        // Main, as the hero's Play: one kind for the page's one main action.
+        CinemaPrimaryButton(onClick = onPlay, text = playLabel, modifier = playModifier)
     }
 }
 
@@ -1832,7 +1816,8 @@ private fun StreamNamePicker(
     modifier: Modifier = Modifier,
 ) {
     if (alternates.isEmpty()) {
-        CinemaText(text = currentName, role = TextRole.Heading)
+        // The same font and place as the other values of the Details tab (TvDetailRow).
+        CinemaText(text = currentName)
         return
     }
 
@@ -1852,9 +1837,10 @@ private fun StreamNamePicker(
                         // look-ok: a focusable picker or a season tab chip, not a list row
                     }.clickable {
                         expanded = true
-                    }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
+                    },
         ) {
-            CinemaText(text = currentName, role = TextRole.Heading)
+            // The value's own font and start, as the other rows; the focus outline hugs it.
+            CinemaText(text = currentName)
             TvIcon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
@@ -2338,8 +2324,10 @@ private fun SeasonTab(
                 .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
+        // A page tab: the tab role, as TvSectionTabs and Search's tabs.
         CinemaText(
             text = stringResource(R.string.series_season_label, season.seasonNumber),
+            role = TvInputDefaults.tabLabelRole,
             tone = textTone,
         )
     }
@@ -2428,6 +2416,7 @@ private fun EpisodeCard(
                     // At least the old column width, growing for E1992 rather than wrapping it
                     // onto two lines (Phase 6, F-E-4).
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     softWrap = false,
                     modifier = Modifier.widthIn(min = Spacing.xxl.scaled(scale)),
                 )

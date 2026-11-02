@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -293,11 +294,14 @@ private fun ProviderList(
             // (TV focus contract, rule 1; A-10).
             // The row's resting surface spans the whole width, slots included, so a row reads as
             // one full-width row whatever buttons it shows (TV UI audit #18).
+            // The focus ring goes round the whole row (slots included) while the row's main stop has
+            // focus, not round the main stop alone (consistency round 2, finding 36).
+            var rowFocused by remember { mutableStateOf(false) }
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .restingRowGround()
+                        .restingRowGround(rowFocused)
                         .padding(end = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
@@ -305,9 +309,11 @@ private fun ProviderList(
                 TvInputListItem(
                     selected = false,
                     onClick = { onEdit(provider.id) },
+                    focusBorder = false,
                     modifier =
                         Modifier
                             .weight(1f)
+                            .onFocusChanged { rowFocused = it.isFocused }
                             .then(if (provider.id == entryId) Modifier.focusRequester(entryRowFocusRequester) else Modifier)
                             .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id)
                             .leftToRail(),

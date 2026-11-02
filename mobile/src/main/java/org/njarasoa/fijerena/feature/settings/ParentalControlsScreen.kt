@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,7 +92,7 @@ fun MobileParentalControlsScreen(
                         title = stringResource(list.titleRes),
                         summary =
                             stringResource(list.descriptionRes) + "\n" +
-                                stringResource(R.string.parental_list_entries, lists[list].orEmpty().size),
+                                lists[list].orEmpty().size.let { pluralStringResource(R.plurals.parental_list_entries, it, it) },
                         onClick = { onOpenList(list) },
                     )
                 }

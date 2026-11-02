@@ -45,6 +45,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * Selected is never a fill nor an outline: the P5 "current" bar on the leading edge
  * ([currentIndicator]), [TvFocusTokens.currentText] and the emphasis weight carry it on the resting
  * container, so the one lifted, outlined option in a grid is always the focused one, selected or not.
+ * [tab]: the button is one of a page's tabs (Search's Catalogue / People / Teams / Guide), not a
+ * filter chip: the tab's text role and the bar on the bottom edge, as on every other tab row
+ * ([TvInputDefaults.tabLabelRole]).
  */
 @Composable
 fun TvSelectableButton(
@@ -53,6 +56,7 @@ fun TvSelectableButton(
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    tab: Boolean = false,
 ) {
     Surface(
         selected = selected,
@@ -88,7 +92,13 @@ fun TvSelectableButton(
         glow = SelectableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
     ) {
         // Fills the surface's content box, which the surface clips and scales with focus.
-        Box(modifier = Modifier.matchParentSize().currentIndicator(selected))
+        Box(
+            modifier =
+                Modifier.matchParentSize().currentIndicator(
+                    selected,
+                    edge = if (tab) CurrentIndicatorEdge.Bottom else CurrentIndicatorEdge.Start,
+                ),
+        )
         Box(
             modifier =
                 Modifier
@@ -99,7 +109,13 @@ fun TvSelectableButton(
             CompositionLocalProvider(
                 androidx.compose.material3.LocalContentColor provides androidx.tv.material3.LocalContentColor.current,
             ) {
-                CinemaText(text = text, role = TextRole.Label, tone = TextTone.Inherit, emphasis = selected, textAlign = TextAlign.Center)
+                CinemaText(
+                    text = text,
+                    role = if (tab) TvInputDefaults.tabLabelRole else TvInputDefaults.chipLabelRole,
+                    tone = TextTone.Inherit,
+                    emphasis = selected,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

@@ -36,7 +36,8 @@ class PinPromptStateTest {
     @Test
     fun `a wrong PIN clears the dots and says so`() {
         every { pins.check("kid", "0000") } returns ProfilePins.Check.Wrong(triesLeft = 4, waitUntil = 0L)
-        every { context.getString(any(), any()) } returns "Wrong PIN"
+        // The tries left are a count: a plural.
+        every { context.resources.getQuantityString(any(), any(), any()) } returns "Wrong PIN"
         val state = prompt(PinRequest.Check("kid", "Enter Kid's PIN"))
 
         state.replace("0000")

@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -132,8 +133,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.ClearSearchHistoryDialog
+import org.njarasoa.fijerena.ui.components.TvDayHeading
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
+import org.njarasoa.fijerena.ui.components.TvLoadingState
 import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
@@ -344,16 +349,7 @@ internal fun TvGuideSearchPane(
 
         when (val state = uiState) {
             is EpgBrowserViewModel.UiState.NoEpgFile -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = stringResource(R.string.epg_browser_no_file_message),
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                    )
-                }
+                TvEmptyState(message = stringResource(R.string.epg_browser_no_file_message), icon = CinemaIcons.DateRange)
             }
 
             is EpgBrowserViewModel.UiState.Error -> {
@@ -482,6 +478,23 @@ private fun EpgBrowserContent(
         LaunchedEffect(Unit) {
             if (returnFocus.key == null && !headerReturnPending && !editing) searchFocusRequester.requestFocusWithRetry()
         }
+        // Clearing the recent searches asks first; after a clear, the bin is gone and focus goes to
+        // the field.
+        var confirmClearHistory by remember { mutableStateOf(false) }
+        var historyClears by remember { mutableIntStateOf(0) }
+        LaunchedEffect(historyClears) {
+            if (historyClears > 0) searchFocusRequester.requestFocusWithRetry()
+        }
+        if (confirmClearHistory) {
+            ClearSearchHistoryDialog(
+                onConfirm = {
+                    confirmClearHistory = false
+                    onClearHistory()
+                    historyClears++
+                },
+                onDismiss = { confirmClearHistory = false },
+            )
+        }
 
         if (isDevMode && epgDbStats != null) {
             CinemaText(
@@ -558,47 +571,21 @@ private fun EpgBrowserContent(
                                 onSearch(term)
                             },
                             onItemRemove = onRemoveHistoryEntry,
-                            onClearAll = onClearHistory,
+                            onClearAll = { confirmClearHistory = true },
                             firstItemFocusRequester = historyFocusRequester,
                         )
                         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
                     }
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val hintText = stringResource(R.string.epg_browser_hint_search_titles)
-                        CinemaText(
-                            text = hintText,
-                            tone = TextTone.Secondary,
-                        )
-                    }
+                    TvEmptyState(message = stringResource(R.string.epg_browser_hint_search_titles), icon = CinemaIcons.Search)
                 }
             }
 
             is EpgBrowserViewModel.UiState.IndexBusy -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = uiState.message(),
-                        tone = TextTone.Secondary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                TvLoadingState(message = uiState.message())
             }
 
             is EpgBrowserViewModel.UiState.Searching -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MitadyLoading(
-                        role = TextRole.Display,
-                        tone = TextTone.Accent,
-                    )
-                }
+                TvLoadingState()
             }
 
             is EpgBrowserViewModel.UiState.Results -> {
@@ -738,15 +725,7 @@ private fun ResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CinemaText(
-                    text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
-                    tone = TextTone.Secondary,
-                )
-            }
+            TvEmptyState(message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }))
         } else {
             // Build index-to-dateLabel mapping for sticky header
             val headerIndices =
@@ -778,7 +757,7 @@ private fun ResultsContent(
                     var isFirstItem = true
                     displayDateGroups.forEach { dateGroup ->
                         item(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
-                            DateHeader(dateLabel = dateGroup.dateLabel)
+                            TvDayHeading(text = dateGroup.dateLabel)
                         }
                         itemsIndexed(
                             dateGroup.programs,
@@ -809,10 +788,7 @@ private fun ResultsContent(
                 }
 
                 pinnedHeaderLabel?.let { label ->
-                    DateHeader(
-                        dateLabel = label,
-                        modifier = Modifier.panel(PanelFill.Surface),
-                    )
+                    TvDayHeading(text = label, pinned = true)
                 }
             }
         }
@@ -822,23 +798,6 @@ private fun ResultsContent(
 // Key of the airing row that opened a channel: prefix + programme id + separator + airing index.
 private const val RETURN_AIRING_PREFIX = "airing:"
 private const val RETURN_AIRING_SEPARATOR = "#"
-
-@Composable
-private fun DateHeader(
-    dateLabel: String,
-    modifier: Modifier = Modifier,
-) {
-    val scale = LocalUiScale.current
-    CinemaText(
-        text = dateLabel,
-        role = TextRole.Heading,
-        tone = TextTone.Primary,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.xs.scaled(scale)),
-    )
-}
 
 @Composable
 private fun ProgramCard(

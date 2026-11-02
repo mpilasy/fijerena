@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Text
@@ -31,11 +32,12 @@ fun TvBackdropText(
     textAlign: TextAlign? = null,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
+    italic: Boolean = false,
 ) {
     val haloColor = CinemaTheme.colors.background
     val halo = remember(haloColor) { Shadow(color = haloColor.copy(alpha = CinemaAlpha.textHigh), blurRadius = BACKDROP_TEXT_SHADOW_BLUR) }
     val base = textStyleOf(role)
-    val style = remember(base, halo) { base.copy(shadow = halo) }
+    val style = remember(base, halo, italic) { base.copy(shadow = halo, fontStyle = if (italic) FontStyle.Italic else base.fontStyle) }
     // look-ok: the component that wraps Material's Text
     Text(
         text = text,

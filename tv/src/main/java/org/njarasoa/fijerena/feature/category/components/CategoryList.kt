@@ -281,7 +281,6 @@ private fun CategoryItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            sourceName?.let { SourceBadge(it) }
             if (isFavorite) {
                 CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
             }
@@ -292,6 +291,8 @@ private fun CategoryItem(
                 // weight(1f) keeps the hint below at the row's end.
                 modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
             )
+            // The source ends the title line, as on every list row and Home card.
+            sourceName?.let { SourceBadge(it) }
             // See StreamItem: a glyph, not a focus stop, on the focused row only.
             if (isFocused && onOpenActions != null) RowActionsHint()
         }

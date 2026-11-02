@@ -3,8 +3,8 @@
 # Start: Settings → Sources & guide → Manage sources → OK on panel-b's row (Edit Source) → Guide
 # sources; title "Guide Sources". Since 2026-10-24 the page shows every source's guide sources,
 # under a header with each source's name; opened from Edit Source, focus is in panel-b's group.
-# The title row has no buttons (the section-root button went with the TV navigation rail,
-# 2026-10-08), so the walk's last UP stays on Add.
+# The title row has one button, Add guide source (an icon action, its label on focus; consistency
+# round 2, finding 23); Refresh stale / Retry failed sit above the groups only when there is one.
 # Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
 # source it is "Add guide source" under "No guide sources configured.". No System Status or
 # Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /

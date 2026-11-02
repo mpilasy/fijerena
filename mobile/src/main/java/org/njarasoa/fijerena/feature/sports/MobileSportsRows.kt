@@ -201,18 +201,6 @@ fun MobileSportsHeading(
 }
 
 /**
- * A day's heading over its games, pinned at the top of the list (a sticky header) until the next
- * day's heading takes its place (user, 2026-11-01); a band only while [pinned] ([dayHeadingBand]).
- */
-@Composable
-fun MobileSportsDayHeading(
-    text: String,
-    pinned: Boolean,
-) {
-    MobileSportsHeading(text, modifier = Modifier.dayHeadingBand(pinned))
-}
-
-/**
  * A game: both teams, the home team first, with both logos (on a team page, the opponent's alone), the time and the
  * competition, then its best channel ([channels]' first: logo, name, "In the
  * guide", "Event channel" or "On ESPN"; "Looking for channels…" while [channels] is null, "Not

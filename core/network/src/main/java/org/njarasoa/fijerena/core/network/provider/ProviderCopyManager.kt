@@ -37,8 +37,28 @@ class ProviderCopyManager(
             val parts = mutableListOf<String>()
             if (connectionCopied) parts.add(context.getString(R.string.provider_copy_result_connection))
             if (settingsCopied) parts.add(context.getString(R.string.provider_copy_result_settings))
-            if (favoritesCopied > 0) parts.add(context.getString(R.string.provider_copy_result_favorites_format, favoritesCopied))
-            if (watchStateCopied > 0) parts.add(context.getString(R.string.provider_copy_result_watch_state_format, watchStateCopied))
+            if (favoritesCopied >
+                0
+            ) {
+                parts.add(
+                    context.resources.getQuantityString(
+                        R.plurals.provider_copy_result_favorites_format,
+                        favoritesCopied,
+                        favoritesCopied,
+                    ),
+                )
+            }
+            if (watchStateCopied >
+                0
+            ) {
+                parts.add(
+                    context.resources.getQuantityString(
+                        R.plurals.provider_copy_result_watch_state_format,
+                        watchStateCopied,
+                        watchStateCopied,
+                    ),
+                )
+            }
             if (parts.isEmpty()) return context.getString(R.string.provider_copy_result_nothing)
             return parts.joinToString(", ") + "."
         }

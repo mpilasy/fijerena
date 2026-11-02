@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
@@ -183,18 +184,13 @@ internal fun LiveTvChannelPanel(
                             selectedIndex == 0 && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft
                         },
                 )
-                CinemaIconButton(
+                // The same icon action as the browse layout's Refresh: its label shows on focus.
+                TvIconAction(
                     onClick = onRefresh,
+                    icon = CinemaIcons.Refresh,
+                    label = stringResource(R.string.common_refresh),
                     enabled = !streamsLoading,
-                    size = TvDimensions.iconLarge,
                     modifier = Modifier.focusRequester(refreshFocus),
-                    icon = {
-                        TvIcon(
-                            imageVector = CinemaIcons.Refresh,
-                            contentDescription = stringResource(R.string.category_refresh_streams_description),
-                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                        )
-                    },
                 )
             }
 

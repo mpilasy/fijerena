@@ -263,9 +263,10 @@ fun MobileEpgGuideScreen(
                     }
 
                     is EpgViewModel.UiState.NoListings -> {
-                        CentredMessage(
-                            title = stringResource(R.string.epg_guide_no_listings_title),
-                            message = noListingsMessage(state),
+                        MobileEmptyState(
+                            message = stringResource(R.string.epg_guide_no_listings_title),
+                            secondary = noListingsMessage(state),
+                            icon = CinemaIcons.LiveTv,
                             actionLabel = stringResource(R.string.common_refresh),
                             onAction = { viewModel.forceRefresh() },
                         )
@@ -273,9 +274,10 @@ fun MobileEpgGuideScreen(
 
                     // Not a failure: Retry could only find no guide again.
                     is EpgViewModel.UiState.NoGuide -> {
-                        CentredMessage(
-                            title = stringResource(R.string.epg_guide_no_guide_title),
-                            message = stringResource(R.string.epg_guide_no_guide_message),
+                        MobileEmptyState(
+                            message = stringResource(R.string.epg_guide_no_guide_title),
+                            secondary = stringResource(R.string.epg_guide_no_guide_message),
+                            icon = CinemaIcons.LiveTv,
                         )
                     }
 
@@ -527,46 +529,6 @@ private fun ProgramDetailsSheet(
                             tone = TextTone.Inherit,
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CentredMessage(
-    title: String,
-    message: String,
-    actionLabel: String? = null,
-    onAction: () -> Unit = {},
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(CinemaSpacing.xl),
-        ) {
-            CinemaText(
-                text = title,
-                role = TextRole.Display,
-                tone = TextTone.Primary,
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaText(
-                text = message,
-                role = TextRole.Body,
-                tone = TextTone.Secondary,
-            )
-            if (actionLabel != null) {
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                CinemaButton(onClick = onAction) {
-                    CinemaText(
-                        actionLabel,
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
                 }
             }
         }

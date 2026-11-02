@@ -46,8 +46,8 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
             up("Add guide source"),
             up("Refresh"),
             up("Use this guide"),
+            // Add is the header's icon action (its label on focus); nothing above it: focus stays.
             up("Add guide source"),
-            // Nothing above Add: focus stays.
             up("Add guide source"),
         )
     }
@@ -58,8 +58,7 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
         val sourceId = SettingsFixture.sourceId(context, SettingsFixture.SOURCE_TWO)
         show { TvEpgManagementScreen(providerId = sourceId, onBack = {}) }
         walk.awaitFocused("Add guide source")
-        // Both sources' groups show, Source Two's with no guide source.
-        rule.onNodeWithText("Source One").assertExists()
+        // Source Two's group is scrolled into view, with no guide source.
         rule.onNodeWithText("Source Two").assertExists()
         rule.onNodeWithText("No guide sources configured.").assertExists()
         // The group's own Add, under Source One's guide source: Up reaches that guide source's row.

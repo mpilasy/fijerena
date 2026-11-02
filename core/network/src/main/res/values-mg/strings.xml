@@ -31,16 +31,28 @@
     <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
     <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
     <string name="settings_export_summary_epg_sources_format">Loharanon\'ny fitarihana: %1$s</string>
-    <string name="settings_export_summary_favorites_format">%1$d tiana indrindra naverina</string>
-    <string name="settings_export_summary_watch_state_format">%1$d tantara fijerena naverina</string>
+    <plurals name="settings_export_summary_favorites_format">
+        <item quantity="one">%1$d tiana indrindra naverina</item>
+        <item quantity="other">%1$d tiana indrindra naverina</item>
+    </plurals>
+    <plurals name="settings_export_summary_watch_state_format">
+        <item quantity="one">%1$d tantara fijerena naverina</item>
+        <item quantity="other">%1$d tantara fijerena naverina</item>
+    </plurals>
     <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (tsy maintsy asiana indray ny tenimiafina)</string>
 
     <!-- Provider copy/duplicate (ProviderCopyManager) -->
     <string name="provider_copy_result_connection">Voadika ny fifandraisana</string>
     <string name="provider_copy_result_settings">Voadika ny fandrindrana</string>
-    <string name="provider_copy_result_favorites_format">%1$d tiana voadika</string>
-    <string name="provider_copy_result_watch_state_format">%1$d tantaram-pijerena voadika</string>
+    <plurals name="provider_copy_result_favorites_format">
+        <item quantity="one">%1$d tiana voadika</item>
+        <item quantity="other">%1$d tiana voadika</item>
+    </plurals>
+    <plurals name="provider_copy_result_watch_state_format">
+        <item quantity="one">%1$d tantaram-pijerena voadika</item>
+        <item quantity="other">%1$d tantaram-pijerena voadika</item>
+    </plurals>
     <string name="provider_copy_result_nothing">Tsy misy azo adika</string>
 
     <!-- EPG freshness label -->
@@ -51,12 +63,21 @@
     <string name="epg_freshness_minutes_ago_format">%1$dm lasa</string>
     <string name="epg_freshness_hours_ago_format">%1$do lasa</string>
     <string name="epg_freshness_days_ago_format">%1$dandro lasa</string>
-    <string name="epg_freshness_stale_suffix_format"> • %1$d lany andro</string>
-    <string name="epg_freshness_never_run_suffix_format"> • %1$d tsy mbola nandeha</string>
+    <plurals name="epg_freshness_stale_count">
+        <item quantity="one">%1$d lany andro</item>
+        <item quantity="other">%1$d lany andro</item>
+    </plurals>
+    <plurals name="epg_freshness_never_run_count">
+        <item quantity="one">%1$d tsy mbola nandeha</item>
+        <item quantity="other">%1$d tsy mbola nandeha</item>
+    </plurals>
     <string name="epg_freshness_updated_format">Navaozina %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
-    <string name="epg_error_task_failed_retries_format">Tsy nahomby aorian\'ny fanandramana %1$d</string>
+    <plurals name="epg_error_task_failed_retries_format">
+        <item quantity="one">Tsy nahomby aorian\'ny fanandramana %1$d</item>
+        <item quantity="other">Tsy nahomby aorian\'ny fanandramana %1$d</item>
+    </plurals>
     <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
     <string name="epg_error_came_back_empty">Foana ny fitarihana azo (tsy misy fantsona). Hamerina indray ny fanavaozana manaraka.</string>
     <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>

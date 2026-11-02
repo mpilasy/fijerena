@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.ui.R
@@ -64,7 +65,7 @@ fun MobileLicensesScreen(
             item {
                 CinemaText(
                     stringResource(R.string.licenses_desc) +
-                        entries?.let { "\n" + stringResource(R.string.licenses_count, it.size) }.orEmpty(),
+                        entries?.let { "\n" + pluralStringResource(R.plurals.licenses_count, it.size, it.size) }.orEmpty(),
                     tone = TextTone.Secondary,
                     modifier = Modifier.padding(CinemaSpacing.md),
                 )

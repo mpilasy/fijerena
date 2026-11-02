@@ -145,6 +145,16 @@ fun TvDetailHero(
                 }
             Box(modifier = Modifier.matchParentSize().background(bottomScrimBrush))
 
+            // Top scrim: the clock (top end, TvClockOverlay) stays legible on bright art.
+            val topScrimBrush =
+                remember(palette.background) {
+                    Brush.verticalGradient(
+                        0f to palette.background.copy(alpha = CinemaAlpha.scrim),
+                        TOP_FADE_END to palette.background.copy(alpha = CinemaAlpha.none),
+                    )
+                }
+            Box(modifier = Modifier.matchParentSize().background(topScrimBrush))
+
             Column(
                 modifier =
                     Modifier
@@ -162,17 +172,18 @@ fun TvDetailHero(
                 val meta = remember(metaLine) { metaLine.filter { it.isNotBlank() }.joinToString(" · ") }
                 if (meta.isNotBlank()) {
                     Spacer(Modifier.height(Spacing.sm))
-                    CinemaText(text = meta, tone = TextTone.Secondary)
+                    // On the art past the scrim's solid part: the halo keeps it legible on bright frames.
+                    TvBackdropText(text = meta, tone = TextTone.Secondary)
                 }
 
                 if (!tagline.isNullOrBlank()) {
                     Spacer(Modifier.height(Spacing.md))
-                    CinemaText(text = tagline, tone = TextTone.Secondary, italic = true)
+                    TvBackdropText(text = tagline, tone = TextTone.Secondary, italic = true)
                 }
 
                 if (!plot.isNullOrBlank()) {
                     Spacer(Modifier.height(Spacing.xs))
-                    CinemaText(text = plot, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    TvBackdropText(text = plot, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
 
                 if (note != null) {
@@ -210,6 +221,9 @@ fun TvDetailHero(
 
 /** The hero's share of a full 16:9 screen height: the rest is where the tab row peeks in. */
 private const val HERO_HEIGHT_FRACTION = 0.82f
+
+/** Where the hero's top scrim ends: the clock's band, clear below this fraction. */
+private const val TOP_FADE_END = 0.25f
 
 /** Where the hero's bottom scrim starts: clear above this fraction, solid background at the bottom. */
 private const val BOTTOM_FADE_START = 0.4f

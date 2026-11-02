@@ -55,7 +55,7 @@ fun ProfilePins.Check.message(
             if (waitUntil > now) {
                 context.getString(R.string.pin_wrong_wait, waitText(context, waitUntil - now))
             } else {
-                context.getString(R.string.pin_wrong_left, triesLeft)
+                context.resources.getQuantityString(R.plurals.pin_wrong_left, triesLeft, triesLeft)
             }
         }
 

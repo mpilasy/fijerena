@@ -548,19 +548,14 @@ private fun MovieDetailsContent(
                                         .then(upScrollToTop)
                                         .leftToRail(),
                             )
-                            CinemaIconButton(
+                            TvIconAction(
                                 onClick = playFromStart,
+                                icon = CinemaIcons.Replay,
+                                label = stringResource(R.string.player_osd_start_over),
                                 modifier =
                                     downToTabRow
                                         .then(upScrollToTop)
                                         .navReturnFocusTarget(returnFocus, RETURN_START_OVER),
-                                icon = {
-                                    TvIcon(
-                                        imageVector = CinemaIcons.Replay,
-                                        contentDescription = stringResource(R.string.player_osd_start_over),
-                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    )
-                                },
                             )
                         } else {
                             CinemaPrimaryButton(
@@ -608,16 +603,11 @@ private fun MovieDetailsContent(
                         }
                         movieDetail.metadata.trailerUrl?.let { trailer ->
                             val playTrailer = rememberPlayTrailer()
-                            CinemaIconButton(
+                            TvIconAction(
                                 onClick = { playTrailer(trailer, movieDetail.metadata.tmdbTrailerUrl) },
+                                icon = CinemaIcons.Movie,
+                                label = stringResource(R.string.details_watch_trailer_description),
                                 modifier = downToTabRow.then(upScrollToTop),
-                                icon = {
-                                    TvIcon(
-                                        imageVector = CinemaIcons.Movie,
-                                        contentDescription = stringResource(R.string.details_watch_trailer_description),
-                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    )
-                                },
                             )
                         }
                         // Refresh info is maintenance, not something to watch: it lives behind "More" at
@@ -1002,7 +992,8 @@ private fun StreamNamePicker(
     onFocusedChanged: (Boolean) -> Unit = {},
 ) {
     if (alternates.isEmpty()) {
-        CinemaText(text = currentName, role = TextRole.Heading)
+        // The same font and place as the other values of the Details tab (TvDetailRow).
+        CinemaText(text = currentName)
         return
     }
 
@@ -1022,9 +1013,10 @@ private fun StreamNamePicker(
                         // look-ok: a focusable picker that opens its list, not a list row
                     }.clickable {
                         expanded = true
-                    }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
+                    },
         ) {
-            CinemaText(text = currentName, role = TextRole.Heading)
+            // The value's own font and start, as the other rows; the focus outline hugs it.
+            CinemaText(text = currentName)
             TvIcon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),

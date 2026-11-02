@@ -158,14 +158,16 @@ fun ColumnScope.ProviderLoginsSection(
                 }
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
+            // Add is an icon action at the end of the list it adds to, as on every Settings page.
+            IconAction(
                 onClick = {
                     addDialogMessage = null
                     showAddDialog = true
                 },
+                icon = CinemaIcons.Add,
+                label = stringResource(R.string.provider_logins_add),
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-            ) { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Label, tone = TextTone.Inherit) }
+            )
         }
     }
 

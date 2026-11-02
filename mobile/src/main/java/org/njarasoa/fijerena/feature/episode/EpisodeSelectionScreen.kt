@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -109,6 +110,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.seasonsAndEpisodesText
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
@@ -818,9 +820,9 @@ private fun EpisodeListContent(
                 val yearRange = seriesDetail.seriesYearRange(presentLabel)
                 val countText =
                     if (sortedSeasons.size > 1) {
-                        stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                        seasonsAndEpisodesText(sortedSeasons.size, totalEpisodes)
                     } else {
-                        stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                        pluralStringResource(R.plurals.series_total_episodes_format, totalEpisodes, totalEpisodes)
                     }
                 val seriesMetaSegments =
                     listOfNotNull<@Composable () -> Unit>(
@@ -913,20 +915,6 @@ private fun EpisodeListContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    DetailIconAction(
-                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                        label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                        onClick = onToggleFavorite,
-                        tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
-                    )
-                    if (wishlist != null) {
-                        DetailIconAction(
-                            icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
-                            label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
-                            onClick = wishlist.toggle,
-                            tone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
-                        )
-                    }
                     if (hasResume) {
                         DetailIconAction(
                             icon = CinemaIcons.Replay,
@@ -938,13 +926,12 @@ private fun EpisodeListContent(
                             },
                         )
                     }
-                    seriesDetail.metadata.trailerUrl?.let { trailer ->
-                        DetailIconAction(
-                            icon = CinemaIcons.Movie,
-                            label = stringResource(R.string.details_watch_trailer),
-                            onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
-                        )
-                    }
+                    DetailIconAction(
+                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                        label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                        onClick = onToggleFavorite,
+                        tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
+                    )
                     if (canMarkManyWatched) {
                         val allWatched = showAllWatched == true
                         DetailIconAction(
@@ -952,6 +939,21 @@ private fun EpisodeListContent(
                             label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
                             onClick = { markEpisodesWatched(null, !allWatched) },
                             tone = if (allWatched) TextTone.Accent else TextTone.Primary,
+                        )
+                    }
+                    if (wishlist != null) {
+                        DetailIconAction(
+                            icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
+                            label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
+                            onClick = wishlist.toggle,
+                            tone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
+                        )
+                    }
+                    seriesDetail.metadata.trailerUrl?.let { trailer ->
+                        DetailIconAction(
+                            icon = CinemaIcons.Movie,
+                            label = stringResource(R.string.details_watch_trailer),
+                            onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                         )
                     }
                 }

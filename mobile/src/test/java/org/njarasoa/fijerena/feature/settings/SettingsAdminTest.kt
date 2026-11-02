@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -93,7 +94,8 @@ class SettingsAdminTest {
         showSettings(active = GUEST)
 
         assertOwnRows()
-        scrollTo(text(R.string.settings_profiles_add))
+        // Add Profile is an icon action: its label is its content description.
+        rule.onNode(hasScrollAction()).performScrollToNode(hasContentDescription(text(R.string.settings_profiles_add)))
         scrollTo(text(R.string.settings_about_section_title))
         // Logs is in About, for everyone with Settings, with no PIN.
         scrollTo(text(R.string.settings_diagnostics_title))

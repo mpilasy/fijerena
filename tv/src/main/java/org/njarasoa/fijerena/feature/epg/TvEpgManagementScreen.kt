@@ -101,6 +101,8 @@ fun TvEpgManagementScreen(
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
+    // Refresh stale / Retry failed, above the groups, only while there is something to refresh.
+    val refreshRow = staleSourceCount > 0 || failedSourceCount > 0
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
 
     val nowMs = remember { System.currentTimeMillis() }
@@ -136,11 +138,11 @@ fun TvEpgManagementScreen(
         val target = if (openGroup != null) openGroup.sources.firstOrNull() else sources.first()
         if (target == null) {
             // The group opened on has no guide source: its own Add, scrolled into view.
-            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id)) }
+            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id, refreshRow)) }
             emptyGroupAddFocus.requestFocusWithRetry()
         } else {
             entrySourceId = target.id
-            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id)) }
+            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id, refreshRow)) }
             entryRowFocus.requestFocusWithRetry()
         }
     }
@@ -213,7 +215,17 @@ fun TvEpgManagementScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            TvScreenHeader(title = stringResource(R.string.epg_management_screen_title))
+            // Add is an icon action in the header, as on every Settings page (Sources, Live Sync).
+            TvScreenHeader(title = stringResource(R.string.epg_management_screen_title)) {
+                if (sources?.isEmpty() == false) {
+                    TvIconAction(
+                        onClick = { showAddDialog = true },
+                        icon = CinemaIcons.Add,
+                        label = stringResource(R.string.epg_add_source),
+                        modifier = Modifier.focusRequester(addFocus),
+                    )
+                }
+            }
 
             // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).
             // The action takes focus itself; Left from it goes to the navigation rail (leftToRail
@@ -233,23 +245,18 @@ fun TvEpgManagementScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                 ) {
-                    if (sources != null) {
-                        // Add, and refreshing the stale or failed sources of this list.
+                    if (sources != null && refreshRow) {
+                        // Refreshing the stale or failed sources of this list.
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
-                                CinemaPrimaryButton(
-                                    onClick = { showAddDialog = true },
-                                    text = stringResource(R.string.epg_add_source),
-                                    modifier = Modifier.focusRequester(addFocus).leftToRail(),
-                                )
-
                                 if (staleSourceCount > 0) {
                                     CinemaSecondaryButton(
                                         onClick = { viewModel.refreshStale() },
                                         text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
+                                        modifier = Modifier.leftToRail(),
                                     )
                                 }
 
@@ -257,6 +264,7 @@ fun TvEpgManagementScreen(
                                     CinemaSecondaryButton(
                                         onClick = { viewModel.refreshFailed() },
                                         text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
+                                        modifier = if (staleSourceCount > 0) Modifier else Modifier.leftToRail(),
                                     )
                                 }
                             }
@@ -275,12 +283,13 @@ fun TvEpgManagementScreen(
                                         role = TextRole.BodySmall,
                                         tone = TextTone.Secondary,
                                     )
-                                    CinemaSecondaryButton(
+                                    TvIconAction(
                                         onClick = {
                                             addForSource = group.provider.id
                                             showAddDialog = true
                                         },
-                                        text = stringResource(R.string.epg_add_source),
+                                        icon = CinemaIcons.Add,
+                                        label = stringResource(R.string.epg_add_source),
                                         modifier =
                                             (
                                                 if (group.provider.id == openGroup?.provider?.id) {
@@ -586,8 +595,10 @@ fun TvEpgManagementScreen(
 private fun groupHeaderIndex(
     groups: List<EpgManagementViewModel.GuideGroup>,
     providerId: Long,
+    // The refresh row above the groups, when it shows.
+    refreshRow: Boolean,
 ): Int {
-    var index = 1
+    var index = if (refreshRow) 1 else 0
     for (group in groups) {
         if (group.provider.id == providerId) return index
         index += 1 + maxOf(group.sources.size, 1)

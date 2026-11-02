@@ -572,7 +572,11 @@ class EpgFileManager private constructor(
                             _state.value =
                                 MultiSourceState.Error(
                                     lastException?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
-                                        ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts),
+                                        ?: context.resources.getQuantityString(
+                                            R.plurals.epg_error_task_failed_retries_format,
+                                            maxAttempts,
+                                            maxAttempts,
+                                        ),
                                 )
                             onComplete?.invoke()
                         }

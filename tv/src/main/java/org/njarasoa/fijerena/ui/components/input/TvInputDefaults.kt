@@ -23,6 +23,7 @@ import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.ListItemGlow
 import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.ListItemShape
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -56,6 +57,17 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * collapse into one another and focus never borrows the accent.
  */
 object TvInputDefaults {
+    /**
+     * One text role for each kind of tab and chip (consistency round 2, finding 31): a page's tabs
+     * (TvSectionTabs, the season tabs, Search's Catalogue / People / Teams / Guide) and a filter's
+     * chips (TvSelectableButton). A tab marks the current one with the bar on its bottom edge, a
+     * chip with the bar on its leading edge ([currentIndicator]).
+     */
+    val tabLabelRole: TextRole = TextRole.Heading
+
+    /** See [tabLabelRole]. */
+    val chipLabelRole: TextRole = TextRole.Label
+
     @ReadOnlyComposable
     @Composable
     fun colors(): ListItemColors =
@@ -82,6 +94,18 @@ object TvInputDefaults {
             focusedSelectedBorder = focusBorder(),
             pressedBorder = focusBorder(),
             pressedSelectedBorder = focusBorder(),
+        )
+
+    /** No outline in any state: a row around the item draws it (a source row and its buttons). */
+    @Composable
+    fun noBorder(): ListItemBorder =
+        ListItemDefaults.border(
+            border = Border.None,
+            focusedBorder = Border.None,
+            selectedBorder = Border.None,
+            focusedSelectedBorder = Border.None,
+            pressedBorder = Border.None,
+            pressedSelectedBorder = Border.None,
         )
 
     @Composable

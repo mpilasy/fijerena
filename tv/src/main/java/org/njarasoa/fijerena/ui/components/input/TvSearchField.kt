@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -86,6 +87,11 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * `focusProperties { down = … }` there applies to the field and the clear button.
  * [restingFieldModifier] goes on the resting field alone (not the clear button), e.g.
  * `Modifier.leftToRail()` where the field starts at the screen's left edge.
+ * [leadingIcon] says what the field does: Search, or Add for a field that adds what is typed.
+ *
+ * One TV text field look (consistency round 2, finding 32): at rest it is drawn as the open field
+ * ([CinemaTextField], as every TV field while it is edited) is: the field's corner, the theme's
+ * outline and no fill, with the accent outline while focused.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -101,6 +107,7 @@ fun TvSearchField(
     modifier: Modifier = Modifier,
     showClearButton: Boolean = query.isNotEmpty(),
     restingFieldModifier: Modifier = Modifier,
+    leadingIcon: ImageVector = CinemaIcons.Search,
 ) {
     val scale = LocalUiScale.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -140,7 +147,7 @@ fun TvSearchField(
     ) {
         val searchIcon: @Composable () -> Unit = {
             TvIcon(
-                imageVector = CinemaIcons.Search,
+                imageVector = leadingIcon,
                 contentDescription = null,
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                 tone = TextTone.Primary,
@@ -201,11 +208,11 @@ fun TvSearchField(
                 shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.field),
                 colors =
                     ClickableSurfaceDefaults.colors(
-                        containerColor = CinemaTheme.colors.surfaceHigh,
+                        containerColor = CinemaTheme.colors.clear,
                         contentColor = CinemaTheme.colors.textPrimary,
-                        focusedContainerColor = CinemaTheme.colors.surfaceRaised,
+                        focusedContainerColor = CinemaTheme.colors.clear,
                         focusedContentColor = CinemaTheme.colors.textPrimary,
-                        pressedContainerColor = CinemaTheme.colors.surfaceRaised,
+                        pressedContainerColor = CinemaTheme.colors.clear,
                         pressedContentColor = CinemaTheme.colors.textPrimary,
                     ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),

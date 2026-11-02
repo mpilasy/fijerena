@@ -113,7 +113,7 @@ fun SettingsRow(
             trailing ?: if (trailingText.isEmpty()) {
                 null
             } else {
-                { TvContentText(text = trailingText, maxLines = 1) }
+                { TvContentText(text = trailingText, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             },
         supportingContent =
             supporting ?: description?.let {
