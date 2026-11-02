@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -191,6 +192,19 @@ class SportsPageViewModelTest {
 
         assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[0]))
         assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[1]))
+    }
+
+    @Test
+    fun `a game whose match never ends finds no channel, and the other games still find theirs`() {
+        val state = MutableStateFlow<GamesState>(GamesState.Loading)
+        val channel = GameChannel(CHANNEL, null, null, GameChannelHow.BROADCASTER_CHANNEL)
+        val matcher = GameMatcher { game -> if (game == GAMES[0]) awaitCancellation() else listOf(channel) }
+
+        runBlocking { readGamesAndChannels(state, { GAMES }, { matcher }, { null }, matchTimeoutMs = 200L) }
+
+        val loaded = state.value as GamesState.Loaded
+        assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[0]))
+        assertEquals(listOf(channel), loaded.channelsOf(GAMES[1]))
     }
 
     @Test

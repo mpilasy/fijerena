@@ -1106,6 +1106,9 @@
     <string name="settings_shrink_database_desc">Supprimer les données restantes des sources supprimées et récupérer de l\'espace disque</string>
     <string name="settings_shrink_database_button">Compacter la base de données</string>
     <string name="settings_shrink_database_button_running">Compactage…</string>
+    <string name="settings_shrink_database_confirm_title">Compacter la base de données ?</string>
+    <string name="settings_shrink_database_confirm_message">Cela supprime les données laissées par les sources supprimées et compacte la base de données. Cela peut prendre une minute, et l\'application peut être lente jusqu\'à la fin. Vos sources, favoris et historique restent.</string>
+    <string name="settings_shrink_database_confirm_action">Compacter</string>
     <plurals name="settings_shrink_database_result_format">
         <item quantity="one">%1$d ligne restante supprimée, %2$s libérés</item>
         <item quantity="other">%1$d lignes restantes supprimées, %2$s libérés</item>

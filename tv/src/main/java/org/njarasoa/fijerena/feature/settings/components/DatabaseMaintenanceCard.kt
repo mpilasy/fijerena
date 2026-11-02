@@ -2,16 +2,25 @@ package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 
 /**
  * "Shrink Database" — manually sweeps `xtream_v2.db` for rows left behind by a deleted provider
  * and reclaims the freed disk space. See [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData].
- * [moreRows] follow in the same section (the guide's maintenance row).
+ * It asks first (a confirm dialog). [moreRows] follow in the same section (the guide's maintenance row).
  */
 @Composable
 fun DatabaseMaintenanceCard(
@@ -25,6 +34,21 @@ fun DatabaseMaintenanceCard(
     lastShrinkBytesReclaimed: Long = 0L,
     moreRows: @Composable ColumnScope.() -> Unit = {},
 ) {
+    // Heavy maintenance asks first (rule 7), as on the phone.
+    var confirming by remember { mutableStateOf(false) }
+    if (confirming) {
+        CinemaAlertDialog(
+            onDismissRequest = { confirming = false },
+            title = stringResource(R.string.settings_shrink_database_confirm_title),
+            text = { CinemaText(stringResource(R.string.settings_shrink_database_confirm_message), tone = TextTone.Secondary) },
+            main =
+                DialogAction(stringResource(R.string.settings_shrink_database_confirm_action)) {
+                    confirming = false
+                    onShrinkClick()
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirming = false },
+        )
+    }
     // A row at the root of Admin's page, with no title of its own above it (as on the phone).
     SettingsSection {
         SettingsRow(
@@ -35,9 +59,9 @@ fun DatabaseMaintenanceCard(
             description =
                 stringResource(R.string.settings_shrink_database_desc) + "\n" +
                     stringResource(R.string.settings_scope_device_section),
-            onClick = onShrinkClick,
+            onClick = { confirming = true },
             enabled = !isPruning,
-            chevron = false,
+            kind = SettingsRowKind.Action,
         )
         if (resultMessage != null) SettingsNote(resultMessage)
         // Only when the last run found something: "0 records deleted" says nothing.

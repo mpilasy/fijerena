@@ -35,8 +35,9 @@
 
     <!-- Track selection labels -->
     <string name="player_track_language_unknown">Unknown</string>
-    <string name="player_track_audio_fallback_label_format">%1$s - %2$dch</string>
     <string name="player_track_generic_label">Track</string>
+    <string name="player_audio_mono">Mono</string>
+    <string name="player_audio_stereo">Stereo</string>
     <string name="player_track_subtitle_fallback_label_format">Subtitle %1$d</string>
     <string name="player_error_occurred">Playback error occurred</string>
     <string name="player_chapter_fallback_format">Chapter %1$d</string>

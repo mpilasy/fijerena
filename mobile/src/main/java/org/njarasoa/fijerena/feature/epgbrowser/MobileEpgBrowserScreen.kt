@@ -84,7 +84,6 @@ import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
@@ -570,7 +569,7 @@ private fun MobileProgramCard(
                     text = program.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).bounceMarquee(),
+                    modifier = Modifier.weight(1f),
                     role = TextRole.Heading,
                     tone = TextTone.Inherit,
                 )
@@ -742,7 +741,7 @@ private fun MobileAiringRow(
             text = airing.channelName,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).bounceMarquee(),
+            modifier = Modifier.weight(1f),
             role = TextRole.Heading,
             tone = TextTone.Primary,
         )

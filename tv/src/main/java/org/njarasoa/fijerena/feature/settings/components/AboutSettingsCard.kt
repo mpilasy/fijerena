@@ -10,6 +10,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -41,7 +42,7 @@ fun AboutSettingsCard(
             description = null,
             onClick = onVersionClick,
             modifier = rowModifier,
-            chevron = false,
+            kind = SettingsRowKind.Action,
             supporting = {
                 Column {
                     CinemaText(

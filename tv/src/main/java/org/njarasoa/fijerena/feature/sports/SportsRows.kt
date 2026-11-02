@@ -202,6 +202,8 @@ fun TvFollowActions(
         onClick = onToggleFollow,
         icon = if (followed) CinemaIcons.Star else CinemaIcons.StarBorder,
         label = stringResource(if (followed) R.string.sports_unfollow else R.string.sports_follow),
+        // A switch, as on the phone: the Accent tone while the team is followed.
+        on = followed,
         modifier = modifier,
     )
     if (team != null) {

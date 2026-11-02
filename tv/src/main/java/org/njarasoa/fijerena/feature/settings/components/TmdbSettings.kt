@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -153,7 +154,7 @@ fun TmdbAttributionRow() {
         title = stringResource(R.string.tmdb_attribution_title),
         description = null,
         onClick = {},
-        chevron = false,
+        kind = SettingsRowKind.Action,
         supporting = {
             Column {
                 Image(

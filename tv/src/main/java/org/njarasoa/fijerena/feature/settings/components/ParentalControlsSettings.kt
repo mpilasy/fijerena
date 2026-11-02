@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -260,7 +261,7 @@ internal fun ParentalListContent(
                     title = stringResource(R.string.parental_list_reset),
                     description = null,
                     onClick = { confirmReset = true },
-                    chevron = false,
+                    kind = SettingsRowKind.Action,
                     focusRequester = resetFocus,
                 )
             }
@@ -306,7 +307,7 @@ private fun ParentalEntryRow(
             },
         onClick = onClick,
         modifier = Modifier.onFocusChanged { focused = it.isFocused },
-        chevron = false,
+        kind = SettingsRowKind.Action,
         focusRequester = focusRequester,
         trailing = {
             if (focused) {
@@ -381,7 +382,7 @@ private fun ColumnScope.ParentalSourceChooser(
                     title = stringResource(R.string.parental_no_sources),
                     description = null,
                     onClick = {},
-                    chevron = false,
+                    kind = SettingsRowKind.Action,
                     focusRequester = entryFocus,
                 )
             }
@@ -422,7 +423,7 @@ private fun ColumnScope.ParentalCheckList(
                         stringResource(R.string.parental_check_desc)
                     },
                 onClick = {},
-                chevron = false,
+                kind = SettingsRowKind.Action,
                 focusRequester = headerFocus,
             )
         }
@@ -434,7 +435,7 @@ private fun ColumnScope.ParentalCheckList(
                     title = stringResource(R.string.parental_check_none),
                     description = null,
                     onClick = {},
-                    chevron = false,
+                    kind = SettingsRowKind.Action,
                 )
             }
         }
@@ -469,7 +470,7 @@ private fun ParentalCategoryRow(category: ParentalControlsRepository.CheckedCate
                 },
             ),
         onClick = {},
-        chevron = false,
+        kind = SettingsRowKind.Action,
     )
 }
 

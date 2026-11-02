@@ -337,4 +337,44 @@ class MediaRepositoryRecentItemsTest {
         // The rows stay: only their place in Recent goes.
         assertEquals(3, watchStateDao.all().size)
     }
+
+    @Test
+    fun aFilmUnderTwoStreamIdsShowsOnce() {
+        val repository =
+            repositoryWith(
+                movie("godfather-1").copy(itemName = "The Godfather"),
+                movie("matrix").copy(itemName = "The Matrix"),
+                movie("godfather-2").copy(itemName = "the godfather "),
+            )
+
+        assertEquals(listOf("godfather-1", "matrix"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+    }
+
+    @Test
+    fun channelsOfOneNameStayApart() {
+        val repository =
+            repositoryWith(
+                channel("bbc-hd").copy(itemName = "BBC One"),
+                channel("bbc-sd").copy(itemName = "BBC One"),
+            )
+
+        assertEquals(listOf("bbc-hd", "bbc-sd"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+    }
+
+    @Test
+    fun removingAFilmTakesEveryEntryOfItsTitle() {
+        val repository =
+            repositoryWith(
+                movie("godfather-1").copy(itemName = "The Godfather"),
+                movie("matrix").copy(itemName = "The Matrix"),
+                movie("godfather-2").copy(itemName = "The Godfather"),
+            )
+
+        val removal = runBlocking { repository.removeFromRecent("godfather-1", ContentType.MOVIES) }
+
+        assertEquals(listOf("godfather-1", "godfather-2"), checkNotNull(removal).plays.map { it.itemId }.sorted())
+        assertEquals(listOf("matrix"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+        runBlocking { repository.restoreRecent(removal) }
+        assertEquals(listOf("godfather-1", "matrix"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+    }
 }

@@ -139,7 +139,8 @@ private fun HeaderBar(
             scrolledContainerColor = container,
             navigationIconContentColor = c.textPrimary,
             titleContentColor = c.textPrimary,
-            actionIconContentColor = c.textSecondary,
+            // Action icons are in the Primary tone (Accent while on), as everywhere.
+            actionIconContentColor = c.textPrimary,
         )
     Column(modifier) {
         if (centred) {
@@ -187,7 +188,7 @@ private fun CentredBar(
                 CompositionLocalProvider(LocalContentColor provides c.textPrimary) { title() }
             }
             Row(Modifier.layoutId(SLOT_ACTIONS), verticalAlignment = Alignment.CenterVertically) {
-                CompositionLocalProvider(LocalContentColor provides c.textSecondary) { actions() }
+                CompositionLocalProvider(LocalContentColor provides c.textPrimary) { actions() }
             }
         },
         // look-ok: the bar component sets its own fill, as Material's bar did

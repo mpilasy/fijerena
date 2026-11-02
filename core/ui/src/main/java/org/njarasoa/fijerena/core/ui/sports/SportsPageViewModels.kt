@@ -17,7 +17,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.EpgGuideLookup
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
@@ -100,7 +103,10 @@ sealed interface GamesState {
 
 /**
  * Reads the games ([loadGames]) into [state], then each game's channels as the [matcher] finds
- * them, every game at once, so the first rows fill first. A failed read sets [GamesState.Failed]
+ * them, [MATCH_PARALLEL] games at a time in the games' order, so the first rows fill first. A game
+ * whose match takes longer than [matchTimeoutMs] finds no channel: its row says "Not found" and
+ * never stays on "Looking for channels…" (phone walk A, item 11: with ten games of a team page
+ * matched all at once, each one's guide reads waited behind all the others'). A failed read sets [GamesState.Failed]
  * ([rawOf]: its raw text in dev mode); a matcher that cannot be made finds nothing. [onGames] gets
  * the games before their channels. Shared by the team and league pages and the Teams search's best
  * team.
@@ -111,6 +117,7 @@ internal suspend fun readGamesAndChannels(
     matcher: suspend () -> GameMatcher,
     rawOf: (Throwable) -> String?,
     onGames: (List<SportsGame>) -> Unit = {},
+    matchTimeoutMs: Long = MATCH_TIMEOUT_MS,
 ) {
     val games =
         try {
@@ -126,7 +133,7 @@ internal suspend fun readGamesAndChannels(
     if (games != null) {
         onGames(games)
         state.value = GamesState.Loaded(games)
-        if (games.isNotEmpty()) matchChannels(state, games, matcher)
+        if (games.isNotEmpty()) matchChannels(state, games, matcher, matchTimeoutMs)
     }
 }
 
@@ -134,10 +141,11 @@ private suspend fun matchChannels(
     state: MutableStateFlow<GamesState>,
     games: List<SportsGame>,
     matcher: suspend () -> GameMatcher,
+    matchTimeoutMs: Long,
 ) {
     val found =
         try {
-            matcher()
+            withTimeoutOrNull(matchTimeoutMs) { matcher() } ?: GameMatcher { emptyList() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -145,11 +153,13 @@ private suspend fun matchChannels(
             android.util.Log.w(GAMES_TAG, "Channels failed: ${e.javaClass.simpleName}")
             GameMatcher { emptyList() }
         }
-    // Every game at once: each game's guide reads run beside the others'.
+    // A few games at a time, in order: all at once, every game's guide reads queued behind the
+    // others' and no row filled until the end.
+    val slots = Semaphore(MATCH_PARALLEL)
     coroutineScope {
         games.forEach { game ->
             launch {
-                val channels = matchOrEmpty(found, game)
+                val channels = slots.withPermit { withTimeoutOrNull(matchTimeoutMs) { matchOrEmpty(found, game) } }.orEmpty()
                 state.update { current ->
                     (current as? GamesState.Loaded)?.let { it.copy(channels = it.channels + (game.key to channels)) } ?: current
                 }
@@ -159,6 +169,12 @@ private suspend fun matchChannels(
 }
 
 private const val GAMES_TAG = "SportsGamesViewModel"
+
+/** The games matched at the same time. */
+internal const val MATCH_PARALLEL = 3
+
+/** The longest a game's match may take before its row says "Not found". */
+internal const val MATCH_TIMEOUT_MS = 20_000L
 
 /**
  * [route] (a team as a route or a search names it) completed from its own entry in [games]: the

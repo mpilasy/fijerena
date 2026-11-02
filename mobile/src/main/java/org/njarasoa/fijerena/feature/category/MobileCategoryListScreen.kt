@@ -136,6 +136,7 @@ import org.njarasoa.fijerena.core.player.domain.categoryNameAsTag
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.rowDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.domain.sourceOr
@@ -175,7 +176,6 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
@@ -1665,7 +1665,7 @@ private fun CategoryChipRow(
                     onClick = { showingAll = true },
                     icon = CinemaIcons.List,
                     label = stringResource(R.string.category_all_title),
-                    tone = TextTone.Secondary,
+                    tone = TextTone.Primary,
                 )
             }
             LazyRow(
@@ -1725,7 +1725,7 @@ private fun CategoryChipRow(
                     onClick = onGuideClick,
                     icon = CinemaIcons.DateRange,
                     label = stringResource(R.string.common_tv_guide),
-                    tone = TextTone.Secondary,
+                    tone = TextTone.Primary,
                 )
             }
         }
@@ -1875,10 +1875,9 @@ private fun CategoryChip(
                         tone = TextTone.Inherit,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        // Marquee only on the selected chip. Touch has no focus, so gating on
-                        // selection is the nearest equivalent — otherwise every overflowing chip
-                        // runs its own per-frame invalidateDraw loop for as long as it's visible.
-                        modifier = Modifier.weight(1f, fill = false).then(if (selected) Modifier.bounceMarquee() else Modifier),
+                        // No marquee on the phone: touch has no focus, so a marquee would scroll for
+                        // as long as the chip shows and always cut its start. The "…" ends a long name.
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     // The source ends the name, as on every row.
                     sourceName?.let { SourceBadge(it) }
@@ -2491,7 +2490,7 @@ internal fun StreamCard(
         // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
         // between the dashes) — an empty row reads as broken, not a catalogue gap.
         // The year goes to the line under it, with the length and rating.
-        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
+        val displayTitle = rowDisplayTitle(parsedTitle, item.name, categoryName) ?: stringResource(R.string.content_untitled)
         val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
         // Films and shows: year · length · rating, from what the row already carries (as on
         // the TV). The rating is a plain "8.2/10": a star means favourite.
@@ -2630,8 +2629,9 @@ internal fun StreamCard(
                         tone = if (isCurrent) TextTone.Accent else TextTone.Primary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        // Only the row that's actually playing scrolls its title.
-                        modifier = Modifier.weight(1f).then(if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier),
+                        // No marquee on the phone, not even on the playing row: with no focus to
+                        // end it, it would scroll for ever and cut the title's start.
+                        modifier = Modifier.weight(1f),
                     )
                     // The source (Expert mode) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
@@ -2678,14 +2678,6 @@ internal fun StreamCard(
                                     },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier =
-                                    if (isCurrentlyPlaying &&
-                                        text == nowLine
-                                    ) {
-                                        Modifier.bounceMarquee()
-                                    } else {
-                                        Modifier
-                                    },
                             )
                         }
                     }
@@ -2696,7 +2688,6 @@ internal fun StreamCard(
                         text = line,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
                         role = TextRole.BodySmall,
                         tone = TextTone.AccentSoft,
                     )

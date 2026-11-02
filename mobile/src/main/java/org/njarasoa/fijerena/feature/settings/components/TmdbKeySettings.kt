@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.scrollEdgeFade
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
@@ -65,12 +66,14 @@ fun TmdbKeyDialog(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var draft by rememberSaveable(uiState.savedKey) { mutableStateOf(uiState.savedKey) }
+    val bodyScroll = rememberScrollState()
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.tmdb_settings_title),
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                // The help text wraps in full; the body scrolls, its edge faded while more is below.
+                modifier = Modifier.scrollEdgeFade(bodyScroll).verticalScroll(bodyScroll),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Image(

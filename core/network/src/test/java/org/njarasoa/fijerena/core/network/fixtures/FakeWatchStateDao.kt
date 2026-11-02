@@ -58,7 +58,7 @@ class FakeWatchStateDao : WatchStateDao {
                 profileId = profileId,
                 itemId = itemId,
                 contentType = contentType,
-                itemName = itemName ?: existing?.itemName ?: "",
+                itemName = itemName?.ifEmpty { null } ?: existing?.itemName ?: "",
                 categoryId = categoryId ?: existing?.categoryId ?: "",
                 positionMs = positionMs,
                 durationMs = durationMs,
@@ -203,7 +203,7 @@ class FakeWatchStateDao : WatchStateDao {
                 existing.copy(
                     updatedAt = now,
                     lastPlayedAt = now,
-                    itemName = itemName ?: existing.itemName,
+                    itemName = itemName?.ifEmpty { null } ?: existing.itemName,
                     seriesId = seriesId ?: existing.seriesId,
                     episodeId = episodeId ?: existing.episodeId,
                     seriesName = seriesName ?: existing.seriesName,

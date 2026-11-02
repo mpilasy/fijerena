@@ -4,8 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 
-/** Export / Import: one row per action, one under the other (no 2-D grids in Settings, rule 2). */
+/** Export / Import: one row per action, one under the other (no 2-D grids in Settings, rule 2); each runs at once, so no chevron. */
 @Composable
 fun ExportImportSettingsCard(
     onExport: () -> Unit,
@@ -30,15 +31,22 @@ fun ExportImportSettingsCard(
             description = null,
             onClick = onExport,
             modifier = exportRowModifier,
+            kind = SettingsRowKind.Action,
         )
         SettingsRow(
             title = stringResource(R.string.settings_import_button),
             description = stringResource(R.string.settings_import_desc),
             onClick = onImport,
+            kind = SettingsRowKind.Action,
         )
         // Only when there is a backup in Downloads to restore (a developer's shortcut).
         if (isDevMode && quickImportReady) {
-            SettingsRow(title = stringResource(R.string.settings_quick_import_button), description = null, onClick = onQuickImport)
+            SettingsRow(
+                title = stringResource(R.string.settings_quick_import_button),
+                description = null,
+                onClick = onQuickImport,
+                kind = SettingsRowKind.Action,
+            )
         }
         if (exportImportMessage != null) SettingsNote(exportImportMessage)
     }

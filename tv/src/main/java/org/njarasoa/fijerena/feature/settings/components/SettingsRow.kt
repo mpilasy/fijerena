@@ -18,6 +18,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -86,7 +87,9 @@ fun SettingsNote(
  * [onClick] — it opens the row's picker or page, it never changes the value itself (plan Part I,
  * B, T-6). [leading] holds an avatar or an icon; [supporting] replaces the description when the
  * row needs more than one line (the profile's sources and subscriptions, the app's build).
- * [trailing] replaces the value and the chevron (a glyph that tells what OK does).
+ * [trailing] replaces the value and the chevron (a glyph that tells what OK does). [kind] says
+ * what OK does: only a [SettingsRowKind.Navigation] row shows the chevron; a
+ * [SettingsRowKind.Action] row (it runs at once, after a confirm, or only shows a value) has none.
  */
 @Composable
 fun SettingsRow(
@@ -95,14 +98,14 @@ fun SettingsRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     value: String? = null,
-    chevron: Boolean = true,
+    kind: SettingsRowKind = SettingsRowKind.Navigation,
     enabled: Boolean = true,
     focusRequester: FocusRequester? = null,
     leading: (@Composable BoxScope.() -> Unit)? = null,
     supporting: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    val trailingText = listOfNotNull(value, if (chevron) "›" else null).joinToString(" ")
+    val trailingText = listOfNotNull(value, if (kind == SettingsRowKind.Navigation) "›" else null).joinToString(" ")
     TvInputListItem(
         selected = false,
         onClick = onClick,
