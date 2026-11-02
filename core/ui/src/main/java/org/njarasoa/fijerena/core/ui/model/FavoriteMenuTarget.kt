@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.model
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 
 /**
@@ -41,11 +42,15 @@ sealed class FavoriteMenuTarget {
     ) : FavoriteMenuTarget()
 }
 
-/** Display name and current favorite state, for building a confirm/toggle dialog. */
+/**
+ * Display name and current favorite state, for building a confirm/toggle dialog. A stream's name is
+ * the clean title its row shows ("The Matrix", not "4K-EN - The Matrix  (1999)": the row shows the year on its second line): a menu's title
+ * is the row's title.
+ */
 fun FavoriteMenuTarget.nameAndFavoriteState(): Pair<String, Boolean> =
     when (this) {
         is FavoriteMenuTarget.Category -> categoryName to isFavorite
-        is FavoriteMenuTarget.Stream -> itemName to isFavorite
+        is FavoriteMenuTarget.Stream -> parseDisplayTitle(itemName).titleWithoutYear.ifBlank { itemName } to isFavorite
     }
 
 fun MediaItem.toFavoriteMenuTarget(

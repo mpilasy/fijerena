@@ -115,7 +115,8 @@ fun MobilePersonScreen(
 
     Scaffold(
         topBar = {
-            MobileScreenHeader(title = shownName, onBack = onBack)
+            // No title in the bar: the page's heading names the person, once, as on TV.
+            MobileScreenHeader(title = "", onBack = onBack)
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground).padding(padding)) {

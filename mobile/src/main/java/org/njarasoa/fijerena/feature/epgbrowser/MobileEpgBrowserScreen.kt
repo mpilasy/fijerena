@@ -108,9 +108,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.ClearSearchHistoryDialog
 import org.njarasoa.fijerena.ui.components.MobileDayHeading
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
@@ -347,7 +347,7 @@ internal fun MobileGuideSearchPane(
 
         // "In <category> only" (GD5).
         if (contextName != null) {
-            CinemaCheckRow(
+            CinemaSwitchRow(
                 checked = inContextOnly,
                 onCheckedChange = { inContextOnly = it },
                 label = stringResource(R.string.epg_browser_in_category_only_format, contextName),
@@ -505,7 +505,10 @@ private fun MobileResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
-            MobileEmptyState(message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }))
+            MobileEmptyState(
+                message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
+                icon = CinemaIcons.Search,
+            )
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),

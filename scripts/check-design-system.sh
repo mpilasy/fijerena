@@ -382,6 +382,41 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(code_hits 'androidx\.compose\.material3\.(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|HorizontalDivider|Text|Icon|Slider|CircularProgressIndicator|LinearProgressIndicator)\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java || true)
 
+# Play and Trailer show the play icon, never a "▶" typed into a label (final phone walk, item 9).
+while IFS= read -r hit; do
+    echo "$hit: a ▶ glyph in a string — show the play icon (PlayButtonLabel on the phone, CinemaPrimaryButton(icon = CinemaIcons.PlayArrow) on TV)."
+    failures=$((failures + 1))
+done < <(grep -n '▶' core/*/src/main/res/values*/strings.xml tv/src/main/res/values*/strings.xml mobile/src/main/res/values*/strings.xml 2>/dev/null || true)
+
+# A phone page gives MobileScreenHeader its title as text (title =, subtitle =), so the Look sets
+# where it goes: the content form (a whole bar of its own) is for a tab root only
+# (MobileSourceTopBar.kt). A page that built its own title there was left at the start of the bar.
+while IFS= read -r hit; do
+    echo "$hit: MobileScreenHeader without a title — give title (and subtitle) as text; the content form is for a tab root only."
+    failures=$((failures + 1))
+done < <(python3 - mobile/src/main/java <<'PY' || true
+import pathlib
+import re
+import sys
+
+ALLOWED = {"MobileSourceTopBar.kt", "MobileScreenHeader.kt"}
+for path in sorted(pathlib.Path(sys.argv[1]).rglob("*.kt")):
+    if path.name in ALLOWED:
+        continue
+    text = path.read_text(encoding="utf-8")
+    for m in re.finditer(r"(?<![A-Za-z0-9_.])MobileScreenHeader\s*([({])", text):
+        args = ""
+        if m.group(1) == "(":
+            depth, i = 1, m.end()
+            while i < len(text) and depth:
+                depth += {"(": 1, ")": -1}.get(text[i], 0)
+                i += 1
+            args = text[m.end():i]
+        if not re.search(r"(?<![A-Za-z0-9_])title\s*=", args):
+            print(f"{path}:{text.count(chr(10), 0, m.start()) + 1}")
+PY
+)
+
 if [ "$failures" -gt 0 ]; then
     echo
     echo "$failures problem(s). Looks come from CinemaTheme and the style classes (see docs/plans/20261016_design-system-plan.md)."

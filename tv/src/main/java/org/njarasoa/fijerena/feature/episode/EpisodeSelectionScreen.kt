@@ -1189,6 +1189,7 @@ internal fun EpisodeListContent(
                             CinemaPrimaryButton(
                                 onClick = { playAnchor(false) },
                                 text = playNextLabel,
+                                icon = CinemaIcons.PlayArrow,
                                 modifier =
                                     Modifier
                                         .testTag(
@@ -1789,7 +1790,7 @@ private fun CompactEpisodesHeader(
             modifier = Modifier.weight(1f, fill = false),
         )
         // Main, as the hero's Play: one kind for the page's one main action.
-        CinemaPrimaryButton(onClick = onPlay, text = playLabel, modifier = playModifier)
+        CinemaPrimaryButton(onClick = onPlay, text = playLabel, modifier = playModifier, icon = CinemaIcons.PlayArrow)
     }
 }
 
@@ -1841,8 +1842,9 @@ private fun StreamNamePicker(
         ) {
             // The value's own font and start, as the other rows; the focus outline hugs it.
             CinemaText(text = currentName)
+            // The "opens a picker" mark of every row (Settings' ›).
             TvIcon(
-                imageVector = CinemaIcons.ArrowDropDown,
+                imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tone = TextTone.Primary,
             )
@@ -1855,9 +1857,11 @@ private fun StreamNamePicker(
                 selected = null,
                 onSelect = { alternate -> alternate?.let(onSelect) },
                 onDismiss = { expanded = false },
-                // With several sources, each copy's own (it opens there).
-                subtitle = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                // With several sources, each copy's own as the badge at the end of its name (it
+                // opens there), as on every row.
+                sourceName = { alternate -> alternate?.let { sourceNames[it.providerId] } },
                 labelIsName = true,
+                labelMaxLines = 2,
             )
         }
     }
@@ -2001,6 +2005,7 @@ private fun EpisodeDetailPanel(
                     CinemaPrimaryButton(
                         onClick = { onPlay(episode.id, episode.title, extension, false) },
                         text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                        icon = CinemaIcons.PlayArrow,
                         modifier = Modifier.focusRequester(playButtonFocusRequester).leftToRail(),
                     )
                     CinemaIconButton(
@@ -2017,6 +2022,7 @@ private fun EpisodeDetailPanel(
                     CinemaPrimaryButton(
                         onClick = { onPlay(episode.id, episode.title, extension, false) },
                         text = stringResource(R.string.series_play_episode_action),
+                        icon = CinemaIcons.PlayArrow,
                         modifier = Modifier.focusRequester(playButtonFocusRequester).leftToRail(),
                     )
                 }

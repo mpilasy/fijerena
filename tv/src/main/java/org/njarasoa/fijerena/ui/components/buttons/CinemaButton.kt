@@ -7,16 +7,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -49,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -173,20 +177,27 @@ fun CinemaTextLabelButton(
     kind: ButtonKind,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
 ) {
     CinemaButton(onClick = onClick, modifier = modifier, kind = kind, enabled = enabled) {
+        // An icon before the label (Play's ▶ as the play icon, never a text glyph).
+        if (icon != null) {
+            TvIcon(imageVector = icon, contentDescription = null)
+            Spacer(modifier = Modifier.width(Spacing.xs))
+        }
         CinemaText(text = text, role = TextRole.Label, tone = TextTone.Inherit, textAlign = TextAlign.Center)
     }
 }
 
-/** The screen's main action ([ButtonKind.Main]): Save, Add, Play. */
+/** The screen's main action ([ButtonKind.Main]): Save, Add, Play ([icon]: the play icon). */
 @Composable
 fun CinemaPrimaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) = CinemaTextLabelButton(onClick, text, ButtonKind.Main, modifier, enabled)
+    icon: ImageVector? = null,
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Main, modifier, enabled, icon)
 
 /** Any other action ([ButtonKind.Other]): Cancel, Back, Retry. */
 @Composable

@@ -86,6 +86,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.panelShape
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.sourceFilterLabel
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
@@ -708,9 +709,13 @@ private fun SearchFilterAction(
                                 onSelectSource(null)
                             }
                             for (source in sources) {
-                                Choice("${source.name} (${source.count})", selectedSource == source.providerId, check = false) {
-                                    onSelectSource(source.providerId)
-                                }
+                                // The source as the badge at the end of the row's label, as on every row.
+                                CinemaRadioRow(
+                                    selected = selectedSource == source.providerId,
+                                    onClick = { onSelectSource(source.providerId) },
+                                    label = sourceFilterLabel(source.name, source.count),
+                                    sourceName = source.name,
+                                )
                             }
                         }
                         if (facets.decades.isNotEmpty()) {
@@ -874,15 +879,9 @@ private fun SearchResults(
                 onClearAll = onClearHistory,
             )
         } else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CinemaText(
-                    text = stringResource(R.string.search_categories_streams_hint),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
+            // The prompt as every search pane's: the empty state with the Search icon.
+            Box(modifier = Modifier.fillMaxSize()) {
+                MobileEmptyState(message = stringResource(R.string.search_categories_streams_hint), icon = CinemaIcons.Search)
             }
         }
     } else if (!isSearching && categoryResults.isEmpty() && results.isEmpty() && notInSources.isEmpty() && notInSourcesError == null) {
@@ -941,7 +940,9 @@ private fun SearchResults(
                         Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                            // No side padding of its own: the pane pads its sides, so the chips
+                            // line up with the search field and the results.
+                            .padding(vertical = Spacing.xs),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     CinemaFilterChip(

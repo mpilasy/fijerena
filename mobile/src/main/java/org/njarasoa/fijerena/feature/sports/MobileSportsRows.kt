@@ -332,7 +332,7 @@ fun MobileTeamBell(
 /**
  * A game on Home's Upcoming Games row (the sports teams plan → Home row): both teams' logos, each
  * team's name on its own line (home first), the day and time, and its best channel (logo, name on
- * up to 2 lines). A tap opens the game's sheet.
+ * one line). A tap opens the game's sheet.
  */
 @Composable
 fun MobileUpcomingGameCard(
@@ -362,7 +362,8 @@ fun MobileUpcomingGameCard(
                 }
             }
             listOfNotNull(game.game.home, game.game.away).forEach { team ->
-                CinemaText(text = team.name, role = TextRole.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // The title role of every other Home card.
+                CinemaText(text = team.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CinemaText(
                 text = DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(start)),
@@ -386,7 +387,8 @@ fun MobileUpcomingGameCard(
                     text = best?.stream?.name?.let(::shownChannelName) ?: stringResource(R.string.sports_not_found),
                     role = TextRole.BodySmall,
                     tone = TextTone.Accent,
-                    maxLines = 2,
+                    // One line: two lines of a narrow card broke "AU (STAN 45)" into "AU" and "(ST…".
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )

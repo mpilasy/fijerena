@@ -142,6 +142,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
+import org.njarasoa.fijerena.ui.components.buttons.PlayButtonLabel
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
@@ -838,7 +839,7 @@ private fun EpisodeListContent(
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
                 // Two lines (phone UI audit, #3): what the button does with the episode's code
-                // ("▶ Resume S02E10 · 19:04 left", "▶ Play S01E01"), then the episode's own title
+                // (the play icon, then "Resume S02E10 · 19:04 left" or "Play S01E01"), then the episode's own title
                 // under it. No code when the provider numbers episodes 0.
                 val anchorOwnTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }
                 val anchorSeason = anchorEpisode?.seasonNumber ?: 1
@@ -890,13 +891,9 @@ private fun EpisodeListContent(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CinemaText(
-                            actionText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            role = TextRole.Label,
-                            tone = TextTone.Inherit,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PlayButtonLabel(actionText)
+                        }
                         anchorOwnTitle?.let {
                             CinemaText(
                                 text = it,
@@ -974,6 +971,8 @@ private fun EpisodeListContent(
                     selectedIndex = tabs.indexOf(selectedTab),
                     labels = tabs.map { seriesDetailTabLabel(it) },
                     onSelect = { pickedTab = tabs[it] },
+                    // Each tab as wide as its label: equal widths cut the longer ones ("Antsipi…").
+                    scrollable = true,
                 )
 
                 if (selectedTab == SeriesDetailTab.DETAILS) {
@@ -1191,8 +1190,9 @@ private fun StreamNamePicker(
                 tone = TextTone.Primary,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            // The "opens a picker" mark of every row (Settings' ›).
             CinemaIcon(
-                imageVector = CinemaIcons.ArrowDropDown,
+                imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tone = TextTone.Accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -1203,17 +1203,16 @@ private fun StreamNamePicker(
             // sources, each copy's own.
             SettingsPickerDialog(
                 title = stringResource(R.string.details_other_instances),
-                options =
-                    listOf(currentName to null) +
-                        alternates.map { alternate ->
-                            (sourceNames[alternate.providerId]?.let { "${alternate.name} · $it" } ?: alternate.name) to alternate
-                        },
+                options = listOf(currentName to null) + alternates.map { it.name to it },
                 selected = null,
                 onSelect = { alternate ->
                     expanded = false
                     alternate?.let(onSelect)
                 },
                 onDismiss = { expanded = false },
+                // Each copy's source as the badge at the end of its name, as on every row.
+                sourceName = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                labelMaxLines = 2,
             )
         }
     }
@@ -1361,62 +1360,46 @@ private fun EpisodeDetailContent(
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
         val hasResume = resumePositionMs > 0L
-        if (hasResume) {
-            val resumeTimeText = formatTime(resumePositionMs)
-            CinemaButton(
-                onClick = {
-                    onPlay(episode.id, episode.title, extension, false)
+        CinemaButton(
+            onClick = {
+                onPlay(episode.id, episode.title, extension, false)
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            PlayButtonLabel(
+                if (hasResume) {
+                    stringResource(R.string.movie_resume_from_format, formatTime(resumePositionMs))
+                } else {
+                    stringResource(R.string.series_play_episode_action)
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                CinemaText(
-                    stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
-                onClick = {
-                    onPlay(episode.id, episode.title, extension, true)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                CinemaText(
-                    stringResource(R.string.player_osd_start_over),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
-        } else {
-            CinemaButton(
-                onClick = {
-                    onPlay(episode.id, episode.title, extension, false)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                CinemaText(
-                    stringResource(R.string.series_play_episode_action),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
-            }
+            )
         }
 
-        // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
-        // carry one per series.
-        seriesDetail.metadata.trailerUrl?.let { trailer ->
+        // Start over and the trailer as the film and show pages offer them: icon actions under
+        // Play, the label in a tooltip. The trailer is the show's, not this episode's — Xtream
+        // and Jellyfin only ever carry one per series.
+        val trailer = seriesDetail.metadata.trailerUrl
+        if (hasResume || trailer != null) {
             val playTrailer = rememberPlayTrailer()
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
-                onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+            Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                CinemaText(
-                    stringResource(R.string.details_watch_trailer),
-                    role = TextRole.Label,
-                    tone = TextTone.Inherit,
-                )
+                if (hasResume) {
+                    DetailIconAction(
+                        icon = CinemaIcons.Replay,
+                        label = stringResource(R.string.player_osd_start_over),
+                        onClick = { onPlay(episode.id, episode.title, extension, true) },
+                    )
+                }
+                trailer?.let {
+                    DetailIconAction(
+                        icon = CinemaIcons.Movie,
+                        label = stringResource(R.string.details_watch_trailer),
+                        onClick = { playTrailer(it, seriesDetail.metadata.tmdbTrailerUrl) },
+                    )
+                }
             }
         }
 
@@ -1519,7 +1502,8 @@ private fun EpisodeDetailContent(
 }
 
 /**
- * One row of season pills; tapping one switches [selectedSeason]. Horizontally scrollable so a
+ * One row of season tabs (the current one marked by an accent bar under it, as the page's tabs);
+ * tapping one switches [selectedSeason]. Horizontally scrollable so a
  * long-running show's season count never wraps the row. The row runs to the screen's edges (out
  * through the list's side padding) with the pills inset by that padding, so the first pill lines
  * up with the content and the last ones slide off the edge — plainly a row that scrolls — rather
@@ -1548,6 +1532,8 @@ private fun SeasonTabs(
         if (!fullyShown) rowState.animateScrollToItem(selectedIndex)
     }
     val background = CinemaTheme.colors.background
+    val accent = CinemaTheme.colors.accent
+    val tabBar = MobileDimensions.tabIndicatorHeight
     val bleedStep = CinemaSpacing.md
     LazyRow(
         state = rowState,
@@ -1587,14 +1573,22 @@ private fun SeasonTabs(
             val isSelected = season.seasonNumber == selectedSeason
             // Long-press: the season's menu (mark it watched or unwatched).
             Box {
+                // A tab as the page's tabs and TV's season tabs: the label in the Heading role
+                // (TvInputDefaults.tabLabelRole), the current one in the text colour over an accent
+                // bar on its bottom edge. The accent fill with accent text was hard to read.
                 CinemaText(
                     text = stringResource(R.string.series_season_name_format, season.seasonNumber),
                     role = TextRole.Heading,
                     emphasis = isSelected,
-                    tone = if (isSelected) TextTone.Accent else TextTone.Secondary,
+                    tone = if (isSelected) TextTone.Primary else TextTone.Secondary,
                     modifier =
                         Modifier
-                            .panel(if (isSelected) PanelFill.Selected else PanelFill.Clear, PanelCorner.Card)
+                            .drawBehind {
+                                if (isSelected) {
+                                    val bar = tabBar.toPx()
+                                    drawRect(accent, topLeft = Offset(0f, size.height - bar), size = Size(size.width, bar))
+                                }
+                            }
                             // look-ok: a picker that opens its list, or a season tab, not a list row
                             .combinedClickable(
                                 role = Role.Button,

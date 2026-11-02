@@ -10,9 +10,9 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * A devices-list line for what a device is playing, on TV and mobile alike: "▶ Playing · Malcolm X
- * · 42:10 / 2:00:15 · Kid · My IPTV", "▶ Playing · The King of Queens S1:E12 · …", "▶ Live · BBC
- * World News — Newsday · Kid · My IPTV", "⏸ Paused · …". The programme is left out when the channel
+ * A devices-list line for what a device is playing, on TV and mobile alike: "Playing · Malcolm X
+ * · 42:10 / 2:00:15 · Kid · My IPTV", "Playing · The King of Queens S1:E12 · …", "Live · BBC
+ * World News — Newsday · Kid · My IPTV", "Paused · …". The programme is left out when the channel
  * has no guide data; the position (films and episodes) and the source when the sender didn't send
  * them. While it plays, the position runs on once a second from the sender's last report.
  */

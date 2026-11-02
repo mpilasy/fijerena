@@ -61,13 +61,18 @@ object MobileDimensions {
     /** A followed team or league in the Sports tab's row: its logo over its name, half a Home card. */
     val followedCardWidth: Dp = 80.dp
 
+    /** The bar under the current tab of a row of tabs drawn by hand (a show's seasons), as Material's tab indicator. */
+    val tabIndicatorHeight: Dp = 3.dp
+
+    /** A category chip on Live TV, Films and Shows at most: a longer name ends with "…". */
+    val categoryChipMaxWidth: Dp = 240.dp
+
     /** A film or show in a row of titles (PosterCard): 2:3 poster art this wide, about three a screen. */
     val posterCardWidth: Dp = 100.dp
 
     val streamThumbnailWidth: Dp = 96.dp
     val streamThumbnailHeight: Dp = 54.dp
     val channelSwipeThreshold: Dp = 56.dp
-    val detailActionMaxWidth: Dp = 96.dp
     val detailLabelWidth: Dp = 112.dp
     val minTouchTarget: Dp = 48.dp
 

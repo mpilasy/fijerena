@@ -786,10 +786,8 @@ fun EpgBrowserViewModel.UiState.Results.noResultsMessage(
     if (contextName != null) {
         androidx.compose.ui.res
             .stringResource(R.string.epg_browser_no_results_in_category_format, query, contextName)
-    } else if (matchedOnly) {
-        androidx.compose.ui.res
-            .stringResource(R.string.epg_browser_no_matched_results_format, query)
     } else {
+        // The one wording of every search's "no results" (Search's Catalogue and Teams too).
         androidx.compose.ui.res
-            .stringResource(R.string.epg_browser_no_results_format, query)
+            .stringResource(R.string.search_no_results_query_format, query)
     }

@@ -100,11 +100,14 @@ class CardLinesTest {
     }
 
     @Test
-    fun `the rating follows the source and is never dropped for the tags`() {
+    fun `the source ends the title line, the rating is never dropped for the tags`() {
         setCards(Card(LONG_TAGS, rating = "7.84"))
         composeTestRule.onNodeWithText("★ 7.8").assertExists()
-        val source = composeTestRule.onNodeWithContentDescription("XS4K", substring = true).getBoundsInRoot().left
-        assertTrue(source < leftOf("★ 7.8"))
+        // The source is the badge at the end of the title line, above the rating's line.
+        val source = composeTestRule.onNodeWithContentDescription("XS4K", substring = true).getBoundsInRoot()
+        val rating = composeTestRule.onNodeWithText("★ 7.8").getBoundsInRoot()
+        assertTrue(source.bottom <= rating.top)
+        assertTrue(source.left > leftOf("★ 7.8"))
         assertEquals(1, moreBadges().size)
         assertTrue(leftOf("★ 7.8") < leftOf(moreBadges().single()))
     }

@@ -6,6 +6,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.DateText
+import org.njarasoa.fijerena.core.ui.utils.nameRes
 
 /**
  * One source as the Sources list describes it under its name: its kind, and the subscription facts
@@ -31,7 +32,7 @@ fun sourceStatus(
     val info =
         if (type == ProviderType.XTREAM) AccountManager(context.applicationContext, entity.id).getAuthResponse()?.userInfo else null
     return SourceStatus(
-        type = type?.displayName ?: entity.type,
+        type = type?.let { context.getString(it.nameRes) } ?: entity.type,
         expiry = formatExpiryDate(context, info?.expDate),
         isExpired = info?.status?.equals("Expired", ignoreCase = true) == true,
         maxConnections = info?.maxConnections,

@@ -264,6 +264,11 @@
     <string name="provider_short_name_automatic">%1$s (automatique)</string>
     <string name="provider_short_name_taken">Une autre source utilise déjà %1$s</string>
     <string name="provider_type_label">Type de source</string>
+    <string name="source_type_xtream">Xtream IPTV</string>
+    <string name="source_type_local">Médias locaux</string>
+    <string name="source_type_smb">Partage réseau (SMB)</string>
+    <string name="source_type_jellyfin">Jellyfin</string>
+    <string name="source_type_remote_m3u">M3U distant</string>
     <string name="provider_url_label">URL du serveur</string>
     <string name="provider_username_label">Nom d\'utilisateur</string>
     <string name="provider_password_label">Mot de passe</string>
@@ -401,10 +406,10 @@
 
     <string name="movie_refresh_info">Actualiser les infos</string>
     <string name="movie_ends_at_format">Finit à %1$s</string>
-    <string name="movie_resume_from_format">▶ Reprendre à %1$s</string>
-    <string name="movie_play_action">▶ Lire le film</string>
+    <string name="movie_resume_from_format">Reprendre à %1$s</string>
+    <string name="movie_play_action">Lire le film</string>
     <string name="movie_director_format">Réalisateur : %1$s</string>
-    <string name="details_watch_trailer">▶ Bande-annonce</string>
+    <string name="details_watch_trailer">Bande-annonce</string>
     <string name="details_tmdb_format">TMDB : %1$s</string>
     <string name="details_tmdb_none">Aucun</string>
     <string name="details_open_other_copy">Ouvrir une autre version</string>
@@ -430,7 +435,7 @@
         <item quantity="one">%1$d épisode</item>
         <item quantity="other">%1$d épisodes</item>
     </plurals>
-    <string name="series_play_episode_action">▶ Lire l\'épisode</string>
+    <string name="series_play_episode_action">Lire l\'épisode</string>
     <string name="series_aired_format">Diffusé : %1$s</string>
     <string name="series_bitrate_format">Débit : %1$s kbps</string>
     <string name="series_loading_episodes">Chargement des épisodes…</string>
@@ -652,6 +657,8 @@
     <string name="device_info_section_display">Écran</string>
     <string name="device_info_version">Version</string>
     <string name="device_info_build">Build</string>
+    <string name="device_info_build_debug">version de débogage</string>
+    <string name="device_info_build_release">version publiée</string>
     <string name="device_info_installed">Installée le</string>
     <string name="device_info_updated">Mise à jour le</string>
     <string name="device_info_profile_sources">Sources du profil</string>
@@ -800,7 +807,7 @@
     <string name="player_stats_build_format">Build : %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Appareil : %1$s | Type : %2$s</string>
     <string name="epg_browser_index_stats_format">Index du guide : %1$s</string>
-    <string name="category_now_playing_badge">▶ Lecture en cours</string>
+    <string name="category_now_playing_badge">Lecture en cours</string>
     <string name="settings_ui_scale_section_title">Taille du texte et de la grille</string>
     <string name="settings_ui_scale_desc">Taille du texte et de tout ce qui est à l\'écran, sur chaque écran</string>
     <string name="settings_ui_scale_auto_format">Auto (%1$s)</string>
@@ -823,8 +830,6 @@
     <string name="category_recent_label">Récents</string>
     <string name="search_error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
     <string name="epg_error_file_too_large">Le guide est trop volumineux pour cette recherche. Essayez une recherche plus précise.</string>
-    <string name="epg_browser_no_matched_results_format">Aucun résultat correspondant pour « %1$s ».</string>
-    <string name="epg_browser_no_results_format">Aucun résultat trouvé pour « %1$s ».</string>
     <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
     <string name="epg_browser_busy_rebuilding_format">L\'index de recherche est en cours de reconstruction. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
     <string name="epg_browser_partial_results_note">Le guide est en cours de mise à jour : recherche plus lente, sur les titres seulement, qui peut manquer des programmes. Les résultats se mettront à jour à la fin.</string>
@@ -912,9 +917,9 @@
     <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu\'il a déjà reste dessus.</string>
     <string name="live_sync_share_playing">Partager ce qui est en lecture avec mon groupe de synchronisation</string>
     <string name="live_sync_share_playing_desc">Les appareils du groupe voient ce que cet appareil lit et quel profil regarde. Seul cet appareil le partage.</string>
-    <string name="live_sync_now_playing">▶ Lecture · %1$s</string>
-    <string name="live_sync_now_live">▶ En direct · %1$s</string>
-    <string name="live_sync_now_paused">⏸ En pause · %1$s</string>
+    <string name="live_sync_now_playing">Lecture · %1$s</string>
+    <string name="live_sync_now_live">En direct · %1$s</string>
+    <string name="live_sync_now_paused">En pause · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
     <string name="live_sync_now_progress">%1$s / %2$s</string>
@@ -972,6 +977,7 @@
     <string name="settings_group_this_device">Cet appareil</string>
     <string name="settings_group_admin">Administration</string>
     <string name="settings_group_admin_desc">Profils, contrôle parental, cet appareil, sources, synchronisation et sauvegardes</string>
+    <string name="settings_open_admin">Ouvrir l’administration</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
@@ -1081,8 +1087,8 @@
     <string name="episode_guest_stars">Invités</string>
     <string name="episode_series_cast">Distribution de la série</string>
     <string name="details_tab_details">Détails</string>
-    <string name="series_resume_episode_time_format">▶ Reprendre S%1$d:E%2$d (%3$s)</string>
-    <string name="series_play_episode_format">▶ Lire S%1$d:E%2$d</string>
+    <string name="series_resume_episode_time_format">Reprendre S%1$d:E%2$d (%3$s)</string>
+    <string name="series_play_episode_format">Lire S%1$d:E%2$d</string>
     <string name="series_episodes_header">Épisodes</string>
     <string name="series_next_up_title">À suivre</string>
     <string name="series_remaining_format">Reste %1$s</string>
@@ -1110,9 +1116,9 @@
     <string name="live_sync_server_hint">https://sync.exemple.com</string>
     <!-- Phase 6 -->
     <string name="details_action_more">Plus</string>
-    <string name="series_play_next_format">▶ Lire : %1$s</string>
+    <string name="series_play_next_format">Lire : %1$s</string>
     <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
-    <string name="series_resume_next_format">▶ Reprendre : %1$s (%2$s)</string>
+    <string name="series_resume_next_format">Reprendre : %1$s (%2$s)</string>
     <!-- Device info: media (P2) -->
     <string name="device_info_section_video_decoders">Décodeurs vidéo</string>
     <string name="device_info_section_audio">Sortie audio</string>
@@ -1124,7 +1130,7 @@
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">Dans %1$s uniquement</string>
-    <string name="epg_browser_no_results_in_category_format">Aucun résultat pour « %1$s » dans %2$s.</string>
+    <string name="epg_browser_no_results_in_category_format">Aucun résultat pour « %1$s » dans %2$s. Essayez d\'autres mots-clés.</string>
     <!-- Device info: network and power (P3) -->
     <string name="device_info_section_network">Réseau</string>
     <string name="device_info_section_power">Alimentation et arrière-plan</string>
@@ -1290,9 +1296,9 @@
     <string name="settings_diagnostics_clear_confirm_title">Effacer le journal ?</string>
     <!-- phone polish: details and episodes -->
     <string name="details_label_category">Catégorie :</string>
-    <string name="series_resume_code_left_format">▶ Reprendre S%1$02dE%2$02d · reste %3$s</string>
-    <string name="series_resume_code_from_format">▶ Reprendre S%1$02dE%2$02d · à %3$s</string>
-    <string name="series_play_code_format">▶ Lire S%1$02dE%2$02d</string>
+    <string name="series_resume_code_left_format">Reprendre S%1$02dE%2$02d · reste %3$s</string>
+    <string name="series_resume_code_from_format">Reprendre S%1$02dE%2$02d · à %3$s</string>
+    <string name="series_play_code_format">Lire S%1$02dE%2$02d</string>
     <!-- TV navigation rail -->
     <string name="tv_nav_rail_home">Accueil</string>
     <string name="home_title">Accueil</string>

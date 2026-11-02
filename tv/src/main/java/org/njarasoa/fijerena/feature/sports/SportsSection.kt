@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.CinemaWordLines
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -355,15 +356,9 @@ private fun FollowedCard(
                 contentDescription = null,
                 modifier = Modifier.size(TvDimensions.followedLogoSize),
             )
-            // Two lines on every tile, so a team's name is read, not cut to a few letters.
-            CinemaText(
-                text = item.name,
-                role = TextRole.Caption,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                minLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // Two lines on every tile, broken between words only ("Manchester" / "City"), so a team's
+            // name is read, not cut to a few letters.
+            CinemaWordLines(text = item.name, role = TextRole.Caption, textAlign = TextAlign.Center)
         }
     }
 }

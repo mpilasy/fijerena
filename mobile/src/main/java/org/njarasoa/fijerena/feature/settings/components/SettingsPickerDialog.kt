@@ -39,7 +39,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * [footer] is drawn under the list (the watch delay's custom field); [preview] is a small static
  * sample at an option's end (a colour theme's colours); [inLook] wraps an option's row (a Look's
  * row drawn in that Look). With [previewIn], a tap only marks an option: the dialog is drawn in
- * that option's theme, and OK saves it ([onSelect]); Cancel keeps the old one.
+ * that option's theme, and OK saves it ([onSelect]); Cancel keeps the old one. [sourceName] gives
+ * an option its source as the badge at the end of its label (a copy of a title); [labelMaxLines]
+ * cuts a long label with "…".
  */
 @Composable
 fun <T> SettingsPickerDialog(
@@ -52,6 +54,8 @@ fun <T> SettingsPickerDialog(
     preview: (@Composable (T) -> Unit)? = null,
     inLook: (@Composable (T, @Composable () -> Unit) -> Unit)? = null,
     previewIn: (@Composable (T, @Composable () -> Unit) -> Unit)? = null,
+    sourceName: (T) -> String? = { null },
+    labelMaxLines: Int = Int.MAX_VALUE,
 ) {
     var marked by remember { mutableStateOf(selected) }
     val checked = if (previewIn != null) marked else selected
@@ -76,6 +80,8 @@ fun <T> SettingsPickerDialog(
                                     },
                                 labelIsName = inLook != null,
                                 trailing = preview?.let { { it(value) } },
+                                sourceName = sourceName(value),
+                                labelMaxLines = labelMaxLines,
                             )
                         }
                         inLook?.invoke(value, row) ?: row()

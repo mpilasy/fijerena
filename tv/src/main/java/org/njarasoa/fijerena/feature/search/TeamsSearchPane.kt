@@ -185,7 +185,10 @@ internal fun TeamsSearchPane(
 
                 is TeamsSearchViewModel.State.Loaded -> {
                     if (shown.isEmpty) {
-                        TvEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
+                        TvEmptyState(
+                            message = stringResource(R.string.search_no_results_query_format, shown.query),
+                            icon = CinemaIcons.Search,
+                        )
                     } else {
                         val listState = rememberLazyListState()
                         val pinnedDay = rememberPinnedDayKey(listState)

@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -234,6 +235,7 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
+import org.njarasoa.fijerena.ui.components.scrollEdgeFade
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import kotlin.math.roundToInt
@@ -1668,7 +1670,8 @@ private fun CategoryChipRow(
             }
             LazyRow(
                 state = listState,
-                modifier = Modifier.weight(1f),
+                // The chip cut at an end fades out, not hard against the bin and guide icons.
+                modifier = Modifier.weight(1f).scrollEdgeFade(listState),
                 contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
@@ -1768,8 +1771,9 @@ private fun AllCategoriesDialog(
                             selected = category.key == selectedCategoryKey,
                             onClick = { onPick(category) },
                             label = category.name,
-                            // The source's name, as the badge on the chips (Expert mode only).
-                            supportingText = sourceNames[category.providerId],
+                            // The source as the badge at the end of the name, as on the chips
+                            // and every row (Expert mode only).
+                            sourceName = sourceNames[category.providerId],
                         )
                     }
                 }
@@ -1851,7 +1855,9 @@ private fun CategoryChip(
         }
     }
     val favoriteLabel = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add)
-    Box(modifier = modifier) {
+    // A width limit: the name's weight in the label needs one, or the name gets no room at all in
+    // the row that scrolls (the chips showed only their source badge).
+    Box(modifier = modifier.widthIn(max = MobileDimensions.categoryChipMaxWidth)) {
         CinemaFilterChip(
             selected = selected,
             onClick = {
@@ -2262,7 +2268,7 @@ private fun StreamsList(
                 }
                 rowMenu?.takeIf { onRemoveWanted != null }?.let { menu ->
                     ItemActionsDialog(
-                        title = menu.item.name,
+                        title = parseDisplayTitle(menu.item.name).titleWithoutYear.ifBlank { menu.item.name },
                         isFavorite = false,
                         onToggleFavorite = null,
                         onDismiss = { rowMenu = null },
@@ -2317,7 +2323,8 @@ private fun StreamsList(
                             }
                         }
                     ItemActionsDialog(
-                        title = parseDisplayTitle(item.name).title.ifBlank { item.name },
+                        // The row's own title: the year is on the row's second line.
+                        title = parseDisplayTitle(item.name).titleWithoutYear.ifBlank { item.name },
                         isFavorite = item.sourceKey in favoriteIds,
                         onToggleFavorite = { onToggleFavorite(item) },
                         onDismiss = { rowMenu = null },
@@ -2630,13 +2637,22 @@ internal fun StreamCard(
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
                 nowPlayingText?.let { text ->
-                    CinemaText(
-                        text = text,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        role = TextRole.BodySmall,
-                        tone = TextTone.Accent,
-                    )
+                    // The play icon, then "Playing": the mark is the icon, not a "▶" in the text.
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
+                        CinemaIcon(
+                            imageVector = CinemaIcons.PlayArrow,
+                            contentDescription = null,
+                            tone = TextTone.Accent,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                        CinemaText(
+                            text = text,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Accent,
+                        )
+                    }
                 }
                 // The second line: the title's badges, then the category,
                 // year · length · rating or the Now line.

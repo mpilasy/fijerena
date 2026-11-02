@@ -282,7 +282,8 @@ internal fun StreamList(
     val goneResources = LocalResources.current
     wantedMenuItem?.let { item ->
         TvActionMenu(
-            title = item.name,
+            // The row's own title: the year is on the row's second line.
+            title = parseDisplayTitle(item.name).titleWithoutYear.ifBlank { item.name },
             actions =
                 listOf(
                     MenuAction(icon = CinemaIcons.Delete, label = stringResource(R.string.wanted_remove), removal = true, onClick = {
@@ -972,7 +973,7 @@ internal fun StreamItem(
                         isCurrent = isCurrent,
                         isFocused = isFocused,
                         // Cut with an ellipsis at rest; the focused row scrolls its whole title.
-                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
                     )
                     // The source (Expert mode) ends the first line, in the same place on every row.

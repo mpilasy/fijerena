@@ -14,10 +14,12 @@ import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
+import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.utils.nameRes
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -98,19 +100,24 @@ private suspend fun appSection(
     val pkg = readOrNull { context.packageManager.getPackageInfo(context.packageName, 0) }
     val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     val providers = readOrNull { AppContainer.getInstance(context).providerRepository.getAllProvidersList() }
-    // The profile in use's sources, by type ("XTREAM 2 · JELLYFIN 1"): there is no source in use.
+    // The profile in use's sources, by kind in the app's language ("Xtream IPTV 2 · Jellyfin 1"):
+    // there is no source in use.
     val profileSources =
         readOrNull { AppContainer.getInstance(context).providerRepository.profileSourcesList() }
             ?.groupingBy { it.type }
             ?.eachCount()
             ?.entries
-            ?.joinToString(" · ") { (type, count) -> "$type $count" }
+            ?.joinToString(" · ") { (type, count) ->
+                val name = ProviderType.entries.firstOrNull { it.name == type }?.let { context.getString(it.nameRes) } ?: type
+                "$name $count"
+            }
+    val buildType = context.getString(if (debuggable) R.string.device_info_build_debug else R.string.device_info_build_release)
     val profiles = readOrNull { ProfileRepository(context).count() }
     return DeviceInfoSection(
         R.string.device_info_section_app,
         listOf(
             infoRow(R.string.device_info_version, pkg?.let { "${it.versionName} (${it.longVersionCode})" }),
-            infoRow(R.string.device_info_build, "$gitHash · $buildTime · ${if (debuggable) "debug" else "release"}"),
+            infoRow(R.string.device_info_build, "$gitHash · $buildTime · $buildType"),
             infoRow(R.string.device_info_installed, pkg?.let { formatDateTime(it.firstInstallTime) }),
             infoRow(R.string.device_info_updated, pkg?.let { formatDateTime(it.lastUpdateTime) }),
             infoRow(R.string.device_info_profile_sources, profileSources),

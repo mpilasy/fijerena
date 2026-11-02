@@ -264,6 +264,11 @@
     <string name="provider_short_name_automatic">%1$s (automatic)</string>
     <string name="provider_short_name_taken">Another source already uses %1$s</string>
     <string name="provider_type_label">Source type</string>
+    <string name="source_type_xtream">Xtream IPTV</string>
+    <string name="source_type_local">Local media</string>
+    <string name="source_type_smb">Network share (SMB)</string>
+    <string name="source_type_jellyfin">Jellyfin</string>
+    <string name="source_type_remote_m3u">Remote M3U</string>
     <string name="provider_url_label">Server URL</string>
     <string name="provider_username_label">Username</string>
     <string name="provider_password_label">Password</string>
@@ -402,10 +407,10 @@
 
     <string name="movie_refresh_info">Refresh film info</string>
     <string name="movie_ends_at_format">Ends at %1$s</string>
-    <string name="movie_resume_from_format">▶ Resume from %1$s</string>
-    <string name="movie_play_action">▶ Play film</string>
+    <string name="movie_resume_from_format">Resume from %1$s</string>
+    <string name="movie_play_action">Play film</string>
     <string name="movie_director_format">Director: %1$s</string>
-    <string name="details_watch_trailer">▶ Trailer</string>
+    <string name="details_watch_trailer">Trailer</string>
     <string name="details_watch_trailer_description">Watch trailer</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">None</string>
@@ -436,9 +441,9 @@
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>
     </plurals>
-    <string name="series_play_episode_action">▶ Play episode</string>
-    <string name="series_resume_episode_time_format">▶ Resume S%1$d:E%2$d (%3$s)</string>
-    <string name="series_play_episode_format">▶ Play S%1$d:E%2$d</string>
+    <string name="series_play_episode_action">Play episode</string>
+    <string name="series_resume_episode_time_format">Resume S%1$d:E%2$d (%3$s)</string>
+    <string name="series_play_episode_format">Play S%1$d:E%2$d</string>
     <string name="series_episodes_header">Episodes</string>
     <string name="series_aired_format">Aired: %1$s</string>
     <string name="series_bitrate_format">Bitrate: %1$s kbps</string>
@@ -674,6 +679,8 @@
     <string name="device_info_section_display">Display</string>
     <string name="device_info_version">Version</string>
     <string name="device_info_build">Build</string>
+    <string name="device_info_build_debug">debug build</string>
+    <string name="device_info_build_release">release build</string>
     <string name="device_info_installed">Installed</string>
     <string name="device_info_updated">Updated</string>
     <string name="device_info_profile_sources">Profile\'s sources</string>
@@ -832,7 +839,7 @@
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
     <string name="epg_browser_index_stats_format">Guide index: %1$s</string>
-    <string name="category_now_playing_badge">▶ Playing</string>
+    <string name="category_now_playing_badge">Playing</string>
     <string name="settings_ui_scale_section_title">Text &amp; Grid Size</string>
     <string name="settings_ui_scale_desc">Size of text and everything on screen, on every screen</string>
     <string name="settings_ui_scale_auto_format">Auto (%1$s)</string>
@@ -855,8 +862,6 @@
     <string name="category_recent_label">Recent</string>
     <string name="search_error_session_expired">Session expired. Please login again.</string>
     <string name="epg_error_file_too_large">The guide is too large to search this way. Try a more specific search.</string>
-    <string name="epg_browser_no_matched_results_format">No matched results for \"%1$s\".</string>
-    <string name="epg_browser_no_results_format">No results found for \"%1$s\".</string>
     <string name="epg_browser_busy_refreshing_format">The guide is updating. Your search for \"%1$s\" will run as soon as it\'s ready.</string>
     <string name="epg_browser_busy_rebuilding_format">The search index is being rebuilt. Your search for \"%1$s\" will run as soon as it\'s ready.</string>
     <string name="epg_browser_partial_results_note">The guide is updating: showing a slower title-only search, which may miss some programmes. Results refresh when the update is done.</string>
@@ -944,9 +949,9 @@
     <string name="live_sync_device_remove_message">It stops syncing right away. What it already has stays on it.</string>
     <string name="live_sync_share_playing">Share What\'s Playing with My Sync Group</string>
     <string name="live_sync_share_playing_desc">The group\'s devices see what this device is playing and which profile is watching. Only this device shares it.</string>
-    <string name="live_sync_now_playing">▶ Playing · %1$s</string>
-    <string name="live_sync_now_live">▶ Live · %1$s</string>
-    <string name="live_sync_now_paused">⏸ Paused · %1$s</string>
+    <string name="live_sync_now_playing">Playing · %1$s</string>
+    <string name="live_sync_now_live">Live · %1$s</string>
+    <string name="live_sync_now_paused">Paused · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
     <string name="live_sync_now_progress">%1$s / %2$s</string>
@@ -1004,6 +1009,7 @@
     <string name="settings_group_this_device">This Device</string>
     <string name="settings_group_admin">Admin</string>
     <string name="settings_group_admin_desc">Profiles, parental controls, this device, sources, sync and backups</string>
+    <string name="settings_open_admin">Open Admin</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>
@@ -1095,9 +1101,9 @@
     <string name="catchup_badge_days">%1$dd</string>
     <!-- Phase 6 -->
     <string name="details_action_more">More</string>
-    <string name="series_play_next_format">▶ Play: %1$s</string>
+    <string name="series_play_next_format">Play: %1$s</string>
     <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
-    <string name="series_resume_next_format">▶ Resume: %1$s (%2$s)</string>
+    <string name="series_resume_next_format">Resume: %1$s (%2$s)</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Channels</string>
     <string name="player_osd_next_episode">Next episode</string>
@@ -1122,7 +1128,7 @@
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">In %1$s only</string>
-    <string name="epg_browser_no_results_in_category_format">No results for \"%1$s\" in %2$s.</string>
+    <string name="epg_browser_no_results_in_category_format">No results found for \"%1$s\" in %2$s. Try different keywords.</string>
     <!-- Device info: network and power (P3) -->
     <string name="device_info_section_network">Network</string>
     <string name="device_info_section_power">Power and Background</string>
@@ -1287,9 +1293,9 @@
     <string name="settings_diagnostics_clear_confirm_title">Clear the Log?</string>
     <!-- phone polish: details and episodes -->
     <string name="details_label_category">Category:</string>
-    <string name="series_resume_code_left_format">▶ Resume S%1$02dE%2$02d · %3$s left</string>
-    <string name="series_resume_code_from_format">▶ Resume S%1$02dE%2$02d · from %3$s</string>
-    <string name="series_play_code_format">▶ Play S%1$02dE%2$02d</string>
+    <string name="series_resume_code_left_format">Resume S%1$02dE%2$02d · %3$s left</string>
+    <string name="series_resume_code_from_format">Resume S%1$02dE%2$02d · from %3$s</string>
+    <string name="series_play_code_format">Play S%1$02dE%2$02d</string>
     <!-- TV navigation rail -->
     <string name="tv_nav_rail_home">Home</string>
     <string name="home_title">Home</string>

@@ -8,10 +8,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 /** Whether source badges show: only while the profile in use has Expert mode (developer mode) on. */
@@ -71,3 +73,14 @@ fun rememberSourceName(providerId: Long): String? {
     }
     return name
 }
+
+/**
+ * The label of a filter's row for one source ("64 results"), whose source shows as the badge at the
+ * end of the label, as on every row. Without badges (Expert mode off) the name stays in the words:
+ * "bears (64)".
+ */
+@Composable
+fun sourceFilterLabel(
+    name: String,
+    count: Int,
+): String = if (LocalShowSourceBadges.current) pluralStringResource(R.plurals.search_results_count, count, count) else "$name ($count)"

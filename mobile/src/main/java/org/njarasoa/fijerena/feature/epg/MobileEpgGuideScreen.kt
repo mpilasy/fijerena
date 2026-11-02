@@ -161,8 +161,13 @@ fun MobileEpgGuideScreen(
     Scaffold(
         topBar = {
             MobileScreenHeader(
-                title = stringResource(R.string.epg_guide_header_title_format, categoryName),
-                subtitle = (state as? EpgViewModel.UiState.Ready)?.let { statusLine(it) },
+                // A short title, so the Look can centre it; the category goes under it, with the
+                // status line.
+                title = stringResource(R.string.common_tv_guide),
+                subtitle =
+                    listOfNotNull(categoryName.takeIf { it.isNotBlank() }, (state as? EpgViewModel.UiState.Ready)?.let { statusLine(it) })
+                        .joinToString(" · ")
+                        .ifEmpty { null },
                 onBack = onBack,
             ) {
                 IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))

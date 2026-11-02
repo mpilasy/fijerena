@@ -124,10 +124,9 @@ internal fun MobileTeamsSearchPane(
         modifier = Modifier.fillMaxWidth().padding(Spacing.md),
         placeholder = stringResource(R.string.search_teams_placeholder),
         leadingIcon = { CinemaIcon(imageVector = CinemaIcons.Search, contentDescription = null) },
+        // No spinner in the field: the pane's loading state below is the one sign of a search.
         trailingIcon = {
-            if (state is TeamsSearchViewModel.State.Loading) {
-                CinemaSpinner(modifier = Modifier.size(MobileDimensions.iconDefault))
-            } else if (query.isNotEmpty()) {
+            if (query.isNotEmpty()) {
                 IconAction(
                     onClick = {
                         onQueryChange("")
@@ -168,7 +167,10 @@ internal fun MobileTeamsSearchPane(
 
             is TeamsSearchViewModel.State.Loaded -> {
                 if (shown.isEmpty) {
-                    MobileEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
+                    MobileEmptyState(
+                        message = stringResource(R.string.search_no_results_query_format, shown.query),
+                        icon = CinemaIcons.Search,
+                    )
                 } else {
                     val cardColors = sportsCardColors()
                     LazyColumn(
