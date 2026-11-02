@@ -165,42 +165,18 @@ private fun <T> PickerColumn(
                 }
                 val preview = option.preview
                 val row: @Composable () -> Unit = {
-                    if (preview == null) {
-                        TvRadioRow(selected = selected, onClick = pick, label = option.label, modifier = rowModifier)
-                    } else {
-                        PickerPreviewRow(
-                            selected = selected,
-                            onClick = pick,
-                            label = option.label,
-                            preview = preview,
-                            modifier = rowModifier,
-                        )
-                    }
+                    // A row with a preview names a theme or a Look: a heading, where its title font shows.
+                    TvRadioRow(
+                        selected = selected,
+                        onClick = pick,
+                        label = option.label,
+                        modifier = rowModifier,
+                        labelIsName = preview != null,
+                        trailing = preview,
+                    )
                 }
                 option.inLook?.invoke(row) ?: row()
             }
         }
-    }
-}
-
-/** [TvRadioRow] with a trailing preview slot, which the shared row does not offer. */
-@Composable
-private fun PickerPreviewRow(
-    selected: Boolean,
-    onClick: () -> Unit,
-    label: String,
-    preview: @Composable () -> Unit,
-    modifier: Modifier,
-) {
-    TvInputListItem(
-        selected = selected,
-        onClick = onClick,
-        modifier = modifier,
-        leadingContent = {
-            CinemaRadioButton(selected = selected, onClick = null)
-        },
-        trailingContent = preview,
-    ) {
-        TvContentText(label, role = TextRole.Heading)
     }
 }

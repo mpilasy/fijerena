@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -320,16 +321,13 @@ fun MobileCategoryFilterDialog(
                 CinemaText(stringResource(R.string.provider_filter_script_title))
                 CinemaText(stringResource(R.string.provider_filter_script_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
                 ScriptType.entries.forEach { script ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CinemaCheckbox(
-                            checked = script in selectedScripts,
-                            onCheckedChange = { checked ->
-                                selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
-                            },
-                        )
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xxs))
-                        CinemaText(script.displayName)
-                    }
+                    CinemaCheckRow(
+                        checked = script in selectedScripts,
+                        onCheckedChange = { checked ->
+                            selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
+                        },
+                        label = script.displayName,
+                    )
                 }
             }
         },

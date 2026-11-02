@@ -59,6 +59,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonStack
@@ -427,13 +428,12 @@ private fun ShareNowPlayingRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
-        Column(Modifier.weight(1f)) {
-            CinemaText(stringResource(R.string.live_sync_share_playing))
-            CinemaText(stringResource(R.string.live_sync_share_playing_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
-        }
-        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange)
-    }
+    CinemaSwitchRow(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        label = stringResource(R.string.live_sync_share_playing),
+        supportingText = stringResource(R.string.live_sync_share_playing_desc),
+    )
 }
 
 /** Names a device for the whole group; empty goes back to its model's name. */

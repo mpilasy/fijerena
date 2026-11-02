@@ -26,7 +26,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -51,46 +51,17 @@ fun AudioTrackSelectorDialog(
                     tone = TextTone.Inherit,
                 )
             } else {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
-                ) {
-                    audioTracks.forEachIndexed { _, track ->
-                        CinemaChoiceRow(
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    audioTracks.forEach { track ->
+                        CinemaRadioRow(
+                            selected = track.isSelected,
                             onClick = {
                                 viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
                                 onDismiss()
                             },
-                            modifier = Modifier.fillMaxWidth(),
-                            selected = track.isSelected,
-                        ) {
-                            Column(modifier = Modifier.padding(Spacing.sm)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    CinemaText(
-                                        text = track.label,
-                                        role = TextRole.Body,
-                                        tone = TextTone.Inherit,
-                                        emphasis = track.isSelected,
-                                    )
-                                    if (track.isSelected) {
-                                        CinemaText(
-                                            text = stringResource(R.string.player_active),
-                                            role = TextRole.BodySmall,
-                                            tone = TextTone.Inherit,
-                                        )
-                                    }
-                                }
-                                CinemaText(
-                                    text = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
-                                    role = TextRole.BodySmall,
-                                    tone = TextTone.Secondary,
-                                )
-                            }
-                        }
+                            label = track.label,
+                            supportingText = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
+                        )
                     }
                 }
             }
@@ -114,78 +85,25 @@ fun SubtitleSelectorDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.player_select_subtitles),
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
-            ) {
-                CinemaChoiceRow(
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CinemaRadioRow(
+                    selected = !hasActiveSubtitle,
                     onClick = {
                         viewModel.disableSubtitles()
                         onDismiss()
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    selected = !hasActiveSubtitle,
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(Spacing.sm),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CinemaText(
-                            text = stringResource(R.string.common_off),
-                            role = TextRole.Body,
-                            tone = TextTone.Inherit,
-                            emphasis = !hasActiveSubtitle,
-                        )
-                        if (!hasActiveSubtitle) {
-                            CinemaText(
-                                text = stringResource(R.string.player_active),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                    }
-                }
-
-                subtitleTracks.forEachIndexed { _, track ->
-                    CinemaChoiceRow(
+                    label = stringResource(R.string.common_off),
+                )
+                subtitleTracks.forEach { track ->
+                    CinemaRadioRow(
+                        selected = track.isSelected,
                         onClick = {
                             viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        selected = track.isSelected,
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.sm)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CinemaText(
-                                    text = track.label,
-                                    role = TextRole.Body,
-                                    tone = TextTone.Inherit,
-                                    emphasis = track.isSelected,
-                                )
-                                if (track.isSelected) {
-                                    CinemaText(
-                                        text = stringResource(R.string.player_active),
-                                        role = TextRole.BodySmall,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                            CinemaText(
-                                text = track.mimeType.substringAfterLast("/").uppercase(),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
-                        }
-                    }
+                        label = track.label,
+                        supportingText = track.mimeType.substringAfterLast("/").uppercase(),
+                    )
                 }
             }
         },
@@ -208,88 +126,32 @@ fun QualitySelectorDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.player_select_quality),
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
-            ) {
-                CinemaChoiceRow(
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CinemaRadioRow(
+                    selected = !hasManualSelection,
                     onClick = {
                         viewModel.enableAutoQuality()
                         onDismiss()
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    selected = !hasManualSelection,
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.sm)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CinemaText(
-                                text = stringResource(R.string.player_quality_auto),
-                                role = TextRole.Body,
-                                tone = TextTone.Inherit,
-                                emphasis = !hasManualSelection,
-                            )
-                            if (!hasManualSelection) {
-                                CinemaText(
-                                    text = stringResource(R.string.player_active),
-                                    role = TextRole.BodySmall,
-                                    tone = TextTone.Inherit,
-                                )
-                            }
-                        }
-                        CinemaText(
-                            text = stringResource(R.string.player_quality_auto_subtitle),
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                    }
-                }
-
-                videoQualities.forEachIndexed { _, quality ->
-                    CinemaChoiceRow(
+                    label = stringResource(R.string.player_quality_auto),
+                    supportingText = stringResource(R.string.player_quality_auto_subtitle),
+                )
+                videoQualities.forEach { quality ->
+                    CinemaRadioRow(
+                        selected = quality.isSelected,
                         onClick = {
                             viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        selected = quality.isSelected,
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.sm)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CinemaText(
-                                    text = quality.label,
-                                    role = TextRole.Body,
-                                    tone = TextTone.Inherit,
-                                    emphasis = quality.isSelected,
-                                )
-                                if (quality.isSelected) {
-                                    CinemaText(
-                                        text = stringResource(R.string.player_active),
-                                        role = TextRole.BodySmall,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                            CinemaText(
-                                text =
-                                    stringResource(
-                                        R.string.player_quality_dimensions_format,
-                                        quality.width,
-                                        quality.height,
-                                        quality.frameRate.toInt(),
-                                    ),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
-                        }
-                    }
+                        label = quality.label,
+                        supportingText =
+                            stringResource(
+                                R.string.player_quality_dimensions_format,
+                                quality.width,
+                                quality.height,
+                                quality.frameRate.toInt(),
+                            ),
+                    )
                 }
             }
         },

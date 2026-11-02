@@ -28,7 +28,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**

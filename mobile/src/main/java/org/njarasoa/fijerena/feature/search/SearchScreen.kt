@@ -123,6 +123,8 @@ import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
@@ -685,21 +687,10 @@ private fun SearchFilterAction(
                             check: Boolean,
                             onClick: () -> Unit,
                         ) {
-                            Row(
-                                // look-ok: a hand-built check or radio row; the toggle row components replace it
-                                modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = Spacing.xxs),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                if (check) {
-                                    CinemaCheckbox(
-                                        checked = on,
-                                        onCheckedChange = null,
-                                    )
-                                } else {
-                                    CinemaRadioButton(selected = on, onClick = null)
-                                }
-                                Spacer(modifier = Modifier.width(Spacing.xs))
-                                CinemaText(label, modifier = Modifier.weight(1f))
+                            if (check) {
+                                CinemaCheckRow(checked = on, onCheckedChange = { onClick() }, label = label)
+                            } else {
+                                CinemaRadioRow(selected = on, onClick = onClick, label = label)
                             }
                         }
                         if (sources.isNotEmpty()) {

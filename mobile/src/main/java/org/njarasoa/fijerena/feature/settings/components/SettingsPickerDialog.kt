@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
@@ -31,6 +30,7 @@ import org.njarasoa.fijerena.core.ui.components.panelOutline
 import org.njarasoa.fijerena.core.ui.components.panelShape
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -63,30 +63,20 @@ fun <T> SettingsPickerDialog(
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     options.forEach { (label, value) ->
                         val row: @Composable () -> Unit = {
-                            Row(
+                            // A Look's name as a heading, where its title font shows (Cinema's serif).
+                            CinemaRadioRow(
+                                selected = value == checked,
+                                onClick = { if (previewIn != null) marked = value else onSelect(value) },
+                                label = label,
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .then(if (inLook != null) Modifier.lookOutline(value == checked) else Modifier)
-                                        // look-ok: a hand-built radio row; the toggle row components replace it
-                                        .clickable { if (previewIn != null) marked = value else onSelect(value) }
-                                        .padding(vertical = Spacing.sm)
-                                        .then(if (inLook != null) Modifier.padding(horizontal = Spacing.sm) else Modifier),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CinemaRadioButton(
-                                    selected = value == checked,
-                                    onClick = null, // handled by Row clickable
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                // A Look's name as a heading, where its title font shows (Cinema's serif).
-                                CinemaText(
-                                    text = label,
-                                    modifier = Modifier.weight(1f),
-                                    role = if (inLook != null) TextRole.Heading else TextRole.Body,
-                                )
-                                preview?.invoke(value)
-                            }
+                                    if (inLook != null) {
+                                        Modifier.lookOutline(value == checked).padding(horizontal = Spacing.sm)
+                                    } else {
+                                        Modifier
+                                    },
+                                labelIsName = inLook != null,
+                                trailing = preview?.let { { it(value) } },
+                            )
                         }
                         inLook?.invoke(value, row) ?: row()
                     }

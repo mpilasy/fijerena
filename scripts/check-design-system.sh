@@ -226,7 +226,7 @@ done || true)
 #     TV TvActionMenu). A form's own control (an inline Add) is marked `// look-ok: <reason>` on its line.
 #   - a colour given to a dialog (containerColor =, titleContentColor =, textContentColor = in a
 #     CinemaAlertDialog( call): the dialog takes its colours from the theme.
-#   - a Cancel row (onClick = onDismiss within 3 lines of a TvInputListItem( / TvOptionRow( call):
+#   - a Cancel row (onClick = onDismiss within 3 lines of a TvInputListItem( / TvRadioRow( call):
 #     Cancel is the dialog's cancel action, a button.
 #   - a raw drop-down (DropdownMenu, DropdownMenuItem, ExposedDropdownMenu…): a menu of actions is an
 #     action menu, one choice of a list is a picker dialog.
@@ -272,7 +272,7 @@ rm -f "${TMPDIR:-/tmp}/dialog-gate.$$"
 while IFS= read -r hit; do
     echo "$hit: a Cancel row — Cancel is the dialog's cancel action (DialogAction), not a row."
     failures=$((failures + 1))
-done < <(grep -rn -A3 --include='*.kt' -E '(^|[^A-Za-z0-9_])(TvInputListItem|TvOptionRow)\(' tv/src/main |
+done < <(grep -rn -A3 --include='*.kt' -E '(^|[^A-Za-z0-9_])(TvInputListItem|TvRadioRow)\(' tv/src/main |
     grep -E 'onClick[[:space:]]*=[[:space:]]*onDismiss([^A-Za-z0-9_]|$)' | grep -v '/ui/components/' |
     sed -E 's/^([^:]+)-([0-9]+)-.*/\1:\2/' || true)
 
@@ -314,6 +314,42 @@ done < <(find mobile/src/main/java -name '*.kt' -not -path '*/ui/components/*' |
         echo "$f"
     fi
 done)
+
+# Choice and toggle rows (docs/plans/20261101_consistency-round-2-plan.md, Phase 2):
+#   - a check box, radio or switch outside the components (ui/components, core/ui/components): a
+#     row of options is a toggle row (phone CinemaCheckRow / CinemaRadioRow / CinemaSwitchRow, TV
+#     TvCheckRow / TvRadioRow / TvSwitchRow), the whole row tappable. A card's own control is marked
+#     `// look-ok: <reason>` on its line or the line above.
+#   - TvOptionRow: retired; TvRadioRow is the TV's one single-choice row.
+#   - CinemaChoiceRow( with a trailing content lambda (best effort: `) {` on the call's line or on
+#     the line that closes its arguments): the row takes its label, icon and supporting text as data.
+while IFS= read -r hit; do
+    echo "$hit: a check box, radio or switch built into a row by hand — use CinemaCheckRow / CinemaRadioRow / CinemaSwitchRow (phone) or TvCheckRow / TvRadioRow / TvSwitchRow (TV)."
+    failures=$((failures + 1))
+done < <(code_hits '(^|[^A-Za-z0-9_])(CinemaCheckbox|CinemaRadioButton|CinemaSwitch)\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java |
+    grep -v '/ui/components/' || true)
+
+while IFS= read -r hit; do
+    echo "$hit: TvOptionRow is retired — use TvRadioRow, the one single-choice row."
+    failures=$((failures + 1))
+done < <(code_hits '(^|[^A-Za-z0-9_])TvOptionRow\(' tv/src/main/java || true)
+
+while IFS= read -r hit; do
+    echo "$hit: CinemaChoiceRow given content — give it label, icon and supportingText as data."
+    failures=$((failures + 1))
+done < <(find mobile/src/main/java -name '*.kt' | sort | while IFS= read -r f; do
+    awk '
+        $0 ~ /^[[:space:]]*(\/\/|\*|\/\*)/ { next }
+        /(^|[^A-Za-z0-9_])CinemaChoiceRow\(/ && !/fun CinemaChoiceRow/ {
+            open = FNR
+            if ($0 ~ /\)[[:space:]]*\{[[:space:]]*$/) { print FILENAME ":" FNR; open = 0 }
+            next
+        }
+        open > 0 && /^[[:space:]]*\)[[:space:]]*\{[[:space:]]*$/ { print FILENAME ":" FNR; open = 0; next }
+        open > 0 && /^[[:space:]]*\)[[:space:]]*$/ { open = 0 }
+        open > 0 && FNR - open > 40 { open = 0 }
+    ' "$f"
+done || true)
 
 if [ "$failures" -gt 0 ]; then
     echo

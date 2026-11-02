@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaRowDefaults
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 
 /**
  * Guide, for a source with live channels: an Xtream source's **Provides a guide** switch (plan
@@ -56,29 +57,17 @@ fun ColumnScope.ProviderGuideSection(
             ProviderSectionTitle(title = stringResource(R.string.provider_section_guide))
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             if (showProvidesGuide) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        CinemaText(stringResource(R.string.provider_provides_guide_label), role = TextRole.Heading)
-                        CinemaText(
-                            if (providerSettings.providesGuide == false && !providerSettings.providesGuideSetByUser) {
-                                stringResource(R.string.provider_provides_guide_detected_off_desc)
-                            } else {
-                                stringResource(R.string.provider_provides_guide_desc)
-                            },
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                    CinemaSwitch(
-                        checked = providerSettings.providesGuideOn,
-                        onCheckedChange = onProvidesGuideChange,
-                    )
-                }
+                CinemaSwitchRow(
+                    checked = providerSettings.providesGuideOn,
+                    onCheckedChange = onProvidesGuideChange,
+                    label = stringResource(R.string.provider_provides_guide_label),
+                    supportingText =
+                        if (providerSettings.providesGuide == false && !providerSettings.providesGuideSetByUser) {
+                            stringResource(R.string.provider_provides_guide_detected_off_desc)
+                        } else {
+                            stringResource(R.string.provider_provides_guide_desc)
+                        },
+                )
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
             }
             CinemaRow(

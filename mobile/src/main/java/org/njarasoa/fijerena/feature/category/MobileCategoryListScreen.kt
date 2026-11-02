@@ -214,6 +214,7 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaIconTab
 import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
 import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.CinemaTooltip
@@ -1758,17 +1759,12 @@ private fun AllCategoriesDialog(
                 }
                 LazyColumn {
                     items(shown, key = { it.key }) { category ->
-                        SettingsListRow(
-                            title = category.name,
-                            // The source's badge, as on the chips (Expert mode only).
-                            leading = sourceNames[category.providerId]?.let { name -> { SourceBadge(name) } },
-                            trailing =
-                                if (category.key == selectedCategoryKey) {
-                                    { CinemaIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) }
-                                } else {
-                                    {}
-                                },
+                        CinemaRadioRow(
+                            selected = category.key == selectedCategoryKey,
                             onClick = { onPick(category) },
+                            label = category.name,
+                            // The source's name, as the badge on the chips (Expert mode only).
+                            supportingText = sourceNames[category.providerId],
                         )
                     }
                 }

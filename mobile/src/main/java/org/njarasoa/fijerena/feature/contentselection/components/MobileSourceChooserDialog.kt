@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -39,22 +39,9 @@ fun MobileSourceChooserDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.source_chooser_title),
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
-            ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 sources.forEach { (id, name) ->
-                    CinemaChoiceRow(
-                        onClick = { onChosen(id) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        CinemaText(
-                            text = name,
-                            modifier = Modifier.padding(CinemaSpacing.md),
-                            role = TextRole.Heading,
-                            tone = TextTone.Inherit,
-                        )
-                    }
+                    CinemaRadioRow(selected = false, onClick = { onChosen(id) }, label = name, labelIsName = true)
                 }
             }
         },

@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -44,7 +43,6 @@ import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
 fun MobileChannelListSheet(
@@ -128,29 +126,14 @@ fun MobileChannelListSheet(
                         items(streams, key = { it.id }, contentType = { "channel" }) { stream ->
                             val isCurrentStream = stream.id == currentStreamId
                             CinemaChoiceRow(
+                                label = stream.name,
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier.fillMaxWidth(),
                                 selected = isCurrentStream,
+                                labelIsName = true,
                                 overMedia = true,
-                            ) {
-                                Row(
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = CinemaSpacing.md,
-                                            vertical = CinemaSpacing.sm,
-                                        ),
-                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    catchupDays[stream.id]?.let { CatchupBadge(it, iconSize = MobileDimensions.iconSmall) }
-                                    CinemaText(
-                                        text = stream.name,
-                                        maxLines = 1,
-                                        role = TextRole.Heading,
-                                        tone = TextTone.Primary,
-                                    )
-                                }
-                            }
+                                catchupDays = catchupDays[stream.id],
+                            )
                         }
                     }
                 }

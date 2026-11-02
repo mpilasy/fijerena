@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -331,6 +332,7 @@ private fun EpgSourceCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     val useLabel = stringResource(R.string.epg_source_use_label)
+                    // look-ok: card control: the switch turns the guide source on or off
                     CinemaSwitch(
                         checked = source.enabled,
                         onCheckedChange = onEnabledChange,
@@ -647,18 +649,11 @@ private fun EpgSourceEditDialog(
                     CinemaText(stringResource(R.string.epg_use_for_label), role = TextRole.Label, tone = TextTone.Secondary)
                     forSources.forEach { source ->
                         val checked = source.id in checkedFor
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                // look-ok: a hand-built check row; the toggle row components replace it
-                                Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox) { on ->
-                                    checkedFor = if (on) checkedFor + source.id else checkedFor - source.id
-                                },
-                        ) {
-                            CinemaCheckbox(checked = checked, onCheckedChange = null)
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            CinemaText(source.name, tone = TextTone.Inherit)
-                        }
+                        CinemaCheckRow(
+                            checked = checked,
+                            onCheckedChange = { on -> checkedFor = if (on) checkedFor + source.id else checkedFor - source.id },
+                            label = source.name,
+                        )
                     }
                 }
             }
