@@ -111,6 +111,20 @@ class ParentalListContentTest {
     }
 
     @Test
+    fun `holding OK puts the word back and removes no other word`() {
+        setList()
+        focus("pokemon")
+        press(Key.DirectionCenter)
+        assertEquals(listOf("doraemon", "naruto"), entries.toList())
+
+        composeTestRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter, HOLD_MS) }
+        composeTestRule.waitForIdle()
+
+        assertEquals(listOf("pokemon", "doraemon", "naruto"), entries.toList())
+        composeTestRule.onNodeWithText("pokemon").assertIsFocused()
+    }
+
+    @Test
     fun `the last word removed gives focus to the word before it`() {
         setList()
         focus("naruto")
@@ -139,3 +153,6 @@ class ParentalListContentTest {
         assertEquals(1, backs)
     }
 }
+
+/** Longer than the key repeat delay, so the press auto-repeats as a held remote key does. */
+private const val HOLD_MS = 1_500L

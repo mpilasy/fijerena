@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.claimFirstField
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -78,6 +79,8 @@ fun ReadOnlyFieldWithEdit(
     var isEditing by remember { mutableStateOf(false) }
     var editValue by remember(value) { mutableStateOf(value) }
     val editFocusRequester = remember { FocusRequester() }
+    // The first field of a dialog's form takes the dialog's first focus (DialogFirstField).
+    val firstFieldFocus = claimFirstField()
 
     // Committing or cancelling removes the text field from the composition entirely. Without
     // somewhere to hand focus back to, Compose drops it to the window root and the next D-pad
@@ -148,6 +151,7 @@ fun ReadOnlyFieldWithEdit(
                     .fillMaxWidth()
                     .focusRequester(returnFocusRequester)
                     .then(if (editButtonFocusRequester != null) Modifier.focusRequester(editButtonFocusRequester) else Modifier)
+                    .then(if (firstFieldFocus != null) Modifier.focusRequester(firstFieldFocus) else Modifier)
                     .semantics { contentDescription = editDescription },
             trailingContent = {
                 Row(verticalAlignment = Alignment.CenterVertically) {

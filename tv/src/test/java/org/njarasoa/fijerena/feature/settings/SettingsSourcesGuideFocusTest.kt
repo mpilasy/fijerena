@@ -57,6 +57,12 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Clear all data"),
             down("Clear all data"),
             up("Delete programmes over 2 days old"),
+            // The status above the actions is a focus stop: Up shows it, and Up there stays.
+            up("Delete leftover downloads"),
+            up("Database:"),
+            up("Database:"),
+            right("Database:"),
+            down("Delete leftover downloads"),
             // Back leaves the sub-pane onto its row, Back again returns to the rail.
             back("Guide Data Maintenance"),
             back("Admin"),

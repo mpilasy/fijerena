@@ -63,14 +63,15 @@ fun TvSelectableButton(
         onClick = onSelect,
         modifier = modifier,
         enabled = enabled,
-        shape = SelectableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
+        shape = SelectableSurfaceDefaults.shape(shape = if (tab) CinemaTheme.shapes.chip else cornerShape(CornerRadius.small)),
         colors =
             SelectableSurfaceDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTheme.colors.textPrimary,
+                // A tab has the one tab look: no fill at rest, its label alone (tabChipFill).
+                containerColor = if (tab) CinemaTheme.colors.clear else TvFocusTokens.restingContainer,
+                contentColor = if (tab) CinemaTheme.colors.textSecondary else CinemaTheme.colors.textPrimary,
                 focusedContainerColor = TvFocusTokens.focusFill,
                 focusedContentColor = TvFocusTokens.onFocusFill,
-                selectedContainerColor = TvFocusTokens.restingContainer,
+                selectedContainerColor = if (tab) CinemaTheme.colors.clear else TvFocusTokens.restingContainer,
                 selectedContentColor = TvFocusTokens.currentText,
                 focusedSelectedContainerColor = TvFocusTokens.focusFill,
                 focusedSelectedContentColor = TvFocusTokens.onFocusFill,

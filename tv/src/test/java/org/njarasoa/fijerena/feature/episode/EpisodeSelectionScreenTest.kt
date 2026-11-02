@@ -319,6 +319,22 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
+     * Menu (or a held OK) on an episode row opens its action menu, as on every other row, with
+     * focus on Mark as watched; it used to mark the episode at once with no menu.
+     */
+    @Test
+    fun menuOnAnEpisodeOpensItsActionMenu() {
+        setLongSeries(initialEpisodeId = "s3e10")
+        composeTestRule.onNodeWithTag("episode_s3e10").assertIsFocused()
+
+        composeTestRule.onNodeWithTag("episode_s3e10").performKeyInput { pressKey(Key.Menu) }
+        composeTestRule.waitForIdle()
+
+        val markWatched = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.watched_mark)
+        composeTestRule.onNodeWithText(markWatched).assertIsFocused()
+    }
+
+    /**
      * Opened on an episode (an actor's line, Continue Watching), one Back returns to the control
      * that opened the screen (focus contract, rule 6) while no other key has been pressed; it took
      * two, the first only moving focus to the tab row.

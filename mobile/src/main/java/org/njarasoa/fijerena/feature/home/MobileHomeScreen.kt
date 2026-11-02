@@ -330,7 +330,7 @@ fun MobileHomeScreen(
                         listOfNotNull(
                             menu.isShowWatched?.let { showWatched ->
                                 MenuAction(
-                                    if (showWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                    if (showWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                                     stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
                                 ) {
                                     val seriesId = menu.showSeriesId
@@ -356,7 +356,7 @@ fun MobileHomeScreen(
                             },
                             // A film marked watched leaves Continue Watching: a removal, with its Undo.
                             menu.watchedFilmId?.takeIf { menu.canMarkWatched }?.let { filmId ->
-                                MenuAction(CinemaIcons.Visibility, stringResource(R.string.watched_mark)) {
+                                MenuAction(CinemaIcons.MarkWatched, stringResource(R.string.watched_mark)) {
                                     if (lists != null) {
                                         val repo = lists.repoFor(menu.providerId)
                                         wantedScope.launchGuarded("Home.markWatched") {

@@ -139,7 +139,6 @@ import org.njarasoa.fijerena.ui.components.SavedCopyNote
 import org.njarasoa.fijerena.ui.components.WishlistRemovePrompt
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.buttons.PlayButtonLabel
@@ -618,10 +617,41 @@ private fun EpisodeListContent(
     }
     // The season whose long-press menu is open, with whether all its episodes are watched.
     var seasonMenu by remember { mutableStateOf<Pair<Int, Boolean?>?>(null) }
+    // The episode whose action menu is open (a long press on its row).
+    var episodeMenu by remember { mutableStateOf<DomainEpisodeItem?>(null) }
     val openSeasonMenu: (Int) -> Unit = { season ->
         watchedToggleScope.launch {
             seasonMenu = season to mediaRepository.episodesWatchState(seriesDetail.id, season)
         }
+    }
+    episodeMenu?.let { episode ->
+        val nowWatched = episode.id in watchedEpisodeIds
+        CinemaActionMenu(
+            title =
+                episodeOwnTitle(episode.title).ifBlank {
+                    stringResource(R.string.series_episode_number_short, episode.episodeNumber)
+                },
+            actions =
+                listOf(
+                    MenuAction(
+                        icon = if (nowWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
+                        label = stringResource(if (nowWatched) R.string.watched_unmark else R.string.watched_mark),
+                        onClick = {
+                            // Manual watched/unwatched mark (Phase 6, the watch state durable storage
+                            // plan). Optimistic: flips this episode's own badge at once; the full
+                            // re-read after the write catches a TMDB sibling this mark completed too
+                            // (Phase 5) and restores the resume bar on an unmark.
+                            watchedEpisodeIds =
+                                if (nowWatched) watchedEpisodeIds - episode.id else watchedEpisodeIds + episode.id
+                            watchedToggleScope.launch {
+                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, !nowWatched)
+                                refreshEpisodeWatchState()
+                            }
+                        },
+                    ),
+                ),
+            onDismiss = { episodeMenu = null },
+        )
     }
     seasonMenu?.let { (season, allWatched) ->
         CinemaActionMenu(
@@ -629,7 +659,7 @@ private fun EpisodeListContent(
             actions =
                 listOf(
                     MenuAction(
-                        icon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+                        icon = if (allWatched == true) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                         label = stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
                         onClick = { markEpisodesWatched(season, allWatched != true) },
                     ),
@@ -1037,26 +1067,9 @@ private fun EpisodeListContent(
                     onClick = {
                         onEpisodeSelected(episode)
                     },
-                    onToggleWatched =
-                        if (mediaRepository.supportsMarkWatched) {
-                            {
-                                // Manual watched/unwatched mark (Phase 6,
-                                // the watch state durable storage plan). Optimistic: flips this
-                                // episode's own badge immediately rather than waiting on the write;
-                                // the full re-read after it lands is what catches a TMDB sibling this
-                                // mark just completed too (Phase 5) and restores the resume bar on an
-                                // unmark — a single-item patch would miss both.
-                                val nowWatched = episode.id !in watchedEpisodeIds
-                                watchedEpisodeIds =
-                                    if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                                watchedToggleScope.launch {
-                                    mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                    refreshEpisodeWatchState()
-                                }
-                            }
-                        } else {
-                            null
-                        },
+                    // A long press opens the episode's action menu, as on every other row.
+                    // Not where the source keeps watched state on its server (Jellyfin).
+                    onLongClick = if (mediaRepository.supportsMarkWatched) ({ episodeMenu = episode }) else null,
                 )
             }
         }
@@ -1608,10 +1621,12 @@ private fun EpisodeCard(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     onClick: () -> Unit,
-    onToggleWatched: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     CinemaCard(
         onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = onLongClick?.let { stringResource(R.string.row_more_actions) },
         modifier = Modifier.fillMaxWidth(),
         border =
             if (isContinueWatching) {
@@ -1659,24 +1674,8 @@ private fun EpisodeCard(
                         role = TextRole.Label,
                         tone = TextTone.Secondary,
                     )
-                    // Watched toggle (Phase 6, the watch state durable storage plan): the
-                    // badge itself is the tap target, since CinemaCard's onClick already owns the
-                    // rest of the row for playing the episode.
-                    // No toggle where the source keeps watched state on its server: the check only shows.
-                    if (onToggleWatched != null) {
-                        CinemaIconButton(
-                            onClick = onToggleWatched,
-                            icon = {
-                                CinemaIcon(
-                                    imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                    contentDescription =
-                                        if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                                    tone = if (isWatched) TextTone.Success else TextTone.Secondary,
-                                    modifier = Modifier.size(MobileDimensions.iconSmall),
-                                )
-                            },
-                        )
-                    } else if (isWatched) {
+                    // The watched check only shows; the row's long press marks it (its action menu).
+                    if (isWatched) {
                         CinemaIcon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),

@@ -23,6 +23,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,39 @@ class DialogAction(
     val focusRequester: FocusRequester? = null,
     val onClick: () -> Unit,
 )
+
+/**
+ * The first input in a dialog's body (a form's first field). A dialog whose body has an input opens
+ * with focus on it, not on Cancel or a Save that is still disabled: the input claims this in
+ * composition ([claimFirstField]) and the dialog lands its first focus there, unless the caller gives
+ * `initialFocus`. Each app's field components claim it; a screen does nothing.
+ */
+class DialogFirstField {
+    val requester = FocusRequester()
+
+    var claimed = false
+        private set
+
+    /** True for the first input that asks, false for every later one. */
+    fun claim(): Boolean {
+        val first = !claimed
+        claimed = true
+        return first
+    }
+}
+
+/** The dialog's [DialogFirstField] inside its body; null outside a dialog. */
+val LocalDialogFirstField = staticCompositionLocalOf<DialogFirstField?> { null }
+
+/**
+ * For an input component: the [DialogFirstField] requester when this input is the first in a
+ * dialog's body, else null. Put it on the input's focus target.
+ */
+@Composable
+fun claimFirstField(): FocusRequester? {
+    val firstField = LocalDialogFirstField.current
+    return remember(firstField) { firstField?.takeIf { it.claim() }?.requester }
+}
 
 /** Draws one dialog button of [ButtonKind] in the app's own button look. */
 typealias DialogActionButton = @Composable (action: DialogAction, kind: ButtonKind, modifier: Modifier) -> Unit
@@ -118,6 +152,8 @@ fun CinemaAlertDialog(
             else -> listOfNotNull(main, cancel) + others
         }?.firstOrNull { it.enabled }
     val buttonFocusRequester = remember { FocusRequester() }
+    // A form (a body with an input) opens on its first input, not on a button: see [DialogFirstField].
+    val firstField = remember { DialogFirstField() }
     val actionArea: @Composable () -> Unit = {
         DialogActionArea(actions, tokens.actions, actionButton) { action ->
             Modifier
@@ -130,9 +166,15 @@ fun CinemaAlertDialog(
         // still, so retry each frame until the request takes (an unattached requester returns
         // false, it doesn't throw). Same shape as the TV app's requestFocusWithRetry, which
         // core:ui can't depend on.
-        val target = initialFocus ?: buttonFocusRequester.takeIf { focusedAction != null } ?: return@LaunchedEffect
+        // The body's first input claims its place while the dialog window composes, so the target
+        // is read again on each try.
+        val target = {
+            initialFocus
+                ?: firstField.requester.takeIf { firstField.claimed }
+                ?: buttonFocusRequester.takeIf { focusedAction != null }
+        }
         var frames = 0
-        while (!target.requestFocus(FocusDirection.Enter) && frames < FOCUS_RETRY_MAX_FRAMES) {
+        while (target()?.requestFocus(FocusDirection.Enter) != true && frames < FOCUS_RETRY_MAX_FRAMES) {
             withFrameNanos { }
             frames++
         }
@@ -187,7 +229,10 @@ fun CinemaAlertDialog(
                                 // fill = false so a short body stays short, but a long one yields
                                 // rather than pushing the buttons off the bottom of the screen.
                                 Box(Modifier.weight(1f, fill = false)) {
-                                    CompositionLocalProvider(LocalContentColor provides textContentColor) {
+                                    CompositionLocalProvider(
+                                        LocalContentColor provides textContentColor,
+                                        LocalDialogFirstField provides firstField,
+                                    ) {
                                         ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                     }
                                 }
@@ -238,7 +283,10 @@ fun CinemaAlertDialog(
                                     Spacer(Modifier.height(CinemaSpacing.xs))
                                 }
                                 text?.let {
-                                    CompositionLocalProvider(LocalContentColor provides textContentColor) {
+                                    CompositionLocalProvider(
+                                        LocalContentColor provides textContentColor,
+                                        LocalDialogFirstField provides firstField,
+                                    ) {
                                         ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                     }
                                 }
@@ -275,7 +323,10 @@ fun CinemaAlertDialog(
                         text?.let {
                             // A long body (a long picker list) yields, so the buttons stay on screen.
                             Box(Modifier.weight(1f, fill = false)) {
-                                CompositionLocalProvider(LocalContentColor provides textContentColor) {
+                                CompositionLocalProvider(
+                                    LocalContentColor provides textContentColor,
+                                    LocalDialogFirstField provides firstField,
+                                ) {
                                     ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                 }
                             }

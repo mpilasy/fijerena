@@ -2,9 +2,11 @@
 
 package org.njarasoa.fijerena.feature.contentselection.components
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -47,11 +50,13 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * row (`NavReturnFocus.requesterWhere`). Back rebuilds Home, so the restorer remembers no card, and
  * its fallback took the hand-back from the card to the row's first card.
  *
- * [leading]: one more item before the cards (a Trending chart row's switch), the row's first. It
- * takes the rail's Left, and Left on the first card goes to it; focus coming into the row still
- * lands on the first card. With it, the row shows even with no card, and it takes the row's focus.
- * [emptyText]: said after the leading item while the row has no card ("None in your sources" on a
- * person's page); not a focus stop, the leading item beside it is.
+ * [leading]: a control in the row's header, after its title (a Trending chart row's switch), so
+ * the cards start where every other row's cards start. It takes the rail's Left, Left on the first
+ * card goes to it, and Right or Down on it goes to the cards; focus coming into the row from above
+ * or below still lands on the cards. With it, the row shows even with no card, and it takes the
+ * row's focus then.
+ * [emptyText]: said in the cards' place while the row has no card ("None in your sources" on a
+ * person's page); not a focus stop, the header's control is.
  *
  * Focus coming into the row brings the whole row into view, its title too: the card's own request
  * scrolled Home only as far as the card, and the title stayed under the header.
@@ -71,24 +76,32 @@ fun <T> HomeRow(
 ) {
     if (items.isEmpty() && leading == null) return
     val leadingFocus = remember { FocusRequester() }
-    val offset = if (leading != null) 1 else 0
-    val lastIndex = items.size - 1 + offset
-    // [index]: the place in the row, the leading item included.
+    val cardsFocus = remember { FocusRequester() }
+    val lastIndex = items.size - 1
+    // [index]: the card's place in the row.
     val placed: (Int) -> Modifier = { index ->
-        // The row's focus: its first card, else the leading item alone.
-        val takesRowFocus = index == offset || (index == 0 && items.isEmpty())
         Modifier
-            .then(if (takesRowFocus) Modifier.focusRequester(firstItemFocus) else Modifier)
-            .then(if (index == 0 && leading != null) Modifier.focusRequester(leadingFocus) else Modifier)
-            .then(if (index == 0) Modifier.leftToRail() else Modifier)
+            .then(if (index == 0) Modifier.focusRequester(firstItemFocus) else Modifier)
+            .then(if (index == 0 && leading == null) Modifier.leftToRail() else Modifier)
             // leftToRail is outside these, so it wins while the rail shows; without
-            // one, Left on the first item stays put.
+            // one, Left on the first card stays put (or goes to the header's control).
             .focusProperties {
-                if (index == 0) left = FocusRequester.Cancel
-                if (index == 1 && leading != null) left = leadingFocus
+                if (index == 0) left = if (leading != null) leadingFocus else FocusRequester.Cancel
                 if (index == lastIndex) right = FocusRequester.Cancel
             }
     }
+    val leadingModifier =
+        Modifier
+            .then(if (items.isEmpty()) Modifier.focusRequester(firstItemFocus) else Modifier)
+            .focusRequester(leadingFocus)
+            .leftToRail()
+            .focusProperties {
+                left = FocusRequester.Cancel
+                if (items.isNotEmpty()) {
+                    right = cardsFocus
+                    down = cardsFocus
+                }
+            }
     val rowInView = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     Column(
@@ -96,39 +109,55 @@ fun <T> HomeRow(
             Modifier
                 .bringIntoViewRequester(rowInView)
                 .then(modifier)
-                .onFocusChanged { if (it.hasFocus) scope.launch { rowInView.bringIntoView() } },
+                .onFocusChanged { if (it.hasFocus) scope.launch { rowInView.bringIntoView() } }
+                .then(
+                    if (leading != null && items.isNotEmpty()) {
+                        // A D-pad move into the row lands on the cards, not on the header's control,
+                        // which is nearer to a move down from the row above.
+                        Modifier
+                            .focusProperties {
+                                onEnter = {
+                                    val direction = requestedFocusDirection
+                                    val vertical = direction == FocusDirection.Down || direction == FocusDirection.Up
+                                    if (vertical && !cardsFocus.requestFocus(FocusDirection.Enter)) cancelFocusChange()
+                                }
+                            }.focusGroup()
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
-        CinemaText(
-            text = title,
-            // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.
-            role = TextRole.Title,
-            tone = TextTone.Primary,
-            modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
-        )
-        LazyRow(
-            state = listState,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            contentPadding = PaddingValues(horizontal = Spacing.xxs),
-            // The cards are all one height; a smaller leading item sits level with their middle.
+        Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.focusRestorer(restoreFocus ?: firstItemFocus),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
         ) {
-            if (leading != null) item(key = LEADING_KEY) { leading(placed(0)) }
-            if (items.isEmpty() && leading != null && emptyText != null) {
-                item(key = EMPTY_KEY) { CinemaText(text = emptyText, tone = TextTone.Secondary) }
+            CinemaText(
+                text = title,
+                // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.
+                role = TextRole.Title,
+                tone = TextTone.Primary,
+            )
+            leading?.invoke(leadingModifier)
+        }
+        if (items.isEmpty()) {
+            if (emptyText != null) {
+                CinemaText(text = emptyText, tone = TextTone.Secondary, modifier = Modifier.padding(start = Spacing.xxs))
             }
-            itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
-                itemContent(item, placed(index + offset))
+        } else {
+            LazyRow(
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                contentPadding = PaddingValues(horizontal = Spacing.xxs),
+                modifier = Modifier.focusRequester(cardsFocus).focusRestorer(restoreFocus ?: firstItemFocus),
+            ) {
+                itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
+                    itemContent(item, placed(index))
+                }
             }
         }
     }
 }
-
-/** The leading item's key: no card's key (a source and an id) looks like it. */
-private const val LEADING_KEY = "homeRow:leading"
-
-/** The empty row's text: shown only with no card, so its key never meets a card's. */
-private const val EMPTY_KEY = "homeRow:empty"
 
 /**
  * The Menu key on a Home card opens its actions, as long-press OK does (row actions, CONTRIBUTING.md →

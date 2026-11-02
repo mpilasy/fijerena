@@ -47,7 +47,7 @@ fun FavoriteContextMenuDialog(
     val watchedAction =
         if (onToggleWatched != null && isWatched != null) {
             MenuAction(
-                icon = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
+                icon = if (isWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                 label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                 onClick = onToggleWatched,
             )
@@ -58,7 +58,7 @@ fun FavoriteContextMenuDialog(
         onToggleShowWatched?.let { toggle ->
             val showWatched = streamTarget?.isShowWatched == true
             MenuAction(
-                icon = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
+                icon = if (showWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                 label = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
                 onClick = toggle,
             )

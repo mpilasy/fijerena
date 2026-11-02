@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -54,6 +55,8 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -102,12 +105,21 @@ fun GuideMaintenancePane(
     LaunchedEffect(Unit) { cleanupFocus.requestFocusWithRetry() }
 
     SettingsSubPane(title = stringResource(R.string.settings_guide_maintenance_title), onBack = onBack) {
-        GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
-        CinemaText(
-            stringResource(R.string.epg_maintenance_desc),
-            role = TextRole.BodySmall,
-            tone = TextTone.Secondary,
-        )
+        // The status is a focus stop (rule 3: Up/Down never skip content), so Up from Cleanup
+        // shows it again after the pane scrolled; OK on it does nothing.
+        TvCard(onClick = {}, modifier = Modifier.fillMaxWidth(), look = TvCardLooks.infoBlock()) {
+            Column(
+                modifier = Modifier.padding(Spacing.md.scaled(scale)),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+            ) {
+                GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
+                CinemaText(
+                    stringResource(R.string.epg_maintenance_desc),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
+                )
+            }
+        }
         CinemaSecondaryButton(
             onClick = { viewModel.cleanupFiles() },
             text = stringResource(R.string.epg_cleanup_btn),

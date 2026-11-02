@@ -1543,14 +1543,14 @@ internal fun MobileSearchFavoriteDialog(
             listOfNotNull(
                 onToggleWatched?.let { toggle ->
                     MenuAction(
-                        icon = if (isWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                        icon = if (isWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                         label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                         onClick = toggle,
                     )
                 },
                 onToggleShowWatched?.let { toggle ->
                     MenuAction(
-                        icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                        icon = if (isShowWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                         label = showWatchedLabel,
                         onClick = toggle,
                     )

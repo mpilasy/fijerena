@@ -38,10 +38,10 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -74,8 +74,10 @@ fun TvCreditsTabContent(
                 ) {
                     line.people.forEachIndexed { index, person ->
                         val key = RETURN_CREW_PREFIX + line.role.name + ":" + person.personId
-                        CinemaSecondaryButton(
-                            onClick = {
+                        // A name is a chip, the chip of Search's filters (TvSelectableButton), never selected.
+                        TvSelectableButton(
+                            selected = false,
+                            onSelect = {
                                 returnFocus.leaveFrom(key)
                                 onPersonSelected(person.personId, person.name, true)
                             },

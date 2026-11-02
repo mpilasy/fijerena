@@ -1174,6 +1174,7 @@ private fun SearchResultsList(
                     } else {
                         stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
                     },
+                icon = CinemaIcons.Search,
                 actionLabel = widen?.let { stringResource(R.string.search_everything) },
                 onAction = widen?.let { { it(query) } },
                 takeFocus = false,

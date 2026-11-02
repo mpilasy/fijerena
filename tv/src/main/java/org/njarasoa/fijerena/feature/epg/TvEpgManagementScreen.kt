@@ -34,7 +34,6 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -57,6 +56,7 @@ import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -66,7 +66,6 @@ import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
 import org.njarasoa.fijerena.ui.components.input.TvSwitchButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
-import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -735,32 +734,28 @@ private fun EpgSourceEditDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                CinemaTextField(
+                // The same text entry as every other form: a value row, OK opens the keyboard.
+                // The first one takes the dialog's first focus (DialogFirstField).
+                ReadOnlyFieldWithEdit(
                     value = url,
                     onValueChange = { url = it },
                     label = stringResource(R.string.epg_xmltv_url_label),
                     keyboardOptions = FieldKeyboards.Url,
-                    supportingText = stringResource(R.string.epg_xmltv_url_hint),
-                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
-                    singleLine = true,
                 )
-                CinemaTextField(
+                FieldNote(stringResource(R.string.epg_xmltv_url_hint))
+                ReadOnlyFieldWithEdit(
                     value = label,
                     onValueChange = { label = it },
                     label = stringResource(R.string.epg_label_optional),
                     keyboardOptions = FieldKeyboards.Name,
-                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
-                    singleLine = true,
                 )
-                CinemaTextField(
+                ReadOnlyFieldWithEdit(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = stringResource(R.string.epg_timezone_label),
                     keyboardOptions = FieldKeyboards.SignedNumber,
-                    supportingText = stringResource(R.string.epg_timezone_hint),
-                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
-                    singleLine = true,
                 )
+                FieldNote(stringResource(R.string.epg_timezone_hint))
                 if (initialSource == null && forSources.size > 1) {
                     CinemaText(stringResource(R.string.epg_use_for_label), role = TextRole.Label, tone = TextTone.Secondary)
                     forSources.forEach { source ->
@@ -774,4 +769,10 @@ private fun EpgSourceEditDialog(
             }
         },
     )
+}
+
+/** A field's note under its row in a form (what to type, the usual value). */
+@Composable
+private fun FieldNote(text: String) {
+    CinemaText(text, role = TextRole.BodySmall, tone = TextTone.Secondary, modifier = Modifier.padding(horizontal = Spacing.md))
 }

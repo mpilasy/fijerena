@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -39,11 +38,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.TvInputDefaults
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
-import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.components.modifiers.tabChipFill
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -80,8 +78,9 @@ fun TvSectionTabs(
     endFocusRequester: FocusRequester? = null,
     firstTabModifier: Modifier = Modifier,
     /**
-     * An icon per tab (null: the label as text). A tab with an icon shows the icon alone and its
-     * label only while focused, as TV icon buttons do; [tabs] stays its accessible name.
+     * An icon per tab (null: the label as text). A tab with an icon shows the icon and its label
+     * while selected or focused, the icon alone otherwise (the row must fit a list's pane); [tabs]
+     * stays its accessible name.
      */
     icons: List<ImageVector?> = emptyList(),
 ) {
@@ -155,9 +154,7 @@ private fun SectionTab(
     }
 
     // P5: the selected tab keeps the resting look and is marked by a bottom accent bar plus
-    // accent text; only focus lifts the container.
-    val containerColor = if (isFocused) TvFocusTokens.focusFill else CinemaTheme.colors.clear
-
+    // accent text; only focus fills the tab (tabChipFill, the one tab look).
     val textTone =
         when {
             isFocused -> TextTone.OnFocus
@@ -178,12 +175,9 @@ private fun SectionTab(
                     scaleY = focusScale
                 }.currentIndicator(
                     active = isSelected,
-                    shape = cornerShape(CornerRadius.medium),
+                    shape = CinemaTheme.shapes.chip,
                     edge = CurrentIndicatorEdge.Bottom,
-                ).background(
-                    color = containerColor,
-                    shape = cornerShape(CornerRadius.medium),
-                )
+                ).tabChipFill(isFocused)
                 // No separate .focusable(): .clickable() below already creates a focus target.
                 .onFocusChanged { isFocused = it.isFocused }
                 .clickable { onSelected() }
@@ -208,11 +202,12 @@ private fun SectionTab(
             ) {
                 TvIcon(
                     imageVector = icon,
-                    contentDescription = if (isFocused) null else label,
+                    contentDescription = if (isFocused || isSelected) null else label,
                     tone = textTone,
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                 )
-                if (isFocused) text()
+                // The selected tab names itself too, so the row says which list shows.
+                if (isFocused || isSelected) text()
             }
         }
     }
