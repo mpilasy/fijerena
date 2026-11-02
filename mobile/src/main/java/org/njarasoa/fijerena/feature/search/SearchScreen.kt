@@ -190,6 +190,8 @@ fun MobileSearchScreen(
     initialGuideTab: Boolean = false,
     // The source chosen in the search brought along (MobileNavHost.openInSectionTab).
     initialSource: Long? = null,
+    // Opened on the Teams tab: the Sports tab's Find Teams.
+    initialTeamsTab: Boolean = false,
     // A Guide tab result: its channel, as Search the guide opens it.
     onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
     // A person found by the People type: their actor page (the people search plan).
@@ -241,7 +243,7 @@ fun MobileSearchScreen(
     var arrived by rememberSaveable { mutableStateOf(false) }
     if (!arrived) {
         arrived = true
-        SearchSession.arrive(initialQuery, initialTypeFilter, initialSource, initialGuideTab)
+        SearchSession.arrive(initialQuery, initialTypeFilter, initialSource, initialGuideTab, initialTeamsTab)
     }
     var searchQuery by SearchSession::query
     var selectedTab by SearchSession::tab

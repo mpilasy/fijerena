@@ -29,7 +29,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             right("Edit Name / Name / Guest"),
             down("Colour"),
             // OK on Colour opens its picker on the current colour; Left closes it on the row.
-            center("Colour 2"),
+            center("Red"),
             left("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / Off"),
             down("UI Theme"),

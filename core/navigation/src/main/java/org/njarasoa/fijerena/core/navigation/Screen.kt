@@ -225,12 +225,14 @@ sealed interface Screen {
     data class Search(
         val contentType: String,
         val initialQuery: String? = null,
-        // Phone: a section's Search opens "ALL" with this section's filter chip selected.
+        // TV and phone: a section's Search opens "ALL" with this section's filter chip selected.
         val initialTypeFilter: String? = null,
         // Phone: opened on its Guide tab, [initialQuery] run there (a Guide result's search, brought along).
         val initialGuideTab: Boolean = false,
         // Phone: the source chosen in the search brought along (a source's providerId), null for every source.
         val initialSource: Long? = null,
+        // TV and phone: opened on its Teams tab (the Sports section's Find Teams).
+        val initialTeamsTab: Boolean = false,
     ) : Screen
 
     /**

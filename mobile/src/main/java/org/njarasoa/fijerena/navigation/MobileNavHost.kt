@@ -544,6 +544,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             initialQuery = searchScreen.initialQuery,
             initialGuideTab = searchScreen.initialGuideTab,
             initialSource = searchScreen.initialSource,
+            initialTeamsTab = searchScreen.initialTeamsTab,
             onStreamSelected = { itemId, itemName, categoryId, contentType, providerId ->
                 val screen =
                     when (contentType) {
@@ -789,7 +790,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 // and Find Teams open Search on its Teams type.
                 composable<Screen.SportsTab> {
                     tabRoot(MobileTab.SPORTS) {
-                        val findTeams = { leaveTabRoot { navController.navigateToSearch(teamsSearch(appSettings.activeProfileId)) } }
+                        val findTeams = { leaveTabRoot { navController.navigateToSearch(teamsSearch()) } }
                         MobileSportsSectionScreen(
                             sourceTopBar = { sourceTopBar(MobileTab.SPORTS)(findTeams) },
                             onTeamSelected = { navController.navigateOnce(it) },

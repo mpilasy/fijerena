@@ -25,7 +25,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -205,12 +208,34 @@ fun TvDetailHero(
             }
 
             if (sideSlot != null) {
+                // A soft scrim behind the side slot, from its end edge: its text stays legible on
+                // busy or bright art, as the left scrim does for the text column.
+                val sideScrimColors =
+                    remember(palette.background) {
+                        listOf(
+                            palette.background.copy(alpha = CinemaAlpha.osdTextScrimDeep),
+                            palette.background.copy(alpha = CinemaAlpha.scrim),
+                            palette.background.copy(alpha = CinemaAlpha.none),
+                        )
+                    }
                 Box(
                     modifier =
                         Modifier
                             .align(Alignment.TopEnd)
                             .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical)
-                            .belowTvClock(),
+                            .belowTvClock()
+                            .drawBehind {
+                                drawRect(
+                                    brush =
+                                        Brush.radialGradient(
+                                            colors = sideScrimColors,
+                                            center = Offset(size.width, size.height / 2),
+                                            radius = size.width * SIDE_SCRIM_RADIUS,
+                                        ),
+                                    topLeft = Offset(size.width - size.width * SIDE_SCRIM_RADIUS, -size.height),
+                                    size = Size(size.width * SIDE_SCRIM_RADIUS * 2, size.height * 3),
+                                )
+                            },
                 ) {
                     sideSlot()
                 }
@@ -221,6 +246,9 @@ fun TvDetailHero(
 
 /** The hero's share of a full 16:9 screen height: the rest is where the tab row peeks in. */
 private const val HERO_HEIGHT_FRACTION = 0.82f
+
+/** The radius of the scrim behind the hero's side slot, as a share of the slot's width. */
+private const val SIDE_SCRIM_RADIUS = 1.1f
 
 /** Where the hero's top scrim ends: the clock's band, clear below this fraction. */
 private const val TOP_FADE_END = 0.25f
