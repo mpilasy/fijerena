@@ -129,9 +129,19 @@ fun Modifier.tabChipFill(isFocused: Boolean): Modifier =
         shape = CinemaTheme.shapes.chip,
     )
 
-/** The resting ground of a row made of several focus stops (a source row and its buttons). */
+/**
+ * The resting ground of a row made of several focus stops (a source row and its buttons), and the
+ * rows' white focus outline around the whole row while its main stop [isFocused]: the ring covers
+ * the full row, buttons included, as on every other row.
+ */
 @Composable
-fun Modifier.restingRowGround(): Modifier = background(TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
+fun Modifier.restingRowGround(isFocused: Boolean = false): Modifier =
+    background(TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
+        .border(
+            width = TvFocusTokens.focusBorderWidth,
+            color = if (isFocused) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
+            shape = cornerShape(CornerRadius.small),
+        )
 
 private data class TvFocusableElement(
     val focusScale: Float,

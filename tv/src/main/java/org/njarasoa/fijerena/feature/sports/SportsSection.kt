@@ -61,6 +61,7 @@ import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
+import org.njarasoa.fijerena.ui.components.TvDayHeading
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -293,13 +294,9 @@ fun SportsSectionScreen(
                             }
                             for (day in days) {
                                 stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
-                                    CinemaText(
+                                    TvDayHeading(
                                         text = DateText.dayLabel(resources, day.date),
-                                        tone = TextTone.Secondary,
-                                        modifier =
-                                            Modifier
-                                                .dayHeadingBand(pinnedDay == "day:${day.date}")
-                                                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                                        pinned = pinnedDay == "day:${day.date}",
                                     )
                                 }
                                 for (game in day.games) {
@@ -358,7 +355,15 @@ private fun FollowedCard(
                 contentDescription = null,
                 modifier = Modifier.size(TvDimensions.followedLogoSize),
             )
-            CinemaText(text = item.name, role = TextRole.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Two lines on every tile, so a team's name is read, not cut to a few letters.
+            CinemaText(
+                text = item.name,
+                role = TextRole.Caption,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

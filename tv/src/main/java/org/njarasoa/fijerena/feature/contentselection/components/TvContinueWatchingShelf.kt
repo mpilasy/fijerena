@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.components.CardBadgeLine
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -145,7 +146,6 @@ private fun TvContinueWatchingCard(
                 CinemaProgressBar(progress = { item.progress }, modifier = Modifier.fillMaxWidth().height(TvDimensions.resumeBarHeight))
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
-                // The provider's "EN - " tag as a badge on the second line, as in the lists.
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -161,6 +161,8 @@ private fun TvContinueWatchingCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // The source (Expert mode) ends the title line, as on the list rows.
+                    sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()
                 }
@@ -184,11 +186,9 @@ private fun TvContinueWatchingCard(
                             stringResource(R.string.series_remaining_format, timeLeft)
                         }
                     }
-                // One line: the source (Expert mode, SourceBadge); Home shows no title tags.
+                // One line: Home shows no title tags.
                 CardBadgeLine(
                     parsed = null,
-                    sourceName = sourceName,
-                    providerId = item.providerId,
                     modifier = Modifier.heightIn(min = rememberBadgeHeight()),
                 ) {
                     CinemaText(text = subtitleLine, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)

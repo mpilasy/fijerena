@@ -13,6 +13,7 @@ class MediaInfoTest {
         when (this) {
             is UiText.DynamicString -> value
             is UiText.StringResource -> "res:$resId" + args.joinToString("") { "|$it" }
+            is UiText.PluralResource -> "plurals:$resId:$count" + args.joinToString("") { "|$it" }
         }
 
     private fun res(

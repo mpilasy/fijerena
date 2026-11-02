@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -148,10 +149,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
+import org.njarasoa.fijerena.ui.components.ClearSearchHistoryDialog
 import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
+import org.njarasoa.fijerena.ui.components.TvLoadingState
 import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
@@ -473,7 +476,7 @@ fun SearchScreen(
                     }
                     when (val state = uiState) {
                         is SearchViewModel.UiState.Loading -> {
-                            LoadingView(message = state.message)
+                            TvLoadingState(message = state.message ?: stringResource(R.string.search_loading_categories))
                         }
 
                         is SearchViewModel.UiState.Error -> {
@@ -642,6 +645,7 @@ private fun SearchTabRow(
                             SearchTab.GUIDE -> R.string.search_tab_guide
                         },
                     ),
+                tab = true,
                 modifier =
                     Modifier
                         .focusRequester(tabFocus.getValue(tab))
@@ -763,28 +767,6 @@ private fun GuideTab(
 }
 
 @Composable
-private fun LoadingView(message: String? = null) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            CinemaSpinner(modifier = Modifier.size(TvDimensions.iconXLarge))
-            CinemaText(
-                text =
-                    message ?: androidx.compose.ui.res
-                        .stringResource(org.njarasoa.fijerena.core.ui.R.string.search_loading_categories),
-                role = TextRole.Title,
-                tone = TextTone.Secondary,
-            )
-        }
-    }
-}
-
-@Composable
 private fun SearchContent(
     query: String,
     // The field's text, shared with the Guide tab.
@@ -886,6 +868,23 @@ private fun SearchContent(
     LaunchedEffect(Unit) {
         if (returnFocus.key == null && !holdFocus && !editing) searchFocusRequester.requestFocusWithRetry()
     }
+    // Clearing the recent searches asks first; after a clear, the bin is gone and focus goes to
+    // the field.
+    var confirmClearHistory by remember { mutableStateOf(false) }
+    var historyClears by remember { mutableIntStateOf(0) }
+    LaunchedEffect(historyClears) {
+        if (historyClears > 0) searchFocusRequester.requestFocusWithRetry()
+    }
+    if (confirmClearHistory) {
+        ClearSearchHistoryDialog(
+            onConfirm = {
+                confirmClearHistory = false
+                onClearHistory()
+                historyClears++
+            },
+            onDismiss = { confirmClearHistory = false },
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TvSearchField(
@@ -921,7 +920,7 @@ private fun SearchContent(
                         onHistoryItemClick(term)
                     },
                     onItemRemove = onHistoryItemRemove,
-                    onClearAll = onClearHistory,
+                    onClearAll = { confirmClearHistory = true },
                     firstItemFocusRequester = historyFocusRequester,
                     fieldFocusRequester = searchFocusRequester,
                 )
@@ -1162,15 +1161,7 @@ private fun SearchResultsList(
     }
 
     if (isSearching && categoryResults.isEmpty() && results.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            MitadyLoading(
-                role = TextRole.Display,
-                tone = TextTone.Accent,
-            )
-        }
+        TvLoadingState()
     } else if (catalogueEmpty && notInSources.isEmpty() && notInSourcesError == null) {
         Box(modifier = Modifier.fillMaxSize()) {
             // A section's Search (from its rail item) found nothing: one press widens it. The

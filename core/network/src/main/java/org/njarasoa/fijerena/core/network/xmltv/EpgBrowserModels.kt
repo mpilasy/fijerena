@@ -145,13 +145,14 @@ fun freshnessLabel(
             ageSec < 86_400 -> context.getString(R.string.epg_freshness_hours_ago_format, ageSec / 3600)
             else -> context.getString(R.string.epg_freshness_days_ago_format, ageSec / 86_400)
         }
-    val staleSuffix =
-        if (staleSourceCount > 0) context.getString(R.string.epg_freshness_stale_suffix_format, staleSourceCount) else ""
-    val neverRunSuffix =
-        if (neverRunSourceCount > 0) {
-            context.getString(R.string.epg_freshness_never_run_suffix_format, neverRunSourceCount)
-        } else {
-            ""
-        }
-    return context.getString(R.string.epg_freshness_updated_format, ageLabel) + staleSuffix + neverRunSuffix
+    // The parts are joined here, with a space each side of the dot: a leading space in a string
+    // resource is dropped, and "ago• 1 stale" was shown.
+    val res = context.resources
+    val parts =
+        listOfNotNull(
+            context.getString(R.string.epg_freshness_updated_format, ageLabel),
+            staleSourceCount.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.epg_freshness_stale_count, it, it) },
+            neverRunSourceCount.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.epg_freshness_never_run_count, it, it) },
+        )
+    return parts.joinToString(" • ")
 }

@@ -63,8 +63,10 @@ import org.njarasoa.fijerena.feature.sports.TvGameBell
 import org.njarasoa.fijerena.feature.sports.TvGameRow
 import org.njarasoa.fijerena.feature.sports.TvSportsHeading
 import org.njarasoa.fijerena.feature.sports.TvSportsItemRow
+import org.njarasoa.fijerena.ui.components.TvDayHeading
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
+import org.njarasoa.fijerena.ui.components.TvLoadingState
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
@@ -170,9 +172,7 @@ internal fun TeamsSearchPane(
                 }
 
                 is TeamsSearchViewModel.State.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        MitadyLoading(role = TextRole.Display, tone = TextTone.Accent)
-                    }
+                    TvLoadingState()
                 }
 
                 is TeamsSearchViewModel.State.Failed -> {
@@ -297,10 +297,9 @@ private fun LazyListScope.bestGameRows(
             }
             for (day in gamesByDay(games.games)) {
                 stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
-                    TvSportsHeading(
-                        DateText.dayLabel(LocalResources.current, day.date),
-                        modifier =
-                            Modifier.dayHeadingBand(pinnedDay == "best_day:${day.date}"),
+                    TvDayHeading(
+                        text = DateText.dayLabel(LocalResources.current, day.date),
+                        pinned = pinnedDay == "best_day:${day.date}",
                     )
                 }
                 for (game in day.games) {

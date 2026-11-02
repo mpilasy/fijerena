@@ -482,7 +482,12 @@ class EpgManagementViewModel(
             _hasStrayFiles.value = false
             if (result.filesDeleted > 0) {
                 _userMessage.tryEmit(
-                    UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)),
+                    UiText.PluralResource(
+                        R.plurals.epg_cache_cleaned,
+                        result.filesDeleted,
+                        result.filesDeleted,
+                        NumberUtils.formatBytes(result.bytesFreed),
+                    ),
                 )
             } else {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
@@ -517,7 +522,7 @@ class EpgManagementViewModel(
             refreshDbStats()
             refreshMaintenanceState()
             if (deleted > 0) {
-                _userMessage.tryEmit(UiText.StringResource(R.string.epg_purged_programmes, deleted))
+                _userMessage.tryEmit(UiText.PluralResource(R.plurals.epg_purged_programmes, deleted, deleted))
             } else {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_old_programmes))
             }

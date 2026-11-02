@@ -405,20 +405,19 @@ private fun MovieDetailsContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
+                        if (hasResume) {
+                            DetailIconAction(
+                                icon = CinemaIcons.Replay,
+                                label = stringResource(R.string.player_osd_start_over),
+                                onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
+                            )
+                        }
                         DetailIconAction(
                             icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                             label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                             onClick = onToggleFavorite,
                             tone = if (isFavorite) TextTone.Accent else TextTone.Primary,
                         )
-                        if (wishlist != null) {
-                            DetailIconAction(
-                                icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
-                                label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
-                                onClick = wishlist.toggle,
-                                tone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
-                            )
-                        }
                         // None where the source keeps watched state on its server (Jellyfin).
                         if (onToggleWatched != null) {
                             DetailIconAction(
@@ -428,11 +427,12 @@ private fun MovieDetailsContent(
                                 tone = if (isWatched) TextTone.Accent else TextTone.Primary,
                             )
                         }
-                        if (hasResume) {
+                        if (wishlist != null) {
                             DetailIconAction(
-                                icon = CinemaIcons.Replay,
-                                label = stringResource(R.string.player_osd_start_over),
-                                onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
+                                icon = if (wishlist.isOn) CinemaIcons.Bookmark else CinemaIcons.BookmarkBorder,
+                                label = stringResource(if (wishlist.isOn) R.string.wanted_remove else R.string.wanted_add),
+                                onClick = wishlist.toggle,
+                                tone = if (wishlist.isOn) TextTone.Accent else TextTone.Primary,
                             )
                         }
                         movieDetail.metadata.trailerUrl?.let { trailer ->

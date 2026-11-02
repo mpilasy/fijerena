@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.PeopleSearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
+import org.njarasoa.fijerena.ui.components.TvLoadingState
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLook
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
@@ -149,9 +150,7 @@ internal fun PeopleSearchPane(
             }
 
             is PeopleSearchViewModel.State.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    MitadyLoading(role = TextRole.Display, tone = TextTone.Accent)
-                }
+                TvLoadingState()
             }
 
             is PeopleSearchViewModel.State.Failed -> {

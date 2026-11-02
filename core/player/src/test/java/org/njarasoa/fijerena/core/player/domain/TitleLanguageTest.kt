@@ -337,4 +337,15 @@ class TitleLanguageTest {
         assertEquals("Pilot", playerEpisodeName("EN - Show - Pilot"))
         assertEquals("Pilot", playerEpisodeName("Pilot"))
     }
+
+    @Test
+    fun `a category named by one tag reads as that tag's badge`() {
+        assertEquals("EN", categoryNameAsTag("en"))
+        assertEquals("PT", categoryNameAsTag(" PT "))
+        assertEquals("4K", categoryNameAsTag("4k"))
+        assertEquals("4K", categoryNameAsTag("UHD"))
+        assertEquals(null, categoryNameAsTag("ROMANIA"))
+        assertEquals(null, categoryNameAsTag("English Series"))
+        assertEquals(null, categoryNameAsTag(null))
+    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
@@ -152,7 +153,7 @@ private fun GuideStatusLines(
                 is MultiSourceState.Idle -> {
                     val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
                     if (queued > 0) {
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_tasks_queued, queued))
+                        stringResource(R.string.epg_current_status, pluralStringResource(R.plurals.epg_status_tasks_queued, queued, queued))
                     } else {
                         stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
                     }
@@ -201,7 +202,15 @@ private fun GuideStatusLines(
         lastRun?.let { stats ->
             val time = NumberUtils.formatTimestamp(LocalContext.current, stats.updatedAtMs)
             val duration = NumberUtils.formatDuration(stats.durationMs)
-            val errorText = if (stats.errors > 0) stringResource(R.string.epg_last_run_errors, stats.errors) else ""
+            // The space is added here: a leading space in a string resource is dropped.
+            val errorText =
+                if (stats.errors >
+                    0
+                ) {
+                    " " + pluralStringResource(R.plurals.epg_last_run_errors, stats.errors, stats.errors)
+                } else {
+                    ""
+                }
             CinemaText(
                 stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
                 role = TextRole.BodySmall,

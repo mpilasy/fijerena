@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
+import org.njarasoa.fijerena.ui.components.input.TvInputDefaults
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -192,7 +193,7 @@ private fun SectionTab(
         val text: @Composable () -> Unit = {
             CinemaText(
                 text = label,
-                role = TextRole.Heading,
+                role = TvInputDefaults.tabLabelRole,
                 tone = textTone,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

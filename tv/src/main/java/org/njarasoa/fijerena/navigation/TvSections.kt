@@ -13,6 +13,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -174,9 +175,18 @@ internal fun TvSectionRail(
 
     LaunchedEffect(entry?.id) {
         val destination = entry?.destination ?: return@LaunchedEffect
-        rail.current = railCurrent(destination.topScreen(), navController.currentSection())
+        val section = navController.currentSection()
         homeOnStack = navController.isOnBackStack(Screen.ContentTypeSelection)
         source = loadRailSource(context)
+        // A Browse entry's list on top (outside the sections): that entry is lit, not Home.
+        val browsed =
+            entry
+                ?.takeIf { section == null && destination.hasRoute<Screen.CategoryList>() }
+                ?.toRoute<Screen.CategoryList>()
+                ?.providerId
+                ?.takeIf { id -> source?.browse.orEmpty().any { it.providerId == id } }
+        rail.currentBrowse = browsed
+        rail.current = if (browsed != null) null else railCurrent(destination.topScreen(), section)
         withContext(Dispatchers.IO) {
             val settings = AppSettings(context.applicationContext)
             activeProfileId = settings.activeProfileId

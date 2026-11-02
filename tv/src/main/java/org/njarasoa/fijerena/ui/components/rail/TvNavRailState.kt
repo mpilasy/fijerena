@@ -51,6 +51,12 @@ class TvNavRailState {
     /** The rail item the nav host says the user is in (lit at rest), or null. */
     var current by mutableStateOf<RailItem?>(null)
 
+    /**
+     * The source of the "Browse <source>" entry the user is in (its list is on top), or null: that
+     * entry is lit then, not Home (consistency round 2, finding 40).
+     */
+    var currentBrowse by mutableStateOf<Long?>(null)
+
     /** Whether focus is inside the rail (it is slid out). Set by the rail itself. */
     var expanded by mutableStateOf(false)
 

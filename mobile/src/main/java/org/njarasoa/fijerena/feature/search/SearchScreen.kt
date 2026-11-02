@@ -30,8 +30,11 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,10 +131,12 @@ import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
+import org.njarasoa.fijerena.ui.components.ClearSearchHistoryDialog
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
+import org.njarasoa.fijerena.ui.components.MobileLoadingState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -518,7 +523,7 @@ fun MobileSearchScreen(
             ) {
                 when (val state = uiState) {
                     is SearchViewModel.UiState.Loading -> {
-                        LoadingView(message = state.message)
+                        MobileLoadingState(message = state.message)
                     }
 
                     is SearchViewModel.UiState.Error -> {
@@ -814,20 +819,6 @@ private fun MobileSearchGuideTab(
         onNavigateToPlayer = onGuideResult,
         modifier = Modifier.fillMaxSize(),
     )
-}
-
-@Composable
-private fun LoadingView(message: String? = null) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        MitadyLoading(
-            role = TextRole.Title,
-            tone = TextTone.Accent,
-            overrideText = message,
-        )
-    }
 }
 
 @Composable
@@ -1194,6 +1185,17 @@ private fun MobileSearchHistorySection(
     onItemRemove: (String) -> Unit,
     onClearAll: () -> Unit,
 ) {
+    // Clearing every recent search asks first, as Clear Recent does.
+    var confirmClear by remember { mutableStateOf(false) }
+    if (confirmClear) {
+        ClearSearchHistoryDialog(
+            onConfirm = {
+                confirmClear = false
+                onClearAll()
+            },
+            onDismiss = { confirmClear = false },
+        )
+    }
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1202,7 +1204,7 @@ private fun MobileSearchHistorySection(
             title = stringResource(R.string.epg_browser_recent_searches),
             trailing = {
                 IconAction(
-                    onClick = onClearAll,
+                    onClick = { confirmClear = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.epg_browser_clear_all_description),
                     tone = TextTone.Danger,

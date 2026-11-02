@@ -7,13 +7,22 @@
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Mise à jour déjà en file d\'attente...</string>
     <string name="epg_up_to_date">Le guide TV est à jour.</string>
-    <string name="epg_refreshing_stale">Mise à jour de %1$d source(s) de guide périmée(s)...</string>
+    <plurals name="epg_refreshing_stale">
+        <item quantity="one">Mise à jour de %1$d source de guide périmée...</item>
+        <item quantity="other">Mise à jour de %1$d sources de guide périmées...</item>
+    </plurals>
     <string name="epg_no_stale_sources">Aucune source de guide périmée à mettre à jour.</string>
     <string name="epg_no_failed_sources">Aucune source de guide en échec trouvée.</string>
-    <string name="epg_cache_cleaned">%1$d fichier(s) nettoyé(s), %2$s libéré(s)</string>
+    <plurals name="epg_cache_cleaned">
+        <item quantity="one">%1$d fichier nettoyé, %2$s libéré(s)</item>
+        <item quantity="other">%1$d fichiers nettoyés, %2$s libéré(s)</item>
+    </plurals>
     <string name="epg_no_stray_files">Aucun fichier orphelin trouvé.</string>
     <string name="epg_data_cleared">Toutes les données du guide ont été effacées</string>
-    <string name="epg_purged_programmes">%1$d programme(s) purgé(s)</string>
+    <plurals name="epg_purged_programmes">
+        <item quantity="one">%1$d programme purgé</item>
+        <item quantity="other">%1$d programmes purgés</item>
+    </plurals>
     <string name="epg_no_old_programmes">Aucun ancien programme à purger.</string>
 
     <!-- EPG Management UI -->
@@ -177,14 +186,20 @@
     <string name="epg_database_error">Erreur : %1$s</string>
     <string name="epg_current_status">État actuel : %1$s</string>
     <string name="epg_status_idle">Inactif</string>
-    <string name="epg_status_tasks_queued">%1$d tâches de mise à jour en attente</string>
+    <plurals name="epg_status_tasks_queued">
+        <item quantity="one">%1$d tâche de mise à jour en attente</item>
+        <item quantity="other">%1$d tâches de mise à jour en attente</item>
+    </plurals>
     <string name="epg_status_processing">Traitement de %1$d/%2$d sources de guide</string>
     <string name="epg_status_retrying">Nouvel essai à %3$s (tentative %1$d sur %2$d)</string>
     <string name="epg_status_finished">Traitement terminé</string>
     <string name="epg_status_finalizing">Finalisation (%1$s)…</string>
     <string name="epg_status_clearing">Effacement des données…</string>
     <string name="epg_last_run_stats">Dernière exécution : Finie à %1$s • %2$d sources de guide en %3$s%4$s</string>
-    <string name="epg_last_run_errors"> (%1$d erreurs)</string>
+    <plurals name="epg_last_run_errors">
+        <item quantity="one">(%1$d erreur)</item>
+        <item quantity="other">(%1$d erreurs)</item>
+    </plurals>
     <string name="epg_maintenance_desc">Les téléchargements et programmes du guide gardés sur cet appareil</string>
     <string name="epg_automation_freq_daily">Quotidien</string>
     <string name="epg_automation_freq_hours">Toutes les %1$d heures</string>
@@ -407,7 +422,14 @@
     <string name="series_refresh_info">Actualiser les infos de la série</string>
     <string name="series_season_name_format">Saison %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
-    <string name="series_total_episodes_format">%1$d épisodes</string>
+    <plurals name="series_season_count">
+        <item quantity="one">%1$d saison</item>
+        <item quantity="other">%1$d saisons</item>
+    </plurals>
+    <plurals name="series_total_episodes_format">
+        <item quantity="one">%1$d épisode</item>
+        <item quantity="other">%1$d épisodes</item>
+    </plurals>
     <string name="series_play_episode_action">▶ Lire l\'épisode</string>
     <string name="series_aired_format">Diffusé : %1$s</string>
     <string name="series_bitrate_format">Débit : %1$s kbps</string>
@@ -547,11 +569,16 @@
     <string name="epg_browser_no_calendar_app">Aucune application de calendrier trouvée sur cet appareil</string>
     <string name="epg_browser_show_less">Afficher moins</string>
     <string name="epg_browser_show_more">Afficher plus</string>
-    <string name="epg_browser_show_more_count">%1$d diffusions de plus</string>
+    <plurals name="epg_browser_show_more_count">
+        <item quantity="one">%1$d diffusion de plus</item>
+        <item quantity="other">%1$d diffusions de plus</item>
+    </plurals>
     <string name="epg_browser_on_air_badge">À L\'ANTENNE</string>
     <string name="epg_browser_soon_badge">BIENTÔT</string>
     <string name="epg_browser_recent_searches">Recherches récentes</string>
     <string name="epg_browser_clear_all_description">Tout effacer</string>
+    <string name="search_history_clear_confirm_title">Effacer les recherches récentes\u00A0?</string>
+    <string name="search_history_clear_confirm_message">Toutes les recherches récentes quittent cette liste.</string>
     <string name="epg_browser_remove_description">Supprimer</string>
 
     <!-- EPG Settings Card -->
@@ -610,7 +637,10 @@
     <string name="licenses_title">Licences open source</string>
     <string name="licenses_desc">Les bibliothèques et polices dont l\'application est faite, et leurs licences</string>
     <string name="licenses_no_text">Texte de licence non inclus. Voir %1$s</string>
-    <string name="licenses_count">%1$d bibliothèques et polices</string>
+    <plurals name="licenses_count">
+        <item quantity="one">%1$d bibliothèque et police</item>
+        <item quantity="other">%1$d bibliothèques et polices</item>
+    </plurals>
     <string name="device_info_yes">Oui</string>
     <string name="device_info_no">Non</string>
     <string name="device_info_missing">—</string>
@@ -749,7 +779,10 @@
     <string name="epg_phase_awaiting_ingestion">En attente d\'importation</string>
     <string name="epg_phase_rebuilding_indexes">Reconstruction des index…</string>
     <string name="epg_phase_swapping_primary_guide">Passage au nouveau guide…</string>
-    <string name="category_count_format">%1$d catégories</string>
+    <plurals name="category_count_format">
+        <item quantity="one">%1$d catégorie</item>
+        <item quantity="other">%1$d catégories</item>
+    </plurals>
 
     <!-- Search content-type audit fixes -->
     <string name="content_type_all_label">Tout le contenu</string>
@@ -1048,7 +1081,6 @@
     <string name="episode_guest_stars">Invités</string>
     <string name="episode_series_cast">Distribution de la série</string>
     <string name="details_tab_details">Détails</string>
-    <string name="series_seasons_and_episodes_format">%1$d saisons · %2$d épisodes</string>
     <string name="series_resume_episode_time_format">▶ Reprendre S%1$d:E%2$d (%3$s)</string>
     <string name="series_play_episode_format">▶ Lire S%1$d:E%2$d</string>
     <string name="series_episodes_header">Épisodes</string>
@@ -1068,7 +1100,10 @@
     <string name="settings_shrink_database_desc">Supprimer les données restantes des sources supprimées et récupérer de l\'espace disque</string>
     <string name="settings_shrink_database_button">Compacter la base de données</string>
     <string name="settings_shrink_database_button_running">Compactage…</string>
-    <string name="settings_shrink_database_result_format">%1$d lignes restantes supprimées, %2$s libérés</string>
+    <plurals name="settings_shrink_database_result_format">
+        <item quantity="one">%1$d ligne restante supprimée, %2$s libérés</item>
+        <item quantity="other">%1$d lignes restantes supprimées, %2$s libérés</item>
+    </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Rien à nettoyer — la base de données est déjà propre</string>
     <string name="settings_shrink_database_dev_stats_time">Dernier compactage : Fini à %1$s • Durée %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">%1$d enregistrements supprimés • %2$s récupérés</string>
@@ -1350,7 +1385,10 @@
     <string name="pin_mismatch">Les deux codes PIN diffèrent : choisissez-en un de nouveau.</string>
     <string name="pin_enter_current">Saisissez le code PIN actuel</string>
     <string name="pin_enter_for">Saisissez le code PIN de %1$s</string>
-    <string name="pin_wrong_left">Code PIN incorrect. Encore %1$d essais avant une attente.</string>
+    <plurals name="pin_wrong_left">
+        <item quantity="one">Code PIN incorrect. Encore %1$d essai avant une attente.</item>
+        <item quantity="other">Code PIN incorrect. Encore %1$d essais avant une attente.</item>
+    </plurals>
     <string name="pin_wrong_wait">Code PIN incorrect. Réessayez dans %1$s.</string>
     <string name="pin_waiting">Trop de codes PIN incorrects. Réessayez dans %1$s.</string>
     <string name="pin_seconds">%1$d s</string>
@@ -1418,7 +1456,10 @@
     <string name="parental_list_hidden_titles_desc">Un titre avec un de ces mots n\'est jamais visible pour un enfant, même dans une catégorie pour enfants.</string>
     <string name="parental_list_exceptions">Exceptions</string>
     <string name="parental_list_exceptions_desc">Un film ou une série avec un de ces mots est visible pour un enfant, même dans une catégorie masquée.</string>
-    <string name="parental_list_entries">%1$d mots</string>
+    <plurals name="parental_list_entries">
+        <item quantity="one">%1$d mot</item>
+        <item quantity="other">%1$d mots</item>
+    </plurals>
     <string name="parental_entry_add">Ajouter un mot</string>
     <string name="parental_entry_hint">Mots entiers, majuscules et accents ignorés. Finir par * pour toute fin : barn* trouve Barnefilmer.</string>
     <string name="parental_entry_matches">Trouve %1$d</string>

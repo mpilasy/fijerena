@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
+import android.content.res.Resources
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -15,6 +16,14 @@ import org.njarasoa.fijerena.core.network.R
 class FreshnessLabelTest {
     private val now = 1_787_184_000L
 
+    private val res =
+        mockk<Resources>().apply {
+            every { getQuantityString(R.plurals.epg_freshness_stale_count, any(), *anyVararg()) } answers
+                { "${arg<Int>(1)} stale" }
+            every { getQuantityString(R.plurals.epg_freshness_never_run_count, any(), *anyVararg()) } answers
+                { "${arg<Int>(1)} never run" }
+        }
+
     private val context =
         mockk<Context>().apply {
             every { getString(R.string.epg_freshness_no_sources) } returns "No EPG sources"
@@ -27,10 +36,7 @@ class FreshnessLabelTest {
                 { "${secondArg<Array<Any>>()[0]}h ago" }
             every { getString(R.string.epg_freshness_days_ago_format, any()) } answers
                 { "${secondArg<Array<Any>>()[0]}d ago" }
-            every { getString(R.string.epg_freshness_stale_suffix_format, any()) } answers
-                { " • ${secondArg<Array<Any>>()[0]} stale" }
-            every { getString(R.string.epg_freshness_never_run_suffix_format, any()) } answers
-                { " • ${secondArg<Array<Any>>()[0]} never run" }
+            every { resources } returns res
             every { getString(R.string.epg_freshness_updated_format, any()) } answers
                 { "Updated ${secondArg<Array<Any>>()[0]}" }
         }

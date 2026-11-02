@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.ProviderType
@@ -63,7 +64,7 @@ fun ProviderTypeDropdown(
             onClick = { typeDropdownExpanded = true },
             modifier = Modifier.fillMaxWidth(),
             trailingContent = {
-                TvContentText(text = "${selectedType.displayName} ›", maxLines = 1)
+                TvContentText(text = "${selectedType.displayName} ›", maxLines = 1, overflow = TextOverflow.Ellipsis)
             },
         ) {
             TvContentText(label, role = TextRole.Heading)

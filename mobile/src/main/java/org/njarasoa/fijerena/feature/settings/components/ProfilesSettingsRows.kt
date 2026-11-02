@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -129,14 +130,15 @@ fun ProfilesSettingsRows(
         CinemaText(message, tone = TextTone.Danger, modifier = Modifier.padding(horizontal = Spacing.md))
     }
     if (canAddProfile) {
-        SettingsListRow(
-            title = stringResource(R.string.settings_profiles_add),
-            leading = { CinemaIcon(CinemaIcons.Add, contentDescription = null, tone = TextTone.Secondary) },
-            trailing = {},
+        // Add is an icon action at the end of the list it adds to, as on every Settings page.
+        IconAction(
             onClick = {
                 onDismissMessage()
                 adding = true
             },
+            icon = CinemaIcons.Add,
+            label = stringResource(R.string.settings_profiles_add),
+            modifier = Modifier.padding(horizontal = Spacing.xs),
         )
     }
 

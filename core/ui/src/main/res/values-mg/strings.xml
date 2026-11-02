@@ -7,13 +7,22 @@
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Efa manandrana...</string>
     <string name="epg_up_to_date">Vaovao ny fandaharana.</string>
-    <string name="epg_refreshing_stale">Manavao ny %1$d lany andro...</string>
+    <plurals name="epg_refreshing_stale">
+        <item quantity="one">Manavao ny %1$d lany andro...</item>
+        <item quantity="other">Manavao ny %1$d lany andro...</item>
+    </plurals>
     <string name="epg_no_stale_sources">Tsy misy mila havaozina.</string>
     <string name="epg_no_failed_sources">Tsy nisy maty ny fangalana vaovao.</string>
-    <string name="epg_cache_cleaned">Nodiovina ny tahiry %1$d, nahazoana %2$s</string>
+    <plurals name="epg_cache_cleaned">
+        <item quantity="one">Nodiovina ny tahiry %1$d, nahazoana %2$s</item>
+        <item quantity="other">Nodiovina ny tahiry %1$d, nahazoana %2$s</item>
+    </plurals>
     <string name="epg_no_stray_files">Tsy misy rakitra tsy manan-tompo tavela.</string>
     <string name="epg_data_cleared">Voafafa daholo ny angon\'ny fandaharana</string>
-    <string name="epg_purged_programmes">Voafafa ny fandaharana %1$d</string>
+    <plurals name="epg_purged_programmes">
+        <item quantity="one">Voafafa ny fandaharana %1$d</item>
+        <item quantity="other">Voafafa ny fandaharana %1$d</item>
+    </plurals>
     <string name="epg_no_old_programmes">Tsy misy fandaharana taloha hofafana.</string>
 
     <!-- EPG Management UI -->
@@ -177,14 +186,20 @@
     <string name="epg_database_error">Fahadisoana: %1$s</string>
     <string name="epg_current_status">Toe-javatra izao: %1$s</string>
     <string name="epg_status_idle">Tsy miasa</string>
-    <string name="epg_status_tasks_queued">Fanavaozana %1$d miandry</string>
+    <plurals name="epg_status_tasks_queued">
+        <item quantity="one">Fanavaozana %1$d miandry</item>
+        <item quantity="other">Fanavaozana %1$d miandry</item>
+    </plurals>
     <string name="epg_status_processing">Mandinika loharanon\'ny fitarihana %1$d/%2$d</string>
     <string name="epg_status_retrying">Andramana indray amin\'ny %3$s (andrana %1$d amin\'ny %2$d)</string>
     <string name="epg_status_finished">Vita ny fandehanana</string>
     <string name="epg_status_finalizing">Mamarana (%1$s)…</string>
     <string name="epg_status_clearing">Mamafa ny angona…</string>
     <string name="epg_last_run_stats">Fandehanana farany: vita tamin\'ny %1$s • loharanon\'ny fitarihana %2$d tao anatin\'ny %3$s%4$s</string>
-    <string name="epg_last_run_errors"> (fahadisoana %1$d)</string>
+    <plurals name="epg_last_run_errors">
+        <item quantity="one">(fahadisoana %1$d)</item>
+        <item quantity="other">(fahadisoana %1$d)</item>
+    </plurals>
     <string name="epg_maintenance_desc">Ny rakitra sy fandaharan\'ny fitarihana voatahiry amin\'ity fitaovana ity</string>
     <string name="epg_automation_freq_daily">Isan\'andro</string>
     <string name="epg_automation_freq_hours">Isaky ny %1$d ora</string>
@@ -398,7 +413,14 @@
     <string name="series_refresh_info">Havaozy ny antsipirian\'ny andian-tantara</string>
     <string name="series_season_name_format">Vanim-potoana %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
-    <string name="series_total_episodes_format">Fizarana %1$d</string>
+    <plurals name="series_season_count">
+        <item quantity="one">Vanim-potoana %1$d</item>
+        <item quantity="other">Vanim-potoana %1$d</item>
+    </plurals>
+    <plurals name="series_total_episodes_format">
+        <item quantity="one">Fizarana %1$d</item>
+        <item quantity="other">Fizarana %1$d</item>
+    </plurals>
     <string name="series_play_episode_action">▶ Alefaso ny fizarana</string>
     <string name="series_aired_format">Nalefa: %1$s</string>
     <string name="series_bitrate_format">Tahan\'ny bit: %1$s kbps</string>
@@ -478,11 +500,16 @@
     <string name="epg_browser_no_calendar_app">Tsy misy rindrankajy alimanaka hita amin\'ity fitaovana ity</string>
     <string name="epg_browser_show_less">Ahena</string>
     <string name="epg_browser_show_more">Ampio</string>
-    <string name="epg_browser_show_more_count">%1$d fandaharana hafa</string>
+    <plurals name="epg_browser_show_more_count">
+        <item quantity="one">%1$d fandaharana hafa</item>
+        <item quantity="other">%1$d fandaharana hafa</item>
+    </plurals>
     <string name="epg_browser_on_air_badge">MIRONGATRA</string>
     <string name="epg_browser_soon_badge">MANATONA</string>
     <string name="epg_browser_recent_searches">Fikarohana Farany</string>
     <string name="epg_browser_clear_all_description">Fafao daholo</string>
+    <string name="search_history_clear_confirm_title">Hofafana ve ny fikarohana farany?</string>
+    <string name="search_history_clear_confirm_message">Hiala avokoa ny fikarohana farany ao amin\'ity lisitra ity.</string>
     <string name="epg_browser_remove_description">Esory</string>
 
     <!-- EPG Settings Card -->
@@ -631,7 +658,10 @@
     <string name="epg_phase_awaiting_ingestion">Miandry ho ampidirina</string>
     <string name="epg_phase_rebuilding_indexes">Manangana ny fikarohana…</string>
     <string name="epg_phase_swapping_primary_guide">Mifindra amin\'ny fandaharana vaovao…</string>
-    <string name="category_count_format">Sokajy %1$d</string>
+    <plurals name="category_count_format">
+        <item quantity="one">Sokajy %1$d</item>
+        <item quantity="other">Sokajy %1$d</item>
+    </plurals>
 
     <!-- Search content-type audit fixes -->
     <string name="content_type_all_label">Ny rehetra</string>
@@ -829,7 +859,6 @@
     <string name="details_more_like_this">Mitovitovy amin\'ity</string>
     <string name="details_no_link_handler">Tsy misy rindrankajy amin\'ity fitaovana ity afaka manokatra io rohy io</string>
     <string name="trailer_unavailable">Tsy misy amin\'ny YouTube intsony io topi-maso io</string>
-    <string name="series_seasons_and_episodes_format">Vanim-potoana %1$d · fizarana %2$d</string>
     <string name="series_resume_episode_time_format">▶ Tohizo S%1$d:E%2$d (%3$s)</string>
     <string name="series_play_episode_format">▶ Alefaso S%1$d:E%2$d</string>
     <string name="series_episodes_header">Fizarana</string>
@@ -902,7 +931,10 @@
     <string name="licenses_title">Fahazoan-dàlana open source</string>
     <string name="licenses_desc">Ireo tranomboky sy endri-tsoratra nanaovana ny rindranasa, sy ny fahazoan-dàlany</string>
     <string name="licenses_no_text">Tsy misy ny lahatsoratry ny fahazoan-dàlana. Jereo %1$s</string>
-    <string name="licenses_count">Tranomboky sy endri-tsoratra %1$d</string>
+    <plurals name="licenses_count">
+        <item quantity="one">Tranomboky sy endri-tsoratra %1$d</item>
+        <item quantity="other">Tranomboky sy endri-tsoratra %1$d</item>
+    </plurals>
     <string name="device_info_yes">Eny</string>
     <string name="device_info_no">Tsia</string>
     <string name="device_info_missing">—</string>
@@ -951,7 +983,10 @@
     <string name="settings_shrink_database_desc">Esory ny angona sisa tavela avy amin\'ny loharano voafafa ary ampitomboy ny toerana malalaka</string>
     <string name="settings_shrink_database_button">Ahenao ny tahirin-kevitra</string>
     <string name="settings_shrink_database_button_running">Mampihena…</string>
-    <string name="settings_shrink_database_result_format">Andalana sisa %1$d no nesorina, nahazoana %2$s</string>
+    <plurals name="settings_shrink_database_result_format">
+        <item quantity="one">Andalana sisa %1$d no nesorina, nahazoana %2$s</item>
+        <item quantity="other">Andalana sisa %1$d no nesorina, nahazoana %2$s</item>
+    </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Tsy misy hodiovina — efa madio ny tahirin-kevitra</string>
     <string name="settings_shrink_database_dev_stats_time">Fampihenana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">Rakitra %1$d voafafa • %2$s azo indray</string>
@@ -1341,7 +1376,10 @@
     <string name="pin_mismatch">Tsy mitovy ireo PIN roa: mifidiana indray.</string>
     <string name="pin_enter_current">Ampidiro ny PIN ankehitriny</string>
     <string name="pin_enter_for">Ampidiro ny PIN an\'i %1$s</string>
-    <string name="pin_wrong_left">Diso ny PIN. Mbola %1$d andrana alohan\'ny fiandrasana.</string>
+    <plurals name="pin_wrong_left">
+        <item quantity="one">Diso ny PIN. Mbola %1$d andrana alohan\'ny fiandrasana.</item>
+        <item quantity="other">Diso ny PIN. Mbola %1$d andrana alohan\'ny fiandrasana.</item>
+    </plurals>
     <string name="pin_wrong_wait">Diso ny PIN. Andramo indray afaka %1$s.</string>
     <string name="pin_waiting">Be loatra ny PIN diso. Andramo indray afaka %1$s.</string>
     <string name="pin_seconds">%1$d s</string>
@@ -1409,7 +1447,10 @@
     <string name="parental_list_hidden_titles_desc">Tsy hitan\'ny ankizy mihitsy ny lohateny misy iray amin\'ireo teny ireo, na dia ao amin\'ny sokajy ho an\'ny ankizy aza.</string>
     <string name="parental_list_exceptions">Maningana</string>
     <string name="parental_list_exceptions_desc">Hitan\'ny ankizy ny sarimihetsika na andian-tantara misy iray amin\'ireo teny ireo, na dia ao amin\'ny sokajy afenina aza.</string>
-    <string name="parental_list_entries">Teny %1$d</string>
+    <plurals name="parental_list_entries">
+        <item quantity="one">Teny %1$d</item>
+        <item quantity="other">Teny %1$d</item>
+    </plurals>
     <string name="parental_entry_add">Hanampy teny</string>
     <string name="parental_entry_hint">Teny feno, tsy miraharaha soratra lehibe sy marika. Farano amin\'ny * ho an\'ny fiafarana rehetra: mahita Barnefilmer ny barn*.</string>
     <string name="parental_entry_matches">Mahita %1$d</string>

@@ -302,6 +302,7 @@ fun RatingBadge(
         role = role,
         tone = tone,
         maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier,
     )
 }
@@ -339,6 +340,7 @@ fun CatchupBadge(
             role = TextRole.Caption,
             tone = TextTone.Secondary,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

@@ -460,6 +460,7 @@ fun MobileControlsOverlay(
                                             .formatClockTime(Date(System.currentTimeMillis() + (duration - position))),
                                     ),
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 role = TextRole.BodySmall,
                                 tone = TextTone.Secondary,
                             )

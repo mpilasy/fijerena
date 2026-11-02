@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -93,7 +94,7 @@ fun MobileDetailHero(
             logoUrl = logoUrl,
             modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = bleed, vertical = CinemaSpacing.md),
         ) {
-            CinemaText(text = title, role = TextRole.Display, maxLines = 3)
+            CinemaText(text = title, role = TextRole.Display, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
     }
 }

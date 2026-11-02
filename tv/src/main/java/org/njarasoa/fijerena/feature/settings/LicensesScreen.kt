@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -68,7 +69,7 @@ fun LicensesScreen(onOpen: (entryId: String) -> Unit) {
             TvScreenHeader(title = stringResource(R.string.licenses_title))
         }
         item {
-            val count = entries?.let { " " + stringResource(R.string.licenses_count, it.size) }.orEmpty()
+            val count = entries?.let { " " + pluralStringResource(R.plurals.licenses_count, it.size, it.size) }.orEmpty()
             CinemaText(stringResource(R.string.licenses_desc) + "." + count, role = TextRole.Body, tone = TextTone.Secondary)
         }
         itemsIndexed(entries.orEmpty(), key = { _, entry -> entry.id }) { index, entry ->

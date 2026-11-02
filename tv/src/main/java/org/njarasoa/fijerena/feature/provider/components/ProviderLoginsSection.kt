@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -269,13 +270,15 @@ fun ProviderLoginsSection(
     }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-    CinemaSecondaryButton(
+    // Add is an icon action at the end of the list it adds to, as on every Settings page.
+    TvIconAction(
         onClick = {
             shownMessage = null
             showAddDialog = true
         },
+        icon = CinemaIcons.Add,
+        label = stringResource(R.string.provider_logins_add),
         enabled = !busy,
-        text = stringResource(R.string.provider_logins_add),
         modifier = Modifier.focusRequester(addRequester).paneItem(pane, "login_add"),
     )
 

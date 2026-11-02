@@ -94,6 +94,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -184,22 +185,15 @@ fun ProfilesSettingsCard(
         if (message != null) {
             CinemaText(message, role = TextRole.Body, tone = TextTone.Danger)
         }
-        SettingsRow(
-            title = stringResource(R.string.settings_profiles_add),
-            description = null,
+        // Add is an icon action at the end of the list it adds to, as on every Settings page.
+        TvIconAction(
             onClick = {
                 onDismissMessage()
                 adding = true
             },
+            icon = CinemaIcons.Add,
+            label = stringResource(R.string.settings_profiles_add),
             modifier = if (profiles.isEmpty()) firstRowModifier else Modifier,
-            chevron = false,
-            leading = {
-                TvIcon(
-                    imageVector = CinemaIcons.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(TvDimensions.iconMedium),
-                )
-            },
         )
     }
 
@@ -688,19 +682,11 @@ fun ProfileEditPane(
                     )
                 }
                 if (canAddProfile) {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_profiles_add),
-                        description = null,
+                    TvIconAction(
                         onClick = { adding = true },
-                        focusRequester = addFocus,
-                        chevron = false,
-                        leading = {
-                            TvIcon(
-                                imageVector = CinemaIcons.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconMedium),
-                            )
-                        },
+                        icon = CinemaIcons.Add,
+                        label = stringResource(R.string.settings_profiles_add),
+                        modifier = Modifier.focusRequester(addFocus),
                     )
                 }
                 CinemaButtonArea(modifier = Modifier.align(Alignment.End)) {

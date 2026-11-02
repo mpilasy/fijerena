@@ -35,6 +35,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -114,7 +115,7 @@ internal fun ParentalControlsCard(
             SettingsRow(
                 title = stringResource(list.titleRes),
                 description = stringResource(list.descriptionRes),
-                value = stringResource(R.string.parental_list_entries, lists[list].orEmpty().size),
+                value = lists[list].orEmpty().size.let { pluralStringResource(R.plurals.parental_list_entries, it, it) },
                 onClick = { onOpenList(list) },
                 modifier = if (index == 0) firstRowModifier else Modifier,
                 focusRequester = focusRequesterFor(parentalListReturnKey(list)),
@@ -232,6 +233,8 @@ internal fun ParentalListContent(
             },
             onClear = { draft = "" },
             placeholder = stringResource(R.string.parental_entry_add),
+            // The field adds what is typed: Add, not Search.
+            leadingIcon = CinemaIcons.Add,
             focusRequester = fieldFocus,
             editing = editing,
             onEditingChange = { editing = it },

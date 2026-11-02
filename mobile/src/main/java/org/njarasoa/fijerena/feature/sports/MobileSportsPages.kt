@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.MobileDayHeading
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -256,7 +257,7 @@ private fun MobileSportsPage(
                         stickyHeader(
                             key = "day:${day.date}",
                             contentType = DAY_HEADING,
-                        ) { MobileSportsDayHeading(DateText.dayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
+                        ) { MobileDayHeading(DateText.dayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
                         items(day.games, key = { "game:${it.key}" }) { game ->
                             MobileGameCard(
                                 game = game,

@@ -62,14 +62,15 @@ import org.njarasoa.fijerena.feature.sports.MobileBestTeamCard
 import org.njarasoa.fijerena.feature.sports.MobileGameBell
 import org.njarasoa.fijerena.feature.sports.MobileGameCard
 import org.njarasoa.fijerena.feature.sports.MobileGameSheet
-import org.njarasoa.fijerena.feature.sports.MobileSportsDayHeading
 import org.njarasoa.fijerena.feature.sports.MobileSportsHeading
 import org.njarasoa.fijerena.feature.sports.MobileSportsItemCard
 import org.njarasoa.fijerena.feature.sports.sportsCardColors
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.MobileDayHeading
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
+import org.njarasoa.fijerena.ui.components.MobileLoadingState
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -150,16 +151,11 @@ internal fun MobileTeamsSearchPane(
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         when (val shown = state) {
             TeamsSearchViewModel.State.Idle -> {
-                CinemaText(
-                    text = stringResource(R.string.search_teams_placeholder),
-                    modifier = Modifier.align(Alignment.Center),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
+                MobileEmptyState(message = stringResource(R.string.search_teams_placeholder), icon = CinemaIcons.Search)
             }
 
             is TeamsSearchViewModel.State.Loading -> {
-                MitadyLoading(modifier = Modifier.align(Alignment.Center), role = TextRole.Title, tone = TextTone.Accent)
+                MobileLoadingState()
             }
 
             is TeamsSearchViewModel.State.Failed -> {
@@ -299,7 +295,7 @@ private fun LazyListScope.bestGameCards(
             }
             for (day in gamesByDay(games.games)) {
                 stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
-                    MobileSportsDayHeading(
+                    MobileDayHeading(
                         DateText.dayLabel(LocalResources.current, day.date),
                         pinned = pinnedDay == "best_day:${day.date}",
                     )

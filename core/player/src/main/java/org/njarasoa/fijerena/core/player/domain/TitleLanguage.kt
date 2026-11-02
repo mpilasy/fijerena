@@ -257,6 +257,18 @@ private fun stripEnding(text: String): Ending {
     return Ending("$rest $kept".trim(), formats, notes.reversed(), eventsOnly)
 }
 
+/**
+ * A category whose whole name is one tag: a two-letter code ("en", "PT") or a picture format
+ * ("4k", "UHD"). Rows show it as a badge ("EN", "4K"), as they show a title's tags, never as plain
+ * text in its place (consistency round 2, finding 30). Null for an ordinary name.
+ */
+fun categoryNameAsTag(name: String?): String? {
+    val word = name?.trim()?.uppercase() ?: return null
+    return FORMATS[word]?.label ?: word.takeIf { CATEGORY_CODE.matches(it) }
+}
+
+private val CATEGORY_CODE = Regex("[A-Z]{2}")
+
 /** [tag] is a picture resolution ("4K", "FHD", "HD"): the quality, which a card names first. */
 fun isResolutionTag(tag: String): Boolean = FORMATS[tag]?.kind == FormatKind.RESOLUTION
 

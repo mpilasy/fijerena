@@ -131,6 +131,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.ParsedTitle
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.categoryKey
+import org.njarasoa.fijerena.core.player.domain.categoryNameAsTag
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
@@ -161,6 +162,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
@@ -1339,6 +1341,7 @@ fun MobileCategoryListScreen(
                                                 CinemaText(
                                                     text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                                     maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
                                                     role = TextRole.Heading,
                                                     tone = TextTone.Primary,
                                                 )
@@ -1350,6 +1353,7 @@ fun MobileCategoryListScreen(
                                                 CinemaText(
                                                     text = stringResource(R.string.category_up_next_format, nextProg.title),
                                                     maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
                                                     role = TextRole.Body,
                                                     tone = TextTone.Secondary,
                                                 )
@@ -1428,6 +1432,7 @@ fun MobileCategoryListScreen(
                                                         CinemaText(
                                                             text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                                             maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
                                                             role = TextRole.Body,
                                                             tone = TextTone.OnMedia,
                                                         )
@@ -1857,7 +1862,6 @@ private fun CategoryChip(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
-                    sourceName?.let { SourceBadge(it) }
                     CinemaText(
                         text = name,
                         role = TextRole.Label,
@@ -1868,8 +1872,10 @@ private fun CategoryChip(
                         // Marquee only on the selected chip. Touch has no focus, so gating on
                         // selection is the nearest equivalent — otherwise every overflowing chip
                         // runs its own per-frame invalidateDraw loop for as long as it's visible.
-                        modifier = if (selected) Modifier.bounceMarquee() else Modifier,
+                        modifier = Modifier.weight(1f, fill = false).then(if (selected) Modifier.bounceMarquee() else Modifier),
                     )
+                    // The source ends the name, as on every row.
+                    sourceName?.let { SourceBadge(it) }
                 }
             },
             colors = colors,
@@ -2028,7 +2034,7 @@ private fun StreamsList(
                 CinemaText(
                     text =
                         if (isCategoryList) {
-                            stringResource(R.string.category_count_format, itemCount)
+                            pluralStringResource(R.plurals.category_count_format, itemCount, itemCount)
                         } else {
                             itemCountText(contentType, itemCount)
                         },
@@ -2511,16 +2517,19 @@ internal fun StreamCard(
             }
         val nowPlayingText = stringResource(R.string.category_now_playing_badge).takeIf { isCurrentlyPlaying }
         val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // A category named by one tag ("en", "4k") shows as a badge, as a title's tags do (as on TV).
+        val categoryTag = remember(categoryName) { categoryNameAsTag(categoryName) }
+        val categoryText = categoryName.takeIf { categoryTag == null }
         // Badges show in Expert mode only (SourceBadge).
         val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
         val sourceLineText =
             when {
                 sourceLine == null -> null
 
-                isChannel -> listOfNotNull(status, nowLine ?: categoryName).joinToString(" · ").ifEmpty { null }
+                isChannel -> listOfNotNull(status, nowLine ?: categoryText).joinToString(" · ").ifEmpty { null }
 
                 // The year first, so a long category can't push it off the line.
-                else -> listOfNotNull(metaLine.ifEmpty { null }, categoryName).joinToString(" · ").ifEmpty { null }
+                else -> listOfNotNull(metaLine.ifEmpty { null }, categoryText).joinToString(" · ").ifEmpty { null }
             }
         // One accessibility node for the row's content, read as its parts were: with an
         // accessibility service on (a screen reader, a password manager, an automation app),
@@ -2538,6 +2547,7 @@ internal fun StreamCard(
                 nowPlayingText,
                 sourceLine?.let { stringResource(R.string.source_badge_description, it) },
                 titleBadgesDescription(parsedTitle),
+                categoryTag,
                 if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
                 nowLine.takeIf { sourceLine == null },
             ).joinToString(", ")
@@ -2551,40 +2561,43 @@ internal fun StreamCard(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             // 16:9, with the resume bar on the thumbnail's bottom edge rather than along the whole
-            // card (phone UI audit P1, as on the TV).
+            // card (phone UI audit P1, as on the TV). A category (Recent and Favourite Categories)
+            // has no artwork: no tile, as on the category chips.
             val thumbnailShape = CinemaTheme.shapes.card
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = StreamThumbnailWidth, height = StreamThumbnailHeight)
-                        .clip(thumbnailShape),
-            ) {
-                CinemaThumbnail(
-                    url = item.thumbnailUrl,
-                    // The clean title's first letter or digit, so a name that opens with a tag,
-                    // a space or a symbol still gets its letter tile.
-                    fallbackLetter = displayTitle.firstOrNull { it.isLetterOrDigit() } ?: displayTitle.firstOrNull(),
-                    // A channel's logo is drawn whole on a neutral tile; the shading under
-                    // artwork would only dim it.
-                    contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
-                    overlayGradient = !isChannel,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                if (watchProgress > 0f) {
-                    CinemaProgressBar(
-                        progress = { watchProgress.coerceIn(0f, 1f) },
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(MobileDimensions.resumeBarHeight),
+            if (item.target !is BrowseTarget.CategoryRef) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(width = StreamThumbnailWidth, height = StreamThumbnailHeight)
+                            .clip(thumbnailShape),
+                ) {
+                    CinemaThumbnail(
+                        url = item.thumbnailUrl,
+                        // The clean title's first letter or digit, so a name that opens with a tag,
+                        // a space or a symbol still gets its letter tile.
+                        fallbackLetter = displayTitle.firstOrNull { it.isLetterOrDigit() } ?: displayTitle.firstOrNull(),
+                        // A channel's logo is drawn whole on a neutral tile; the shading under
+                        // artwork would only dim it.
+                        contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                        overlayGradient = !isChannel,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                }
-                if (isTmdbOnly) {
-                    NotAvailableMark(
-                        iconSize = MobileDimensions.iconSmall,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xxs),
-                    )
+                    if (watchProgress > 0f) {
+                        CinemaProgressBar(
+                            progress = { watchProgress.coerceIn(0f, 1f) },
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(MobileDimensions.resumeBarHeight),
+                        )
+                    }
+                    if (isTmdbOnly) {
+                        NotAvailableMark(
+                            iconSize = MobileDimensions.iconSmall,
+                            modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xxs),
+                        )
+                    }
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -2620,6 +2633,7 @@ internal fun StreamCard(
                     CinemaText(
                         text = text,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         role = TextRole.BodySmall,
                         tone = TextTone.Accent,
                     )
@@ -2627,12 +2641,13 @@ internal fun StreamCard(
                 // The second line: the title's badges, then the category,
                 // year · length · rating or the Now line.
                 val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
-                if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
+                if (sourceLine != null || lineText != null || parsedTitle.hasBadges || categoryTag != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         TitleBadges(parsedTitle)
+                        categoryTag?.let { LanguageBadge(it) }
                         lineText?.let { text ->
                             CinemaText(
                                 text = text,

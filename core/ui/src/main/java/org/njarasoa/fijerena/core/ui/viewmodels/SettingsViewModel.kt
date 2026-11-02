@@ -273,9 +273,11 @@ class SettingsViewModel(
                 if (result.rowsRemoved == 0L) {
                     context.getString(R.string.settings_shrink_database_nothing_to_clean)
                 } else {
-                    context.getString(
-                        R.string.settings_shrink_database_result_format,
-                        result.rowsRemoved,
+                    val rows = result.rowsRemoved.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    context.resources.getQuantityString(
+                        R.plurals.settings_shrink_database_result_format,
+                        rows,
+                        rows,
                         NumberUtils.formatBytes(result.bytesReclaimed),
                     )
                 }

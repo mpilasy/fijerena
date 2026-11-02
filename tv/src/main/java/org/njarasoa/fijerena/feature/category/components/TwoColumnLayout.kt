@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
@@ -244,7 +245,10 @@ internal fun TwoColumnLayout(
             TvScreenHeader(
                 title = sectionTitle(contentType),
                 subtitle =
-                    listOfNotNull(headerSource, stringResource(R.string.category_count_format, categoryCount)).joinToString(" · "),
+                    listOfNotNull(
+                        headerSource,
+                        pluralStringResource(R.plurals.category_count_format, categoryCount, categoryCount),
+                    ).joinToString(" · "),
             ) {
                 val hasEpgData =
                     supportsNativeEpg ||

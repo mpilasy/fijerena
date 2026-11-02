@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  *
  * A selected row carries the P5 "current" bar ([currentIndicator]). `ListItem` pads its content,
  * so the bar is drawn from outside the item and follows the item's focus / press scale itself.
+ * [focusBorder] false: the row around the item draws the focus outline ([restingRowGround]).
  */
 @Composable
 internal fun TvInputListItem(
@@ -34,6 +35,7 @@ internal fun TvInputListItem(
     leadingContent: (@Composable BoxScope.() -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
+    focusBorder: Boolean = true,
     headlineContent: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -53,7 +55,7 @@ internal fun TvInputListItem(
         shape = TvInputDefaults.shape(),
         colors = TvInputDefaults.colors(),
         scale = TvInputDefaults.scale(),
-        border = TvInputDefaults.border(),
+        border = if (focusBorder) TvInputDefaults.border() else TvInputDefaults.noBorder(),
         glow = TvInputDefaults.glow(),
         interactionSource = interactionSource,
         headlineContent = headlineContent,

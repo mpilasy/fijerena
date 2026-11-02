@@ -267,6 +267,7 @@ private fun TimeRuler(
                             CinemaText(
                                 text = TimeFormat.formatTime(tick.epochSec),
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(start = CinemaSpacing.xxs),
                                 role = TextRole.Caption,
                                 tone = TextTone.Secondary,
@@ -316,6 +317,7 @@ private fun GuideRow(
                 CinemaText(
                     text = stringResource(R.string.epg_guide_no_listings_title),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = CinemaSpacing.sm),
                     role = TextRole.BodySmall,
                     tone = TextTone.Secondary,

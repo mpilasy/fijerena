@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -66,6 +67,7 @@ import org.njarasoa.fijerena.core.ui.sports.sportLabel
 import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
+import org.njarasoa.fijerena.ui.components.TvDayHeading
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -231,6 +233,11 @@ private fun TvSportsPage(
         if (target != null) {
             entered = true
             target.requestFocusWithRetry()
+            // The header stays in view: the focused row's own scroll into view runs after the focus
+            // move, and a scroll to the top made at once was undone by it (the header half off the
+            // screen). Wait for that scroll to end, then go back to the top.
+            withFrameNanos { }
+            snapshotFlow { listState.isScrollInProgress }.first { !it }
             listState.scrollToItem(0)
         }
     }
@@ -329,14 +336,9 @@ private fun TvSportsPage(
                     var first = true
                     for (day in days) {
                         stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
-                            CinemaText(
+                            TvDayHeading(
                                 text = DateText.dayLabel(resources, day.date),
-                                tone = TextTone.Secondary,
-                                modifier =
-                                    Modifier
-                                        .dayHeadingBand(
-                                            pinnedDay == "day:${day.date}",
-                                        ).padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                                pinned = pinnedDay == "day:${day.date}",
                             )
                         }
                         for (game in day.games) {

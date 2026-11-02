@@ -62,12 +62,21 @@ fun titleFactRows(
         listOfNotNull(
             facts.status?.let { showStatus(it) },
             facts.seasonCount?.let { seasons ->
-                facts.episodeCount?.let { episodes -> stringResource(R.string.series_seasons_and_episodes_format, seasons, episodes) }
+                facts.episodeCount?.let { episodes -> seasonsAndEpisodesText(seasons, episodes) }
             },
         )
     if (status.isNotEmpty()) rows += FactRow(stringResource(R.string.details_label_status), status.joinToString(" · "))
     return rows
 }
+
+/** "5 seasons · 62 episodes", each count with its own plural. */
+@Composable
+fun seasonsAndEpisodesText(
+    seasons: Int,
+    episodes: Int,
+): String =
+    pluralStringResource(R.plurals.series_season_count, seasons, seasons) + " · " +
+        pluralStringResource(R.plurals.series_total_episodes_format, episodes, episodes)
 
 // TMDB's code for "no spoken language" (a silent film, a documentary of music).
 private const val NO_LANGUAGE = "xx"

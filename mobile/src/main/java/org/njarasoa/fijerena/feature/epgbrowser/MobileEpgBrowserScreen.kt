@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -110,7 +111,11 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.ClearSearchHistoryDialog
+import org.njarasoa.fijerena.ui.components.MobileDayHeading
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
+import org.njarasoa.fijerena.ui.components.MobileLoadingState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -291,6 +296,7 @@ internal fun MobileGuideSearchPane(
             CinemaText(
                 text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = Spacing.md),
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
@@ -420,57 +426,20 @@ internal fun MobileGuideSearchPane(
                             onClearAll = { viewModel.clearEpgSearchHistory() },
                         )
                     }
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val hintText = stringResource(R.string.epg_browser_hint_search_titles)
-                        CinemaText(
-                            text = hintText,
-                            role = TextRole.Body,
-                            tone = TextTone.Secondary,
-                        )
-                    }
+                    MobileEmptyState(message = stringResource(R.string.epg_browser_hint_search_titles), icon = CinemaIcons.Search)
                 }
             }
 
             is EpgBrowserViewModel.UiState.IndexBusy -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = state.message(),
-                        textAlign = TextAlign.Center,
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                    )
-                }
+                MobileLoadingState(message = state.message())
             }
 
             is EpgBrowserViewModel.UiState.NoEpgFile -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaText(
-                        text = stringResource(R.string.epg_browser_no_file_message),
-                        role = TextRole.Body,
-                        tone = TextTone.Secondary,
-                    )
-                }
+                MobileEmptyState(message = stringResource(R.string.epg_browser_no_file_message), icon = CinemaIcons.DateRange)
             }
 
             is EpgBrowserViewModel.UiState.Searching -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MitadyLoading(
-                        role = TextRole.Title,
-                        tone = TextTone.Accent,
-                    )
-                }
+                MobileLoadingState()
             }
 
             is EpgBrowserViewModel.UiState.Results -> {
@@ -536,16 +505,7 @@ private fun MobileResultsContent(
         }
 
         if (displayDateGroups.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CinemaText(
-                    text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
-            }
+            MobileEmptyState(message = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }))
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
@@ -557,7 +517,7 @@ private fun MobileResultsContent(
             ) {
                 displayDateGroups.forEach { dateGroup ->
                     stickyHeader(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
-                        MobileDateHeader(dateLabel = dateGroup.dateLabel)
+                        MobileDayHeading(text = dateGroup.dateLabel, pinned = true)
                     }
                     items(
                         dateGroup.programs,
@@ -574,20 +534,6 @@ private fun MobileResultsContent(
             }
         }
     }
-}
-
-@Composable
-private fun MobileDateHeader(dateLabel: String) {
-    CinemaText(
-        text = dateLabel,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .panel(PanelFill.Surface)
-                .padding(vertical = CinemaSpacing.sm),
-        role = TextRole.Label,
-        tone = TextTone.Primary,
-    )
 }
 
 @Composable
@@ -733,8 +679,9 @@ private fun MobileProgramCard(
                             if (expanded) {
                                 stringResource(R.string.epg_browser_show_less)
                             } else {
-                                stringResource(
-                                    R.string.epg_browser_show_more_count,
+                                pluralStringResource(
+                                    R.plurals.epg_browser_show_more_count,
+                                    program.airings.size - 3,
                                     program.airings.size - 3,
                                 )
                             },
@@ -834,6 +781,17 @@ private fun MobileEpgSearchHistorySection(
     onItemRemove: (String) -> Unit,
     onClearAll: () -> Unit,
 ) {
+    // Clearing every recent search asks first, as Clear Recent does.
+    var confirmClear by remember { mutableStateOf(false) }
+    if (confirmClear) {
+        ClearSearchHistoryDialog(
+            onConfirm = {
+                confirmClear = false
+                onClearAll()
+            },
+            onDismiss = { confirmClear = false },
+        )
+    }
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -842,7 +800,7 @@ private fun MobileEpgSearchHistorySection(
             title = stringResource(R.string.epg_browser_recent_searches),
             trailing = {
                 IconAction(
-                    onClick = onClearAll,
+                    onClick = { confirmClear = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.epg_browser_clear_all_description),
                     tone = TextTone.Danger,

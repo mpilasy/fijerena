@@ -211,7 +211,8 @@ private fun RailOverlay(
     // Opaque, also when the theme's surface is see-through: the open rail's labels sit over the
     // screen's own text, which must not show through them.
     val panel = CinemaTheme.colors.surface.compositeOver(CinemaTheme.colors.background)
-    val entryItem = railEntryItem(state.current, items)
+    // Focus enters on the lit item: a Browse entry when one is lit, else a rail item.
+    val entryItem = if (state.currentBrowse != null) null else railEntryItem(state.current, items)
 
     // The Look's frame (Console): in the safe margins, so it shows and hides with the rail.
     val frame = LocalUiStyle.current.frame
@@ -281,7 +282,14 @@ private fun RailOverlay(
                 if (item == RailItem.SEARCH) {
                     browse.forEach { source ->
                         key(source.providerId) {
-                            BrowseEntry(source = source, openProgress = openProgress, onClick = { selectBrowse(source) })
+                            val isCurrent = source.providerId == state.currentBrowse
+                            BrowseEntry(
+                                source = source,
+                                isCurrent = isCurrent,
+                                openProgress = openProgress,
+                                onClick = { selectBrowse(source) },
+                                modifier = if (isCurrent) Modifier.focusRequester(state.entry) else Modifier,
+                            )
                         }
                     }
                 }
@@ -316,6 +324,7 @@ private fun RailOverlay(
             CinemaText(
                 text = stringResource(R.string.tv_nav_rail_hint),
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .background(panel.copy(alpha = CinemaAlpha.opaque), cornerShape(CornerRadius.large))
@@ -374,15 +383,24 @@ private fun RailEntry(
     }
 }
 
-/** A "Browse <source>" entry (O1): never lit, as what it opens is not one of the rail's places. */
+/** A "Browse <source>" entry (O1): lit while its source's list is on top ([isCurrent]), as a rail item is. */
 @Composable
 private fun BrowseEntry(
     source: BrowseSource,
+    isCurrent: Boolean,
     openProgress: State<Float>,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val label = stringResource(R.string.browse_source, source.name)
-    RailButton(label = label, description = label, isCurrent = false, openProgress = openProgress, onClick = onClick, modifier = Modifier) {
+    RailButton(
+        label = label,
+        description = label,
+        isCurrent = isCurrent,
+        openProgress = openProgress,
+        onClick = onClick,
+        modifier = modifier,
+    ) {
         Icon(
             imageVector = CinemaIcons.Folder,
             contentDescription = null,
