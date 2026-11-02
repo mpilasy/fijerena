@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,7 +107,7 @@ internal fun MobilePeopleSearchPane(
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth().padding(Spacing.md),
         placeholder = stringResource(R.string.search_people_placeholder),
-        leadingIcon = { Icon(imageVector = CinemaIcons.Search, contentDescription = null) },
+        leadingIcon = { CinemaIcon(imageVector = CinemaIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (state is PeopleSearchViewModel.State.Loading) {
                 CinemaSpinner(modifier = Modifier.size(MobileDimensions.iconDefault))

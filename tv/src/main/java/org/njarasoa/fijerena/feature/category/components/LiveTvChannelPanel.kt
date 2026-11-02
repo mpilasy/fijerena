@@ -25,7 +25,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.categoryKey
@@ -38,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -189,7 +189,7 @@ internal fun LiveTvChannelPanel(
                     size = TvDimensions.iconLarge,
                     modifier = Modifier.focusRequester(refreshFocus),
                     icon = {
-                        Icon(
+                        TvIcon(
                             imageVector = CinemaIcons.Refresh,
                             contentDescription = stringResource(R.string.category_refresh_streams_description),
                             modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),

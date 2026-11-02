@@ -256,6 +256,7 @@ internal fun ProfileSwitchRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
+        // look-ok: a hand-built switch row; the toggle row components replace it
         modifier = modifier.fillMaxWidth().clickable(enabled = enabled) { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -282,6 +283,7 @@ private fun ColorSwatch(
                 .size(MobileDimensions.iconLarge)
                 .clip(CinemaTheme.shapes.identity)
                 .panelOutline(if (selected) PanelOutline.Marked else PanelOutline.None, PanelCorner.Identity)
+                // look-ok: a colour swatch of the profile colour picker, not a list row
                 .clickable(onClick = onClick)
                 .semantics {
                     contentDescription = label

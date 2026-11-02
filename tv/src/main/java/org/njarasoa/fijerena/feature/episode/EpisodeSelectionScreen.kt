@@ -93,7 +93,6 @@ import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
-import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -1201,7 +1200,7 @@ internal fun EpisodeListContent(
                                     onClick = { playAnchor(true) },
                                     modifier = downToTabRow.then(upScrollToTop),
                                     icon = {
-                                        Icon(
+                                        TvIcon(
                                             imageVector = CinemaIcons.Replay,
                                             contentDescription = stringResource(R.string.player_osd_start_over),
                                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -1244,7 +1243,7 @@ internal fun EpisodeListContent(
                                     onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                                     modifier = downToTabRow.then(upScrollToTop),
                                     icon = {
-                                        Icon(
+                                        TvIcon(
                                             imageVector = CinemaIcons.Movie,
                                             contentDescription = stringResource(R.string.details_watch_trailer_description),
                                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -1850,6 +1849,7 @@ private fun StreamNamePicker(
                     .onFocusChanged {
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
+                        // look-ok: a focusable picker or a season tab chip, not a list row
                     }.clickable {
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
@@ -2020,7 +2020,7 @@ private fun EpisodeDetailPanel(
                     CinemaIconButton(
                         onClick = { onPlay(episode.id, episode.title, extension, true) },
                         icon = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.Replay,
                                 contentDescription = stringResource(R.string.player_osd_start_over),
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -2045,7 +2045,7 @@ private fun EpisodeDetailPanel(
                             onNavigate(it)
                         },
                         icon = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.SkipPrevious,
                                 contentDescription = stringResource(R.string.player_prev_episode),
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -2061,7 +2061,7 @@ private fun EpisodeDetailPanel(
                             onNavigate(it)
                         },
                         icon = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.SkipNext,
                                 contentDescription = stringResource(R.string.player_next_episode),
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -2077,7 +2077,7 @@ private fun EpisodeDetailPanel(
                     CinemaIconButton(
                         onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                         icon = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.Movie,
                                 contentDescription = stringResource(R.string.details_watch_trailer_description),
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -2333,6 +2333,7 @@ private fun SeasonTab(
                 .onFocusChanged { isFocused = it.isFocused }
                 // Hold OK or Menu: the season's actions (mark it watched or unwatched).
                 .then(onLongPress?.let { Modifier.tvLongPress(it).openActionsOnMenuKey(it) } ?: Modifier)
+                // look-ok: a focusable picker or a season tab chip, not a list row
                 .clickable { onSelected() }
                 .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,

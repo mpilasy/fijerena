@@ -709,6 +709,7 @@
     <string name="settings_group_display">Fisehoana</string>
     <string name="settings_group_this_device">Ity fitaovana ity</string>
     <string name="settings_group_admin">Fitantanana</string>
+    <string name="settings_group_admin_desc">Mombamomba, fanaraha-maso ny ray aman-dreny, ity fitaovana ity, loharano, fampifanarahana sy tahiry</string>
     <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
     <string name="common_custom">Safidy manokana</string>
     <string name="settings_custom_value_format">%1$s (manokana)</string>
@@ -897,7 +898,7 @@
     <string name="settings_diagnostics_copy">Kopiao</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Momba ny fitaovana</string>
-    <string name="device_info_desc">Ity rindranasa sy fitaovana ity: dikan-teny, fitadidiana, toerana fitehirizana, efijery, decoder, tambajotra ary asa ao ambadika</string>
+    <string name="device_info_desc">Ity rindranasa sy fitaovana ity: dikan-teny, fitadidiana, toerana fitehirizana, efijery, mpamaky media, tambajotra ary asa ao ambadika</string>
     <string name="device_info_open">Momba ny fitaovana</string>
     <string name="licenses_title">Fahazoan-dàlana open source</string>
     <string name="licenses_desc">Ireo tranomboky sy endri-tsoratra nanaovana ny rindranasa, sy ny fahazoan-dàlany</string>
@@ -913,7 +914,7 @@
     <string name="device_info_section_storage">Fitehirizana</string>
     <string name="device_info_section_display">Efijery</string>
     <string name="device_info_version">Dikan-teny</string>
-    <string name="device_info_build">Build</string>
+    <string name="device_info_build">Fanamboarana</string>
     <string name="device_info_installed">Napetraka tamin\'ny</string>
     <string name="device_info_updated">Nohavaozina tamin\'ny</string>
     <string name="device_info_profile_sources">Loharanon\'ny mombamomba</string>
@@ -923,22 +924,23 @@
     <string name="device_info_codename">Anarana miafina</string>
     <string name="device_info_android">Android</string>
     <string name="device_info_security_patch">Fanitsiana fiarovana</string>
-    <string name="device_info_abis">Rafitry ny processeur</string>
+    <string name="device_info_abis">Rafitry ny CPU</string>
     <string name="device_info_form_factor">Karazana fitaovana</string>
     <string name="device_info_form_tv">Fahitalavitra</string>
     <string name="device_info_form_mobile">Finday na takelaka</string>
     <string name="device_info_device_type">Fantatra ho</string>
-    <string name="device_info_ram">Fitadidiana (RAM)</string>
+    <string name="device_info_type_other_tv">Fahitalavitra hafa</string>
+    <string name="device_info_ram">Fitadidiana miasa</string>
     <string name="device_info_low_memory_now">Kely fitadidiana izao</string>
     <string name="device_info_low_memory_threshold">Fetran\'ny fitadidiana kely</string>
     <string name="device_info_low_ram_device">Fitaovana kely fitadidiana</string>
     <string name="device_info_heap">Fitadidiana ampiasain\'ny rindranasa</string>
     <string name="device_info_heap_class">Fetran\'ny fitadidian\'ny rindranasa (mahazatra / lehibe)</string>
-    <string name="device_info_native_heap">Fitadidiana native an\'ny rindranasa</string>
+    <string name="device_info_native_heap">Fitadidiana fototra an\'ny rindranasa</string>
     <string name="device_info_internal_storage">Fitehirizana anatiny</string>
     <string name="device_info_database_format">Tahiry %1$s</string>
-    <string name="device_info_image_cache">Cache sary</string>
-    <string name="device_info_cache_total">Cache rehetra</string>
+    <string name="device_info_image_cache">Tahiry vonjimaika sary</string>
+    <string name="device_info_cache_total">Tahiry vonjimaika rehetra</string>
     <string name="device_info_files_total">Rakitry ny rindranasa</string>
     <string name="device_info_display_mode">Fomba ankehitriny</string>
     <string name="device_info_density">Hakitroky</string>
@@ -1070,12 +1072,12 @@
     <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
     <string name="series_resume_next_format">▶ Tohizo: %1$s (%2$s)</string>
     <!-- Device info: media (P2) -->
-    <string name="device_info_section_video_decoders">Decoder video</string>
+    <string name="device_info_section_video_decoders">Mpamaky video</string>
     <string name="device_info_section_audio">Feo mivoaka</string>
     <string name="device_info_decoder_hardware_format">%1$s · fitaovana · %2$s</string>
     <string name="device_info_decoder_software_format">%1$s · rindrankajy · %2$s</string>
-    <string name="device_info_decoder_none">Tsy misy decoder</string>
-    <string name="device_info_audio_passthrough">Alefa mivantana (passthrough)</string>
+    <string name="device_info_decoder_none">Tsy misy mpamaky video</string>
+    <string name="device_info_audio_passthrough">Alefa mivantana</string>
     <string name="device_info_audio_passthrough_none">Tsy misy</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Fandaharana</string>
@@ -1127,7 +1129,7 @@
     <string name="device_info_power_ac">Herinaratra (AC)</string>
     <string name="device_info_power_usb">USB</string>
     <string name="device_info_power_wireless">Tsy misy tariby</string>
-    <string name="device_info_power_dock">Fipetrahana (dock)</string>
+    <string name="device_info_power_dock">Fipetrahana</string>
     <string name="device_info_device_idle">Doze lalina izao</string>
     <string name="device_info_light_idle">Doze maivana izao</string>
     <string name="device_info_battery_saver">Mandeha ny fitsitsiana bateria</string>

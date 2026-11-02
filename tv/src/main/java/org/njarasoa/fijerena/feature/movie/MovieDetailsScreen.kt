@@ -58,7 +58,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -556,7 +555,7 @@ private fun MovieDetailsContent(
                                         .then(upScrollToTop)
                                         .navReturnFocusTarget(returnFocus, RETURN_START_OVER),
                                 icon = {
-                                    Icon(
+                                    TvIcon(
                                         imageVector = CinemaIcons.Replay,
                                         contentDescription = stringResource(R.string.player_osd_start_over),
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -613,7 +612,7 @@ private fun MovieDetailsContent(
                                 onClick = { playTrailer(trailer, movieDetail.metadata.tmdbTrailerUrl) },
                                 modifier = downToTabRow.then(upScrollToTop),
                                 icon = {
-                                    Icon(
+                                    TvIcon(
                                         imageVector = CinemaIcons.Movie,
                                         contentDescription = stringResource(R.string.details_watch_trailer_description),
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -1020,6 +1019,7 @@ private fun StreamNamePicker(
                     .onFocusChanged {
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
+                        // look-ok: a focusable picker that opens its list, not a list row
                     }.clickable {
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),

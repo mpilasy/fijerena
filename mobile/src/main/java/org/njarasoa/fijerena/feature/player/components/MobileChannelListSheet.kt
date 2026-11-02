@@ -70,6 +70,7 @@ fun MobileChannelListSheet(
             Modifier
                 .fillMaxSize()
                 .panel(PanelFill.Veil)
+                // look-ok: a tap catcher: the veil closes the list, the panel keeps taps from it
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -81,6 +82,7 @@ fun MobileChannelListSheet(
                     .align(panelAlignment)
                     .fillMaxWidth(0.72f)
                     .fillMaxHeight()
+                    // look-ok: a tap catcher: the veil closes the list, the panel keeps taps from it
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

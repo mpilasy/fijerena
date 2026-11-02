@@ -400,6 +400,7 @@ private fun ChannelCell(
     Column(
         modifier =
             modifier
+                // look-ok: a guide grid cell, not a list row
                 .clickable(onClick = onClick)
                 .padding(CHANNEL_CELL_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -473,6 +474,7 @@ private fun ProgramCell(
                 .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f)
                 .clip(shape)
                 .panel(PanelFill.Raised)
+                // look-ok: a guide grid cell, not a list row
                 .clickable(onClick = onClick),
     ) {
         if (onAir) {

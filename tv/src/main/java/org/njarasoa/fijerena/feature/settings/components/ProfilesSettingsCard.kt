@@ -44,7 +44,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.UiThemes
@@ -87,6 +86,7 @@ import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -151,7 +151,7 @@ fun ProfilesSettingsCard(
                 onClick = { choosingPin = true },
                 modifier = firstRowModifier,
                 leading = {
-                    Icon(
+                    TvIcon(
                         imageVector = CinemaIcons.Lock,
                         contentDescription = null,
                         modifier = Modifier.size(TvDimensions.iconMedium),
@@ -194,7 +194,7 @@ fun ProfilesSettingsCard(
             modifier = if (profiles.isEmpty()) firstRowModifier else Modifier,
             chevron = false,
             leading = {
-                Icon(
+                TvIcon(
                     imageVector = CinemaIcons.Add,
                     contentDescription = null,
                     modifier = Modifier.size(TvDimensions.iconMedium),
@@ -695,7 +695,7 @@ fun ProfileEditPane(
                         focusRequester = addFocus,
                         chevron = false,
                         leading = {
-                            Icon(
+                            TvIcon(
                                 imageVector = CinemaIcons.Add,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconMedium),

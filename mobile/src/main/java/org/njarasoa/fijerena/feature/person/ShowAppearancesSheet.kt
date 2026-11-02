@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.person
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +20,9 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.person.appearanceLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSheet
+import org.njarasoa.fijerena.ui.components.CinemaSheetHeader
 
 /**
  * A person's appearances in one show, as a sheet over the person page
@@ -38,25 +39,11 @@ fun ShowAppearancesSheet(
     onDismiss: () -> Unit,
 ) {
     val resources = LocalResources.current
-    CinemaSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-        ) {
-            CinemaText(text = title, role = TextRole.Title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            subtitle?.let { CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Secondary) }
-        }
-        LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.md)) {
+    CinemaSheet(onDismissRequest = onDismiss, rows = true) {
+        CinemaSheetHeader(title = title, subtitle = subtitle)
+        LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.sm)) {
             items(lines, key = { "${it.season}:${it.episode ?: ""}" }) { line ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(line) }
-                            .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                CinemaRow(onClick = { onSelect(line) }) {
                     CinemaText(
                         text = appearanceLabel(resources, line),
                         role = TextRole.Body,

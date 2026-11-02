@@ -660,6 +660,7 @@
     <string name="device_info_form_tv">TV</string>
     <string name="device_info_form_mobile">Phone or tablet</string>
     <string name="device_info_device_type">Detected as</string>
+    <string name="device_info_type_other_tv">Other TV</string>
     <string name="device_info_ram">Memory (RAM)</string>
     <string name="device_info_low_memory_now">Low on memory now</string>
     <string name="device_info_low_memory_threshold">Low-memory threshold</string>
@@ -968,6 +969,7 @@
     <string name="settings_group_display">Display</string>
     <string name="settings_group_this_device">This Device</string>
     <string name="settings_group_admin">Admin</string>
+    <string name="settings_group_admin_desc">Profiles, parental controls, this device, sources, sync and backups</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>

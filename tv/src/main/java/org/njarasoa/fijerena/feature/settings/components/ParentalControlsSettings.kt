@@ -281,8 +281,8 @@ internal fun ParentalListContent(
 }
 
 /**
- * A word and what it matches ("Matches 12"; nothing while it loads); a ✕ on the focused row says
- * OK removes it. The ✕ keeps its slot on the other rows: a trailing slot that comes with focus
+ * A word and what it matches ("Matches 12"; nothing while it loads); a bin on the focused row says
+ * OK removes it. The bin keeps its slot on the other rows: a trailing slot that comes with focus
  * changes the row's layout, and the row then loses that focus.
  */
 @Composable
@@ -308,7 +308,7 @@ private fun ParentalEntryRow(
         trailing = {
             if (focused) {
                 TvIcon(
-                    imageVector = CinemaIcons.Close,
+                    imageVector = CinemaIcons.Delete,
                     contentDescription = stringResource(R.string.edit_remove_row),
                     tone = TextTone.Danger,
                     modifier = Modifier.size(TvDimensions.iconSmall),

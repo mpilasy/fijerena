@@ -38,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Icon
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.wanted.CatalogueHit
@@ -66,6 +65,7 @@ import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -234,7 +234,7 @@ fun TmdbTitleScreen(
                                 onClick = { playTrailer(trailer) },
                                 modifier = actionKeys,
                                 icon = {
-                                    Icon(
+                                    TvIcon(
                                         imageVector = CinemaIcons.Movie,
                                         contentDescription = stringResource(R.string.details_watch_trailer_description),
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),

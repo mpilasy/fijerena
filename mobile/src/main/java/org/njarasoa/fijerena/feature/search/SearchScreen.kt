@@ -70,10 +70,12 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.GroupHeading
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -121,6 +123,7 @@ import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
@@ -452,7 +455,7 @@ fun MobileSearchScreen(
                         .padding(Spacing.md),
                 placeholder = searchPlaceholder(contentType),
                 leadingIcon = {
-                    Icon(
+                    CinemaIcon(
                         imageVector = CinemaIcons.Search,
                         contentDescription = null,
                     )
@@ -670,12 +673,7 @@ private fun SearchFilterAction(
                     ) {
                         @Composable
                         fun Heading(text: String) {
-                            CinemaText(
-                                text,
-                                modifier = Modifier.padding(top = Spacing.xs),
-                                role = TextRole.Caption,
-                                tone = TextTone.Secondary,
-                            )
+                            GroupHeading(text, modifier = Modifier.padding(top = Spacing.xs))
                         }
 
                         // One choice: the whole row takes the tap. A radio for the source (one choice), a
@@ -688,6 +686,7 @@ private fun SearchFilterAction(
                             onClick: () -> Unit,
                         ) {
                             Row(
+                                // look-ok: a hand-built check or radio row; the toggle row components replace it
                                 modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = Spacing.xxs),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -1208,24 +1207,18 @@ private fun MobileSearchHistorySection(
         modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(
-                text = stringResource(R.string.epg_browser_recent_searches),
-                role = TextRole.Label,
-                tone = TextTone.Secondary,
-            )
-            IconAction(
-                onClick = onClearAll,
-                icon = CinemaIcons.Delete,
-                label = stringResource(R.string.epg_browser_clear_all_description),
-                tone = TextTone.Secondary,
-                iconModifier = Modifier.size(MobileDimensions.iconSmall),
-            )
-        }
+        SectionHeader(
+            title = stringResource(R.string.epg_browser_recent_searches),
+            trailing = {
+                IconAction(
+                    onClick = onClearAll,
+                    icon = CinemaIcons.Delete,
+                    label = stringResource(R.string.epg_browser_clear_all_description),
+                    tone = TextTone.Danger,
+                    iconModifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            },
+        )
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -1246,7 +1239,7 @@ private fun MobileSearchHistorySection(
                         )
                     },
                     leadingIcon = {
-                        Icon(
+                        CinemaIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
@@ -1287,27 +1280,14 @@ internal fun SearchSectionHeader(
     count: Int,
     hiddenCount: Int,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.xxs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CinemaText(
-            text = title,
-            role = TextRole.Heading,
-            tone = TextTone.Primary,
-        )
-        Spacer(Modifier.weight(1f))
-        CinemaText(
-            text = searchCountLabel(count, hiddenCount),
-            role = TextRole.Body,
-            tone = TextTone.Secondary,
-        )
-    }
+    SectionHeader(
+        title = title,
+        count = searchCountLabel(count, hiddenCount),
+        modifier = Modifier.padding(vertical = Spacing.xxs),
+    )
 }
 
+/** A section header that folds its group: the whole header is one tap target. */
 @Composable
 private fun MobileCollapsibleHeader(
     title: String,
@@ -1321,37 +1301,23 @@ private fun MobileCollapsibleHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = Spacing.xxs)
-                .clip(panelShape(PanelCorner.Chip))
-                .clickable(onClick = onToggle),
+                .clip(panelShape(PanelCorner.Chip)),
         fill = PanelFill.RaisedFaint,
         corner = PanelCorner.Chip,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(
-                text = title,
-                role = TextRole.Heading,
-                tone = TextTone.Primary,
-                emphasis = true,
-            )
-            Spacer(Modifier.weight(1f))
-            CinemaText(
-                text = searchCountLabel(count, hiddenCount),
-                modifier = Modifier.padding(end = Spacing.xs),
-                role = TextRole.Body,
-                tone = TextTone.Secondary,
-            )
-            CinemaIcon(
-                imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-                contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tone = TextTone.Accent,
-                modifier = Modifier.size(MobileDimensions.iconSmall),
+        CinemaRow(onClick = onToggle) {
+            SectionHeader(
+                title = title,
+                count = searchCountLabel(count, hiddenCount),
+                trailing = {
+                    CinemaIcon(
+                        imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
+                        contentDescription =
+                            if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
+                        tone = TextTone.Secondary,
+                        modifier = Modifier.size(MobileDimensions.iconSmall),
+                    )
+                },
             )
         }
     }
@@ -1366,13 +1332,11 @@ private fun CategoryResultCard(
     onLongClick: () -> Unit = {},
 ) {
     CinemaCard(
+        onClick = onClick,
+        onLongClick = onLongClick,
         modifier =
             Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                ),
+                .fillMaxWidth(),
         colors = cardColors,
     ) {
         Row(
@@ -1411,14 +1375,12 @@ internal fun SearchResultCard(
     onLongClick: () -> Unit = {},
 ) {
     CinemaCard(
+        onClick = onClick,
+        onLongClick = onLongClick,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(MobileDimensions.streamCardHeight)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                ),
+                .height(MobileDimensions.streamCardHeight),
         colors = cardColors,
     ) {
         Row(
@@ -1495,15 +1457,13 @@ internal fun TmdbTitleCard(
     onLongClick: () -> Unit,
 ) {
     CinemaCard(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = stringResource(R.string.row_more_actions),
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(MobileDimensions.streamCardHeight)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    onLongClickLabel = stringResource(R.string.row_more_actions),
-                ),
+                .height(MobileDimensions.streamCardHeight),
         colors = cardColors,
     ) {
         Row(

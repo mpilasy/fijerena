@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.sports
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +49,9 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSheet
+import org.njarasoa.fijerena.ui.components.CinemaSheetHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -78,26 +79,17 @@ fun MobileGameSheet(
     val resources = LocalResources.current
     var asking by remember { mutableStateOf<GameChannel?>(null) }
     val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
-    CinemaSheet(onDismissRequest = onDismiss) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                CinemaText(text = gameTitle(resources, game), role = TextRole.Title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                CinemaText(
-                    text =
-                        listOfNotNull(
-                            game.competition.name.takeIf { it.isNotBlank() },
-                            DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
-                        ).joinToString(" · "),
-                    role = TextRole.BodySmall,
-                    tone = TextTone.Secondary,
-                )
-            }
-            actions()
-        }
-        LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.md)) {
+    CinemaSheet(onDismissRequest = onDismiss, rows = true) {
+        CinemaSheetHeader(
+            title = gameTitle(resources, game),
+            subtitle =
+                listOfNotNull(
+                    game.competition.name.takeIf { it.isNotBlank() },
+                    DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
+                ).joinToString(" · "),
+            actions = actions,
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.sm)) {
             if (channels.isNullOrEmpty()) {
                 item(key = "no_channel") { SheetText(noChannelNote(resources, channels)) }
             } else {
@@ -200,14 +192,8 @@ private fun ChannelLine(
         } else {
             channelNote(resources, channel)
         }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-        verticalAlignment = Alignment.CenterVertically,
+    CinemaRow(
+        onClick = onClick,
     ) {
         CinemaThumbnail(
             url = stream.iconUrl,

@@ -1,6 +1,6 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.colorOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -61,14 +62,7 @@ fun SettingsListRow(
 ) {
     val titleTone = if (enabled) TextTone.Primary else TextTone.Disabled
     val summaryTone = if (enabled) TextTone.Secondary else TextTone.Disabled
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    CinemaRow(onClick = onClick, enabled = enabled, horizontalArrangement = Arrangement.Start) {
         if (leading != null) {
             leading()
             Spacer(modifier = Modifier.width(Spacing.sm))

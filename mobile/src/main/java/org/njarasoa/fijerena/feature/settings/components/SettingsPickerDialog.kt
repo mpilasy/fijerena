@@ -68,6 +68,7 @@ fun <T> SettingsPickerDialog(
                                     Modifier
                                         .fillMaxWidth()
                                         .then(if (inLook != null) Modifier.lookOutline(value == checked) else Modifier)
+                                        // look-ok: a hand-built radio row; the toggle row components replace it
                                         .clickable { if (previewIn != null) marked = value else onSelect(value) }
                                         .padding(vertical = Spacing.sm)
                                         .then(if (inLook != null) Modifier.padding(horizontal = Spacing.sm) else Modifier),

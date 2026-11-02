@@ -380,7 +380,7 @@ fun TvEpgManagementScreen(
                                         )
                                         TvIconAction(
                                             onClick = { intervalSource = source },
-                                            icon = CinemaIcons.Sync,
+                                            icon = CinemaIcons.Schedule,
                                             label = stringResource(R.string.epg_auto_refresh_title),
                                             modifier =
                                                 if (source.id ==

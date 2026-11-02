@@ -41,8 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +58,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -97,6 +94,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
+import org.njarasoa.fijerena.ui.components.CinemaSlider
 import org.njarasoa.fijerena.ui.components.MobileClockText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -198,6 +196,7 @@ fun MobileControlsOverlay(
             Modifier
                 .fillMaxSize()
                 .panel(PanelFill.Osd)
+                // look-ok: a whole-screen tap catcher over the video
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -472,21 +471,13 @@ fun MobileControlsOverlay(
                         var seekPosition by remember { mutableStateOf(0f) }
                         var lastHapticSecond by remember { mutableStateOf(-1L) }
 
-                        val scrubberColors =
-                            SliderDefaults.colors(
-                                thumbColor = CinemaTheme.colors.accent,
-                                activeTrackColor = CinemaTheme.colors.accent,
-                                inactiveTrackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint),
-                            )
-                        val scrubberInteractionSource = remember { MutableInteractionSource() }
-
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CinemaText(
                                 text = formatTime(position),
                                 role = TextRole.BodySmall,
                                 tone = TextTone.Primary,
                             )
-                            Slider(
+                            CinemaSlider(
                                 value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
                                 onValueChange = { newValue ->
                                     isSeeking = true
@@ -505,21 +496,6 @@ fun MobileControlsOverlay(
                                     isSeeking = false
                                 },
                                 modifier = Modifier.weight(1f).padding(horizontal = CinemaSpacing.xs),
-                                colors = scrubberColors,
-                                interactionSource = scrubberInteractionSource,
-                                // Default thumb is a 4dp-wide bar — round and enlarge it so it
-                                // reads as a draggable knob, not a thin tick mark.
-                                thumb = {
-                                    SliderDefaults.Thumb(
-                                        interactionSource = scrubberInteractionSource,
-                                        colors = scrubberColors,
-                                        thumbSize =
-                                            DpSize(
-                                                MobileDimensions.playerScrubberThumbSize,
-                                                MobileDimensions.playerScrubberThumbSize,
-                                            ),
-                                    )
-                                },
                             )
                             CinemaText(
                                 text = formatTime(duration),
@@ -704,6 +680,7 @@ fun MobileControlsOverlay(
                     Modifier
                         .fillMaxSize()
                         .panel(PanelFill.Scrim)
+                        // look-ok: a whole-screen tap catcher over the video
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,

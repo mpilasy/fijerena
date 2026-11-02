@@ -240,6 +240,7 @@ internal fun ParentalListContent(
                             },
                             icon = CinemaIcons.Delete,
                             label = stringResource(R.string.parental_entry_remove, entry),
+                            tone = TextTone.Danger,
                         )
                     },
                 )

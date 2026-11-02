@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.GroupHeading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
@@ -220,10 +221,5 @@ internal fun TvSearchFilterDialog(
 /** A section's name: not focusable, it only names the rows under it. */
 @Composable
 private fun Heading(text: String) {
-    CinemaText(
-        text,
-        modifier = Modifier.padding(top = Spacing.sm),
-        role = TextRole.Label,
-        tone = TextTone.Secondary,
-    )
+    GroupHeading(text, modifier = Modifier.padding(top = Spacing.sm))
 }

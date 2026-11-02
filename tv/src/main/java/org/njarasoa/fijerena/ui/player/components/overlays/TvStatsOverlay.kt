@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.GroupHeading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
@@ -687,5 +688,5 @@ private fun CompactStatRowColored(
 
 @Composable
 private fun SectionHeader(title: String) {
-    CinemaText(text = title, role = TextRole.Label, tone = TextTone.Primary, emphasis = true, modifier = Modifier.padding(top = Spacing.xs))
+    GroupHeading(title, modifier = Modifier.padding(top = Spacing.xs))
 }

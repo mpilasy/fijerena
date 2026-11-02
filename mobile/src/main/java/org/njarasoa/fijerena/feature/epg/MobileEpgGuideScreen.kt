@@ -24,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
+import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaSheet
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -238,7 +238,7 @@ fun MobileEpgGuideScreen(
                         }
                         Column(modifier = Modifier.fillMaxSize()) {
                             ListingsEndNote(state)
-                            PullToRefreshBox(
+                            CinemaPullToRefresh(
                                 isRefreshing = isRefreshing,
                                 onRefresh = { viewModel.forceRefresh() },
                             ) {
@@ -468,11 +468,7 @@ private fun ProgramDetailsSheet(
 
     CinemaSheet(onDismissRequest = onDismiss) { close ->
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = CinemaSpacing.md)
-                    .padding(bottom = CinemaSpacing.md),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         ) {
             CinemaText(
@@ -491,6 +487,7 @@ private fun ProgramDetailsSheet(
             if (description != null) {
                 CinemaText(
                     text = description,
+                    // dock-ok: the description scrolls in the programme sheet, over the bar; the guide grid ends with the inset
                     modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
                     role = TextRole.Body,
                     tone = TextTone.Primary,

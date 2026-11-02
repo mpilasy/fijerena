@@ -66,6 +66,7 @@ import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Replay
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SkipNext
@@ -123,6 +124,7 @@ import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
@@ -180,6 +182,7 @@ import androidx.compose.material.icons.sharp.RadioButtonChecked
 import androidx.compose.material.icons.sharp.RadioButtonUnchecked
 import androidx.compose.material.icons.sharp.Refresh
 import androidx.compose.material.icons.sharp.Replay
+import androidx.compose.material.icons.sharp.Schedule
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.SkipNext
@@ -449,6 +452,11 @@ object CinemaIcons {
     val Sync: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Sync, Icons.Outlined.Sync, Icons.Sharp.Sync)
+
+    /** A clock: when a thing runs by itself (a guide source's auto refresh). */
+    val Schedule: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Schedule, Icons.Outlined.Schedule, Icons.Sharp.Schedule)
 
     val RadioButtonChecked: ImageVector
         @Composable @ReadOnlyComposable

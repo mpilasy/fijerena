@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.feature.provider.components.SourceAdvancedSection
 import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -349,7 +350,8 @@ fun MobileAddProviderScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(CinemaSpacing.md)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = LocalDockInset.current),
         ) {
             // Provider type: a picker row when adding, a disabled field when editing (the type of
             // an existing source cannot change).

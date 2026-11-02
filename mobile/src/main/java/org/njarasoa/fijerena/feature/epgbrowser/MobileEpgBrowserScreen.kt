@@ -32,11 +32,9 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -78,10 +76,10 @@ import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -109,6 +107,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaRow
+import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -297,7 +297,7 @@ internal fun MobileGuideSearchPane(
         }
 
         val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
-        CinemaTextField(
+        CinemaSearchField(
             value = query,
             onValueChange = { onQueryChange(it) },
             modifier =
@@ -306,7 +306,7 @@ internal fun MobileGuideSearchPane(
                     .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
             placeholder = placeholderText,
             leadingIcon = {
-                Icon(
+                CinemaIcon(
                     imageVector = CinemaIcons.Search,
                     contentDescription = null,
                     modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -326,7 +326,6 @@ internal fun MobileGuideSearchPane(
                     )
                 }
             },
-            singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions =
                 KeyboardActions(
@@ -346,6 +345,7 @@ internal fun MobileGuideSearchPane(
                 modifier =
                     Modifier
                         .padding(horizontal = Spacing.md)
+                        // look-ok: a hand-built check row; the toggle row components replace it
                         .clickable { inContextOnly = !inContextOnly },
             ) {
                 CinemaCheckbox(
@@ -489,6 +489,7 @@ internal fun MobileGuideSearchPane(
 
             is EpgBrowserViewModel.UiState.Results -> {
                 MobileResultsContent(
+                    isDevMode = isDevMode,
                     results = state,
                     nowEpoch = nowEpoch,
                     matchedOnly = matchedOnly,
@@ -510,6 +511,7 @@ internal fun MobileGuideSearchPane(
 private fun MobileResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
+    isDevMode: Boolean,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
@@ -525,16 +527,19 @@ private fun MobileResultsContent(
         }
 
     Column {
-        CinemaText(
-            text = results.statsLine(),
-            modifier =
-                Modifier.padding(
-                    horizontal = Spacing.md,
-                    vertical = CinemaSpacing.xxs,
-                ),
-            role = TextRole.Body,
-            tone = TextTone.Secondary,
-        )
+        // Counts, timing and search path: developer information, as on TV.
+        if (isDevMode) {
+            CinemaText(
+                text = results.statsLine(),
+                modifier =
+                    Modifier.padding(
+                        horizontal = Spacing.md,
+                        vertical = CinemaSpacing.xxs,
+                    ),
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
+            )
+        }
         if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
             CinemaText(
                 text = stringResource(R.string.epg_browser_partial_results_note),
@@ -612,10 +617,8 @@ private fun MobileProgramCard(
     val bells = rememberGameBells()
 
     CinemaCard(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
+        onClick = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier =
@@ -721,14 +724,10 @@ private fun MobileProgramCard(
             }
 
             if (showExpander) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { expanded = !expanded }
-                            .padding(top = CinemaSpacing.xs),
+                CinemaRow(
+                    onClick = { expanded = !expanded },
+                    contentPadding = PaddingValues(top = CinemaSpacing.xs),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CinemaIcon(
                         imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
@@ -789,16 +788,11 @@ private fun MobileAiringRow(
             }
         }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .then(
-                    if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
-                ).alpha(if (isMatched) 1f else 0.5f)
-                .padding(vertical = CinemaSpacing.xxs),
+    CinemaRow(
+        onClick = onClick,
+        modifier = Modifier.alpha(if (isMatched) 1f else 0.5f),
+        contentPadding = PaddingValues(vertical = CinemaSpacing.xxs),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isMatched) {
             CinemaIcon(
@@ -858,24 +852,18 @@ private fun MobileEpgSearchHistorySection(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(
-                text = stringResource(R.string.epg_browser_recent_searches),
-                role = TextRole.Label,
-                tone = TextTone.Secondary,
-            )
-            IconAction(
-                onClick = onClearAll,
-                icon = CinemaIcons.Delete,
-                label = stringResource(R.string.epg_browser_clear_all_description),
-                tone = TextTone.Secondary,
-                iconModifier = Modifier.size(MobileDimensions.iconSmall),
-            )
-        }
+        SectionHeader(
+            title = stringResource(R.string.epg_browser_recent_searches),
+            trailing = {
+                IconAction(
+                    onClick = onClearAll,
+                    icon = CinemaIcons.Delete,
+                    label = stringResource(R.string.epg_browser_clear_all_description),
+                    tone = TextTone.Danger,
+                    iconModifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            },
+        )
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -896,7 +884,7 @@ private fun MobileEpgSearchHistorySection(
                         )
                     },
                     leadingIcon = {
-                        Icon(
+                        CinemaIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),

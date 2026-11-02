@@ -98,6 +98,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                     onClick = { showClearConfirm = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.settings_diagnostics_clear),
+                    tone = TextTone.Danger,
                 )
                 IconAction(
                     onClick = {
@@ -144,6 +145,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            // look-ok: a log entry panel: tap shows the details, hold copies it
                             .combinedClickable(
                                 onClickLabel =
                                     when {

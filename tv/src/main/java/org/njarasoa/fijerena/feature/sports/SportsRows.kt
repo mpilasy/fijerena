@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
@@ -172,7 +171,7 @@ fun TvBestTeamRow(
                         )
                     }
                 }
-                Icon(
+                TvIcon(
                     imageVector = CinemaIcons.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.sports_open_team_page),
                     modifier = Modifier.size(TvDimensions.iconMedium),
