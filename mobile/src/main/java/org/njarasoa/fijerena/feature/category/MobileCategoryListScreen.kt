@@ -2191,7 +2191,7 @@ private fun StreamsList(
                                             if (revealed) value = showWatchState(showSeriesId, item.providerId)
                                         }
                                         SwipeActionButton(
-                                            icon = if (isShowWatched == true) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            icon = if (isShowWatched == true) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                                             contentDescription =
                                                 stringResource(
                                                     if (isShowWatched ==
@@ -2210,7 +2210,7 @@ private fun StreamsList(
                                         )
                                     } else if (showSeriesId == null && isWatchable && showWatchedMark) {
                                         SwipeActionButton(
-                                            icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            icon = if (isWatchedItem) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                                             contentDescription =
                                                 stringResource(
                                                     if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
@@ -2295,7 +2295,7 @@ private fun StreamsList(
                             when (action) {
                                 RowMenuAction.MARK_WATCHED -> {
                                     MenuAction(
-                                        icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        icon = if (isWatchedItem) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                                         label = stringResource(if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark),
                                         onClick = { onToggleWatched(item) },
                                     )
@@ -2303,7 +2303,7 @@ private fun StreamsList(
 
                                 RowMenuAction.MARK_SHOW_WATCHED -> {
                                     MenuAction(
-                                        icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        icon = if (isShowWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                                         label =
                                             stringResource(
                                                 if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show,

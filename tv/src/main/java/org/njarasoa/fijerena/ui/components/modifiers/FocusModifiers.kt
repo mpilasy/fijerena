@@ -119,13 +119,14 @@ fun Modifier.rowFocusOutline(
     )
 
 /**
- * A tab chip's fill (the season tabs): [TvFocusTokens.focusFill] while [isFocused], the resting
- * container otherwise. Selection is not a fill (P5): the chip's current bar and text carry it.
+ * The one tab look's fill (every page and section tab: a detail page's, the season tabs, a list's,
+ * Search's): [TvFocusTokens.focusFill] while [isFocused], no fill otherwise, so a tab at rest is its
+ * label alone. Selection is not a fill (P5): the tab's bottom bar and text carry it.
  */
 @Composable
 fun Modifier.tabChipFill(isFocused: Boolean): Modifier =
     background(
-        color = if (isFocused) TvFocusTokens.focusFill else TvFocusTokens.restingContainer,
+        color = if (isFocused) TvFocusTokens.focusFill else CinemaTheme.colors.clear,
         shape = CinemaTheme.shapes.chip,
     )
 

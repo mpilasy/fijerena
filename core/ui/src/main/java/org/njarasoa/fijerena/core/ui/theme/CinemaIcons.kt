@@ -308,9 +308,12 @@ object CinemaIcons {
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Visibility, Icons.Outlined.Visibility, Icons.Sharp.Visibility)
 
-    /** A switch's eye while its setting is off (UX-D7): the outline in every look, so "on" can be filled. */
+    /**
+     * A switch's eye while its setting is off (UX-D7): the struck-out eye, as an outline in every
+     * look. A plain outline eye read the same as the filled one once focus drew both dark on white.
+     */
     val VisibilityOutline: ImageVector
-        get() = Icons.Outlined.Visibility
+        get() = Icons.Outlined.VisibilityOff
 
     /** A switch's eye while its setting is on (UX-D7): filled in every look. */
     val VisibilityFilled: ImageVector
@@ -354,6 +357,19 @@ object CinemaIcons {
     val CheckCircleFilled: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.CheckCircle, Icons.Rounded.CheckCircle, Icons.Sharp.CheckCircle)
+
+    /**
+     * The one icon of a "Mark as watched" action (an episode, a film, a season, a show) in every
+     * action menu and swipe action on both apps: the check in a ring.
+     */
+    val MarkWatched: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = CheckCircleOutline
+
+    /** The one icon of a "Mark as unwatched" action, next to [MarkWatched]: the empty ring. */
+    val MarkUnwatched: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = RadioButtonUnchecked
 
     val BarChart: ImageVector
         @Composable @ReadOnlyComposable

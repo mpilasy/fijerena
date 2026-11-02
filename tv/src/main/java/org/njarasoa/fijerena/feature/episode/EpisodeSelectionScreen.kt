@@ -166,6 +166,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.feature.contentselection.components.openActionsOnMenuKey
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
@@ -772,6 +773,8 @@ internal fun EpisodeListContent(
     // The season whose menu is open, with whether all its episodes are watched. A Dialog window:
     // closing it hands focus back to the season tab it was opened on.
     var seasonMenu by remember { mutableStateOf<Pair<Int, Boolean?>?>(null) }
+    // The episode whose action menu is open (hold OK or Menu on its row).
+    var episodeMenu by remember { mutableStateOf<DomainEpisodeItem?>(null) }
     var seasonMenuOpened by remember { mutableStateOf(false) }
     LaunchedEffect(seasonMenu) {
         if (seasonMenu != null) {
@@ -793,12 +796,41 @@ internal fun EpisodeListContent(
             actions =
                 listOf(
                     MenuAction(
-                        icon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+                        icon = if (allWatched == true) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                         label = stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
                         onClick = { markEpisodesWatched(season, allWatched != true) },
                     ),
                 ),
             onDismiss = { seasonMenu = null },
+        )
+    }
+    episodeMenu?.let { episode ->
+        val nowWatched = episode.id in watchedEpisodeIds
+        TvActionMenu(
+            title =
+                episodeOwnTitle(episode.title).ifBlank {
+                    stringResource(R.string.series_episode_number_short, episode.episodeNumber)
+                },
+            actions =
+                listOf(
+                    MenuAction(
+                        icon = if (nowWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
+                        label = stringResource(if (nowWatched) R.string.watched_unmark else R.string.watched_mark),
+                        onClick = {
+                            // Manual watched/unwatched mark (Phase 6, the watch state durable storage
+                            // plan). Optimistic: flips this episode's own badge at once; the full
+                            // re-read after the write catches a TMDB sibling this mark completed too
+                            // (Phase 5) and restores the resume bar on an unmark.
+                            watchedEpisodeIds =
+                                if (nowWatched) watchedEpisodeIds - episode.id else watchedEpisodeIds + episode.id
+                            watchedToggleScope.launch {
+                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, !nowWatched)
+                                refreshEpisodeWatchState()
+                            }
+                        },
+                    ),
+                ),
+            onDismiss = { episodeMenu = null },
         )
     }
     markManyError?.let { message ->
@@ -1467,25 +1499,14 @@ internal fun EpisodeListContent(
                                     onClick = {
                                         selectedEpisode = episode
                                     },
-                                    onLongPress = {
-                                        // Not where the source keeps watched state on its server (Jellyfin).
+                                    // Hold OK or Menu: the episode's action menu, as on every other
+                                    // row. Not where the source keeps watched state on its server (Jellyfin).
+                                    onLongPress =
                                         if (mediaRepository.supportsMarkWatched) {
-                                            // Manual watched/unwatched mark (Phase 6,
-                                            // the watch state durable storage plan). Optimistic:
-                                            // flips this episode's own badge immediately rather than
-                                            // waiting on the write; the full re-read after it lands is what
-                                            // catches a TMDB sibling this mark just completed too (Phase 5)
-                                            // and restores the resume bar on an unmark — a single-item
-                                            // patch would miss both.
-                                            val nowWatched = episode.id !in watchedEpisodeIds
-                                            watchedEpisodeIds =
-                                                if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                                            watchedToggleScope.launch {
-                                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                                refreshEpisodeWatchState()
-                                            }
-                                        }
-                                    },
+                                            { episodeMenu = episode }
+                                        } else {
+                                            null
+                                        },
                                 )
                             }
                         }
@@ -2363,9 +2384,10 @@ private fun EpisodeCard(
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onLongPress: () -> Unit = {},
+    onLongPress: (() -> Unit)? = null,
 ) {
     val scale = LocalUiScale.current
+    var isFocused by remember { mutableStateOf(false) }
     TvCard(
         onClick = onClick,
         modifier =
@@ -2373,7 +2395,8 @@ private fun EpisodeCard(
                 .fillMaxWidth()
                 .height(TvDimensions.episodeCardHeight.scaled(scale))
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .tvLongPress(onLongPress),
+                .onFocusChanged { isFocused = it.isFocused }
+                .then(onLongPress?.let { Modifier.tvLongPress(it).openActionsOnMenuKey(it) } ?: Modifier),
         look = cardStyle,
     ) {
         // Box, not a Column with a weighted row: the card is pinned to cardHeight and its content
@@ -2463,6 +2486,11 @@ private fun EpisodeCard(
                         role = TextRole.Body,
                         tone = TextTone.Secondary,
                     )
+                }
+                // The "⋮" hint on the focused row: hold OK or Menu opens its actions.
+                if (isFocused && onLongPress != null) {
+                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                    RowActionsHint()
                 }
             }
 

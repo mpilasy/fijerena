@@ -163,7 +163,7 @@ internal fun PeopleSearchPane(
 
             is PeopleSearchViewModel.State.Loaded -> {
                 if (shown.results.isEmpty) {
-                    TvEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query))
+                    TvEmptyState(message = stringResource(R.string.search_no_results_query_format, shown.query), icon = CinemaIcons.Search)
                 } else {
                     PeopleResultsList(
                         results = shown.results,

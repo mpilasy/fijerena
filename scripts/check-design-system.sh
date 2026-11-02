@@ -417,6 +417,33 @@ for path in sorted(pathlib.Path(sys.argv[1]).rglob("*.kt")):
 PY
 )
 
+# A menu's "Mark as watched" / "Mark as unwatched" has one icon each on both apps
+# (CinemaIcons.MarkWatched / MarkUnwatched; final TV walk, item 10).
+while IFS= read -r hit; do
+    echo "$hit: a watched action in a menu with its own icon — use CinemaIcons.MarkWatched / CinemaIcons.MarkUnwatched."
+    failures=$((failures + 1))
+done < <(python3 - tv/src/main/java mobile/src/main/java <<'PY' || true
+import pathlib
+import re
+import sys
+
+for root in sys.argv[1:]:
+    for path in sorted(pathlib.Path(root).rglob("*.kt")):
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"(?<![A-Za-z0-9_.])MenuAction\(", text):
+            depth, i = 1, m.end()
+            while i < len(text) and depth:
+                depth += {"(": 1, ")": -1}.get(text[i], 0)
+                i += 1
+            args = text[m.end():i]
+            if not re.search(r"R\.string\.watched_(un)?mark", args):
+                continue
+            icons = set(re.findall(r"CinemaIcons\.([A-Za-z]+)", args))
+            if icons - {"MarkWatched", "MarkUnwatched"}:
+                print(f"{path}:{text.count(chr(10), 0, m.start()) + 1}")
+PY
+)
+
 if [ "$failures" -gt 0 ]; then
     echo
     echo "$failures problem(s). Looks come from CinemaTheme and the style classes (see docs/plans/20261016_design-system-plan.md)."

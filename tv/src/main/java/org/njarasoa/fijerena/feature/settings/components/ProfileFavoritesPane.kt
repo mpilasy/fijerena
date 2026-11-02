@@ -157,6 +157,7 @@ internal fun ProfileFavoritesPane(
                         } else {
                             stringResource(R.string.profile_favorites_no_results, profile.name)
                         },
+                    icon = if (query.isBlank()) null else CinemaIcons.Search,
                 )
             }
 

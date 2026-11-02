@@ -68,6 +68,21 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
     }
 
     @Test
+    fun `the Add dialog opens on its first field`() {
+        seed(SettingsFixture.ADMIN)
+        show { TvEpgManagementScreen(providerId = 0L, onBack = {}) }
+        walk.awaitFocused("Use this guide")
+        walk.run(up("Add guide source"))
+        // A form opens on its first field, never on Cancel (DialogFirstField).
+        walk.press(androidx.compose.ui.input.key.Key.DirectionCenter)
+        walk.awaitFocused("Edit Guide link (XMLTV)")
+        walk.run(
+            down("Edit Label (optional)"),
+            down("Edit Time correction (hours)"),
+        )
+    }
+
+    @Test
     fun `opened from Settings, on no source, focus is on the first guide source`() {
         seed(SettingsFixture.ADMIN)
         show { TvEpgManagementScreen(providerId = 0L, onBack = {}) }

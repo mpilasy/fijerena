@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.compose.ui.input.key.Key
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.testing.FocusStep
@@ -82,6 +83,22 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             down("Reset to the app's list"),
             back("Exceptions"),
         )
+    }
+
+    @Test
+    fun `a word removed in Settings comes back on Menu`() {
+        open(SettingsFixture.ADMIN)
+        walk.run(
+            *toAddProfile(),
+            *adminDown("Add Profile", "Exceptions"),
+            center("Add a word"),
+            down("pokemon"),
+            // OK removes the word: focus on the word that takes its place.
+            center("doraemon"),
+        )
+        walk.press(Key.Menu)
+        walk.awaitFocused("pokemon")
+        walk.run(down("doraemon"))
     }
 
     @Test
