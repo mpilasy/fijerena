@@ -1,6 +1,6 @@
 # Consistency round 2: one build for each job
 
-**Status:** In progress 2026-11-01 (Phases 1 and 3).
+**Status:** Done 2026-11-01. All phases on main; a final walk of every screen on both apps, its findings fixed (phone 1e659b550, TV 89c7f5081) and checked again on both emulators.
 
 ## Goal
 
@@ -84,9 +84,9 @@ emulators (findings of the walks are added as they come).
 
 | # | Phase | State |
 |---|---|---|
-| 1 | Menus and dialog bodies (findings 1, 2, 3, 8 for dialogs, 9 for dialogs): action menu components, every menu and drop-down of actions moved, PIN options and guide maintenance as dialog actions or a page, dialog titles and colours from the component, gate | In progress |
-| 2 | Choice and toggle rows (finding 4): row components, every picker and filter moved (phone Search filter as a dialog with radio and check rows, as on TV), gate | Not started |
-| 3 | Feedback and empty states (findings 5, 6, 7): one undo host per app, no Toast, favourite Undo on the phone, empty states through the components, gate | In progress |
-| 4 | Leftovers (findings 8, 9, 10 to 20): text roles, sheet and dialog spacing, one dialog button layout per Look, raw `Icon(`/`Slider`/`PullToRefreshBox`/`TooltipBox`, clickable rows, row actions and delete icons, search field, Settings pages, text not in the app language, lists under the bar, gate; then the TV walk's findings | Not started |
-| 4b | TV walk findings (22, 23, 24, 26 to 40) on both apps where the same job exists, gate where a class allows it | Not started |
-| 5 | Walk every screen, dialog, menu, sheet and picker on both emulators again; docs | Not started |
+| 1 | Menus and dialog bodies (findings 1, 2, 3, 8 for dialogs, 9 for dialogs): action menu components, every menu and drop-down of actions moved, PIN options and guide maintenance as dialog actions or a page, dialog titles and colours from the component, gate | Done 2026-11-01 |
+| 2 | Choice and toggle rows (finding 4): row components, every picker and filter moved (phone Search filter as a dialog with radio and check rows, as on TV), gate | Done 2026-11-01 |
+| 3 | Feedback and empty states (findings 5, 6, 7): one undo host per app, no Toast, favourite Undo on the phone, empty states through the components, gate | Done 2026-11-01 |
+| 4 | Leftovers (findings 8, 9, 10 to 20): text roles, sheet and dialog spacing, one dialog button layout per Look, raw `Icon(`/`Slider`/`PullToRefreshBox`/`TooltipBox`, clickable rows, row actions and delete icons, search field, Settings pages, text not in the app language, lists under the bar, gate; then the TV walk's findings | Done 2026-11-01 |
+| 4b | TV walk findings (22, 23, 24, 26 to 40) on both apps where the same job exists, gate where a class allows it | Done 2026-11-01 |
+| 5 | Walk every screen, dialog, menu, sheet and picker on both emulators again; docs | Done 2026-11-01 |
