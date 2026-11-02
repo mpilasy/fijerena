@@ -1466,7 +1466,7 @@ class CategoryViewModel(
                     if (goneCount >
                         0
                     ) {
-                        context.getString(R.string.favorite_gone_count_format, favoritesName, goneCount)
+                        context.resources.getQuantityString(R.plurals.favorite_gone_count_format, goneCount, favoritesName, goneCount)
                     } else {
                         favoritesName
                     },
@@ -1481,7 +1481,12 @@ class CategoryViewModel(
             virtualCats.add(
                 MediaCategory(
                     id = WANTED_CATEGORY_ID,
-                    name = if (newCount > 0) context.getString(R.string.wanted_title_new_format, title, newCount) else title,
+                    name =
+                        if (newCount > 0) {
+                            context.resources.getQuantityString(R.plurals.wanted_title_new_format, newCount, title, newCount)
+                        } else {
+                            title
+                        },
                     isVirtual = true,
                 ),
             )

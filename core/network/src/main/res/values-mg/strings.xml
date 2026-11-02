@@ -27,9 +27,18 @@
     <string name="settings_export_error_invalid_format">Tsy rakitra fandrindrana Fijerena ity rakitra ity.</string>
     <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
     <string name="settings_export_summary_providers_format">Loharano: %1$s</string>
-    <string name="settings_export_item_added_format">%1$d nampidirina</string>
-    <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
-    <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
+    <plurals name="settings_export_item_added_format">
+        <item quantity="one">%1$d nampidirina</item>
+        <item quantity="other">%1$d nampidirina</item>
+    </plurals>
+    <plurals name="settings_export_item_overwritten_format">
+        <item quantity="one">%1$d nosoloana</item>
+        <item quantity="other">%1$d nosoloana</item>
+    </plurals>
+    <plurals name="settings_export_item_skipped_format">
+        <item quantity="one">%1$d nihoarana</item>
+        <item quantity="other">%1$d nihoarana</item>
+    </plurals>
     <string name="settings_export_summary_epg_sources_format">Loharanon\'ny fitarihana: %1$s</string>
     <plurals name="settings_export_summary_favorites_format">
         <item quantity="one">%1$d tiana indrindra naverina</item>

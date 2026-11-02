@@ -1,62 +1,100 @@
 package org.njarasoa.fijerena.core.ui.utils
 
 import android.content.Context
+import android.content.res.Resources
+import org.njarasoa.fijerena.core.ui.R
+import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Numbers, sizes and durations on screen, written the app language's way ("195 300", "19,3 Mo",
+ * "1 337 ms" in French; "195,300", "19.3 MB", "1,337 ms" in English). Every screen on TV and phone
+ * uses these, with the locale of its Resources ([appLocale]). A unit follows its number after a
+ * no-break space, so a line never wraps between them.
+ */
 object NumberUtils {
-    /**
-     * Format a count (e.g. programs, channels) to a short string (e.g. 1.2k, 5m).
-     * Locale.US, like the byte sizes below and PlaybackFormat's formatRating()/formatBitrate():
-     * a device-locale decimal comma would make "1,2k" sit next to dot-formatted numbers.
-     */
-    fun formatCount(count: Int): String =
-        when {
-            count >= 1_000_000 -> String.format(Locale.US, "%.1fm", count / 1_000_000.0)
-            count >= 1_000 -> String.format(Locale.US, "%.1fk", count / 1_000.0)
-            else -> count.toString()
-        }
+    /** A whole count, grouped the [locale]'s way: "195,300" in English, "195 300" in French. */
+    fun formatCount(
+        count: Long,
+        locale: Locale,
+    ): String = NumberFormat.getIntegerInstance(locale).format(count)
 
-    fun formatDuration(durationMs: Long): String {
+    fun formatCount(
+        count: Int,
+        locale: Locale,
+    ): String = formatCount(count.toLong(), locale)
+
+    /** [formatCount] in the app language of [resources]. */
+    fun formatCount(
+        resources: Resources,
+        count: Long,
+    ): String = formatCount(count, resources.appLocale())
+
+    fun formatCount(
+        resources: Resources,
+        count: Int,
+    ): String = formatCount(count.toLong(), resources.appLocale())
+
+    /** [value] with one decimal, the [locale]'s decimal mark and grouping: "19.3" in English, "19,3" in French. */
+    fun formatDecimal(
+        value: Double,
+        locale: Locale,
+    ): String =
+        NumberFormat
+            .getNumberInstance(locale)
+            .apply {
+                minimumFractionDigits = 1
+                maximumFractionDigits = 1
+            }.format(value)
+
+    /** "1,337 ms" under 10 seconds, "45 s" under a minute, else "2 min 5 s" ("1 337 ms" in French). */
+    fun formatDuration(
+        durationMs: Long,
+        locale: Locale,
+    ): String {
         val totalSeconds = durationMs / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return when {
-            durationMs < 10_000 -> "${durationMs}ms"
-            minutes > 0 -> "${minutes}m ${seconds}s"
-            else -> "${seconds}s"
+            durationMs < 10_000 -> "${formatCount(durationMs, locale)}${NBSP}ms"
+            minutes > 0 -> "${formatCount(minutes, locale)}${NBSP}min $seconds${NBSP}s"
+            else -> "$seconds${NBSP}s"
         }
     }
 
-    /**
-     * Format bytes to a human-readable string (KB, MB, GB). Always a decimal point, see formatCount.
-     */
-    fun formatBytes(bytes: Long): String =
+    /** [formatDuration] in the app language of [resources]. */
+    fun formatDuration(
+        resources: Resources,
+        durationMs: Long,
+    ): String = formatDuration(durationMs, resources.appLocale())
+
+    /** A size in the app language: "19.3 MB" in English, "19,3 Mo" in French. */
+    fun formatBytes(
+        resources: Resources,
+        bytes: Long,
+    ): String = formatBytes(bytes, resources.appLocale()) { unit, number -> resources.getString(unit, number) }
+
+    /** [formatBytes] with the unit's words from [unitText] (a size string resource and the number). */
+    internal fun formatBytes(
+        bytes: Long,
+        locale: Locale,
+        unitText: (Int, String) -> String,
+    ): String =
         when {
-            bytes >= 1_073_741_824 -> String.format(Locale.US, "%.1f GB", bytes / 1_073_741_824.0)
-            bytes >= 1_048_576 -> String.format(Locale.US, "%.1f MB", bytes / 1_048_576.0)
-            bytes >= 1_024 -> String.format(Locale.US, "%.1f KB", bytes / 1_024.0)
-            else -> "$bytes B"
+            bytes >= GB -> unitText(R.string.size_gigabytes, formatDecimal(bytes / GB.toDouble(), locale))
+            bytes >= MB -> unitText(R.string.size_megabytes, formatDecimal(bytes / MB.toDouble(), locale))
+            bytes >= KB -> unitText(R.string.size_kilobytes, formatDecimal(bytes / KB.toDouble(), locale))
+            else -> unitText(R.string.size_bytes, formatCount(bytes, locale))
         }
 
-    /**
-     * Format a timestamp to a short time string (e.g. 14:30:05).
-     */
-    fun formatShortTime(millis: Long): String =
-        java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(millis))
-
-    /**
-     * Format a timestamp to a medium date/time string ("3 Nov 2026, 14:30"), see [DateText.dateTime].
-     */
+    /** A timestamp as a medium date and time ("3 Nov 2026, 14:30"), see [DateText.dateTime]. */
     fun formatTimestamp(
         context: Context,
         millis: Long,
     ): String = DateText.dateTime(context, millis)
 
-    /**
-     * Format epoch seconds to a medium date/time string.
-     */
-    fun formatEpochDate(
-        context: Context,
-        epochSeconds: Long,
-    ): String = formatTimestamp(context, epochSeconds * 1000L)
+    private const val NBSP = ' '
+    private const val KB = 1_024L
+    private const val MB = 1_048_576L
+    private const val GB = 1_073_741_824L
 }

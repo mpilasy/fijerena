@@ -1085,7 +1085,7 @@ fun ContentTypeSelectionScreen(
                     if (newCount >
                         0
                     ) {
-                        stringResource(R.string.wanted_title_new_format, wantedTitle, newCount)
+                        pluralStringResource(R.plurals.wanted_title_new_format, newCount, wantedTitle, newCount)
                     } else {
                         wantedTitle
                     },

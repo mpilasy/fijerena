@@ -65,8 +65,8 @@ fun splitGenres(raw: String?): List<String> =
         .filter { it.isNotEmpty() }
         .distinctBy(::genreKey)
 
-/** A genre's key: the same genre in any case is one choice. */
-fun genreKey(genre: String): String = genre.lowercase()
+/** A genre's key: the same genre in any case, accent or language ("Comedy", "Comédie") is one choice. */
+fun genreKey(genre: String): String = GenreNames.key(genre)
 
 fun decadeOf(year: Int): Int = year / DECADE * DECADE
 
@@ -173,12 +173,14 @@ fun TmdbTitle.matches(choice: SearchFacetChoice): Boolean =
 /**
  * The choices of [results] and [tmdb], each section counting what the other sections' [choice]
  * leaves. A chosen value stays listed with no results, so it can be cleared. Decades newest first;
- * genres, languages and regions by count, then by name (a language or region by its key).
+ * genres, languages and regions by count, then by name (a language or region by its key). A genre
+ * shows in [language] (the app's, ISO 639) when a result spells it so, else as first found.
  */
 fun searchFacets(
     results: List<SearchResult>,
     tmdb: List<TmdbTitle>,
     choice: SearchFacetChoice,
+    language: String = "en",
 ): SearchFacets {
     val forDecades = choice.copy(decades = emptySet())
     val forGenres = choice.copy(genres = emptySet())
@@ -197,7 +199,13 @@ fun searchFacets(
     val labels = mutableMapOf<String, String>()
     val genreCounts = mutableMapOf<String, Int>()
     for (result in results) {
-        for (genre in result.genres) labels.getOrPut(genreKey(genre)) { genre }
+        for (genre in result.genres) {
+            val key = genreKey(genre)
+            val current = labels[key]
+            if (current == null || (!GenreNames.isSpellingOf(key, current, language) && GenreNames.isSpellingOf(key, genre, language))) {
+                labels[key] = genre
+            }
+        }
         if (!result.matches(forGenres)) continue
         for (genre in result.genres) genreCounts.merge(genreKey(genre), 1, Int::plus)
     }

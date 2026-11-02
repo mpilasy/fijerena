@@ -190,25 +190,37 @@
         <item quantity="one">Fanavaozana %1$d miandry</item>
         <item quantity="other">Fanavaozana %1$d miandry</item>
     </plurals>
-    <string name="epg_status_processing">Mandinika loharanon\'ny fitarihana %1$d/%2$d</string>
+    <plurals name="epg_status_processing">
+        <item quantity="one">Mandinika loharanon\'ny fitarihana %1$d/%2$d</item>
+        <item quantity="other">Mandinika loharanon\'ny fitarihana %1$d/%2$d</item>
+    </plurals>
     <string name="epg_status_retrying">Andramana indray amin\'ny %3$s (andrana %1$d amin\'ny %2$d)</string>
     <string name="epg_status_finished">Vita ny fandehanana</string>
     <string name="epg_status_finalizing">Mamarana (%1$s)…</string>
     <string name="epg_status_clearing">Mamafa ny angona…</string>
-    <string name="epg_last_run_stats">Fandehanana farany: vita tamin\'ny %1$s • loharanon\'ny fitarihana %2$d tao anatin\'ny %3$s%4$s</string>
+    <plurals name="epg_last_run_stats">
+        <item quantity="one">Fandehanana farany: vita tamin\'ny %1$s • loharanon\'ny fitarihana %2$d tao anatin\'ny %3$s%4$s</item>
+        <item quantity="other">Fandehanana farany: vita tamin\'ny %1$s • loharanon\'ny fitarihana %2$d tao anatin\'ny %3$s%4$s</item>
+    </plurals>
     <plurals name="epg_last_run_errors">
         <item quantity="one">(fahadisoana %1$d)</item>
         <item quantity="other">(fahadisoana %1$d)</item>
     </plurals>
     <string name="epg_maintenance_desc">Ny rakitra sy fandaharan\'ny fitarihana voatahiry amin\'ity fitaovana ity</string>
     <string name="epg_automation_freq_daily">Isan\'andro</string>
-    <string name="epg_automation_freq_hours">Isaky ny %1$d ora</string>
+    <plurals name="epg_automation_freq_hours">
+        <item quantity="one">Isaky ny %1$d ora</item>
+        <item quantity="other">Isaky ny %1$d ora</item>
+    </plurals>
     <string name="epg_automation_freq_weekly">Isan-kerinandro</string>
     <string name="epg_source_refresh_off">Tsy misy fanavaozana ho azy</string>
     <string name="epg_source_off_summary">Tsy mandeha: tsy ampiasaina, tsy havaozina</string>
     <string name="epg_source_refresh_daily">Havaozina isan\'andro</string>
     <string name="epg_source_refresh_weekly">Havaozina isan-kerinandro</string>
-    <string name="epg_source_refresh_hours">Havaozina isaky ny %1$d ora</string>
+    <plurals name="epg_source_refresh_hours">
+        <item quantity="one">Havaozina isaky ny %1$d ora</item>
+        <item quantity="other">Havaozina isaky ny %1$d ora</item>
+    </plurals>
     <string name="epg_unnamed_source">loharanon\'ny fitarihana tsy misy anarana</string>
     <string name="epg_source_stat_label">Fanavaozana farany</string>
     <string name="epg_source_stat_download">Nalaina tao anatin\'ny</string>
@@ -358,7 +370,18 @@
     <string name="provider_last_sync_status">Fampifanarahana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
     <string name="provider_sync_success">Vita soa aman-tsara ny fampifanarahana</string>
     <string name="provider_sync_no_changes">Tsy nisy fiovana hatramin\'ny fampifanarahana farany</string>
-    <string name="provider_sync_delta">%1$d nampiana • %2$d nohavaozina • %3$d nesorina</string>
+    <plurals name="provider_sync_added">
+        <item quantity="one">%1$d nampiana</item>
+        <item quantity="other">%1$d nampiana</item>
+    </plurals>
+    <plurals name="provider_sync_updated">
+        <item quantity="one">%1$d nohavaozina</item>
+        <item quantity="other">%1$d nohavaozina</item>
+    </plurals>
+    <plurals name="provider_sync_removed">
+        <item quantity="one">%1$d nesorina</item>
+        <item quantity="other">%1$d nesorina</item>
+    </plurals>
     <string name="provider_total_db_items_label">Singa voatahiry</string>
     <string name="provider_total_items_value">Singa %1$s</string>
     <string name="provider_live_tv_label">TV mivantana</string>
@@ -588,7 +611,7 @@
     <string name="settings_playback_section_title">Filalaovana</string>
     <string name="settings_playback_watch_delay_desc">Mba tsy hampidirana ny fantsona nolalovana fotsiny</string>
     <string name="settings_watch_delay_label">Ampidirina ao amin\'ny Vao haingana aorian\'ny (segondra)</string>
-    <string name="settings_watch_delay_range_format">%1$d–%2$d segondra</string>
+    <string name="settings_watch_delay_range_format" tools:ignore="PluralsCandidate">%1$d–%2$d segondra</string>
     <string name="settings_theme_section_title">Endrika</string>
     <string name="settings_theme_desc">Safidio ny endriky ny loko ho an\'ny rindrankajy</string>
 
@@ -677,7 +700,10 @@
         <item quantity="one">Valiny %1$d</item>
         <item quantity="other">Valiny %1$d</item>
     </plurals>
-    <string name="search_results_hidden_format">%1$d nafenina</string>
+    <plurals name="search_results_hidden_format">
+        <item quantity="one">%1$d nafenina</item>
+        <item quantity="other">%1$d nafenina</item>
+    </plurals>
     <string name="provider_none_label">Tsy misy loharano</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
@@ -759,7 +785,10 @@
     <string name="row_actions_hint">Tazony ny OK na tsindrio Menu hahitana ny asa</string>
     <string name="row_more_actions">Asa hafa</string>
     <!-- GD1 -->
-    <string name="epg_guide_status_format">%1$d amin\'ny %2$d fantsona no manana fandaharana · %3$s · nohavaozina %4$s</string>
+    <plurals name="epg_guide_status_format">
+        <item quantity="one">%1$d amin\'ny %2$d fantsona no manana fandaharana · %3$s · nohavaozina %4$s</item>
+        <item quantity="other">%1$d amin\'ny %2$d fantsona no manana fandaharana · %3$s · nohavaozina %4$s</item>
+    </plurals>
     <string name="epg_guide_source_xmltv">fitarihana XMLTV</string>
     <string name="epg_guide_source_native">fandaharan\'ny loharano</string>
     <string name="epg_guide_updated_unknown">tsy fantatra</string>
@@ -845,7 +874,10 @@
     <string name="live_preview_next_format">Manaraka: %1$s</string>
     <string name="live_preview_hint">OK  Alefaso   ·   OK indray  Efijery feno   ·   Tazony ny OK  Safidy</string>
     <!-- GD4 -->
-    <string name="epg_guide_status_partial_format">%1$d amin\'ny %2$d fantsona voavaky no manana fandaharana · %3$d raha atambatra · %4$s · nohavaozina %5$s</string>
+    <plurals name="epg_guide_status_partial_format">
+        <item quantity="one">%1$d amin\'ny %2$d fantsona voavaky no manana fandaharana · %3$d raha atambatra · %4$s · nohavaozina %5$s</item>
+        <item quantity="other">%1$d amin\'ny %2$d fantsona voavaky no manana fandaharana · %3$d raha atambatra · %4$s · nohavaozina %5$s</item>
+    </plurals>
     <string name="epg_guide_listings_end_format">Mifarana amin\'ny %1$s ny fandaharana</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="details_watch_trailer">Topi-maso</string>
@@ -917,7 +949,7 @@
     <string name="player_stats_heap">Fitadidiana</string>
     <string name="player_stats_heap_format">%1$d / %2$d MB (%3$d%%)</string>
     <string name="player_stats_gc">GC</string>
-    <string name="player_stats_gc_format">%1$d fandehanana, %2$d ms</string>
+    <string name="player_stats_gc_format" tools:ignore="PluralsCandidate">%1$d fandehanana, %2$d ms</string>
     <string name="player_stats_ui_skipped">Sarin\'ny UI tsy naseho</string>
     <string name="settings_diagnostics_title">Tatitra</string>
     <string name="settings_diagnostics_desc">Ireo fianjerana sy fahadisoana voarakitra tamin\'ity fitaovana ity, sy ny antony nikatonan\'ny rindrankajy farany</string>
@@ -999,7 +1031,10 @@
     </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Tsy misy hodiovina — efa madio ny tahirin-kevitra</string>
     <string name="settings_shrink_database_dev_stats_time">Fampihenana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
-    <string name="settings_shrink_database_dev_stats_delta">Rakitra %1$d voafafa • %2$s azo indray</string>
+    <plurals name="settings_shrink_database_dev_stats_delta">
+        <item quantity="one">Rakitra %1$d voafafa • %2$s azo indray</item>
+        <item quantity="other">Rakitra %1$d voafafa • %2$s azo indray</item>
+    </plurals>
     <string name="settings_profiles_title">Mombamomba</string>
     <string name="settings_profiles_description">Samy manana ny loharanony, ny endriny, ny ankafiziny, ny tantaran\'ny fijereny ary ny PIN-ny ny mombamomba tsirairay.</string>
     <string name="settings_profiles_add">Hampiditra mombamomba</string>
@@ -1062,7 +1097,7 @@
     <string name="live_sync_just_now">vao izao</string>
     <string name="time_ago_minutes">%1$d minitra lasa izay</string>
     <string name="time_ago_hours">%1$d ora lasa izay</string>
-    <string name="time_ago_days">%1$d andro lasa izay</string>
+    <string name="time_ago_days" tools:ignore="PluralsCandidate">%1$d andro lasa izay</string>
     <string name="live_sync_status_never">Mbola tsy nampifanarahana</string>
     <string name="live_sync_status_failed">Tsy nahomby ny fampifanarahana farany. Haverina ho azy izy.</string>
     <string name="live_sync_server_line">Mpizara: %1$s</string>
@@ -1333,7 +1368,7 @@
     <string name="epg_xmltv_url_hint">Ny adiresin\'ny rakitra fandaharana XMLTV (.xml na .xml.gz), avy amin\'ny mpamatsy anao na tranonkala fandaharana.</string>
     <string name="epg_timezone_hint">Raha diso ora ihany ny fandaharana. Matetika 0.</string>
     <string name="settings_developer_mode_enabled">Mpitantana ity mombamomba ity</string>
-    <string name="settings_developer_mode_taps_left">Mpitantana: %1$d sisa</string>
+    <string name="settings_developer_mode_taps_left" tools:ignore="PluralsCandidate">Mpitantana: %1$d sisa</string>
     <string name="ui_style_standard">Mahazatra</string>
     <string name="ui_style_rounded">Boribory</string>
     <string name="ui_style_sharp">Maranitra</string>
@@ -1415,7 +1450,7 @@
     <string name="provider_not_in_profile">Tsy ampiasain\'ity mombamomba ity</string>
     <string name="settings_import_desc">Avy amin\'ny rakitra tahiry: ianao no misafidy izay haverina</string>
     <string name="provider_clear_library_desc">Fafana ny katalaogy nalaina; alaina indray amin\'ny fampifanarahana manaraka. Mijanona ny ankafizina sy ny tantaran\'ny fijerena.</string>
-    <string name="profile_section_look">Endrika</string>
+    <string name="profile_section_look">Fisehoana</string>
     <string name="ui_theme_title">Endrika iraisana</string>
     <string name="ui_theme_desc">Mametraka miaraka ny « Endrika » sy ny « Endrika sy fahatsapana ». Manokana: safidio tsirairay.</string>
     <string name="ui_theme_custom">Manokana</string>
@@ -1463,7 +1498,10 @@
     </plurals>
     <string name="parental_entry_add">Hanampy teny</string>
     <string name="parental_entry_hint">Teny feno, tsy miraharaha soratra lehibe sy marika. Farano amin\'ny * ho an\'ny fiafarana rehetra: mahita Barnefilmer ny barn*.</string>
-    <string name="parental_entry_matches">Mahita %1$d</string>
+    <plurals name="parental_entry_matches">
+        <item quantity="one">Mahita %1$d</item>
+        <item quantity="other">Mahita %1$d</item>
+    </plurals>
     <string name="parental_entry_matches_none">Tsy mahita na inona na inona amin\'ny loharanonao</string>
     <string name="parental_list_reset">Hiverina amin\'ny lisitry ny app</string>
     <string name="parental_list_reset_confirm">Hosoloina ny tenin\'ny app ve ity lisitra ity? Ho very ny fanovanao tamin\'ity lisitra ity.</string>
@@ -1484,14 +1522,20 @@
     <string name="wanted_not_available">Tsy misy</string>
     <string name="wanted_available">Misy</string>
     <string name="wanted_no_source_yet">Mbola tsy misy loharano manana ity lohateny ity.</string>
-    <string name="wanted_title_new_format">%1$s · %2$d vaovao</string>
+    <plurals name="wanted_title_new_format">
+        <item quantity="one">%1$s · %2$d vaovao</item>
+        <item quantity="other">%1$s · %2$d vaovao</item>
+    </plurals>
     <string name="wanted_banner_open">Asehoy ny lisitry ny irina</string>
     <plurals name="wanted_banner">
         <item quantity="one">Misy izao ny lohateny %1$d ao amin\'ny lisitry ny irinao</item>
         <item quantity="other">Misy izao ny lohateny %1$d ao amin\'ny lisitry ny irinao</item>
     </plurals>
     <string name="favorite_gone_from_source">Tsy ao intsony amin\'ny loharano</string>
-    <string name="favorite_gone_count_format">%1$s · %2$d tsy ao intsony</string>
+    <plurals name="favorite_gone_count_format">
+        <item quantity="one">%1$s · %2$d tsy ao intsony</item>
+        <item quantity="other">%1$s · %2$d tsy ao intsony</item>
+    </plurals>
     <string name="favorite_move_to_copy">Afindrao amin\'ny dika hafa</string>
     <string name="favorite_gone_message">Tsy ao intsony amin\'ny loharanony %1$s.</string>
     <string name="wanted_kind_movie">Sarimihetsika</string>
@@ -1547,4 +1591,9 @@
     <string name="watch_question_starts">Manomboka %1$s</string>
     <string name="watch_question_source">Loharano: %1$s</string>
     <string name="watch_question_aired">Nalefa %1$s</string>
+    <!-- Sizes (NumberUtils.formatBytes): the number, a no-break space, the unit -->
+    <string name="size_bytes">%1$s&#160;B</string>
+    <string name="size_kilobytes">%1$s&#160;KB</string>
+    <string name="size_megabytes">%1$s&#160;MB</string>
+    <string name="size_gigabytes">%1$s&#160;GB</string>
 </resources>

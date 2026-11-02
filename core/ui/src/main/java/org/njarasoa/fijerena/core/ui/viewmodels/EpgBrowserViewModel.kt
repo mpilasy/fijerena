@@ -350,6 +350,10 @@ class EpgBrowserViewModel(
             }
         }
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
+        // The profile in use's history, read again when another profile is picked.
+        viewModelScope.launchGuarded("EpgBrowserViewModel.followProfileHistory") {
+            appSettings.observeActiveProfileId().collect { _epgSearchHistory.value = appSettings.getEpgSearchHistory() }
+        }
         viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent(loadScope()) }
         loadGuideSourceOwners()
         categoryId?.let { id ->

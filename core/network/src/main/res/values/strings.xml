@@ -29,9 +29,18 @@
     <string name="settings_export_error_invalid_format">This file isn\'t a Fijerena settings file.</string>
     <string name="settings_export_summary_import_failed_format">Couldn\'t import the settings: %1$s</string>
     <string name="settings_export_summary_providers_format">Sources: %1$s</string>
-    <string name="settings_export_item_added_format">%1$d added</string>
-    <string name="settings_export_item_overwritten_format">%1$d overwritten</string>
-    <string name="settings_export_item_skipped_format">%1$d skipped</string>
+    <plurals name="settings_export_item_added_format">
+        <item quantity="one">%1$d added</item>
+        <item quantity="other">%1$d added</item>
+    </plurals>
+    <plurals name="settings_export_item_overwritten_format">
+        <item quantity="one">%1$d overwritten</item>
+        <item quantity="other">%1$d overwritten</item>
+    </plurals>
+    <plurals name="settings_export_item_skipped_format">
+        <item quantity="one">%1$d skipped</item>
+        <item quantity="other">%1$d skipped</item>
+    </plurals>
     <string name="settings_export_summary_epg_sources_format">Guide sources: %1$s</string>
     <plurals name="settings_export_summary_favorites_format">
         <item quantity="one">%1$d favourite restored</item>

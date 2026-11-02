@@ -4,7 +4,10 @@
     <string name="player_error_stream_type_live">Live stream</string>
     <string name="player_error_stream_type_video">Video</string>
     <string name="player_error_recovery_exhausted_format">%1$s unavailable after repeated recovery attempts. Check your connection and try again.</string>
-    <string name="player_error_retry_exhausted_format">%1$s unavailable after %2$d retries. %3$s</string>
+    <plurals name="player_error_retry_exhausted_format">
+        <item quantity="one">%1$s unavailable after %2$d retry. %3$s</item>
+        <item quantity="other">%1$s unavailable after %2$d retries. %3$s</item>
+    </plurals>
     <string name="player_error_channel_offline">The channel may be offline.</string>
     <string name="player_error_check_connection">Check your connection and try again.</string>
     <string name="player_error_codec_unsupported_format">Video codec not supported on this device: %1$s</string>

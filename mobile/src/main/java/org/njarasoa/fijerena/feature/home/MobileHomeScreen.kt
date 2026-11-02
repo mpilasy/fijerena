@@ -655,7 +655,13 @@ private fun HomeRowsColumn(
                     Box(Modifier.bringIntoViewRequester(wantedInView.getValue(contentType))) {
                         val sectionNew = wantedCards.count { it.isNew }
                         HomeRow(
-                            if (sectionNew > 0) stringResource(R.string.wanted_title_new_format, wantedTitle, sectionNew) else wantedTitle,
+                            if (sectionNew >
+                                0
+                            ) {
+                                pluralStringResource(R.plurals.wanted_title_new_format, sectionNew, wantedTitle, sectionNew)
+                            } else {
+                                wantedTitle
+                            },
                             wantedCards,
                             { it.key },
                         ) { card -> WantedTitleCard(card, onLongClick = { onMenu(HomeMenu.Wishlist(card)) }) { wanted.onOpen(card) } }

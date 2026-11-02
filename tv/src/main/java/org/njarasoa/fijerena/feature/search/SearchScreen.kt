@@ -125,6 +125,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
+import org.njarasoa.fijerena.core.ui.utils.appLocale
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
@@ -285,6 +286,13 @@ fun SearchScreen(
     val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child, sportsOn = sportsOn)
     val showsTabs = tabs.isNotEmpty()
     SearchSession.forProfile(profileId)
+    // A screen opened anew starts on the catalogue with no type, source, decade or genre left from
+    // an earlier Search; Back to it keeps what was chosen (SearchSession.arrive).
+    var arrived by rememberSaveable { mutableStateOf(false) }
+    if (!arrived) {
+        arrived = true
+        SearchSession.arrive()
+    }
     var selectedTab by SearchSession::tab
     val activeTab = activeSearchTab(selectedTab, tabs)
     // The field's text, shared by both tabs; each tab's own state holds the query it last ran.
@@ -418,7 +426,9 @@ fun SearchScreen(
         ) {
             TvScreenHeader(
                 title = stringResource(R.string.common_search),
-                subtitle = localizedContentTypeLabel(contentType),
+                // What the field searches: the scope on the catalogue, nothing more on another tab
+                // (People, Teams and the guide have no scope).
+                subtitle = if (activeTab == SearchTab.CATALOGUE) localizedContentTypeLabel(contentType) else null,
             ) {
             }
 
@@ -527,8 +537,11 @@ fun SearchScreen(
                             val sourceResults = remember(streamResults, source) { streamResults.fromSource(source) }
                             val tmdbTitles = tmdbSection?.titles.orEmpty()
                             val facetChoice = effectiveFacetChoice(selectedFacets, sourceResults, tmdbTitles)
+                            val language = LocalResources.current.appLocale().language
                             val facets =
-                                remember(sourceResults, tmdbTitles, facetChoice) { searchFacets(sourceResults, tmdbTitles, facetChoice) }
+                                remember(sourceResults, tmdbTitles, facetChoice, language) {
+                                    searchFacets(sourceResults, tmdbTitles, facetChoice, language)
+                                }
                             SearchContent(
                                 query = successState.query,
                                 fieldText = fieldText,
@@ -1024,6 +1037,9 @@ private fun SearchHistorySection(
     firstItemFocusRequester: FocusRequester? = null,
     fieldFocusRequester: FocusRequester? = null,
 ) {
+    // Clear all sits between the field and the chips: Up from the chips reaches it, Up again the
+    // field, Down the first chip. It was reached only with Right past the last chip.
+    val clearFocus = remember { FocusRequester() }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -1033,6 +1049,11 @@ private fun SearchHistorySection(
             trailing = {
                 CinemaIconButton(
                     onClick = onClearAll,
+                    modifier =
+                        Modifier.focusRequester(clearFocus).focusProperties {
+                            fieldFocusRequester?.let { up = it }
+                            firstItemFocusRequester?.let { down = it }
+                        },
                     icon = {
                         TvIcon(
                             imageVector = CinemaIcons.Delete,
@@ -1047,16 +1068,17 @@ private fun SearchHistorySection(
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
         // and a D-pad user should not have to scroll a rail to reach the last entry.
         FlowRow(
-            // Up out of the first line goes to the field. Left to the geometric search, a chip at
-            // the left edge picks the Catalogue tab over the far wider field (closer centres).
+            // Up out of the first line goes to Clear all, then the field. Left to the geometric
+            // search, a chip at the left edge picks the Catalogue tab over the far wider field
+            // (closer centres).
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .then(
-                        fieldFocusRequester?.let { field ->
+                        fieldFocusRequester?.let {
                             Modifier
                                 .focusProperties {
-                                    onExit = { if (requestedFocusDirection == FocusDirection.Up) field.requestFocus() }
+                                    onExit = { if (requestedFocusDirection == FocusDirection.Up) clearFocus.requestFocus() }
                                 }.focusGroup()
                         } ?: Modifier,
                     ),
@@ -1411,7 +1433,7 @@ private fun searchCountLabel(
 ): String {
     val label = pluralStringResource(R.plurals.search_results_count, count, count)
     return if (hiddenCount > 0) {
-        label + " · " + stringResource(R.string.search_results_hidden_format, hiddenCount)
+        label + " · " + pluralStringResource(R.plurals.search_results_hidden_format, hiddenCount, hiddenCount)
     } else {
         label
     }

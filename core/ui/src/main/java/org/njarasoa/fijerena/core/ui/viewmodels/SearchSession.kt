@@ -29,6 +29,25 @@ object SearchSession {
     /** The type pill that shows only TMDB's titles no source has; not a content type. */
     const val NOT_IN_SOURCES = "NOT_IN_SOURCES"
 
+    /**
+     * A Search screen opened anew (not reached with Back): the term stays, as the app has one
+     * search, but the choices around it are the ones this screen brings — its type pill, source and
+     * tab, and no decade or genre. Choices left from an earlier Search hid results under a count of
+     * everything ("All content (839)" over 4 results) and kept the People tab open in a new Search.
+     */
+    fun arrive(
+        query: String? = null,
+        typeFilter: String? = null,
+        source: Long? = null,
+        guideTab: Boolean = false,
+    ) {
+        query?.takeIf { it.isNotBlank() }?.let { this.query = it }
+        this.typeFilter = typeFilter
+        this.source = source
+        facets = SearchFacetChoice()
+        tab = if (guideTab) SearchTab.GUIDE else SearchTab.CATALOGUE
+    }
+
     /** Called by each Search screen with the profile in use: another profile's search is dropped. */
     fun forProfile(id: String) {
         if (id == profileId) return

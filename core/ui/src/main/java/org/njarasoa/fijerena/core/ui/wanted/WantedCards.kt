@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.WantedTitleEntity
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.DateText
+import org.njarasoa.fijerena.core.ui.utils.appLocale
 import java.time.LocalDate
 
 /**
@@ -60,7 +61,7 @@ data class WantedCard(
 
 /** The short line under a title no source has: Coming 14 Mar 2027, In cinemas, Out on digital… */
 fun ReleaseStatus.label(resources: Resources): String {
-    val day = date?.let { DateText.mediumDate(it) }
+    val day = date?.let { DateText.mediumDate(it, resources.appLocale()) }
     return when (stage) {
         ReleaseStage.COMING -> {
             resources.getString(R.string.wanted_coming, day)

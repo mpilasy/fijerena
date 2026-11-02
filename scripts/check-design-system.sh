@@ -408,6 +408,22 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(grep -n '\.\.\.' core/*/src/main/res/values*/strings.xml tv/src/main/res/values*/strings.xml mobile/src/main/res/values*/strings.xml 2>/dev/null | grep -v '<!--' || true)
 
+# French text uses the typographic apostrophe "’", never the straight one (TV and phone walks in
+# French: the two were mixed).
+while IFS= read -r hit; do
+    echo "$hit: a straight apostrophe in French — use ’."
+    failures=$((failures + 1))
+done < <(grep -n "\\\\'" core/*/src/main/res/values-fr/strings.xml 2>/dev/null || true)
+
+# A count with a noun is a <plurals>, never a string with "%d" before the noun ("1 sources de
+# guide"). Flags a count followed by a word of three letters or more; units and "of"/"sur" pass.
+while IFS= read -r hit; do
+    echo "$hit: a count with a noun in a <string> — make it a <plurals> (CONTRIBUTING → Strings)."
+    failures=$((failures + 1))
+done < <(grep -nE '<string name="[^"]*"( [^>]*)?>[^<]*%([0-9]\$)?d [[:alpha:]À-ÿ]{3,}' core/*/src/main/res/values*/strings.xml 2>/dev/null \
+    | grep -v 'tools:ignore="PluralsCandidate"' \
+    | grep -vE '%([0-9]\$)?d (sur|of|fps|MHz|Mbps|kbps|Mbit|kbit|min|amin|ora|minitra|andro|passages|runs)\b' || true)
+
 # A phone page gives MobileScreenHeader its title as text (title =, subtitle =), so the Look sets
 # where it goes: the content form (a whole bar of its own) is for a tab root only
 # (MobileSourceTopBar.kt). A page that built its own title there was left at the start of the bar.

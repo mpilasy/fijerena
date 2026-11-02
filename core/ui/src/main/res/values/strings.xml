@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Playback -->
     <string name="slow_connection_banner_format">Connection too slow for this video (needs ~%1$d Mbps, getting ~%2$d Mbps)</string>
     <string name="slow_connection_banner">Connection too slow for this video</string>
@@ -190,25 +190,37 @@
         <item quantity="one">%1$d refresh task queued</item>
         <item quantity="other">%1$d refresh tasks queued</item>
     </plurals>
-    <string name="epg_status_processing">Processing %1$d/%2$d guide sources</string>
+    <plurals name="epg_status_processing">
+        <item quantity="one">Processing %1$d/%2$d guide source</item>
+        <item quantity="other">Processing %1$d/%2$d guide sources</item>
+    </plurals>
     <string name="epg_status_retrying">Trying again at %3$s (attempt %1$d of %2$d)</string>
     <string name="epg_status_finished">Finished run</string>
     <string name="epg_status_finalizing">Finalising (%1$s)…</string>
     <string name="epg_status_clearing">Clearing data…</string>
-    <string name="epg_last_run_stats">Last run: finished at %1$s • %2$d guide sources in %3$s%4$s</string>
+    <plurals name="epg_last_run_stats">
+        <item quantity="one">Last run: finished %1$s • %2$d guide source in %3$s%4$s</item>
+        <item quantity="other">Last run: finished %1$s • %2$d guide sources in %3$s%4$s</item>
+    </plurals>
     <plurals name="epg_last_run_errors">
         <item quantity="one">(%1$d error)</item>
         <item quantity="other">(%1$d errors)</item>
     </plurals>
     <string name="epg_maintenance_desc">The guide\'s downloads and programmes kept on this device</string>
     <string name="epg_automation_freq_daily">Daily</string>
-    <string name="epg_automation_freq_hours">Every %1$d hours</string>
+    <plurals name="epg_automation_freq_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Every hour</item>
+        <item quantity="other">Every %1$d hours</item>
+    </plurals>
     <string name="epg_automation_freq_weekly">Weekly</string>
     <string name="epg_source_refresh_off">Auto-refresh off</string>
     <string name="epg_source_off_summary">Off: not used, not refreshed</string>
     <string name="epg_source_refresh_daily">Refreshes daily</string>
     <string name="epg_source_refresh_weekly">Refreshes weekly</string>
-    <string name="epg_source_refresh_hours">Refreshes every %1$d hours</string>
+    <plurals name="epg_source_refresh_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Refreshes every hour</item>
+        <item quantity="other">Refreshes every %1$d hours</item>
+    </plurals>
     <string name="epg_unnamed_source">Unnamed guide source</string>
     <string name="epg_source_stat_label">Last sync</string>
     <string name="epg_source_stat_download">Downloaded in</string>
@@ -358,7 +370,18 @@
     <string name="provider_last_sync_status">Last sync: finished at %1$s • took %2$s</string>
     <string name="provider_sync_success">Sync completed successfully</string>
     <string name="provider_sync_no_changes">No changes since last sync</string>
-    <string name="provider_sync_delta">%1$d added • %2$d updated • %3$d removed</string>
+    <plurals name="provider_sync_added">
+        <item quantity="one">%1$d added</item>
+        <item quantity="other">%1$d added</item>
+    </plurals>
+    <plurals name="provider_sync_updated">
+        <item quantity="one">%1$d updated</item>
+        <item quantity="other">%1$d updated</item>
+    </plurals>
+    <plurals name="provider_sync_removed">
+        <item quantity="one">%1$d removed</item>
+        <item quantity="other">%1$d removed</item>
+    </plurals>
     <string name="provider_total_db_items_label">Items stored</string>
     <string name="provider_total_items_value">%1$s Items</string>
     <string name="provider_live_tv_label">Live TV</string>
@@ -732,7 +755,10 @@
     </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
     <string name="settings_shrink_database_dev_stats_time">Last shrink: Finished at %1$s • Took %2$s</string>
-    <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
+    <plurals name="settings_shrink_database_dev_stats_delta">
+        <item quantity="one">%1$d record deleted • %2$s recovered</item>
+        <item quantity="other">%1$d records deleted • %2$s recovered</item>
+    </plurals>
     <string name="settings_import_select_title">Select What to Import</string>
     <string name="settings_import_general_label">General settings</string>
     <string name="settings_import_providers_count_format">Sources (%1$d)</string>
@@ -746,7 +772,7 @@
     <string name="settings_playback_section_title">Playback</string>
     <string name="settings_playback_watch_delay_desc">So a channel you only zap past isn\'t added</string>
     <string name="settings_watch_delay_label">Add to Recent After (Seconds)</string>
-    <string name="settings_watch_delay_range_format">%1$d–%2$d seconds</string>
+    <string name="settings_watch_delay_range_format" tools:ignore="PluralsCandidate">%1$d–%2$d seconds</string>
     <string name="settings_theme_section_title">Theme</string>
     <string name="settings_theme_desc">Select a colour theme for the app</string>
 
@@ -835,7 +861,10 @@
         <item quantity="one">%1$d result</item>
         <item quantity="other">%1$d results</item>
     </plurals>
-    <string name="search_results_hidden_format">%1$d hidden</string>
+    <plurals name="search_results_hidden_format">
+        <item quantity="one">%1$d hidden</item>
+        <item quantity="other">%1$d hidden</item>
+    </plurals>
     <string name="provider_none_label">No source</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
@@ -932,7 +961,7 @@
     <string name="live_sync_just_now">just now</string>
     <string name="time_ago_minutes">%1$d min ago</string>
     <string name="time_ago_hours">%1$d h ago</string>
-    <string name="time_ago_days">%1$d days ago</string>
+    <string name="time_ago_days" tools:ignore="PluralsCandidate">%1$d days ago</string>
     <string name="live_sync_status_never">Not synced yet</string>
     <string name="live_sync_status_failed">The last sync failed. It is retried automatically.</string>
     <string name="live_sync_server_line">Server: %1$s</string>
@@ -1029,7 +1058,10 @@
     <string name="row_actions_hint">Hold OK or press Menu for actions</string>
     <string name="row_more_actions">More actions</string>
     <!-- GD1 -->
-    <string name="epg_guide_status_format">%1$d of %2$d channels have listings · %3$s · updated %4$s</string>
+    <plurals name="epg_guide_status_format">
+        <item quantity="one">%1$d of %2$d channels has listings · %3$s · updated %4$s</item>
+        <item quantity="other">%1$d of %2$d channels have listings · %3$s · updated %4$s</item>
+    </plurals>
     <string name="epg_guide_source_xmltv">XMLTV guide</string>
     <string name="epg_guide_source_native">source\'s own guide</string>
     <string name="epg_guide_updated_unknown">unknown</string>
@@ -1119,7 +1151,10 @@
     <string name="live_preview_next_format">Next: %1$s</string>
     <string name="live_preview_hint">OK  Play   ·   OK again  Full screen   ·   Hold OK  Options</string>
     <!-- GD4 -->
-    <string name="epg_guide_status_partial_format">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</string>
+    <plurals name="epg_guide_status_partial_format">
+        <item quantity="one">%1$d of %2$d loaded channels has listings · %3$d in all · %4$s · updated %5$s</item>
+        <item quantity="other">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</item>
+    </plurals>
     <string name="epg_guide_listings_end_format">Listings end at %1$s</string>
     <!-- Device info: media (P2) -->
     <string name="device_info_section_video_decoders">Video Decoders</string>
@@ -1469,7 +1504,10 @@
     </plurals>
     <string name="parental_entry_add">Add a word</string>
     <string name="parental_entry_hint">Whole words, any case, accents ignored. End with * for any ending: barn* finds Barnefilmer.</string>
-    <string name="parental_entry_matches">Matches %1$d</string>
+    <plurals name="parental_entry_matches">
+        <item quantity="one">Matches %1$d</item>
+        <item quantity="other">Matches %1$d</item>
+    </plurals>
     <string name="parental_entry_matches_none">Matches nothing on your sources</string>
     <string name="parental_list_reset">Reset to the app\'s list</string>
     <string name="parental_list_reset_confirm">Replace this list with the app\'s words? Your changes to this list are lost.</string>
@@ -1490,14 +1528,20 @@
     <string name="wanted_not_available">Not available</string>
     <string name="wanted_available">Available</string>
     <string name="wanted_no_source_yet">No source has this title yet.</string>
-    <string name="wanted_title_new_format">%1$s · %2$d new</string>
+    <plurals name="wanted_title_new_format">
+        <item quantity="one">%1$s · %2$d new</item>
+        <item quantity="other">%1$s · %2$d new</item>
+    </plurals>
     <string name="wanted_banner_open">Show Wishlist</string>
     <plurals name="wanted_banner">
         <item quantity="one">%1$d title on your Wishlist is now available</item>
         <item quantity="other">%1$d titles on your Wishlist are now available</item>
     </plurals>
     <string name="favorite_gone_from_source">Gone from source</string>
-    <string name="favorite_gone_count_format">%1$s · %2$d gone</string>
+    <plurals name="favorite_gone_count_format">
+        <item quantity="one">%1$s · %2$d gone</item>
+        <item quantity="other">%1$s · %2$d gone</item>
+    </plurals>
     <string name="favorite_move_to_copy">Move to the other copy</string>
     <string name="favorite_gone_message">%1$s is no longer in its source.</string>
     <string name="wanted_kind_movie">Film</string>
@@ -1553,4 +1597,9 @@
     <string name="watch_question_starts">Starts %1$s</string>
     <string name="watch_question_source">Source: %1$s</string>
     <string name="watch_question_aired">Aired %1$s</string>
+    <!-- Sizes (NumberUtils.formatBytes): the number, a no-break space, the unit -->
+    <string name="size_bytes">%1$s&#160;B</string>
+    <string name="size_kilobytes">%1$s&#160;KB</string>
+    <string name="size_megabytes">%1$s&#160;MB</string>
+    <string name="size_gigabytes">%1$s&#160;GB</string>
 </resources>

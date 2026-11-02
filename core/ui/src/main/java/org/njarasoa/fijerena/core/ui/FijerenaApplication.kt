@@ -5,6 +5,7 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.os.StrictMode
 import android.util.Log
 import androidx.annotation.OptIn
@@ -55,7 +56,27 @@ class FijerenaApplication :
     // looked up through it (ViewModels, services) stayed in the phone's language — Recent,
     // Favorites, Recent Categories in English on a Malagasy app (phone UI audit, spot check).
     override fun attachBaseContext(base: Context) {
+        launchBase = base
         super.attachBaseContext(LocaleManager.wrap(base))
+    }
+
+    private var launchBase: Context? = null
+
+    @Volatile
+    private var languageResources: Pair<String, Resources>? = null
+
+    // The application's Resources in the app language in use, not only the one at launch: after a
+    // change in Settings the application context's text, dates and numbers stayed in the launch
+    // language (English device info, Malagasy dates in a French app). One Resources per language,
+    // made from the launch context the same way as at launch.
+    override fun getResources(): Resources {
+        val base = launchBase
+        val language = LocaleManager.currentLanguage
+        if (base == null || language == null) return super.getResources()
+        languageResources?.let { (lang, res) -> if (lang == language) return res }
+        val res = LocaleManager.localized(base, language).resources
+        languageResources = language to res
+        return res
     }
 
     override fun onCreate() {

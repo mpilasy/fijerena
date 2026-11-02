@@ -3,7 +3,7 @@
     <!-- EPG sync foreground-service notifications -->
     <string name="epg_sync_notification_channel">Mises à jour du guide TV</string>
     <string name="epg_sync_notification_title">Actualisation du guide TV</string>
-    <string name="epg_fts_rebuild_notification_title">Reconstruction de l\'index du guide TV</string>
+    <string name="epg_fts_rebuild_notification_title">Reconstruction de l’index du guide TV</string>
 
     <!-- Xtream catalog sync foreground-service notifications -->
     <string name="xtream_sync_notification_channel">Mises à jour du catalogue</string>
@@ -12,34 +12,43 @@
     <!-- Friendly error messages -->
     <string name="error_no_internet">Impossible de joindre le serveur. Vérifiez votre connexion internet.</string>
     <string name="error_timeout">Le serveur a mis trop de temps à répondre. Veuillez réessayer.</string>
-    <string name="error_ssl">Échec de la connexion sécurisée. Vérifiez l\'adresse du serveur.</string>
+    <string name="error_ssl">Échec de la connexion sécurisée. Vérifiez l’adresse du serveur.</string>
     <string name="error_network">Erreur réseau. Vérifiez votre connexion et réessayez.</string>
-    <string name="error_unauthorized">Échec de la connexion. Vérifiez votre nom d\'utilisateur et votre mot de passe.</string>
+    <string name="error_unauthorized">Échec de la connexion. Vérifiez votre nom d’utilisateur et votre mot de passe.</string>
     <string name="error_saved_login_lost">Cet appareil a perdu un identifiant enregistré (son coffre de clés sécurisé a été réinitialisé). Modifiez la source et saisissez à nouveau le mot de passe.</string>
-    <string name="error_guide_login_missing">Ce guide se télécharge avec l\'identifiant de la source, et cet appareil n\'en a pas le mot de passe. Modifiez la source et saisissez le mot de passe.</string>
-    <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
-    <string name="error_not_found">Rien n\'a été trouvé à cette adresse. Vérifiez l\'URL.</string>
+    <string name="error_guide_login_missing">Ce guide se télécharge avec l’identifiant de la source, et cet appareil n’en a pas le mot de passe. Modifiez la source et saisissez le mot de passe.</string>
+    <string name="error_generic">Une erreur s’est produite. Veuillez réessayer.</string>
+    <string name="error_not_found">Rien n’a été trouvé à cette adresse. Vérifiez l’URL.</string>
     <string name="error_server">Le serveur a rencontré un problème. Veuillez réessayer plus tard.</string>
-    <string name="error_invalid_playlist">Cette adresse ne mène pas à une playlist M3U. Vérifiez l\'URL.</string>
+    <string name="error_invalid_playlist">Cette adresse ne mène pas à une playlist M3U. Vérifiez l’URL.</string>
     <string name="error_catalog_sync_failed">Échec de la synchronisation du catalogue. %1$s</string>
     <string name="sync_error_download_failed">Échec du téléchargement</string>
 
     <!-- Settings export/import -->
     <string name="settings_export_error_read_file">Impossible de lire le fichier</string>
-    <string name="settings_export_error_invalid_format">Ce fichier n\'est pas un fichier de paramètres Fijerena.</string>
-    <string name="settings_export_summary_import_failed_format">Impossible d\'importer les paramètres : %1$s</string>
+    <string name="settings_export_error_invalid_format">Ce fichier n’est pas un fichier de paramètres Fijerena.</string>
+    <string name="settings_export_summary_import_failed_format">Impossible d’importer les paramètres : %1$s</string>
     <string name="settings_export_summary_providers_format">Sources : %1$s</string>
-    <string name="settings_export_item_added_format">%1$d ajouté(s)</string>
-    <string name="settings_export_item_overwritten_format">%1$d écrasé(s)</string>
-    <string name="settings_export_item_skipped_format">%1$d ignoré(s)</string>
+    <plurals name="settings_export_item_added_format">
+        <item quantity="one">%1$d ajouté</item>
+        <item quantity="other">%1$d ajoutés</item>
+    </plurals>
+    <plurals name="settings_export_item_overwritten_format">
+        <item quantity="one">%1$d écrasé</item>
+        <item quantity="other">%1$d écrasés</item>
+    </plurals>
+    <plurals name="settings_export_item_skipped_format">
+        <item quantity="one">%1$d ignoré</item>
+        <item quantity="other">%1$d ignorés</item>
+    </plurals>
     <string name="settings_export_summary_epg_sources_format">Sources de guide : %1$s</string>
     <plurals name="settings_export_summary_favorites_format">
         <item quantity="one">%1$d favori restauré</item>
         <item quantity="other">%1$d favoris restaurés</item>
     </plurals>
     <plurals name="settings_export_summary_watch_state_format">
-        <item quantity="one">%1$d élément d\'historique restauré</item>
-        <item quantity="other">%1$d éléments d\'historique restaurés</item>
+        <item quantity="one">%1$d élément d’historique restauré</item>
+        <item quantity="other">%1$d éléments d’historique restaurés</item>
     </plurals>
     <string name="settings_export_summary_updated">Paramètres mis à jour</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (les mots de passe doivent être ressaisis)</string>
@@ -52,8 +61,8 @@
         <item quantity="other">%1$d favoris copiés</item>
     </plurals>
     <plurals name="provider_copy_result_watch_state_format">
-        <item quantity="one">%1$d élément d\'historique copié</item>
-        <item quantity="other">%1$d éléments d\'historique copiés</item>
+        <item quantity="one">%1$d élément d’historique copié</item>
+        <item quantity="other">%1$d éléments d’historique copiés</item>
     </plurals>
     <string name="provider_copy_result_nothing">Rien à copier</string>
 
@@ -61,7 +70,7 @@
     <string name="epg_freshness_no_sources">Aucune source de guide</string>
     <string name="epg_freshness_all_off">Guide désactivé : activez-le dans Sources de guide</string>
     <string name="epg_freshness_never_refreshed">Jamais actualisé</string>
-    <string name="epg_freshness_just_now">à l\'instant</string>
+    <string name="epg_freshness_just_now">à l’instant</string>
     <string name="epg_freshness_minutes_ago_format">il y a %1$dm</string>
     <string name="epg_freshness_hours_ago_format">il y a %1$dh</string>
     <string name="epg_freshness_days_ago_format">il y a %1$dj</string>

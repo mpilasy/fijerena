@@ -278,7 +278,7 @@ class SettingsViewModel(
                         R.plurals.settings_shrink_database_result_format,
                         rows,
                         rows,
-                        NumberUtils.formatBytes(result.bytesReclaimed),
+                        NumberUtils.formatBytes(context.resources, result.bytesReclaimed),
                     )
                 }
             _uiState.value =

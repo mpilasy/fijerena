@@ -942,7 +942,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             _playbackState.value =
                 PlaybackState.Error(
-                    getString(R.string.player_error_retry_exhausted_format, label, maxRetries, detail),
+                    resources.getQuantityString(R.plurals.player_error_retry_exhausted_format, maxRetries, label, maxRetries, detail),
                 )
             releaseWakeLock()
             return

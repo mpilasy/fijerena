@@ -81,6 +81,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -622,8 +623,9 @@ private fun GuideHeader(
 @Composable
 private fun statusLine(state: EpgViewModel.UiState.Ready): String =
     if (state.loadedCount < state.totalCount) {
-        stringResource(
-            R.string.epg_guide_status_partial_format,
+        pluralStringResource(
+            R.plurals.epg_guide_status_partial_format,
+            state.listedCount,
             state.listedCount,
             state.loadedCount,
             state.totalCount,
@@ -631,8 +633,9 @@ private fun statusLine(state: EpgViewModel.UiState.Ready): String =
             updatedLabel(state.updatedAtMs),
         )
     } else {
-        stringResource(
-            R.string.epg_guide_status_format,
+        pluralStringResource(
+            R.plurals.epg_guide_status_format,
+            state.listedCount,
             state.listedCount,
             state.totalCount,
             sourceLabel(state.source),

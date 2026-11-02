@@ -16,6 +16,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -432,7 +433,7 @@ fun TvEpgManagementScreen(
                                                                 activeProgress.progressPercent,
                                                             )
                                                         } else {
-                                                            NumberUtils.formatBytes(activeProgress.downloadedBytes)
+                                                            NumberUtils.formatBytes(LocalResources.current, activeProgress.downloadedBytes)
                                                         },
                                                     role = TextRole.Caption,
                                                     tone = TextTone.Secondary,
@@ -484,24 +485,24 @@ fun TvEpgManagementScreen(
                                             } else {
                                                 SourceStat(
                                                     stringResource(R.string.epg_source_stat_download),
-                                                    NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                                    NumberUtils.formatDuration(LocalResources.current, source.lastDownloadDurationMs),
                                                     scale,
                                                 )
                                                 SourceStat(
                                                     stringResource(R.string.epg_source_stat_ingest),
-                                                    NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                                    NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
                                                     scale,
                                                 )
                                             }
                                             SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
                                             SourceStat(
                                                 stringResource(R.string.epg_source_stat_channels),
-                                                NumberUtils.formatCount(source.lastChannels),
+                                                NumberUtils.formatCount(LocalResources.current, source.lastChannels),
                                                 scale,
                                             )
                                             SourceStat(
                                                 stringResource(R.string.epg_source_stat_programmes),
-                                                NumberUtils.formatCount(source.lastProgrammes),
+                                                NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
                                                 scale,
                                             )
 

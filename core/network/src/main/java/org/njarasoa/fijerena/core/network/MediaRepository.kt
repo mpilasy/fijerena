@@ -614,14 +614,16 @@ class MediaRepository(
             ?: kotlin.Result.failure(Exception("No provider set"))
 
     /**
-     * If no filters are set, returns all categories.
+     * If no filters are set, returns all categories. A child profile's rules are a filter too: on a
+     * source with no category flags of its own (M3U, Jellyfin) they are the only thing that hides
+     * the categories that are not a kids' one.
      */
     suspend fun getFilteredCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
         val result = getCategories(contentType)
         if (result.isFailure) return result
 
         val filters = providerSettings.categoryFilters
-        if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) return result
+        if (filters.filtersNothing) return result
 
         // ScriptDetector.detectScript allocates a map and walks Character.UnicodeBlock per
         // category. With ~870 categories that is tens of milliseconds, and callers run on

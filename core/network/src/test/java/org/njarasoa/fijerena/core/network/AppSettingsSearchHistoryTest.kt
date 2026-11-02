@@ -1,8 +1,13 @@
 package org.njarasoa.fijerena.core.network
 
 import android.content.Context
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -10,6 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /** Search and EPG search history, and the phone's last tab, are per profile. */
 class AppSettingsSearchHistoryTest {
@@ -97,6 +103,53 @@ class AppSettingsSearchHistoryTest {
 
         assertEquals(emptyList<String>(), settings.getSearchHistory())
         assertEquals(emptyList<String>(), settings.getEpgSearchHistory())
+    }
+
+    @Test
+    fun `a profile made a child's loses the searches typed before`() {
+        mockkObject(SettingsSyncQueue)
+        try {
+            every { SettingsSyncQueue.setting(any(), any(), any()) } just Runs
+            settings.activeProfileId = OTHER
+            settings.addSearchHistory("lust")
+            settings.addEpgSearchHistory("late film")
+
+            settings.setChildProfile(OTHER, true)
+            assertEquals(emptyList<String>(), settings.getSearchHistory())
+            assertEquals(emptyList<String>(), settings.getEpgSearchHistory())
+
+            // A child's own searches stay while it stays a child.
+            settings.addSearchHistory("bluey")
+            settings.setChildProfile(OTHER, true)
+            assertEquals(listOf("bluey"), settings.getSearchHistory())
+        } finally {
+            unmockkObject(SettingsSyncQueue)
+        }
+    }
+
+    @Test
+    fun `a profile made a child's on another device loses the searches typed before`() {
+        settings.activeProfileId = OTHER
+        settings.addSearchHistory("family guy")
+
+        settings.applyRemoteSetting(AppSettings.KEY_CHILD_PROFILE, OTHER, JsonPrimitive(true))
+
+        assertEquals(emptyList<String>(), settings.getSearchHistory())
+    }
+
+    @Test
+    fun `upgrade gives no grown-up history to a default profile that is a child's`() {
+        prefs
+            .edit()
+            .putBoolean("child_profile_${ProfileEntity.DEFAULT_ID}", true)
+            .putString("search_history", "lust")
+            .commit()
+
+        settings.moveLegacySearchHistoryToDefaultProfile()
+
+        assertFalse(prefs.contains("search_history"))
+        settings.activeProfileId = ProfileEntity.DEFAULT_ID
+        assertEquals(emptyList<String>(), settings.getSearchHistory())
     }
 
     private companion object {

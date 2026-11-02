@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
+import org.njarasoa.fijerena.core.ui.utils.appLocale
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
@@ -234,16 +235,13 @@ fun MobileSearchScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     // The app's one search (SearchSession), shared by both tabs and every Search screen: Back to any
-    // of them shows the latest. Arriving with a query, filter, source or tab brought along sets it,
-    // once per screen.
+    // of them shows the latest. A screen opened anew sets the choices it brings and clears the
+    // others, once per screen (SearchSession.arrive).
     SearchSession.forProfile(appSettings.activeProfileId)
     var arrived by rememberSaveable { mutableStateOf(false) }
     if (!arrived) {
         arrived = true
-        initialQuery?.takeIf { it.isNotBlank() }?.let { SearchSession.query = it }
-        initialTypeFilter?.let { SearchSession.typeFilter = it }
-        initialSource?.let { SearchSession.source = it }
-        if (initialGuideTab) SearchSession.tab = SearchTab.GUIDE
+        SearchSession.arrive(initialQuery, initialTypeFilter, initialSource, initialGuideTab)
     }
     var searchQuery by SearchSession::query
     var selectedTab by SearchSession::tab
@@ -363,7 +361,9 @@ fun MobileSearchScreen(
         topBar = {
             MobileScreenHeader(
                 title = stringResource(R.string.common_search),
-                subtitle = localizedContentTypeLabel(contentType),
+                // What the field searches: the scope on the catalogue, nothing more on another tab
+                // (People, Teams and the guide have no scope).
+                subtitle = if (activeTab == SearchTab.CATALOGUE) localizedContentTypeLabel(contentType) else null,
                 onBack = onBack,
             )
         },
@@ -451,7 +451,14 @@ fun MobileSearchScreen(
                 remember(successState?.filteredResults, source) { successState?.filteredResults.orEmpty().fromSource(source) }
             val tmdbTitles = tmdbSection?.titles.orEmpty()
             val facetChoice = effectiveFacetChoice(selectedFacets, sourceResults, tmdbTitles)
-            val facets = remember(sourceResults, tmdbTitles, facetChoice) { searchFacets(sourceResults, tmdbTitles, facetChoice) }
+            val language = LocalResources.current.appLocale().language
+            val facets =
+                remember(
+                    sourceResults,
+                    tmdbTitles,
+                    facetChoice,
+                    language,
+                ) { searchFacets(sourceResults, tmdbTitles, facetChoice, language) }
             val facetLabels = rememberSearchFacetLabels()
 
             // Search bar — searches as you type; the keyboard's search action runs it at once.
@@ -1264,7 +1271,7 @@ private fun searchCountLabel(
 ): String {
     val label = pluralStringResource(R.plurals.search_results_count, count, count)
     return if (hiddenCount > 0) {
-        label + " · " + stringResource(R.string.search_results_hidden_format, hiddenCount)
+        label + " · " + pluralStringResource(R.plurals.search_results_hidden_format, hiddenCount, hiddenCount)
     } else {
         label
     }

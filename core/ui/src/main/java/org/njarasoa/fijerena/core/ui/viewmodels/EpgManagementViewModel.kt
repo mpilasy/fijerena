@@ -486,7 +486,7 @@ class EpgManagementViewModel(
                         R.plurals.epg_cache_cleaned,
                         result.filesDeleted,
                         result.filesDeleted,
-                        NumberUtils.formatBytes(result.bytesFreed),
+                        NumberUtils.formatBytes(context.resources, result.bytesFreed),
                     ),
                 )
             } else {
@@ -554,7 +554,7 @@ class EpgManagementViewModel(
                 EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.common_off)
                 DAILY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_daily)
                 WEEKLY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_weekly)
-                else -> UiText.StringResource(R.string.epg_automation_freq_hours, hours)
+                else -> UiText.PluralResource(R.plurals.epg_automation_freq_hours, hours, hours)
             }
 
         /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
@@ -570,14 +570,7 @@ class EpgManagementViewModel(
                 EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.epg_source_refresh_off)
                 DAILY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_daily)
                 WEEKLY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_weekly)
-                else -> UiText.StringResource(R.string.epg_source_refresh_hours, hours)
-            }
-
-        private fun formatCount(count: Int): String =
-            when {
-                count >= 1_000_000 -> String.format(java.util.Locale.US, "%.1fM", count / 1_000_000.0)
-                count >= 1_000 -> String.format(java.util.Locale.US, "%.1fK", count / 1_000.0)
-                else -> count.toString()
+                else -> UiText.PluralResource(R.plurals.epg_source_refresh_hours, hours, hours)
             }
     }
 }

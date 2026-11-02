@@ -211,11 +211,19 @@ class AppSettings(
      */
     fun isChildProfile(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHILD_PROFILE, profileId), false)
 
+    /**
+     * Makes [profileId] a child's or not. A profile that becomes a child's starts with no search
+     * history: the searches typed before were a grown-up's, and a child must not see them.
+     */
     fun setChildProfile(
         profileId: String,
         child: Boolean,
     ) {
-        prefs.edit { putBoolean(profileKey(KEY_CHILD_PROFILE, profileId), child) }
+        val becomesChild = child && !isChildProfile(profileId)
+        prefs.edit {
+            if (becomesChild) removeSearchHistories(profileId)
+            putBoolean(profileKey(KEY_CHILD_PROFILE, profileId), child)
+        }
         SettingsSyncQueue.setting(context, KEY_CHILD_PROFILE, profileId)
     }
 
@@ -454,7 +462,12 @@ class AppSettings(
                 }
 
                 KEY_CHILD_PROFILE -> {
-                    if (profileId != SyncKind.SHARED) value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
+                    if (profileId != SyncKind.SHARED) {
+                        value.booleanOrNull?.let { child ->
+                            if (child && !isChildProfile(profileId)) removeSearchHistories(profileId)
+                            putBoolean(profileKey(key, profileId), child)
+                        }
+                    }
                 }
 
                 // Blank: the PIN was removed.
@@ -1055,26 +1068,29 @@ class AppSettings(
 
     /**
      * One-time upgrade: the install-wide search histories from before they were per profile go to
-     * the default profile (unless it already has its own), so other profiles start empty.
+     * the default profile (unless it already has its own, or is a child's: they are a grown-up's
+     * searches), so other profiles start empty.
      */
     fun moveLegacySearchHistoryToDefaultProfile() {
         val legacyKeys = listOf(KEY_SEARCH_HISTORY, KEY_EPG_SEARCH_HISTORY).filter { prefs.contains(it) }
         if (legacyKeys.isEmpty()) return
+        val toDefault = !isChildProfile(ProfileEntity.DEFAULT_ID)
         prefs.edit {
             legacyKeys.forEach { legacy ->
                 val target = historyKey(legacy, ProfileEntity.DEFAULT_ID)
-                if (!prefs.contains(target)) putString(target, prefs.getString(legacy, null))
+                if (toDefault && !prefs.contains(target)) putString(target, prefs.getString(legacy, null))
                 remove(legacy)
             }
         }
     }
 
     /** Drops a deleted profile's search and EPG search history. */
-    fun removeProfileSearchHistory(profileId: String) =
-        prefs.edit {
-            remove(historyKey(KEY_SEARCH_HISTORY, profileId))
-            remove(historyKey(KEY_EPG_SEARCH_HISTORY, profileId))
-        }
+    fun removeProfileSearchHistory(profileId: String) = prefs.edit { removeSearchHistories(profileId) }
+
+    private fun SharedPreferences.Editor.removeSearchHistories(profileId: String) {
+        remove(historyKey(KEY_SEARCH_HISTORY, profileId))
+        remove(historyKey(KEY_EPG_SEARCH_HISTORY, profileId))
+    }
 
     /**
      * The section (a `ContentType`) the active profile last had open in the phone's bottom bar,

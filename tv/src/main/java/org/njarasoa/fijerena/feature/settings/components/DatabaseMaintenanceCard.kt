@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -68,14 +70,19 @@ fun DatabaseMaintenanceCard(
         if (isDevMode && lastShrinkAtMs > 0L && (lastShrinkRowsRemoved > 0 || lastShrinkBytesReclaimed > 0)) {
             val context = LocalContext.current
             val time = NumberUtils.formatTimestamp(context, lastShrinkAtMs)
-            val duration = NumberUtils.formatDuration(lastShrinkDurationMs)
+            val duration = NumberUtils.formatDuration(LocalResources.current, lastShrinkDurationMs)
             SettingsNote(
                 stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration),
                 alpha = CinemaAlpha.textMedium,
             )
-            val bytesStr = NumberUtils.formatBytes(lastShrinkBytesReclaimed)
+            val bytesStr = NumberUtils.formatBytes(LocalResources.current, lastShrinkBytesReclaimed)
             SettingsNote(
-                stringResource(R.string.settings_shrink_database_dev_stats_delta, lastShrinkRowsRemoved, bytesStr),
+                pluralStringResource(
+                    R.plurals.settings_shrink_database_dev_stats_delta,
+                    lastShrinkRowsRemoved.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    lastShrinkRowsRemoved,
+                    bytesStr,
+                ),
                 alpha = CinemaAlpha.textLow,
             )
         }

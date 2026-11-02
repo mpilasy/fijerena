@@ -61,6 +61,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -85,8 +86,6 @@ import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
-import org.njarasoa.fijerena.core.network.xmltv.formatCount
-import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgeKind
@@ -124,6 +123,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -316,8 +316,8 @@ internal fun TvGuideSearchPane(
             is EpgIndexState.Indexed -> {
                 stringResource(
                     R.string.epg_browser_dev_stats_counts_format,
-                    formatCount(idx.programmeCount),
-                    formatCount(idx.channelCount),
+                    NumberUtils.formatCount(LocalResources.current, idx.programmeCount),
+                    NumberUtils.formatCount(LocalResources.current, idx.channelCount),
                 )
             }
 
@@ -517,12 +517,12 @@ private fun EpgBrowserContent(
                     stringResource(
                         R.string.epg_browser_indexing_progress_programmes_format,
                         idx.progressPercent,
-                        formatCount(idx.programmesIndexed),
+                        NumberUtils.formatCount(LocalResources.current, idx.programmesIndexed),
                     )
                 } else {
                     stringResource(
                         R.string.epg_browser_finalizing_programmes_format,
-                        formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                        NumberUtils.formatCount(LocalResources.current, (idx as EpgIndexState.Optimizing).programmeCount),
                     )
                 }
             val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -33,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.home.syncDeltaText
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -92,7 +94,7 @@ fun ColumnScope.DataManagementSection(
                         if ((currentProvider?.lastSyncedAtMs ?: 0L) > 0L) {
                             Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                             val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
-                            val duration = NumberUtils.formatDuration(currentProvider?.lastSyncDurationMs ?: 0L)
+                            val duration = NumberUtils.formatDuration(LocalResources.current, currentProvider?.lastSyncDurationMs ?: 0L)
                             CinemaText(
                                 stringResource(R.string.provider_last_sync_status, time, duration),
                                 role = TextRole.BodySmall,
@@ -111,7 +113,7 @@ fun ColumnScope.DataManagementSection(
                                     if (inserted == 0 && updated == 0 && deleted == 0) {
                                         stringResource(R.string.provider_sync_no_changes)
                                     } else {
-                                        stringResource(R.string.provider_sync_delta, inserted, updated, deleted)
+                                        syncDeltaText(inserted, updated, deleted)
                                     },
                                     role = TextRole.BodySmall,
                                     tone = TextTone.Secondary,
@@ -135,7 +137,7 @@ fun ColumnScope.DataManagementSection(
                     val totalItems =
                         stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
                     CinemaText(
-                        stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
+                        stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(LocalResources.current, totalItems)),
                         role = TextRole.Title,
                         tone = TextTone.Primary,
                     )
@@ -150,8 +152,8 @@ fun ColumnScope.DataManagementSection(
                         CinemaText(
                             stringResource(
                                 R.string.provider_live_tv_stats,
-                                NumberUtils.formatCount(stats.liveTv.categoryCount),
-                                NumberUtils.formatCount(stats.liveTv.itemsCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.liveTv.categoryCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.liveTv.itemsCount),
                             ),
                             tone = TextTone.Primary,
                         )
@@ -165,8 +167,8 @@ fun ColumnScope.DataManagementSection(
                         CinemaText(
                             stringResource(
                                 R.string.provider_movies_stats,
-                                NumberUtils.formatCount(stats.movies.categoryCount),
-                                NumberUtils.formatCount(stats.movies.itemsCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.movies.categoryCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.movies.itemsCount),
                             ),
                             tone = TextTone.Primary,
                         )
@@ -179,9 +181,9 @@ fun ColumnScope.DataManagementSection(
                         CinemaText(
                             stringResource(
                                 R.string.provider_tv_shows_stats,
-                                NumberUtils.formatCount(stats.tvShows.categoryCount),
-                                NumberUtils.formatCount(stats.tvShows.itemsCount),
-                                NumberUtils.formatCount(stats.tvShows.episodesCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.tvShows.categoryCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.tvShows.itemsCount),
+                                NumberUtils.formatCount(LocalResources.current, stats.tvShows.episodesCount),
                             ),
                             tone = TextTone.Primary,
                         )

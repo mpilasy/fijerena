@@ -5,6 +5,7 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Debug
@@ -56,10 +57,15 @@ internal fun formatDateTime(epochMs: Long): String = SimpleDateFormat("yyyy-MM-d
 
 /** "1.2 GB free of 3.0 GB". */
 internal fun freeOfTotal(
+    resources: Resources,
     freeBytes: Long,
     totalBytes: Long,
 ): UiText =
-    UiText.StringResource(R.string.device_info_free_of_format, NumberUtils.formatBytes(freeBytes), NumberUtils.formatBytes(totalBytes))
+    UiText.StringResource(
+        R.string.device_info_free_of_format,
+        NumberUtils.formatBytes(resources, freeBytes),
+        NumberUtils.formatBytes(resources, totalBytes),
+    )
 
 /** "3840×2160 @ 60 Hz"; the rate rounded to two decimals at most (23.976 → 23.98). */
 internal fun modeText(
@@ -166,20 +172,27 @@ private fun memorySection(context: Context): DeviceInfoSection {
     return DeviceInfoSection(
         R.string.device_info_section_memory,
         listOf(
-            infoRow(R.string.device_info_ram, mem?.let { freeOfTotal(it.availMem, it.totalMem) } ?: missingValue()),
+            infoRow(R.string.device_info_ram, mem?.let { freeOfTotal(context.resources, it.availMem, it.totalMem) } ?: missingValue()),
             infoRow(R.string.device_info_low_memory_now, yesNo(mem?.lowMemory)),
-            infoRow(R.string.device_info_low_memory_threshold, mem?.let { NumberUtils.formatBytes(it.threshold) }),
+            infoRow(R.string.device_info_low_memory_threshold, mem?.let { NumberUtils.formatBytes(context.resources, it.threshold) }),
             infoRow(R.string.device_info_low_ram_device, yesNo(am?.isLowRamDevice)),
             infoRow(
                 R.string.device_info_heap,
                 UiText.StringResource(
                     R.string.device_info_used_of_format,
-                    NumberUtils.formatBytes(heapUsed),
-                    NumberUtils.formatBytes(runtime.maxMemory()),
+                    NumberUtils.formatBytes(context.resources, heapUsed),
+                    NumberUtils.formatBytes(context.resources, runtime.maxMemory()),
                 ),
             ),
-            infoRow(R.string.device_info_heap_class, am?.let { "${it.memoryClass} MB / ${it.largeMemoryClass} MB" }),
-            infoRow(R.string.device_info_native_heap, NumberUtils.formatBytes(Debug.getNativeHeapAllocatedSize())),
+            infoRow(
+                R.string.device_info_heap_class,
+                am?.let {
+                    val mb = 1_048_576L
+                    "${NumberUtils.formatBytes(context.resources, it.memoryClass * mb)} / " +
+                        NumberUtils.formatBytes(context.resources, it.largeMemoryClass * mb)
+                },
+            ),
+            infoRow(R.string.device_info_native_heap, NumberUtils.formatBytes(context.resources, Debug.getNativeHeapAllocatedSize())),
         ),
     )
 }
@@ -196,21 +209,30 @@ private fun storageSection(context: Context): DeviceInfoSection {
         databases.map { (name, bytes) ->
             DeviceInfoRow(
                 UiText.StringResource(R.string.device_info_database_format, name),
-                UiText.DynamicString(NumberUtils.formatBytes(bytes)),
+                UiText.DynamicString(NumberUtils.formatBytes(context.resources, bytes)),
             )
         }
     return DeviceInfoSection(
         R.string.device_info_section_storage,
         listOf(
-            infoRow(R.string.device_info_internal_storage, stat?.let { freeOfTotal(it.availableBytes, it.totalBytes) } ?: missingValue()),
+            infoRow(
+                R.string.device_info_internal_storage,
+                stat?.let { freeOfTotal(context.resources, it.availableBytes, it.totalBytes) } ?: missingValue(),
+            ),
         ) + databaseRows +
             listOf(
                 infoRow(
                     R.string.device_info_image_cache,
-                    readOrNull { NumberUtils.formatBytes(directorySize(File(context.cacheDir, "image_cache"))) },
+                    readOrNull { NumberUtils.formatBytes(context.resources, directorySize(File(context.cacheDir, "image_cache"))) },
                 ),
-                infoRow(R.string.device_info_cache_total, readOrNull { NumberUtils.formatBytes(directorySize(context.cacheDir)) }),
-                infoRow(R.string.device_info_files_total, readOrNull { NumberUtils.formatBytes(directorySize(context.filesDir)) }),
+                infoRow(
+                    R.string.device_info_cache_total,
+                    readOrNull { NumberUtils.formatBytes(context.resources, directorySize(context.cacheDir)) },
+                ),
+                infoRow(
+                    R.string.device_info_files_total,
+                    readOrNull { NumberUtils.formatBytes(context.resources, directorySize(context.filesDir)) },
+                ),
             ),
     )
 }

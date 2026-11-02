@@ -76,11 +76,11 @@ class EpgManagementRefreshIntervalTest {
     @Test
     fun `labels and row text`() {
         assertText(R.string.common_off, refreshIntervalLabel(REFRESH_OFF))
-        assertText(R.string.epg_automation_freq_hours, refreshIntervalLabel(4), 4)
+        assertPlural(R.plurals.epg_automation_freq_hours, refreshIntervalLabel(4), 4)
         assertText(R.string.epg_automation_freq_daily, refreshIntervalLabel(24))
         assertText(R.string.epg_automation_freq_weekly, refreshIntervalLabel(168))
         assertText(R.string.epg_source_refresh_off, refreshIntervalSummary(REFRESH_OFF))
-        assertText(R.string.epg_source_refresh_hours, refreshIntervalSummary(48), 48)
+        assertPlural(R.plurals.epg_source_refresh_hours, refreshIntervalSummary(48), 48)
         assertText(R.string.epg_source_refresh_daily, refreshIntervalSummary(24))
         assertText(R.string.epg_source_refresh_weekly, refreshIntervalSummary(168))
     }
@@ -110,7 +110,7 @@ class EpgManagementRefreshIntervalTest {
     @Test
     fun `refresh line says off for a guide source that is off, whatever its interval`() {
         assertText(R.string.epg_source_off_summary, EpgManagementViewModel.refreshSummary(enabled = false, hours = 6))
-        assertText(R.string.epg_source_refresh_hours, EpgManagementViewModel.refreshSummary(enabled = true, hours = 6), 6)
+        assertPlural(R.plurals.epg_source_refresh_hours, EpgManagementViewModel.refreshSummary(enabled = true, hours = 6), 6)
     }
 
     private fun assertText(
@@ -121,5 +121,17 @@ class EpgManagementRefreshIntervalTest {
         val resource = text as UiText.StringResource
         assertEquals(resId, resource.resId)
         assertEquals(args.toList(), resource.args.toList())
+    }
+
+    /** A count of hours: a plural, so "1 hour" and "6 hours" read right. */
+    private fun assertPlural(
+        resId: Int,
+        text: UiText,
+        hours: Int,
+    ) {
+        val resource = text as UiText.PluralResource
+        assertEquals(resId, resource.resId)
+        assertEquals(hours, resource.count)
+        assertEquals(listOf<Any>(hours), resource.args.toList())
     }
 }

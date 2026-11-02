@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
@@ -36,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.home.syncDeltaText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -99,7 +101,7 @@ fun CacheManagementSection(
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val time = NumberUtils.formatTimestamp(context, lastSyncedAtMs)
-                val duration = NumberUtils.formatDuration(lastSyncDurationMs)
+                val duration = NumberUtils.formatDuration(LocalResources.current, lastSyncDurationMs)
                 CinemaText(
                     stringResource(R.string.provider_last_sync_status, time, duration),
                     role = TextRole.BodySmall,
@@ -117,7 +119,7 @@ fun CacheManagementSection(
                         if (lastSyncInserted == 0 && lastSyncUpdated == 0 && lastSyncDeleted == 0) {
                             stringResource(R.string.provider_sync_no_changes)
                         } else {
-                            stringResource(R.string.provider_sync_delta, lastSyncInserted, lastSyncUpdated, lastSyncDeleted)
+                            syncDeltaText(lastSyncInserted, lastSyncUpdated, lastSyncDeleted)
                         },
                         role = TextRole.BodySmall,
                         tone = TextTone.Secondary,
@@ -155,7 +157,7 @@ fun CacheManagementSection(
             tone = TextTone.Primary,
         )
         CinemaText(
-            stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
+            stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(LocalResources.current, totalItems)),
             role = TextRole.Title,
             tone = TextTone.Primary,
         )
@@ -170,8 +172,8 @@ fun CacheManagementSection(
                         R.string.provider_live_tv_label,
                         stringResource(
                             R.string.provider_live_tv_stats,
-                            NumberUtils.formatCount(stats.liveTv.categoryCount),
-                            NumberUtils.formatCount(stats.liveTv.itemsCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.liveTv.categoryCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.liveTv.itemsCount),
                         ),
                     ),
                 (stats.movies.itemsCount > 0) to
@@ -179,8 +181,8 @@ fun CacheManagementSection(
                         R.string.provider_movies_label,
                         stringResource(
                             R.string.provider_movies_stats,
-                            NumberUtils.formatCount(stats.movies.categoryCount),
-                            NumberUtils.formatCount(stats.movies.itemsCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.movies.categoryCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.movies.itemsCount),
                         ),
                     ),
                 (stats.tvShows.itemsCount > 0) to
@@ -188,9 +190,9 @@ fun CacheManagementSection(
                         R.string.provider_tv_shows_label,
                         stringResource(
                             R.string.provider_tv_shows_stats,
-                            NumberUtils.formatCount(stats.tvShows.categoryCount),
-                            NumberUtils.formatCount(stats.tvShows.itemsCount),
-                            NumberUtils.formatCount(stats.tvShows.episodesCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.tvShows.categoryCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.tvShows.itemsCount),
+                            NumberUtils.formatCount(LocalResources.current, stats.tvShows.episodesCount),
                         ),
                     ),
             ).filter { it.first }.map { it.second }
@@ -202,7 +204,7 @@ fun CacheManagementSection(
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         CinemaText(
-            stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(stats.epgCount)),
+            stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(LocalResources.current, stats.epgCount)),
             role = TextRole.BodySmall,
             tone = TextTone.Secondary,
         )
