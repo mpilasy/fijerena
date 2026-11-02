@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
@@ -44,31 +45,31 @@ fun ImportOptionsDialog(
         title = stringResource(R.string.settings_import_select_title),
         text = {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CinemaCheckbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
-                    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    CinemaText(stringResource(R.string.settings_import_general_label))
-                }
+                CinemaCheckRow(
+                    checked = optGlobal,
+                    onCheckedChange = { optGlobal = it },
+                    label = stringResource(R.string.settings_import_general_label),
+                )
                 if (parsed.hasProviders) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CinemaCheckbox(checked = optProviders, onCheckedChange = { optProviders = it })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        CinemaText(stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size))
-                    }
+                    CinemaCheckRow(
+                        checked = optProviders,
+                        onCheckedChange = { optProviders = it },
+                        label = stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
+                    )
                 }
                 if (parsed.hasEpgSources) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CinemaCheckbox(checked = optEpg, onCheckedChange = { optEpg = it })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        CinemaText(stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size))
-                    }
+                    CinemaCheckRow(
+                        checked = optEpg,
+                        onCheckedChange = { optEpg = it },
+                        label = stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
+                    )
                 }
                 if (parsed.hasFavorites) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CinemaCheckbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        CinemaText(stringResource(R.string.settings_import_favorites_label))
-                    }
+                    CinemaCheckRow(
+                        checked = optFavorites,
+                        onCheckedChange = { optFavorites = it },
+                        label = stringResource(R.string.settings_import_favorites_label),
+                    )
                 }
             }
         },

@@ -55,7 +55,6 @@
     <string name="player_no_quality">Aucune option de qualité disponible.</string>
     <string name="player_quality_auto">Auto (Adaptatif)</string>
     <string name="player_subtitles_off">Désactivé</string>
-    <string name="player_active">Actif</string>
     <string name="player_live">EN DIRECT</string>
     <string name="player_catchup">REPLAY</string>
     <string name="player_osd_watch_live">Regarder en direct</string>

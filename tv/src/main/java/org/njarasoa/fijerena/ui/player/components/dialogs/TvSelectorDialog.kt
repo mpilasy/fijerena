@@ -23,7 +23,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.ui.components.TvOverlayPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.input.TvOptionRow
+import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -85,12 +85,11 @@ fun TvSelectorDialog(
         }
 
         options.forEachIndexed { index, option ->
-            TvOptionRow(
-                title = option.title,
+            TvRadioRow(
                 selected = option.selected,
                 onClick = option.onSelect,
-                subtitle = option.subtitle,
-                activeLabel = stringResource(R.string.player_active),
+                label = option.title,
+                description = option.subtitle,
                 modifier =
                     if (index == selectedIndex) {
                         Modifier.focusRequester(initialFocusRequester)

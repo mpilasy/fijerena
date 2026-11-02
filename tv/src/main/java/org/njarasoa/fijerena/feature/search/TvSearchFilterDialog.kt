@@ -29,16 +29,15 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
-import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Search's filter on TV (the search decade genre filter plan, Phase 3): a
  * section each for the results' sources (one choice; Expert mode, two or more sources), decades,
- * genres, languages and regions (several), with their counts, and **Clear filters** while one is active. A dialog
- * window: focus opens on the first chosen row, else the first choice (never on Clear filters);
- * OK changes a row and keeps focus on it; Clear filters, Close or Back closes it.
+ * genres, languages and regions (several), with their counts, and a **Clear filters** button while one is
+ * active. A dialog window: focus opens on the first chosen row, else the first choice (never on Clear
+ * filters); OK changes a row and keeps focus on it; Clear filters, Close or Back closes it.
  */
 @Composable
 internal fun TvSearchFilterDialog(
@@ -101,18 +100,6 @@ internal fun TvSearchFilterDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
             ) {
-                // It closes the dialog: the row goes once nothing is chosen, and focus would go with it.
-                if (active) {
-                    TvOptionRow(
-                        title = stringResource(R.string.search_filter_clear),
-                        selected = false,
-                        onClick = {
-                            onSelectSource(null)
-                            onChoiceChange(SearchFacetChoice())
-                            onDismiss()
-                        },
-                    )
-                }
                 if (sources.isNotEmpty()) {
                     Heading(stringResource(R.string.search_filter_source))
                     TvRadioRow(
@@ -214,6 +201,15 @@ internal fun TvSearchFilterDialog(
                 }
             }
         },
+        // As on the phone, while a filter is on; it closes the dialog.
+        others =
+            listOfNotNull(
+                DialogAction(stringResource(R.string.search_filter_clear)) {
+                    onSelectSource(null)
+                    onChoiceChange(SearchFacetChoice())
+                    onDismiss()
+                }.takeIf { active },
+            ),
         cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 }

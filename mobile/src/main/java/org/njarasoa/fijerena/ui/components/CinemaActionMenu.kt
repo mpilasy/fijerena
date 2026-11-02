@@ -2,23 +2,15 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaIcon
-import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.MenuAction
-import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.inMenuOrder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
@@ -59,21 +51,14 @@ private fun ActionRow(
     action: MenuAction,
     onDismiss: () -> Unit,
 ) {
-    val tone = if (action.removal) TextTone.Danger else TextTone.Primary
     CinemaChoiceRow(
+        label = action.label,
         onClick = {
             action.onClick()
             onDismiss()
         },
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaIcon(action.icon, contentDescription = null, tone = tone)
-            Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-            CinemaText(action.label, tone = tone)
-        }
-    }
+        icon = action.icon,
+        removal = action.removal,
+    )
 }

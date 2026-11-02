@@ -55,7 +55,6 @@
     <string name="player_no_quality">Tsy misy kalitao azo isafidianana.</string>
     <string name="player_quality_auto">Mandeha ho azy (Adaptive)</string>
     <string name="player_subtitles_off">Tsy mandeha</string>
-    <string name="player_active">Mandeha</string>
     <string name="player_live">Mivantana</string>
     <string name="player_catchup">Averina</string>
     <string name="player_osd_watch_live">Hijery mivantana</string>

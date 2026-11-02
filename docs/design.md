@@ -307,7 +307,7 @@ A 15-style scale (48 sp down to 14 sp): display and headline styles in Manrope, 
 
 - **Buttons** (`buttons/CinemaButton.kt`): `CinemaButton`, `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaIconButton`, `CinemaDangerButton`, `CinemaDangerIconButton`
 - **Detail screens:** `TvDetailHero`, `AmbientBackdrop`, `RelatedTitlesRow`, `TvSectionTabs`, `TvActionMenu`
-- **Input and focus** (`input/`): `TvPane`, `NavReturnFocus`, `FocusRetry`, `FocusReturn`, `TvSearchField`, `TvOptionRow`, `TvToggleRows`, `TvSelectableButton`, `TvInputListItem`
+- **Input and focus** (`input/`): `TvPane`, `NavReturnFocus`, `FocusRetry`, `FocusReturn`, `TvSearchField`, `TvToggleRows` (`TvRadioRow` is the one single-choice row), `TvSelectableButton`, `TvInputListItem`
 - **Other:** `TvGlassPanel`, `TvErrorState`, `ReadOnlyFieldWithEdit`, `AccentBlock` (`cards/`), `modifiers/FocusModifiers`, `modifiers/TvDpadEscape`
 
 ---

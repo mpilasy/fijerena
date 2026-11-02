@@ -30,6 +30,8 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
+import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
@@ -82,36 +84,37 @@ fun CopyProviderDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 CinemaText(stringResource(R.string.provider_copy_to_target_label), role = TextRole.Heading)
                 targets.forEach { candidate ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CinemaRadioButton(selected = targetId == candidate.id, onClick = { targetId = candidate.id })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        CinemaText(candidate.name, role = TextRole.Heading)
-                    }
+                    CinemaRadioRow(
+                        selected = targetId == candidate.id,
+                        onClick = { targetId = candidate.id },
+                        label = candidate.name,
+                        labelIsName = true,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                 CinemaText(stringResource(R.string.provider_copy_to_options_label), role = TextRole.Heading)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CinemaCheckbox(checked = copySettings, onCheckedChange = { copySettings = it })
-                    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    CinemaText(stringResource(R.string.provider_copy_to_settings_label))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CinemaCheckbox(checked = copyFavorites, onCheckedChange = { copyFavorites = it })
-                    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    CinemaText(stringResource(R.string.provider_copy_to_favorites_label))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CinemaCheckbox(checked = copyWatchHistory, onCheckedChange = { copyWatchHistory = it })
-                    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    CinemaText(stringResource(R.string.provider_copy_to_watch_history_label))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CinemaCheckbox(checked = copyConnection, onCheckedChange = { copyConnection = it })
-                    Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    CinemaText(stringResource(R.string.provider_copy_to_connection_label))
-                }
+                CinemaCheckRow(
+                    checked = copySettings,
+                    onCheckedChange = { copySettings = it },
+                    label = stringResource(R.string.provider_copy_to_settings_label),
+                )
+                CinemaCheckRow(
+                    checked = copyFavorites,
+                    onCheckedChange = { copyFavorites = it },
+                    label = stringResource(R.string.provider_copy_to_favorites_label),
+                )
+                CinemaCheckRow(
+                    checked = copyWatchHistory,
+                    onCheckedChange = { copyWatchHistory = it },
+                    label = stringResource(R.string.provider_copy_to_watch_history_label),
+                )
+                CinemaCheckRow(
+                    checked = copyConnection,
+                    onCheckedChange = { copyConnection = it },
+                    label = stringResource(R.string.provider_copy_to_connection_label),
+                )
                 if (copyConnection) {
                     val targetName = targets.firstOrNull { it.id == targetId }?.name.orEmpty()
                     CinemaText(

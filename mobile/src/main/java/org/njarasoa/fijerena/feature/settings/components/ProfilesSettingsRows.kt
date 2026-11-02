@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -183,11 +184,11 @@ internal fun ProfileAddDialog(
                     showError = showNameError,
                 )
                 ProfileColourPicker(colorIndex = colorIndex, onPick = { colorIndex = it })
-                ProfileSwitchRow(
-                    title = stringResource(R.string.profile_child_title),
+                CinemaSwitchRow(
+                    label = stringResource(R.string.profile_child_title),
                     checked = child,
                     onCheckedChange = { child = it },
-                    summary = stringResource(R.string.profile_child_desc_phone),
+                    supportingText = stringResource(R.string.profile_child_desc_phone),
                 )
                 if (SwitchLock.ON && child && noAdminPin) {
                     CinemaText(stringResource(R.string.profile_child_no_pin_warning), tone = TextTone.Danger)
@@ -239,34 +240,6 @@ internal fun ProfileColourPicker(
                 ColorSwatch(index = index, selected = index == colorIndex, onClick = { onPick(index) })
             }
         }
-    }
-}
-
-/**
- * A profile setting on its page: the title (and an optional [summary] under it), and the switch on
- * the right; the whole row toggles it.
- */
-@Composable
-internal fun ProfileSwitchRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    summary: String? = null,
-    enabled: Boolean = true,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        // look-ok: a hand-built switch row; the toggle row components replace it
-        modifier = modifier.fillMaxWidth().clickable(enabled = enabled) { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            CinemaText(title)
-            if (summary != null) {
-                CinemaText(summary, tone = TextTone.Secondary)
-            }
-        }
-        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 

@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.input.TvOptionRow
+import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -50,12 +50,12 @@ fun TvSourceChooserDialog(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
             ) {
                 sources.forEachIndexed { index, (id, name) ->
-                    TvOptionRow(
-                        title = name,
-                        role = TextRole.Heading,
+                    TvRadioRow(
                         selected = false,
                         onClick = { onChosen(id) },
+                        label = name,
                         modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
+                        labelIsName = true,
                     )
                 }
             }

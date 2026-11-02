@@ -107,6 +107,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaCheckRow
 import org.njarasoa.fijerena.ui.components.CinemaRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -340,27 +341,12 @@ internal fun MobileGuideSearchPane(
 
         // "In <category> only" (GD5).
         if (contextName != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .padding(horizontal = Spacing.md)
-                        // look-ok: a hand-built check row; the toggle row components replace it
-                        .clickable { inContextOnly = !inContextOnly },
-            ) {
-                CinemaCheckbox(
-                    checked = inContextOnly,
-                    onCheckedChange = { inContextOnly = it },
-                    modifier = Modifier.size(MobileDimensions.iconLarge),
-                )
-                CinemaText(
-                    text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    role = TextRole.Caption,
-                    tone = TextTone.Inherit,
-                )
-            }
+            CinemaCheckRow(
+                checked = inContextOnly,
+                onCheckedChange = { inContextOnly = it },
+                label = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                modifier = Modifier.padding(horizontal = Spacing.md),
+            )
         }
 
         val currentIndexState = indexState

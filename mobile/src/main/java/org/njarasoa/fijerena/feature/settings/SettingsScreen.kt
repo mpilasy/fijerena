@@ -75,6 +75,7 @@ import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -465,11 +466,12 @@ fun MobileSettingsScreen(
                                     summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                                     onClick = { showWatchDelayPicker = true },
                                 )
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_show_clock_title),
-                                    summary = stringResource(R.string.settings_show_clock_desc),
-                                    trailing = { CinemaSwitch(checked = uiState.showClock, onCheckedChange = viewModel::updateShowClock) },
-                                    onClick = { viewModel.updateShowClock(!uiState.showClock) },
+                                CinemaSwitchRow(
+                                    checked = uiState.showClock,
+                                    onCheckedChange = viewModel::updateShowClock,
+                                    label = stringResource(R.string.settings_show_clock_title),
+                                    modifier = Modifier.padding(horizontal = Spacing.md),
+                                    supportingText = stringResource(R.string.settings_show_clock_desc),
                                 )
                             }
                         }
@@ -493,16 +495,12 @@ fun MobileSettingsScreen(
                                 }
                                 GuideMaintenanceRow(viewModel = epgViewModel)
                                 TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
-                                SettingsListRow(
-                                    title = stringResource(R.string.tmdb_charts_title),
-                                    summary = stringResource(R.string.tmdb_charts_desc),
-                                    trailing = {
-                                        CinemaSwitch(
-                                            checked = uiState.showTmdbCharts,
-                                            onCheckedChange = viewModel::updateShowTmdbCharts,
-                                        )
-                                    },
-                                    onClick = { viewModel.updateShowTmdbCharts(!uiState.showTmdbCharts) },
+                                CinemaSwitchRow(
+                                    checked = uiState.showTmdbCharts,
+                                    onCheckedChange = viewModel::updateShowTmdbCharts,
+                                    label = stringResource(R.string.tmdb_charts_title),
+                                    modifier = Modifier.padding(horizontal = Spacing.md),
+                                    supportingText = stringResource(R.string.tmdb_charts_desc),
                                 )
                                 if (uiState.showTmdbCharts) {
                                     var chartsRefreshed by remember { mutableStateOf(false) }
@@ -525,16 +523,12 @@ fun MobileSettingsScreen(
                                         },
                                     )
                                 }
-                                SettingsListRow(
-                                    title = stringResource(R.string.sports_switch_title),
-                                    summary = stringResource(R.string.sports_switch_desc),
-                                    trailing = {
-                                        CinemaSwitch(
-                                            checked = uiState.showSports,
-                                            onCheckedChange = viewModel::updateShowSports,
-                                        )
-                                    },
-                                    onClick = { viewModel.updateShowSports(!uiState.showSports) },
+                                CinemaSwitchRow(
+                                    checked = uiState.showSports,
+                                    onCheckedChange = viewModel::updateShowSports,
+                                    label = stringResource(R.string.sports_switch_title),
+                                    modifier = Modifier.padding(horizontal = Spacing.md),
+                                    supportingText = stringResource(R.string.sports_switch_desc),
                                 )
                             }
                         }

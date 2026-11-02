@@ -37,6 +37,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
  *
  * These use the TV flavours of the controls (`androidx.tv.material3`), not the touch ones, so the
  * indicator sizing and colours match the rest of the 10-foot UI.
+ *
+ * The check and radio rows are the options of a list (a filter, a picker), as the phone's
+ * `CinemaCheckRow` and `CinemaRadioRow`: the label is Body, Heading when it is a name (a source, a
+ * Look). The switch row is a setting among the Settings rows (`SettingsRow`), so its label is
+ * Heading as theirs. [TvRadioRow] is the one single-choice row: every picker, the source chooser,
+ * the search filter and the player's track lists use it.
  */
 @Composable
 fun TvCheckRow(
@@ -54,12 +60,18 @@ fun TvCheckRow(
         modifier = modifier,
         description = description,
         enabled = enabled,
+        labelRole = TextRole.Body,
         leading = {
             CinemaCheckbox(checked = checked, onCheckedChange = null, enabled = enabled)
         },
     )
 }
 
+/**
+ * One option of a single choice. [selected] must be driven by what is actually active, never by
+ * what holds focus: arrowing through the list must not move the mark. [trailing] is a small static
+ * sample at the row's end (a colour theme's colours).
+ */
 @Composable
 fun TvRadioRow(
     selected: Boolean,
@@ -68,17 +80,21 @@ fun TvRadioRow(
     modifier: Modifier = Modifier,
     description: String? = null,
     enabled: Boolean = true,
+    labelIsName: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     TvStateRow(
         selected = selected,
         onClick = onClick,
         label = label,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         description = description,
         enabled = enabled,
+        labelRole = if (labelIsName) TextRole.Heading else TextRole.Body,
         leading = {
             CinemaRadioButton(selected = selected, onClick = null, enabled = enabled)
         },
+        trailing = trailing,
     )
 }
 
@@ -100,6 +116,7 @@ fun TvSwitchRow(
         modifier = modifier.fillMaxWidth(),
         description = description,
         enabled = enabled,
+        labelRole = TextRole.Heading,
         trailing = {
             CinemaSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
         },
@@ -118,6 +135,7 @@ private fun TvStateRow(
     modifier: Modifier,
     description: String?,
     enabled: Boolean,
+    labelRole: TextRole,
     leading: (@Composable BoxScope.() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -135,6 +153,6 @@ private fun TvStateRow(
                 }
             },
     ) {
-        CinemaText(text = label, role = TextRole.Heading)
+        CinemaText(text = label, role = labelRole)
     }
 }

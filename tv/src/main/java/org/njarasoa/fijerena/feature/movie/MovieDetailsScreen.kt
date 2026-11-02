@@ -1041,7 +1041,7 @@ private fun StreamNamePicker(
                 onDismiss = { expanded = false },
                 // With several sources, each copy's own (it opens there).
                 subtitle = { alternate -> alternate?.let { sourceNames[it.providerId] } },
-                role = TextRole.Heading,
+                labelIsName = true,
             )
         }
     }

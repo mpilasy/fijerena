@@ -59,12 +59,12 @@ import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceCho
 import org.njarasoa.fijerena.feature.provider.components.MobileCategoryFilterDialog
 import org.njarasoa.fijerena.feature.settings.components.ProfileColourPicker
 import org.njarasoa.fijerena.feature.settings.components.ProfileNameField
-import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.PinDialog
@@ -206,15 +206,15 @@ fun MobileProfileEditScreen(
                     // There is always an Expert: the only one can't turn it off, nor be a child's.
                     val listed by viewModel.profiles.collectAsStateWithLifecycle()
                     val lastExpert = remember(profileId, listed) { viewModel.isLastExpert(profileId) }
-                    ProfileSwitchRow(
-                        title = stringResource(R.string.profile_child_title),
+                    CinemaSwitchRow(
+                        label = stringResource(R.string.profile_child_title),
                         checked = child,
                         onCheckedChange = {
                             child = it
                             if (it) devMode = false
                             apply(name)
                         },
-                        summary =
+                        supportingText =
                             stringResource(
                                 if (devMode && lastExpert) R.string.profile_child_last_expert else R.string.profile_child_desc_phone,
                             ),
@@ -231,14 +231,14 @@ fun MobileProfileEditScreen(
                     }
                     // A child profile (adult categories hidden) is never Expert.
                     if (!child) {
-                        ProfileSwitchRow(
-                            title = stringResource(R.string.settings_developer_mode_title),
+                        CinemaSwitchRow(
+                            label = stringResource(R.string.settings_developer_mode_title),
                             checked = devMode,
                             onCheckedChange = {
                                 devMode = it
                                 apply(name)
                             },
-                            summary = if (lastExpert) stringResource(R.string.settings_developer_mode_last) else null,
+                            supportingText = if (lastExpert) stringResource(R.string.settings_developer_mode_last) else null,
                             enabled = !lastExpert,
                             modifier = inset,
                         )
@@ -334,11 +334,11 @@ fun MobileProfileEditScreen(
                         ) {
                             CinemaText(stringResource(R.string.profile_sources_desc), tone = TextTone.Secondary)
                             sources.forEach { source ->
-                                ProfileSwitchRow(
-                                    title = source.name,
+                                CinemaSwitchRow(
+                                    label = source.name,
                                     checked = source.isOn,
                                     onCheckedChange = { viewModel.setProfileSource(profileId, sources, source.providerKey, it) },
-                                    summary = if (source.filterable) null else stringResource(R.string.profile_source_no_filters),
+                                    supportingText = if (source.filterable) null else stringResource(R.string.profile_source_no_filters),
                                 )
                             }
                         }
@@ -550,9 +550,9 @@ internal fun ProfileOwnRows(
         onClick = { choosingLook = true },
         enabled = !lookLocked,
     )
-    ProfileSwitchRow(
-        title = stringResource(R.string.profile_poster_backdrop_title),
-        summary = stringResource(R.string.profile_poster_backdrop_desc),
+    CinemaSwitchRow(
+        label = stringResource(R.string.profile_poster_backdrop_title),
+        supportingText = stringResource(R.string.profile_poster_backdrop_desc),
         checked = posterBackdrop,
         onCheckedChange = {
             posterBackdrop = it
@@ -562,8 +562,8 @@ internal fun ProfileOwnRows(
     )
 
     SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
-    ProfileSwitchRow(
-        title = stringResource(R.string.settings_autoplay_next_episode_title),
+    CinemaSwitchRow(
+        label = stringResource(R.string.settings_autoplay_next_episode_title),
         checked = autoplayNextEpisode,
         onCheckedChange = onAutoplayNextEpisodeChange,
         modifier = inset,

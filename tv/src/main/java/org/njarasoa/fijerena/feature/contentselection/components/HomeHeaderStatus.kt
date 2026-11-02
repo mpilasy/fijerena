@@ -62,9 +62,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -138,13 +138,15 @@ internal fun SourcesStatusSheet(
                         state.lastSyncError
                             ?.takeIf { state.status == SourceSyncStatus.FAILED }
                             ?.let { stringResource(R.string.home_source_update_failed_detail, it) }
-                    TvOptionRow(
+                    // A focusable line of status (focus rule 3): OK closes the dialog.
+                    val detail = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null }
+                    SettingsRow(
                         title = if (isDevMode) "${state.name} (${state.type})" else state.name,
-                        subtitle = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null },
-                        role = TextRole.Heading,
-                        selected = false,
+                        description = null,
                         onClick = onDismiss,
-                        modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
+                        chevron = false,
+                        focusRequester = if (index == 0) firstRow else null,
+                        supporting = detail?.let { { CinemaText(it, role = TextRole.Body, tone = TextTone.Secondary) } },
                     )
                 }
             }
