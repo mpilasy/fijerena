@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,7 +85,7 @@ private fun databaseStatusText(indexState: EpgIndexState): String =
         is EpgIndexState.Indexed -> {
             stringResource(
                 R.string.epg_database_label,
-                stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)),
+                stringResource(R.string.epg_database_ready, NumberUtils.formatCount(LocalResources.current, indexState.programmeCount)),
             )
         }
 
@@ -129,7 +130,12 @@ private fun guideStatusLines(
                 is MultiSourceState.Processing -> {
                     stringResource(
                         R.string.epg_current_status,
-                        stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources),
+                        pluralStringResource(
+                            R.plurals.epg_status_processing,
+                            multiState.totalSources,
+                            multiState.completedCount,
+                            multiState.totalSources,
+                        ),
                     )
                 }
 
@@ -168,7 +174,7 @@ private fun guideStatusLines(
 
         lastRun?.let { stats ->
             val time = NumberUtils.formatTimestamp(LocalContext.current, stats.updatedAtMs)
-            val duration = NumberUtils.formatDuration(stats.durationMs)
+            val duration = NumberUtils.formatDuration(LocalResources.current, stats.durationMs)
             // The space is added here: a leading space in a string resource is dropped.
             val errorText =
                 if (stats.errors >
@@ -178,7 +184,15 @@ private fun guideStatusLines(
                 } else {
                     ""
                 }
-            lines += stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText)
+            lines +=
+                pluralStringResource(
+                    R.plurals.epg_last_run_stats,
+                    stats.sourcesProcessed,
+                    time,
+                    stats.sourcesProcessed,
+                    duration,
+                    errorText,
+                )
         }
     }
     return lines

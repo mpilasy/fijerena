@@ -21,7 +21,8 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The profile's avatar with a small gear badge at its lower end: the avatar opens the profile menu,
- * which has Settings (settings flow review, SF-D4). Each tab root's top bar shows it, last.
+ * which has Settings (settings flow review, SF-D4). Each tab root's top bar shows it, last. A child's
+ * profile menu has no Settings, so its avatar has no badge ([showSettingsBadge] false).
  */
 @Composable
 fun ProfileSettingsAvatar(
@@ -30,9 +31,11 @@ fun ProfileSettingsAvatar(
     size: Dp,
     initialRole: TextRole,
     modifier: Modifier = Modifier,
+    showSettingsBadge: Boolean = true,
 ) {
     Box(modifier = modifier) {
         ProfileAvatar(name = name, colorIndex = colorIndex, size = size, initialRole = initialRole)
+        if (!showSettingsBadge) return@Box
         Box(
             modifier =
                 Modifier

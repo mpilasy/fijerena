@@ -5,6 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.utils.resourcesIn
+import java.util.Locale
 
 class CoreInfoTest {
     @Test
@@ -40,9 +42,9 @@ class CoreInfoTest {
 
     @Test
     fun `free of total formats both sizes`() {
-        val text = freeOfTotal(1_073_741_824L, 3L * 1_073_741_824L) as UiText.StringResource
+        val text = freeOfTotal(resourcesIn(Locale.UK), 1_073_741_824L, 3L * 1_073_741_824L) as UiText.StringResource
         assertEquals(R.string.device_info_free_of_format, text.resId)
-        assertEquals(listOf("1.0 GB", "3.0 GB"), text.args.toList())
+        assertEquals(listOf("1.0\u00A0GB", "3.0\u00A0GB"), text.args.toList())
     }
 
     @Test

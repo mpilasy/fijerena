@@ -252,6 +252,11 @@ class SearchViewModel(
                 query = "",
             )
         _searchHistory.value = appSettings.getSearchHistory()
+        // The history is the profile in use's: read again when another profile is picked, so a
+        // screen kept across the switch never shows the previous profile's searches.
+        viewModelScope.launchGuarded("SearchViewModel.followProfileHistory") {
+            appSettings.observeActiveProfileId().collect { _searchHistory.value = appSettings.getSearchHistory() }
+        }
         prefetchAll()
         followHasGuide()
         // The profile's sources changed (one turned on or off, added or deleted): the search covers

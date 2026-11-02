@@ -5,7 +5,7 @@
     <string name="slow_connection_banner">Connexion trop lente pour cette vidéo</string>
 
     <!-- EPG Management -->
-    <string name="epg_refresh_in_queue">Mise à jour déjà en file d\'attente…</string>
+    <string name="epg_refresh_in_queue">Mise à jour déjà en file d’attente…</string>
     <string name="epg_up_to_date">Le guide TV est à jour.</string>
     <plurals name="epg_refreshing_stale">
         <item quantity="one">Mise à jour de %1$d source de guide périmée…</item>
@@ -14,8 +14,8 @@
     <string name="epg_no_stale_sources">Aucune source de guide périmée à mettre à jour.</string>
     <string name="epg_no_failed_sources">Aucune source de guide en échec trouvée.</string>
     <plurals name="epg_cache_cleaned">
-        <item quantity="one">%1$d fichier nettoyé, %2$s libéré(s)</item>
-        <item quantity="other">%1$d fichiers nettoyés, %2$s libéré(s)</item>
+        <item quantity="one">%1$d fichier nettoyé, %2$s libérés</item>
+        <item quantity="other">%1$d fichiers nettoyés, %2$s libérés</item>
     </plurals>
     <string name="epg_no_stray_files">Aucun fichier orphelin trouvé.</string>
     <string name="epg_data_cleared">Toutes les données du guide ont été effacées</string>
@@ -87,8 +87,8 @@
     <string name="settings_language_mg">Malagasy</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_export_success">Paramètres exportés avec succès</string>
-    <string name="settings_export_failed">Impossible d\'exporter les paramètres</string>
-    <string name="settings_import_failed">Impossible d\'importer les paramètres : %1$s</string>
+    <string name="settings_export_failed">Impossible d’exporter les paramètres</string>
+    <string name="settings_import_failed">Impossible d’importer les paramètres : %1$s</string>
 
     <!-- Common -->
     <string name="common_close">Fermer</string>
@@ -109,7 +109,7 @@
     <string name="sports_next_games_heading">Prochains matchs</string>
     <string name="sports_channels_heading">Vos chaînes</string>
     <string name="sports_follow">Suivre</string>
-    <string name="sports_open_team_page">Ouvrir la page de l\'équipe</string>
+    <string name="sports_open_team_page">Ouvrir la page de l’équipe</string>
     <string name="sports_unfollow">Ne plus suivre</string>
     <string name="sports_followed">Suivi</string>
     <string name="sports_load_error">Impossible de charger les matchs</string>
@@ -190,30 +190,42 @@
         <item quantity="one">%1$d tâche de mise à jour en attente</item>
         <item quantity="other">%1$d tâches de mise à jour en attente</item>
     </plurals>
-    <string name="epg_status_processing">Traitement de %1$d/%2$d sources de guide</string>
+    <plurals name="epg_status_processing">
+        <item quantity="one">Traitement de %1$d/%2$d source de guide</item>
+        <item quantity="other">Traitement de %1$d/%2$d sources de guide</item>
+    </plurals>
     <string name="epg_status_retrying">Nouvel essai à %3$s (tentative %1$d sur %2$d)</string>
     <string name="epg_status_finished">Traitement terminé</string>
     <string name="epg_status_finalizing">Finalisation (%1$s)…</string>
     <string name="epg_status_clearing">Effacement des données…</string>
-    <string name="epg_last_run_stats">Dernière exécution : Finie à %1$s • %2$d sources de guide en %3$s%4$s</string>
+    <plurals name="epg_last_run_stats">
+        <item quantity="one">Dernière exécution : terminée le %1$s • %2$d source de guide en %3$s%4$s</item>
+        <item quantity="other">Dernière exécution : terminée le %1$s • %2$d sources de guide en %3$s%4$s</item>
+    </plurals>
     <plurals name="epg_last_run_errors">
         <item quantity="one">(%1$d erreur)</item>
         <item quantity="other">(%1$d erreurs)</item>
     </plurals>
     <string name="epg_maintenance_desc">Les téléchargements et programmes du guide gardés sur cet appareil</string>
     <string name="epg_automation_freq_daily">Quotidien</string>
-    <string name="epg_automation_freq_hours">Toutes les %1$d heures</string>
+    <plurals name="epg_automation_freq_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Toutes les heures</item>
+        <item quantity="other">Toutes les %1$d heures</item>
+    </plurals>
     <string name="epg_automation_freq_weekly">Hebdomadaire</string>
     <string name="epg_source_refresh_off">Mise à jour auto désactivée</string>
     <string name="epg_source_off_summary">Désactivé : ni utilisé, ni actualisé</string>
     <string name="epg_source_refresh_daily">Mise à jour quotidienne</string>
     <string name="epg_source_refresh_weekly">Mise à jour hebdomadaire</string>
-    <string name="epg_source_refresh_hours">Mise à jour toutes les %1$d heures</string>
+    <plurals name="epg_source_refresh_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Mise à jour toutes les heures</item>
+        <item quantity="other">Mise à jour toutes les %1$d heures</item>
+    </plurals>
     <string name="epg_unnamed_source">Source de guide sans nom</string>
     <string name="epg_source_stat_label">Dernière synchro</string>
     <string name="epg_source_stat_download">Téléchargé en</string>
     <string name="epg_source_stat_ingest">Importé en</string>
-    <string name="epg_source_stat_latest">Programmes jusqu\'au</string>
+    <string name="epg_source_stat_latest">Programmes jusqu’au</string>
     <string name="epg_source_stat_channels">Chaînes</string>
     <string name="epg_source_stat_programmes">Programmes</string>
     <string name="epg_source_stat_unchanged">Inchangé</string>
@@ -249,9 +261,9 @@
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
-    <string name="browse_sign_in_ask_admin">Cette source n\'est pas encore connectée. Demande à un admin de la connecter.</string>
+    <string name="browse_sign_in_ask_admin">Cette source n’est pas encore connectée. Demandez à un admin de la connecter.</string>
     <string name="login_server_url_label">URL du serveur</string>
-    <string name="login_username_label">Nom d\'utilisateur</string>
+    <string name="login_username_label">Nom d’utilisateur</string>
     <string name="login_password_label">Mot de passe</string>
 
     <!-- Provider Setup -->
@@ -260,7 +272,7 @@
     <string name="provider_name_label">Nom de la source</string>
     <!-- Edit Source: the source badge's short name ("X4P") -->
     <string name="provider_short_name_label">Nom court</string>
-    <string name="provider_short_name_desc">Ce qu\'affiche le badge de la source à la place du nom, 5 caractères au plus. Laisser vide pour le tirer du nom.</string>
+    <string name="provider_short_name_desc">Ce qu’affiche le badge de la source à la place du nom, 5 caractères au plus. Laisser vide pour le tirer du nom.</string>
     <string name="provider_short_name_automatic">%1$s (automatique)</string>
     <string name="provider_short_name_taken">Une autre source utilise déjà %1$s</string>
     <string name="provider_type_label">Type de source</string>
@@ -270,7 +282,7 @@
     <string name="source_type_jellyfin">Jellyfin</string>
     <string name="source_type_remote_m3u">M3U distant</string>
     <string name="provider_url_label">URL du serveur</string>
-    <string name="provider_username_label">Nom d\'utilisateur</string>
+    <string name="provider_username_label">Nom d’utilisateur</string>
     <string name="provider_password_label">Mot de passe</string>
     <string name="provider_save_button">Enregistrer</string>
     <string name="provider_delete_button">Supprimer</string>
@@ -282,19 +294,19 @@
     <string name="provider_name_placeholder_local">ex. Vidéos locales</string>
     <string name="provider_name_placeholder_remote_m3u">ex. Ma Playlist M3U</string>
     <string name="provider_error_name_required">Le nom de la source est requis</string>
-    <string name="provider_error_url_required">L\'URL du serveur est requise</string>
-    <string name="provider_error_username_required">Le nom d\'utilisateur est requis</string>
+    <string name="provider_error_url_required">L’URL du serveur est requise</string>
+    <string name="provider_error_username_required">Le nom d’utilisateur est requis</string>
     <string name="provider_error_password_required">Le mot de passe est requis</string>
-    <string name="provider_error_host_required">L\'hôte / IP est requis</string>
+    <string name="provider_error_host_required">L’hôte / IP est requis</string>
     <string name="provider_error_share_required">Le nom du partage est requis</string>
-    <string name="provider_error_m3u_url_required">L\'URL de la playlist M3U est requise</string>
+    <string name="provider_error_m3u_url_required">L’URL de la playlist M3U est requise</string>
     <string name="provider_connecting">Connexion…</string>
     <string name="provider_saving">Enregistrement…</string>
     <string name="provider_connection_failed">Échec de la connexion</string>
     <string name="provider_save_anyway">Enregistrer quand même</string>
     <string name="provider_go_back">Retour</string>
     <string name="provider_clear_cache_all_title">Vider tout le cache ?</string>
-    <string name="provider_clear_cache_all_message">Ceci supprimera les données en cache de cette source (Direct, Films, Séries : catégories et flux). L\'application les téléchargera à nouveau.</string>
+    <string name="provider_clear_cache_all_message">Ceci supprimera les données en cache de cette source (Direct, Films, Séries : catégories et flux). L’application les téléchargera à nouveau.</string>
     <string name="provider_clear_all_button">Tout effacer</string>
     <string name="provider_clear_cache_live_title">Vider le cache TV en direct ?</string>
     <string name="provider_clear_cache_live_message">Ceci supprimera toutes les catégories et chaînes en direct du cache.</string>
@@ -314,7 +326,7 @@
     <string name="provider_filter_include_desc">Seules les catégories correspondant à ces règles seront affichées</string>
     <string name="provider_filter_add_rules_label">Ajouter des règles (séparées par une virgule)</string>
     <string name="provider_filter_prefixes_placeholder">Adulte, XXX, 18+</string>
-    <string name="provider_filter_script_title">Filtre d\'écriture :</string>
+    <string name="provider_filter_script_title">Filtre d’écriture :</string>
     <string name="provider_filter_script_desc">Afficher uniquement les scripts sélectionnés (aucun = tout afficher)</string>
     <string name="provider_filter_choose_match_type">Choisir le type de correspondance</string>
     <string name="provider_filter_match_starts">Commence par</string>
@@ -331,14 +343,14 @@
     <string name="provider_hide_password">Masquer le mot de passe</string>
     <string name="provider_show_password">Afficher le mot de passe</string>
     <string name="provider_or_separator">— ou —</string>
-    <string name="provider_enter_jellyfin_url_first">Entrez d\'abord l\'URL du serveur Jellyfin</string>
+    <string name="provider_enter_jellyfin_url_first">Entrez d’abord l’URL du serveur Jellyfin</string>
     <string name="provider_use_quick_connect">Utiliser la connexion rapide</string>
     <string name="provider_jellyfin_household_login">Une seule connexion pour tout le foyer : chaque profil qui a cette source partage sa progression, ses vus et ses favoris.</string>
     <string name="provider_host_label">Hôte / IP</string>
     <string name="provider_host_placeholder">192.168.1.100</string>
     <string name="provider_share_label">Nom du partage</string>
     <string name="provider_share_placeholder">media</string>
-    <string name="provider_username_optional_label">Nom d\'utilisateur (optionnel)</string>
+    <string name="provider_username_optional_label">Nom d’utilisateur (optionnel)</string>
     <string name="provider_password_optional_label">Mot de passe (optionnel)</string>
     <string name="provider_m3u_url_label">URL de la playlist M3U</string>
     <string name="provider_m3u_url_placeholder">https://exemple.com/playlist.m3u</string>
@@ -351,14 +363,25 @@
     <string name="provider_stream_format_desc">Format utilisé pour les flux en direct (m3u8 = HLS, ts = MPEG-TS)</string>
     <string name="provider_playlist_type_label">Type de playlist</string>
     <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = avec les infos du guide, simple = basique)</string>
-    <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. \'Adulte\', \'XXX\')</string>
+    <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. « Adulte », « XXX »)</string>
     <string name="provider_data_management_desc">Le catalogue de cette source gardé sur cet appareil</string>
     <string name="provider_syncing">Synchronisation…</string>
     <string name="provider_sync_now_button">Synchroniser maintenant</string>
     <string name="provider_last_sync_status">Dernière synchro : Finie à %1$s • Durée %2$s</string>
     <string name="provider_sync_success">Synchronisation réussie</string>
     <string name="provider_sync_no_changes">Aucun changement depuis la dernière synchro</string>
-    <string name="provider_sync_delta">%1$d ajoutés • %2$d mis à jour • %3$d supprimés</string>
+    <plurals name="provider_sync_added">
+        <item quantity="one">%1$d ajouté</item>
+        <item quantity="other">%1$d ajoutés</item>
+    </plurals>
+    <plurals name="provider_sync_updated">
+        <item quantity="one">%1$d mis à jour</item>
+        <item quantity="other">%1$d mis à jour</item>
+    </plurals>
+    <plurals name="provider_sync_removed">
+        <item quantity="one">%1$d supprimé</item>
+        <item quantity="other">%1$d supprimés</item>
+    </plurals>
     <string name="provider_total_db_items_label">Éléments enregistrés</string>
     <string name="provider_total_items_value">%1$s Éléments</string>
     <string name="provider_live_tv_label">TV en direct</string>
@@ -370,12 +393,12 @@
     <string name="provider_epg_stats">Guide : %1$s chaînes</string>
     <string name="provider_qc_init_failed">Impossible de démarrer Quick Connect</string>
     <string name="provider_qc_poll_failed">Échec de la vérification : %1$s</string>
-    <string name="provider_qc_auth_failed">Échec de l\'authentification : %1$s</string>
+    <string name="provider_qc_auth_failed">Échec de l’authentification : %1$s</string>
     <string name="provider_qc_timeout">Délai expiré. Veuillez réessayer.</string>
     <string name="provider_connecting_server">Connexion au serveur…</string>
     <string name="provider_qc_enter_code">Entrez ce code dans Jellyfin :</string>
     <string name="provider_qc_instructions">Sur un appareil déjà connecté à Jellyfin, ouvrez le menu de votre profil → Quick Connect et saisissez le code ci-dessus.</string>
-    <string name="provider_qc_waiting">En attente d\'approbation…</string>
+    <string name="provider_qc_waiting">En attente d’approbation…</string>
 
     <!-- Provider Selection -->
     <string name="provider_selection_title">Sources</string>
@@ -395,7 +418,7 @@
     <string name="provider_copy_to_favorites_label">Favoris</string>
     <string name="provider_copy_to_watch_history_label">Historique de visionnage</string>
     <string name="provider_copy_to_connection_label">Connexion et identifiants</string>
-    <string name="provider_copy_to_connection_warning_format">Ceci écrase l\'URL, le nom d\'utilisateur et le mot de passe de « %1$s ».</string>
+    <string name="provider_copy_to_connection_warning_format">Ceci écrase l’URL, le nom d’utilisateur et le mot de passe de « %1$s ».</string>
     <string name="provider_duplicate_result_format">Dupliqué sous « %1$s ».</string>
 
     <!-- More Common -->
@@ -419,7 +442,7 @@
     <string name="details_saved_copy_tv">Détails enregistrés : la source est injoignable. Actualisez depuis le menu Plus.</string>
     <string name="details_more_like_this">Dans le même genre</string>
     <string name="details_no_link_handler">Aucune application de cet appareil ne peut ouvrir ce lien</string>
-    <string name="trailer_unavailable">Cette bande-annonce n\'est plus sur YouTube</string>
+    <string name="trailer_unavailable">Cette bande-annonce n’est plus sur YouTube</string>
     <string name="movie_loading_details">Chargement des détails…</string>
     <string name="movie_error_loading">Impossible de charger le film</string>
     <string name="movie_back_to_movies">Retour aux films</string>
@@ -435,7 +458,7 @@
         <item quantity="one">%1$d épisode</item>
         <item quantity="other">%1$d épisodes</item>
     </plurals>
-    <string name="series_play_episode_action">Lire l\'épisode</string>
+    <string name="series_play_episode_action">Lire l’épisode</string>
     <string name="series_aired_format">Diffusé : %1$s</string>
     <string name="series_bitrate_format">Débit : %1$s kbps</string>
     <string name="series_loading_episodes">Chargement des épisodes…</string>
@@ -539,8 +562,8 @@
 
     <!-- Stats Labels extras -->
     <string name="player_stats_resolution">Résolution</string>
-    <string name="player_stats_frame_rate">Fréquence d\'images</string>
-    <string name="player_stats_sample_rate">Fréquence d\'échantillonnage</string>
+    <string name="player_stats_frame_rate">Fréquence d’images</string>
+    <string name="player_stats_sample_rate">Fréquence d’échantillonnage</string>
     <string name="player_stats_channels">Canaux</string>
     <string name="player_stats_position">Position</string>
     <string name="player_stats_duration">Durée</string>
@@ -555,7 +578,7 @@
     <string name="epg_source_phase_format">%1$s…</string>
     <string name="epg_source_progress_percent">%1$d%%</string>
     <string name="epg_database_ready">Prêt (%1$s programmes)</string>
-    <string name="epg_database_optimizing">Optimisation de l\'index de recherche…</string>
+    <string name="epg_database_optimizing">Optimisation de l’index de recherche…</string>
     <string name="epg_database_error_prefixed">Problème de la base du guide : %1$s</string>
     <string name="epg_current_status_error">Problème de mise à jour du guide : %1$s</string>
 
@@ -578,12 +601,12 @@
         <item quantity="one">%1$d diffusion de plus</item>
         <item quantity="other">%1$d diffusions de plus</item>
     </plurals>
-    <string name="epg_browser_on_air_badge">À L\'ANTENNE</string>
+    <string name="epg_browser_on_air_badge">À L’ANTENNE</string>
     <string name="epg_browser_soon_badge">BIENTÔT</string>
     <string name="epg_browser_recent_searches">Recherches récentes</string>
-    <string name="epg_browser_clear_all_description">Tout effacer</string>
-    <string name="search_history_clear_confirm_title">Effacer les recherches récentes\u00A0?</string>
-    <string name="search_history_clear_confirm_message">Toutes les recherches récentes quittent cette liste.</string>
+    <string name="epg_browser_clear_all_description">Tout vider</string>
+    <string name="search_history_clear_confirm_title">Vider les recherches récentes\u00A0?</string>
+    <string name="search_history_clear_confirm_message">La liste des recherches récentes sera vidée.</string>
     <string name="epg_browser_remove_description">Supprimer</string>
 
     <!-- EPG Settings Card -->
@@ -599,35 +622,35 @@
 
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">À propos</string>
-    <string name="app_disclaimer_no_content">Fijerena ne fournit ni n\'héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
+    <string name="app_disclaimer_no_content">Fijerena ne fournit ni n’héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
     <string name="app_copyright">© 2026 Orinasa Njarasoa</string>
     <string name="app_license_notice">Logiciel libre sous licence publique générale GNU, version 3 ou ultérieure, sans garantie. Code source : github.com/mpilasy/fijerena</string>
-    <string name="terms_title">Conditions d\'utilisation</string>
+    <string name="terms_title">Conditions d’utilisation</string>
     <string name="terms_desc">Qui est responsable des sources que vous ajoutez</string>
     <string name="terms_updated">Dernière modification le 21 octobre 2026.</string>
-    <string name="terms_s1_title">Ce qu\'est Fijerena</string>
-    <string name="terms_s1_body">Fijerena est un lecteur multimédia. Il ne fournit, n\'héberge, ne vend ni ne recommande aucun contenu, et il est livré sans aucune source. Il lit seulement les sources que vous ajoutez : serveurs, listes de lecture et guides de tiers.</string>
+    <string name="terms_s1_title">Ce qu’est Fijerena</string>
+    <string name="terms_s1_body">Fijerena est un lecteur multimédia. Il ne fournit, n’héberge, ne vend ni ne recommande aucun contenu, et il est livré sans aucune source. Il lit seulement les sources que vous ajoutez : serveurs, listes de lecture et guides de tiers.</string>
     <string name="terms_s2_title">Vos sources relèvent de votre responsabilité</string>
-    <string name="terms_s2_body">Vous seul choisissez les sources que vous ajoutez et les contenus que vous lisez. Vous seul êtes responsable de vous assurer que chaque source, et l\'usage que vous en faites, est légal là où vous êtes. Cela comprend le fait de détenir les droits ou licences pour les contenus, et de respecter le droit d\'auteur, les conditions de chaque fournisseur et toute autre loi et règle qui s\'applique à vous.</string>
+    <string name="terms_s2_body">Vous seul choisissez les sources que vous ajoutez et les contenus que vous lisez. Vous seul êtes responsable de vous assurer que chaque source, et l’usage que vous en faites, est légal là où vous êtes. Cela comprend le fait de détenir les droits ou licences pour les contenus, et de respecter le droit d’auteur, les conditions de chaque fournisseur et toute autre loi et règle qui s’applique à vous.</string>
     <string name="terms_s3_title">Aucun contrôle des sources</string>
-    <string name="terms_s3_body">Les développeurs et contributeurs de Fijerena ne vérifient, ne surveillent, n\'approuvent, ne contrôlent ni ne prennent en charge aucune source ni aucun contenu. Qu\'une source fonctionne avec l\'application ne signifie pas qu\'ils l\'approuvent.</string>
+    <string name="terms_s3_body">Les développeurs et contributeurs de Fijerena ne vérifient, ne surveillent, n’approuvent, ne contrôlent ni ne prennent en charge aucune source ni aucun contenu. Qu’une source fonctionne avec l’application ne signifie pas qu’ils l’approuvent.</string>
     <string name="terms_s4_title">Aucune garantie</string>
-    <string name="terms_s4_body">L\'application est fournie telle quelle, sans aucune garantie, comme le prévoit la licence publique générale GNU.</string>
+    <string name="terms_s4_body">L’application est fournie telle quelle, sans aucune garantie, comme le prévoit la licence publique générale GNU.</string>
     <string name="terms_s5_title">Aucune responsabilité</string>
-    <string name="terms_s5_body">Dans toute la mesure permise par la loi, les développeurs et contributeurs ne sont responsables d\'aucune réclamation, perte ou dommage qui découle des sources que vous ajoutez, des contenus auxquels vous accédez ou de votre usage de l\'application. Tout litige sur une source ou son contenu concerne vous et le fournisseur de cette source.</string>
+    <string name="terms_s5_body">Dans toute la mesure permise par la loi, les développeurs et contributeurs ne sont responsables d’aucune réclamation, perte ou dommage qui découle des sources que vous ajoutez, des contenus auxquels vous accédez ou de votre usage de l’application. Tout litige sur une source ou son contenu concerne vous et le fournisseur de cette source.</string>
     <string name="terms_s6_title">Votre engagement envers nous</string>
-    <string name="terms_s6_body">Dans toute la mesure permise par la loi, vous acceptez de défendre les développeurs et contributeurs, et de les garantir, contre toute réclamation qui découle de vos sources, des contenus auxquels vous accédez ou de votre usage de l\'application.</string>
+    <string name="terms_s6_body">Dans toute la mesure permise par la loi, vous acceptez de défendre les développeurs et contributeurs, et de les garantir, contre toute réclamation qui découle de vos sources, des contenus auxquels vous accédez ou de votre usage de l’application.</string>
     <string name="terms_s7_title">Vos droits selon la GPL</string>
-    <string name="terms_s7_body">Ces conditions ne limitent pas les droits que la licence publique générale GNU vous donne d\'utiliser, d\'étudier, de partager et de modifier l\'application.</string>
+    <string name="terms_s7_body">Ces conditions ne limitent pas les droits que la licence publique générale GNU vous donne d’utiliser, d’étudier, de partager et de modifier l’application.</string>
     <string name="terms_s8_title">Modifications</string>
-    <string name="terms_s8_body">Ces conditions peuvent changer. La version présente dans l\'application que vous utilisez est celle qui s\'applique. Si une traduction diffère du texte anglais, le texte anglais prévaut.</string>
-    <string name="provider_add_terms_notice">Vous seul êtes responsable des sources que vous ajoutez et de l\'usage que vous en faites. Voir Paramètres → À propos → Conditions d\'utilisation.</string>
+    <string name="terms_s8_body">Ces conditions peuvent changer. La version présente dans l’application que vous utilisez est celle qui s’applique. Si une traduction diffère du texte anglais, le texte anglais prévaut.</string>
+    <string name="provider_add_terms_notice">Vous seul êtes responsable des sources que vous ajoutez et de l’usage que vous en faites. Voir Paramètres → À propos → Conditions d’utilisation.</string>
     <string name="settings_developer_mode_title">Admin</string>
     <string name="settings_developer_mode_desc">Permet à ce profil de modifier les sources, les profils, le contrôle parental et les sauvegardes</string>
-    <string name="settings_developer_mode_last">Seul profil admin, il le reste : rendez d\'abord un autre profil admin.</string>
+    <string name="settings_developer_mode_last">Seul profil admin, il le reste : rendez d’abord un autre profil admin.</string>
     <string name="settings_diagnostics_title">Journaux</string>
-    <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
-    <string name="settings_diagnostics_empty">Rien d\'enregistré.</string>
+    <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l’application</string>
+    <string name="settings_diagnostics_empty">Rien d’enregistré.</string>
     <string name="settings_diagnostics_clear">Effacer le journal</string>
     <string name="settings_diagnostics_share">Partager</string>
     <string name="settings_diagnostics_copy_hint">Maintenez une entrée pour la copier.</string>
@@ -636,11 +659,11 @@
     <string name="settings_diagnostics_hide_details">Masquer les détails</string>
     <string name="settings_diagnostics_copy">Copier</string>
     <!-- Device info (the device info screen plan) -->
-    <string name="device_info_title">Infos sur l\'appareil</string>
+    <string name="device_info_title">Infos sur l’appareil</string>
     <string name="device_info_desc">Cette application et cet appareil : versions, mémoire, stockage, écran, décodeurs, réseau et activité en arrière-plan</string>
-    <string name="device_info_open">Infos sur l\'appareil</string>
+    <string name="device_info_open">Infos sur l’appareil</string>
     <string name="licenses_title">Licences open source</string>
-    <string name="licenses_desc">Les bibliothèques et polices dont l\'application est faite, et leurs licences</string>
+    <string name="licenses_desc">Les bibliothèques et polices dont l’application est faite, et leurs licences</string>
     <string name="licenses_no_text">Texte de licence non inclus. Voir %1$s</string>
     <plurals name="licenses_count">
         <item quantity="one">%1$d bibliothèque et police</item>
@@ -649,7 +672,7 @@
     <string name="device_info_yes">Oui</string>
     <string name="device_info_no">Non</string>
     <string name="device_info_missing">—</string>
-    <string name="device_info_load_failed">Impossible de lire les infos sur l\'appareil</string>
+    <string name="device_info_load_failed">Impossible de lire les infos sur l’appareil</string>
     <string name="device_info_section_app">Application</string>
     <string name="device_info_section_device">Appareil</string>
     <string name="device_info_section_memory">Mémoire</string>
@@ -669,7 +692,7 @@
     <string name="device_info_android">Android</string>
     <string name="device_info_security_patch">Correctif de sécurité</string>
     <string name="device_info_abis">Architectures du processeur</string>
-    <string name="device_info_form_factor">Type d\'appareil</string>
+    <string name="device_info_form_factor">Type d’appareil</string>
     <string name="device_info_form_tv">Téléviseur</string>
     <string name="device_info_form_mobile">Téléphone ou tablette</string>
     <string name="device_info_device_type">Détecté comme</string>
@@ -678,14 +701,14 @@
     <string name="device_info_low_memory_now">Mémoire faible maintenant</string>
     <string name="device_info_low_memory_threshold">Seuil de mémoire faible</string>
     <string name="device_info_low_ram_device">Appareil à faible mémoire</string>
-    <string name="device_info_heap">Mémoire utilisée par l\'application</string>
-    <string name="device_info_heap_class">Limite de mémoire de l\'application (normale / grande)</string>
-    <string name="device_info_native_heap">Mémoire native de l\'application</string>
+    <string name="device_info_heap">Mémoire utilisée par l’application</string>
+    <string name="device_info_heap_class">Limite de mémoire de l’application (normale / grande)</string>
+    <string name="device_info_native_heap">Mémoire native de l’application</string>
     <string name="device_info_internal_storage">Stockage interne</string>
     <string name="device_info_database_format">Base de données %1$s</string>
     <string name="device_info_image_cache">Cache des images</string>
     <string name="device_info_cache_total">Tous les caches</string>
-    <string name="device_info_files_total">Fichiers de l\'application</string>
+    <string name="device_info_files_total">Fichiers de l’application</string>
     <string name="device_info_display_mode">Mode actuel</string>
     <string name="device_info_density">Densité</string>
     <string name="device_info_display_modes">Modes pris en charge</string>
@@ -694,9 +717,9 @@
     <string name="device_info_free_of_format">%1$s libres sur %2$s</string>
     <string name="device_info_used_of_format">%1$s sur %2$s</string>
     <string name="settings_export_import_section_title">Sauvegarde</string>
-    <string name="settings_export_import_desc">Les sources et leurs identifiants, les favoris, l\'historique et les réglages</string>
+    <string name="settings_export_import_desc">Les sources et leurs identifiants, les favoris, l’historique et les réglages</string>
     <string name="common_import">Importer</string>
-    <string name="settings_quick_import_not_found">Fichier de paramètres introuvable dans Téléchargements ou le dossier de l\'application</string>
+    <string name="settings_quick_import_not_found">Fichier de paramètres introuvable dans Téléchargements ou le dossier de l’application</string>
     <string name="settings_quick_import_button">Restaurer depuis Téléchargements</string>
     <string name="settings_import_select_title">Sélectionner quoi importer</string>
     <string name="settings_import_general_label">Paramètres généraux</string>
@@ -709,11 +732,11 @@
     <string name="common_duplicate">Dupliquer</string>
     <string name="settings_import_skip_duplicates_button">Ignorer les doublons</string>
     <string name="settings_playback_section_title">Lecture</string>
-    <string name="settings_playback_watch_delay_desc">Pour qu\'une chaîne seulement survolée en zappant ne soit pas ajoutée</string>
+    <string name="settings_playback_watch_delay_desc">Pour qu’une chaîne seulement survolée en zappant ne soit pas ajoutée</string>
     <string name="settings_watch_delay_label">Ajouter aux Récents après (secondes)</string>
-    <string name="settings_watch_delay_range_format">%1$d–%2$d secondes</string>
+    <string name="settings_watch_delay_range_format" tools:ignore="PluralsCandidate">%1$d–%2$d secondes</string>
     <string name="settings_theme_section_title">Thème</string>
-    <string name="settings_theme_desc">Choisir un thème de couleur pour l\'application</string>
+    <string name="settings_theme_desc">Choisir un thème de couleur pour l’application</string>
 
     <!-- Content Type Selection -->
     <string name="home_source_updating">Mise à jour…</string>
@@ -753,8 +776,8 @@
     <string name="epg_browser_enter_programme_placeholder">Saisir le titre du programme…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
     <string name="epg_browser_finalizing_programmes_format">finalisation… (%1$s programmes)</string>
-    <string name="epg_browser_building_index_label">Construction de l\'index de recherche…</string>
-    <string name="epg_browser_optimizing_index_label">Optimisation de l\'index de recherche…</string>
+    <string name="epg_browser_building_index_label">Construction de l’index de recherche…</string>
+    <string name="epg_browser_optimizing_index_label">Optimisation de l’index de recherche…</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Retour aux catégories</string>
@@ -771,8 +794,8 @@
     <string name="settings_import_choose_action">Que souhaitez-vous faire ?</string>
 
     <!-- TV Settings: Theme Card -->
-    <string name="settings_ui_style_section_title">Apparence</string>
-    <string name="settings_ui_style_desc_tv">Choisissez une apparence inspirée d\'une plateforme</string>
+    <string name="settings_ui_style_section_title">Style</string>
+    <string name="settings_ui_style_desc_tv">Choisir un style inspiré d’une plateforme</string>
 
     <!-- TV Category/Search misc -->
     <string name="category_refresh_streams_description">Actualiser les flux</string>
@@ -783,7 +806,7 @@
     <!-- EPG phase labels -->
     <string name="epg_phase_downloading">Téléchargement</string>
     <string name="epg_phase_ingesting">Importation</string>
-    <string name="epg_phase_awaiting_ingestion">En attente d\'importation</string>
+    <string name="epg_phase_awaiting_ingestion">En attente d’importation</string>
     <string name="epg_phase_rebuilding_indexes">Reconstruction des index…</string>
     <string name="epg_phase_swapping_primary_guide">Passage au nouveau guide…</string>
     <plurals name="category_count_format">
@@ -793,14 +816,17 @@
 
     <!-- Search content-type audit fixes -->
     <string name="content_type_all_label">Tout le contenu</string>
-    <string name="search_no_results_query_format">Aucun résultat pour « %1$s ». Essayez d\'autres mots-clés.</string>
-    <string name="search_no_results_type_format">Aucun résultat dans %1$s pour « %2$s ». Essayez d\'autres mots-clés.</string>
+    <string name="search_no_results_query_format">Aucun résultat pour « %1$s ». Essayez d’autres mots-clés.</string>
+    <string name="search_no_results_type_format">Aucun résultat dans %1$s pour « %2$s ». Essayez d’autres mots-clés.</string>
     <string name="search_everything">Rechercher partout</string>
     <plurals name="search_results_count">
         <item quantity="one">%1$d résultat</item>
         <item quantity="other">%1$d résultats</item>
     </plurals>
-    <string name="search_results_hidden_format">%1$d masqués</string>
+    <plurals name="search_results_hidden_format">
+        <item quantity="one">%1$d masqué</item>
+        <item quantity="other">%1$d masqués</item>
+    </plurals>
     <string name="provider_none_label">Aucune source</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
@@ -809,12 +835,12 @@
     <string name="epg_browser_index_stats_format">Index du guide : %1$s</string>
     <string name="category_now_playing_badge">Lecture en cours</string>
     <string name="settings_ui_scale_section_title">Taille du texte et de la grille</string>
-    <string name="settings_ui_scale_desc">Taille du texte et de tout ce qui est à l\'écran, sur chaque écran</string>
+    <string name="settings_ui_scale_desc">Taille du texte et de tout ce qui est à l’écran, sur chaque écran</string>
     <string name="settings_ui_scale_auto_format">Auto (%1$s)</string>
 
     <!-- Connection test error messages -->
     <string name="provider_error_invalid_credentials">Identifiants invalides</string>
-    <string name="provider_error_account_inactive_format">Le compte n\'est pas actif : %1$s</string>
+    <string name="provider_error_account_inactive_format">Le compte n’est pas actif : %1$s</string>
     <string name="provider_error_connection_failed">Échec de la connexion</string>
     <string name="category_select_to_view_channels">Sélectionnez une catégorie pour voir les chaînes</string>
     <string name="category_no_channels">Aucune chaîne dans cette catégorie.</string>
@@ -830,8 +856,8 @@
     <string name="category_recent_label">Récents</string>
     <string name="search_error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
     <string name="epg_error_file_too_large">Le guide est trop volumineux pour cette recherche. Essayez une recherche plus précise.</string>
-    <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
-    <string name="epg_browser_busy_rebuilding_format">L\'index de recherche est en cours de reconstruction. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
+    <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu’il sera prêt.</string>
+    <string name="epg_browser_busy_rebuilding_format">L’index de recherche est en cours de reconstruction. Votre recherche « %1$s » sera lancée dès qu’il sera prêt.</string>
     <string name="epg_browser_partial_results_note">Le guide est en cours de mise à jour : recherche plus lente, sur les titres seulement, qui peut manquer des programmes. Les résultats se mettront à jour à la fin.</string>
     <!-- Profils (the live sync plan → User profiles) -->
     <string name="settings_profiles_title">Profils</string>
@@ -849,7 +875,7 @@
     <string name="profile_error_name_required">Saisissez un nom</string>
     <string name="profile_delete_confirm_title">Supprimer %1$s ?</string>
     <string name="profile_delete_confirm_text">Ses favoris, son historique et ses catégories récentes sur toutes les sources seront supprimés. Cette action est irréversible.</string>
-    <string name="profile_delete_blocked_active">Cet appareil utilise ce profil. Passez d\'abord à un autre profil.</string>
+    <string name="profile_delete_blocked_active">Cet appareil utilise ce profil. Passez d’abord à un autre profil.</string>
     <string name="profile_delete_blocked_last">Le dernier profil ne peut pas être supprimé.</string>
     <string name="continue_watching_up_next">À suivre</string>
     <string name="profile_switching">Passage à %1$s…</string>
@@ -858,26 +884,26 @@
     <string name="profile_switch_to_button">Passer à ce profil</string>
     <string name="profile_content_filters_title">Filtres de contenu</string>
     <string name="profile_child_title">Profil enfant</string>
-    <string name="profile_child_desc">Sur la TV, l\'Accueil ne montre que les favoris ajoutés ici par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n\'atteignent pas. Un profil enfant n\'est jamais admin.</string>
+    <string name="profile_child_desc">Sur la TV, l’Accueil ne montre que les favoris ajoutés ici par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n’atteignent pas. Un profil enfant n’est jamais admin.</string>
     <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
-    <string name="profile_child_desc_phone">Sur la TV, l\'Accueil ne montre que les favoris ajoutés sur la TV par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n\'atteignent pas. Un profil enfant n\'est jamais admin.</string>
+    <string name="profile_child_desc_phone">Sur la TV, l’Accueil ne montre que les favoris ajoutés sur la TV par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n’atteignent pas. Un profil enfant n’est jamais admin.</string>
     <string name="profile_favorites_title">Favoris</string>
-    <string name="profile_favorites_row_desc">Ce que cet enfant voit sur l\'Accueil</string>
+    <string name="profile_favorites_row_desc">Ce que cet enfant voit sur l’Accueil</string>
     <string name="profile_parental_controls_desc">Les listes de mots du foyer, pour chaque profil enfant</string>
-    <string name="profile_favorites_desc">Ce que %1$s voit sur l\'Accueil. Cherchez un film, une série ou une chaîne ; OK l\'ajoute ou le retire.</string>
+    <string name="profile_favorites_desc">Ce que %1$s voit sur l’Accueil. Cherchez un film, une série ou une chaîne ; OK l’ajoute ou le retire.</string>
     <string name="profile_favorites_search">Chercher films, séries et chaînes</string>
     <string name="profile_favorites_none">Pas encore de favoris. Cherchez pour en ajouter.</string>
     <string name="profile_favorites_no_results">Rien trouvé que %1$s puisse regarder.</string>
-    <string name="profile_child_last_expert">Le seul profil admin ne peut pas être un profil enfant : rendez d\'abord un autre profil admin.</string>
-    <string name="profile_source_no_filters">Les filtres de contenu n\'agissent pas sur cette source</string>
+    <string name="profile_child_last_expert">Le seul profil admin ne peut pas être un profil enfant : rendez d’abord un autre profil admin.</string>
+    <string name="profile_source_no_filters">Les filtres de contenu n’agissent pas sur cette source</string>
     <string name="settings_pin_nudge_title">Définir un code PIN pour les paramètres</string>
-    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil admin n\'a de code PIN : un enfant peut passer à n\'importe quel profil, et n\'importe qui peut changer les sources, les filtres de contenu et les profils.</string>
+    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil admin n’a de code PIN : un enfant peut passer à n’importe quel profil, et n’importe qui peut changer les sources, les filtres de contenu et les profils.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d sur %2$d</string>
-    <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source.</string>
+    <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n’est activée que pour le profil qui l’a ajoutée. Un profil garde au moins une source.</string>
     <!-- Live sync (the live sync plan, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
-    <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter. Pour installer un serveur, voir le dossier server sur github.com/mpilasy/fijerena.</string>
+    <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l’appareil avant de le quitter. Pour installer un serveur, voir le dossier server sur github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Configurer</string>
     <string name="live_sync_manage">Gérer</string>
     <string name="live_sync_off">Désactivée</string>
@@ -888,16 +914,16 @@
     <string name="live_sync_create">Créer un groupe de synchronisation</string>
     <string name="live_sync_join_scan">Scanner un code pour rejoindre</string>
     <string name="live_sync_join_show_code">Rejoindre depuis un téléphone</string>
-    <string name="live_sync_handoff_instructions">Sur un téléphone déjà dans le groupe, ouvrez Paramètres → Synchronisation en direct → Scanner un code, et visez ce code. Cet appareil rejoint le groupe dès qu\'il est scanné.</string>
-    <string name="live_sync_invite_instructions">Sur l\'appareil à ajouter, ouvrez Paramètres → Synchronisation en direct et scannez ce code. Il fonctionne une fois, pendant 10 minutes.</string>
-    <string name="live_sync_qr_description">Code d\'appairage</string>
+    <string name="live_sync_handoff_instructions">Sur un téléphone déjà dans le groupe, ouvrez Paramètres → Synchronisation en direct → Scanner un code, et visez ce code. Cet appareil rejoint le groupe dès qu’il est scanné.</string>
+    <string name="live_sync_invite_instructions">Sur l’appareil à ajouter, ouvrez Paramètres → Synchronisation en direct et scannez ce code. Il fonctionne une fois, pendant 10 minutes.</string>
+    <string name="live_sync_qr_description">Code d’appairage</string>
     <string name="live_sync_waiting">En attente du scan…</string>
     <string name="live_sync_status_syncing">Synchronisation…</string>
     <string name="live_sync_status_last">Dernière synchronisation %1$s</string>
-    <string name="live_sync_just_now">à l\'instant</string>
+    <string name="live_sync_just_now">à l’instant</string>
     <string name="time_ago_minutes">il y a %1$d min</string>
     <string name="time_ago_hours">il y a %1$d h</string>
-    <string name="time_ago_days">il y a %1$d jours</string>
+    <string name="time_ago_days" tools:ignore="PluralsCandidate">il y a %1$d jours</string>
     <string name="live_sync_status_never">Pas encore synchronisé</string>
     <string name="live_sync_status_failed">La dernière synchronisation a échoué. Elle est relancée automatiquement.</string>
     <string name="live_sync_server_line">Serveur : %1$s</string>
@@ -912,9 +938,9 @@
     <string name="live_sync_device_rename">Renommer</string>
     <string name="live_sync_device_rename_title">Renommer %1$s</string>
     <string name="live_sync_device_name_label">Nom</string>
-    <string name="live_sync_device_name_hint">Affiché sur tous les appareils du groupe. Laissez vide pour le modèle de l\'appareil.</string>
+    <string name="live_sync_device_name_hint">Affiché sur tous les appareils du groupe. Laissez vide pour le modèle de l’appareil.</string>
     <string name="live_sync_device_remove_title">Retirer %1$s ?</string>
-    <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu\'il a déjà reste dessus.</string>
+    <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu’il a déjà reste dessus.</string>
     <string name="live_sync_share_playing">Partager ce qui est en lecture avec mon groupe de synchronisation</string>
     <string name="live_sync_share_playing_desc">Les appareils du groupe voient ce que cet appareil lit et quel profil regarde. Seul cet appareil le partage.</string>
     <string name="live_sync_now_playing">Lecture · %1$s</string>
@@ -926,7 +952,7 @@
     <string name="live_sync_now_detail">%1$s · %2$s</string>
     <string name="live_sync_stop">Arrêter</string>
     <string name="live_sync_stop_title">Arrêter la lecture sur %1$s ?</string>
-    <string name="live_sync_stop_message">Ce qui y est en lecture s\'arrête et le lecteur se ferme. La lecture peut reprendre aussitôt.</string>
+    <string name="live_sync_stop_message">Ce qui y est en lecture s’arrête et le lecteur se ferme. La lecture peut reprendre aussitôt.</string>
     <string name="live_sync_stopping">Arrêt en cours…</string>
     <string name="live_sync_stop_unreachable">Impossible de joindre %1$s</string>
     <string name="live_sync_stopped_from">Lecture arrêtée depuis %1$s</string>
@@ -934,41 +960,41 @@
     <string name="live_sync_leave">Quitter le groupe de synchronisation</string>
     <string name="live_sync_leave_title">Quitter le groupe de synchronisation ?</string>
     <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, sources, favoris et historique restent dessus.</string>
-    <string name="live_sync_scan_hint">Visez le code affiché sur l\'autre appareil</string>
-    <string name="live_sync_camera_permission">L\'accès à la caméra est nécessaire pour scanner le code.</string>
+    <string name="live_sync_scan_hint">Visez le code affiché sur l’autre appareil</string>
+    <string name="live_sync_camera_permission">L’accès à la caméra est nécessaire pour scanner le code.</string>
     <string name="live_sync_camera_grant">Autoriser la caméra</string>
     <string name="live_sync_joined">Groupe de synchronisation rejoint</string>
-    <string name="live_sync_handed_over">Envoyé. L\'autre appareil rejoint le groupe dans un instant.</string>
-    <string name="sync_error_unreachable">Impossible de joindre le serveur de synchronisation. Vérifiez l\'adresse et votre connexion.</string>
-    <string name="sync_error_not_a_server">Cette adresse n\'est pas un serveur de synchronisation Fijerena.</string>
+    <string name="live_sync_handed_over">Envoyé. L’autre appareil rejoint le groupe dans un instant.</string>
+    <string name="sync_error_unreachable">Impossible de joindre le serveur de synchronisation. Vérifiez l’adresse et votre connexion.</string>
+    <string name="sync_error_not_a_server">Cette adresse n’est pas un serveur de synchronisation Fijerena.</string>
     <string name="sync_error_setup_secret">Le secret de configuration est incorrect.</string>
     <string name="sync_error_revoked">Cet appareil a été retiré du groupe de synchronisation.</string>
     <string name="sync_error_code_expired">Le code a expiré ou a déjà été utilisé. Affichez-en un nouveau.</string>
-    <string name="sync_error_not_a_code">Ce n\'est pas un code d\'appairage Fijerena.</string>
+    <string name="sync_error_not_a_code">Ce n’est pas un code d’appairage Fijerena.</string>
     <!-- Autoplay next episode (per profile) -->
-    <string name="settings_autoplay_next_episode_title">Lire l\'épisode suivant automatiquement</string>
-    <string name="settings_autoplay_next_episode_desc">Vers la fin d\'un épisode, le suivant est proposé et démarre quand il se termine.</string>
+    <string name="settings_autoplay_next_episode_title">Lire l’épisode suivant automatiquement</string>
+    <string name="settings_autoplay_next_episode_desc">Vers la fin d’un épisode, le suivant est proposé et démarre quand il se termine.</string>
     <string name="player_up_next_compact_format">À suivre · %1$s · %2$s</string>
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->
     <string name="safe_mode_title">Mode sans échec</string>
-    <string name="safe_mode_message">Fijerena s\'est fermée de manière inattendue plusieurs fois de suite et a donc démarré en mode sans échec : la synchronisation en direct, les mises à jour du guide et les autres tâches de démarrage sont en pause. Vos sources, vos favoris et votre historique de visionnage sont intacts.</string>
-    <string name="safe_mode_hint">Choisissez Continuer pour démarrer normalement. Si l\'application se ferme encore, videz d\'abord les caches.</string>
+    <string name="safe_mode_message">Fijerena s’est fermée de manière inattendue plusieurs fois de suite et a donc démarré en mode sans échec : la synchronisation en direct, les mises à jour du guide et les autres tâches de démarrage sont en pause. Vos sources, vos favoris et votre historique de visionnage sont intacts.</string>
+    <string name="safe_mode_hint">Choisissez Continuer pour démarrer normalement. Si l’application se ferme encore, videz d’abord les caches.</string>
     <string name="safe_mode_continue">Continuer</string>
     <string name="safe_mode_clear_caches">Vider les caches</string>
     <string name="safe_mode_clear_confirm_title">Vider les caches ?</string>
-    <string name="safe_mode_clear_confirm_message">Cela supprime l\'index du guide TV, le catalogue téléchargé de chaque source et le cache des affiches. Les sources, les profils, les favoris et l\'historique de visionnage sont conservés. Tout ce qui est supprimé sera de nouveau téléchargé une fois que vous aurez continué.</string>
+    <string name="safe_mode_clear_confirm_message">Cela supprime l’index du guide TV, le catalogue téléchargé de chaque source et le cache des affiches. Les sources, les profils, les favoris et l’historique de visionnage sont conservés. Tout ce qui est supprimé sera de nouveau téléchargé une fois que vous aurez continué.</string>
     <string name="safe_mode_clear_confirm">Vider</string>
     <string name="safe_mode_clearing">Vidage des caches…</string>
     <string name="safe_mode_cleared">Caches vidés. Choisissez Continuer pour démarrer normalement.</string>
-    <string name="safe_mode_clear_failed">Certains caches n\'ont pas pu être vidés. Les détails sont dans les journaux.</string>
+    <string name="safe_mode_clear_failed">Certains caches n’ont pas pu être vidés. Les détails sont dans les journaux.</string>
     <string name="safe_mode_diagnostics">Afficher les journaux</string>
-    <string name="newer_data_title">Données d\'une version plus récente</string>
-    <string name="newer_data_message">Vos sources sur cet appareil ont été enregistrées par une version plus récente de Fijerena (version des données %1$d ; cette version lit jusqu\'à %2$d). Installez la version plus récente pour continuer à les utiliser.</string>
-    <string name="newer_data_hint">Ou réinitialisez les sources pour utiliser cette version maintenant : les sources et leurs réglages sont mis de côté en sauvegarde et vous repartez sans aucune. Les favoris et l\'historique de visionnage restent sur l\'appareil.</string>
+    <string name="newer_data_title">Données d’une version plus récente</string>
+    <string name="newer_data_message">Vos sources sur cet appareil ont été enregistrées par une version plus récente de Fijerena (version des données %1$d ; cette version lit jusqu’à %2$d). Installez la version plus récente pour continuer à les utiliser.</string>
+    <string name="newer_data_hint">Ou réinitialisez les sources pour utiliser cette version maintenant : les sources et leurs réglages sont mis de côté en sauvegarde et vous repartez sans aucune. Les favoris et l’historique de visionnage restent sur l’appareil.</string>
     <string name="newer_data_reset">Réinitialiser les sources</string>
     <string name="newer_data_reset_confirm_title">Réinitialiser les sources ?</string>
-    <string name="newer_data_reset_confirm_message">Toutes les sources, tous les profils et toutes les sources de guide de cet appareil sont mis de côté, et l\'application redémarre sans aucune. Installer la version plus récente et restaurer la sauvegarde les fait revenir.</string>
+    <string name="newer_data_reset_confirm_message">Toutes les sources, tous les profils et toutes les sources de guide de cet appareil sont mis de côté, et l’application redémarre sans aucune. Installer la version plus récente et restaurer la sauvegarde les fait revenir.</string>
     <string name="newer_data_reset_confirm">Réinitialiser</string>
 
     <!-- Settings overhaul (the ux overhaul plan): groups, scope chips, rows -->
@@ -978,7 +1004,7 @@
     <string name="settings_group_admin">Administration</string>
     <string name="settings_group_admin_desc">Profils, contrôle parental, cet appareil, sources, synchronisation et sauvegardes</string>
     <string name="settings_open_admin">Ouvrir l’administration</string>
-    <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
+    <string name="settings_applies_immediately">Les changements ici s’appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
 
@@ -986,26 +1012,29 @@
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Récents après</string>
-    <string name="settings_show_clock_title">Afficher l\'heure</string>
-    <string name="settings_show_clock_desc">L\'heure en haut à droite de chaque écran. Le lecteur l\'affiche toujours.</string>
+    <string name="settings_show_clock_title">Afficher l’heure</string>
+    <string name="settings_show_clock_desc">L’heure en haut à droite de chaque écran. Le lecteur l’affiche toujours.</string>
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->
     <string name="row_actions_hint">Maintenez OK ou appuyez sur Menu pour les actions</string>
-    <string name="row_more_actions">Plus d\'actions</string>
+    <string name="row_more_actions">Plus d’actions</string>
     <!-- GD1 -->
-    <string name="epg_guide_status_format">%1$d chaînes sur %2$d ont un programme · %3$s · mis à jour %4$s</string>
+    <plurals name="epg_guide_status_format">
+        <item quantity="one">%1$d chaîne sur %2$d a un programme · %3$s · mis à jour %4$s</item>
+        <item quantity="other">%1$d chaînes sur %2$d ont un programme · %3$s · mis à jour %4$s</item>
+    </plurals>
     <string name="epg_guide_source_xmltv">guide XMLTV</string>
     <string name="epg_guide_source_native">guide de la source</string>
     <string name="epg_guide_updated_unknown">inconnu</string>
     <string name="epg_guide_no_listings_title">Aucun programme</string>
-    <string name="epg_guide_no_listings_index_empty">L\'index du guide n\'a rien pour ces chaînes. Actualisez le guide dans Paramètres → Sources et guide → Sources de guide.</string>
-    <string name="epg_guide_no_listings_stale_format">Rien pour ce jour : %1$s, mis à jour %2$s, s\'arrête avant.</string>
+    <string name="epg_guide_no_listings_index_empty">L’index du guide n’a rien pour ces chaînes. Actualisez le guide dans Paramètres → Sources et guide → Sources de guide.</string>
+    <string name="epg_guide_no_listings_stale_format">Rien pour ce jour : %1$s, mis à jour %2$s, s’arrête avant.</string>
     <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
     <string name="epg_guide_no_guide_title">Pas de guide</string>
     <string name="epg_guide_no_channels">Aucune chaîne pour laquelle afficher un guide.</string>
-    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Sources et guide → Sources de guide.</string>
-    <string name="epg_search_no_results_stale">Le guide n\'est plus à jour : il n\'a peut-être pas encore ce programme. Actualisez-le, puis cherchez à nouveau.</string>
+    <string name="epg_guide_no_guide_message">Cette source n’a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Sources et guide → Sources de guide.</string>
+    <string name="epg_search_no_results_stale">Le guide n’est plus à jour : il n’a peut-être pas encore ce programme. Actualisez-le, puis cherchez à nouveau.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connexion</string>
     <string name="provider_save_connection_button">Enregistrer la connexion</string>
@@ -1014,7 +1043,7 @@
     <string name="provider_section_danger_zone">Zone de danger</string>
     <string name="provider_clear_cached_library_button">Vider toute la bibliothèque en cache</string>
     <string name="provider_discard_changes_title">Abandonner les modifications ?</string>
-    <string name="provider_discard_changes_message">Les informations de connexion modifiées n\'ont pas été enregistrées.</string>
+    <string name="provider_discard_changes_message">Les informations de connexion modifiées n’ont pas été enregistrées.</string>
     <string name="provider_discard_button">Abandonner</string>
     <string name="provider_keep_editing_button">Continuer la modification</string>
     <!-- T4 -->
@@ -1025,27 +1054,27 @@
     <string name="provider_provides_guide_desc">Le guide propre à cette source (xmltv.php) est ajouté automatiquement</string>
     <string name="provider_provides_guide_detected_off_desc">Désactivé : le guide propre à cette source (xmltv.php) était vide</string>
     <string name="provider_logins_title">Identifiants</string>
-    <string name="provider_logins_desc">La lecture utilise l\'identifiant libre, pour que plus d\'appareils regardent en même temps. Les identifiants en plus doivent être sur le serveur de cette source.</string>
-    <string name="provider_logins_update_warning">Mettez l\'appli à jour sur tous vos appareils avant d\'ajouter des identifiants : une version plus ancienne peut les supprimer.</string>
+    <string name="provider_logins_desc">La lecture utilise l’identifiant libre, pour que plus d’appareils regardent en même temps. Les identifiants en plus doivent être sur le serveur de cette source.</string>
+    <string name="provider_logins_update_warning">Mettez l’appli à jour sur tous vos appareils avant d’ajouter des identifiants : une version plus ancienne peut les supprimer.</string>
     <string name="provider_logins_add">Ajouter un identifiant</string>
     <string name="provider_logins_make_main">Rendre principal</string>
     <string name="provider_logins_remove">Retirer</string>
     <string name="provider_logins_remove_confirm_title">Retirer cet identifiant ?</string>
-    <string name="provider_logins_remove_confirm_format">Cette source n\'utilisera plus %1$s.</string>
-    <string name="provider_logins_remove_main_confirm_format">%1$s est l\'identifiant principal. %2$s devient l\'identifiant principal.</string>
+    <string name="provider_logins_remove_confirm_format">Cette source n’utilisera plus %1$s.</string>
+    <string name="provider_logins_remove_main_confirm_format">%1$s est l’identifiant principal. %2$s devient l’identifiant principal.</string>
     <string name="provider_logins_checking_add">Vérification de cet identifiant…</string>
-    <string name="provider_logins_added_format">%1$s ajouté. La lecture peut maintenant l\'utiliser.</string>
-    <string name="provider_logins_refused">Le serveur n\'a pas accepté ce nom d\'utilisateur et ce mot de passe.</string>
+    <string name="provider_logins_added_format">%1$s ajouté. La lecture peut maintenant l’utiliser.</string>
+    <string name="provider_logins_refused">Le serveur n’a pas accepté ce nom d’utilisateur et ce mot de passe.</string>
     <string name="provider_logins_different_server">Cet identifiant est sur un autre serveur et ne peut pas partager cette source.</string>
-    <string name="provider_logins_duplicate">Cette source a déjà ce nom d\'utilisateur.</string>
-    <string name="provider_logins_last">Une source a besoin d\'au moins un identifiant. Pour retirer celui-ci, supprimez la source.</string>
-    <string name="provider_logins_username_required">Saisissez un nom d\'utilisateur.</string>
+    <string name="provider_logins_duplicate">Cette source a déjà ce nom d’utilisateur.</string>
+    <string name="provider_logins_last">Une source a besoin d’au moins un identifiant. Pour retirer celui-ci, supprimez la source.</string>
+    <string name="provider_logins_username_required">Saisissez un nom d’utilisateur.</string>
     <string name="provider_logins_password_needed">Mot de passe requis</string>
-    <string name="provider_logins_password_needed_main">Cet identifiant n\'a pas de mot de passe sur cet appareil, il ne peut donc pas être l\'identifiant principal. Retirez-le puis ajoutez-le de nouveau avec son mot de passe.</string>
+    <string name="provider_logins_password_needed_main">Cet identifiant n’a pas de mot de passe sur cet appareil, il ne peut donc pas être l’identifiant principal. Retirez-le puis ajoutez-le de nouveau avec son mot de passe.</string>
     <string name="provider_logins_checking">Vérification…</string>
     <string name="provider_logins_inactive_format">Inactif (%1$s)</string>
     <string name="provider_logins_expires_format">Expire le %1$s</string>
-    <string name="provider_logins_no_expiry">Sans date d\'expiration</string>
+    <string name="provider_logins_no_expiry">Sans date d’expiration</string>
     <string name="provider_logins_unknown">Impossible de joindre le serveur</string>
     <string name="provider_logins_as_of_format">%1$s · au %2$s</string>
     <string name="provider_logins_main_format">Identifiant principal · %1$s</string>
@@ -1054,7 +1083,7 @@
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · dernière actualisation %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · jamais actualisée</string>
-    <string name="provider_more_actions_for_format">Plus d\'actions pour %1$s</string>
+    <string name="provider_more_actions_for_format">Plus d’actions pour %1$s</string>
     <!-- LT2 -->
     <string name="live_panel_no_favorites">Pas encore de favoris — maintenez OK sur une chaîne pour en ajouter une.</string>
     <!-- Phase 4 -->
@@ -1062,7 +1091,7 @@
     <string name="settings_guide_maintenance_title">Maintenance des données du guide</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">Guide TV · %1$s</string>
-    <string name="epg_tab_today">Aujourd\'hui</string>
+    <string name="epg_tab_today">Aujourd’hui</string>
     <string name="epg_tab_tomorrow">Demain</string>
     <string name="epg_tab_yesterday">Hier</string>
     <string name="epg_details_watch_channel">Regarder la chaîne</string>
@@ -1075,13 +1104,16 @@
     <string name="player_osd_next_format">Ensuite : %1$s (%2$s)</string>
     <!-- LT5 -->
     <string name="live_tuning_format">Syntonisation · %1$s</string>
-    <string name="live_channel_unavailable">%1$s n\'est pas disponible pour le moment</string>
+    <string name="live_channel_unavailable">%1$s n’est pas disponible pour le moment</string>
     <string name="live_channel_next">Chaîne suivante</string>
     <string name="live_preview_next_format">Ensuite : %1$s</string>
     <string name="live_preview_hint">OK  Lire   ·   OK à nouveau  Plein écran   ·   OK maintenu  Options</string>
     <!-- GD4 -->
-    <string name="epg_guide_status_partial_format">%1$d chaînes chargées sur %2$d ont un programme · %3$d en tout · %4$s · mis à jour %5$s</string>
-    <string name="epg_guide_listings_end_format">Le programme s\'arrête à %1$s</string>
+    <plurals name="epg_guide_status_partial_format">
+        <item quantity="one">%1$d chaîne chargée sur %2$d a un programme · %3$d en tout · %4$s · mis à jour %5$s</item>
+        <item quantity="other">%1$d chaînes chargées sur %2$d ont un programme · %3$d en tout · %4$s · mis à jour %5$s</item>
+    </plurals>
+    <string name="epg_guide_listings_end_format">Le programme s’arrête à %1$s</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="details_watch_trailer_description">Regarder la bande-annonce</string>
     <string name="details_tab_cast">Distribution</string>
@@ -1103,12 +1135,12 @@
     <string name="player_stats_heap_format">%1$d / %2$d Mo (%3$d%%)</string>
     <string name="player_stats_gc">GC</string>
     <string name="player_stats_gc_format">%1$d passages, %2$d ms</string>
-    <string name="player_stats_ui_skipped">Images d\'interface sautées</string>
-    <string name="settings_shrink_database_desc">Supprimer les données restantes des sources supprimées et récupérer de l\'espace disque</string>
+    <string name="player_stats_ui_skipped">Images d’interface sautées</string>
+    <string name="settings_shrink_database_desc">Supprimer les données restantes des sources supprimées et récupérer de l’espace disque</string>
     <string name="settings_shrink_database_button">Compacter la base de données</string>
     <string name="settings_shrink_database_button_running">Compactage…</string>
     <string name="settings_shrink_database_confirm_title">Compacter la base de données ?</string>
-    <string name="settings_shrink_database_confirm_message">Cela supprime les données laissées par les sources supprimées et compacte la base de données. Cela peut prendre une minute, et l\'application peut être lente jusqu\'à la fin. Vos sources, favoris et historique restent.</string>
+    <string name="settings_shrink_database_confirm_message">Cela supprime les données laissées par les sources supprimées et compacte la base de données. Cela peut prendre une minute, et l’application peut être lente jusqu’à la fin. Vos sources, favoris et historique restent.</string>
     <string name="settings_shrink_database_confirm_action">Compacter</string>
     <plurals name="settings_shrink_database_result_format">
         <item quantity="one">%1$d ligne restante supprimée, %2$s libérés</item>
@@ -1116,7 +1148,10 @@
     </plurals>
     <string name="settings_shrink_database_nothing_to_clean">Rien à nettoyer — la base de données est déjà propre</string>
     <string name="settings_shrink_database_dev_stats_time">Dernier compactage : Fini à %1$s • Durée %2$s</string>
-    <string name="settings_shrink_database_dev_stats_delta">%1$d enregistrements supprimés • %2$s récupérés</string>
+    <plurals name="settings_shrink_database_dev_stats_delta">
+        <item quantity="one">%1$d enregistrement supprimé • %2$s récupérés</item>
+        <item quantity="other">%1$d enregistrements supprimés • %2$s récupérés</item>
+    </plurals>
     <string name="live_sync_server_hint">https://sync.exemple.com</string>
     <!-- Phase 6 -->
     <string name="details_action_more">Plus</string>
@@ -1134,7 +1169,7 @@
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">Dans %1$s uniquement</string>
-    <string name="epg_browser_no_results_in_category_format">Aucun résultat pour « %1$s » dans %2$s. Essayez d\'autres mots-clés.</string>
+    <string name="epg_browser_no_results_in_category_format">Aucun résultat pour « %1$s » dans %2$s. Essayez d’autres mots-clés.</string>
     <!-- Device info: network and power (P3) -->
     <string name="device_info_section_network">Réseau</string>
     <string name="device_info_section_power">Alimentation et arrière-plan</string>
@@ -1148,7 +1183,7 @@
     <string name="device_info_transport_other">Autre</string>
     <string name="device_info_not_connected">Non connecté</string>
     <string name="device_info_internet_validated">Internet fonctionne</string>
-    <string name="device_info_metered">Facturé à l\'usage</string>
+    <string name="device_info_metered">Facturé à l’usage</string>
     <string name="device_info_vpn">VPN actif</string>
     <string name="device_info_private_dns">DNS privé</string>
     <string name="device_info_private_dns_off">Non utilisé</string>
@@ -1164,8 +1199,8 @@
     <string name="device_info_downstream">Débit descendant estimé</string>
     <string name="device_info_mbps">%1$d Mbit/s</string>
     <string name="device_info_kbps">%1$d kbit/s</string>
-    <string name="device_info_battery_exempt">Exemptée de l\'optimisation de la batterie</string>
-    <string name="device_info_standby_bucket">Groupe de mise en veille de l\'application</string>
+    <string name="device_info_battery_exempt">Exemptée de l’optimisation de la batterie</string>
+    <string name="device_info_standby_bucket">Groupe de mise en veille de l’application</string>
     <string name="device_info_bucket_exempted">Exempté</string>
     <string name="device_info_bucket_active">Actif</string>
     <string name="device_info_bucket_working_set">Ensemble de travail</string>
@@ -1176,12 +1211,12 @@
     <string name="device_info_background_restricted">Restreinte en arrière-plan</string>
     <string name="device_info_charging">En charge, selon Doze</string>
     <string name="device_info_battery_present">Batterie présente</string>
-    <string name="device_info_power_source">Source d\'alimentation</string>
+    <string name="device_info_power_source">Source d’alimentation</string>
     <string name="device_info_power_battery">Batterie (non branché)</string>
     <string name="device_info_power_ac">Secteur (CA)</string>
     <string name="device_info_power_usb">USB</string>
     <string name="device_info_power_wireless">Sans fil</string>
-    <string name="device_info_power_dock">Station d\'accueil</string>
+    <string name="device_info_power_dock">Station d’accueil</string>
     <string name="device_info_device_idle">Veille profonde (Doze) maintenant</string>
     <string name="device_info_light_idle">Veille légère (Doze) maintenant</string>
     <string name="device_info_battery_saver">Économiseur de batterie activé</string>
@@ -1197,7 +1232,7 @@
     <string name="device_info_guide_failed">%1$s · durée %2$d s · sources de guide : %3$d · erreurs : %4$d</string>
     <string name="device_info_catalog_job">Tâche de synchronisation du catalogue</string>
     <string name="device_info_catalog_job_next">Prochaine synchronisation du catalogue</string>
-    <string name="device_info_guide_job">Tâche d\'actualisation du guide</string>
+    <string name="device_info_guide_job">Tâche d’actualisation du guide</string>
     <string name="device_info_guide_job_next">Prochaine actualisation du guide</string>
     <string name="device_info_job_not_scheduled">Non planifiée</string>
     <string name="device_info_job_scheduled">Planifiée</string>
@@ -1224,13 +1259,13 @@
         <item quantity="other">%1$d séries</item>
     </plurals>
     <string name="browse_no_films">Aucun film dans cette catégorie.</string>
-    <string name="browse_recent_empty">Ce que vous regardez s\'affiche ici.</string>
-    <string name="browse_favorites_empty">Maintenez OK sur un titre ou une chaîne pour l\'ajouter aux favoris.</string>
-    <string name="browse_favorites_empty_phone">Balayez un titre ou une chaîne vers la droite, ou appuyez longuement dessus, pour l\'ajouter aux favoris.</string>
+    <string name="browse_recent_empty">Ce que vous regardez s’affiche ici.</string>
+    <string name="browse_favorites_empty">Maintenez OK sur un titre ou une chaîne pour l’ajouter aux favoris.</string>
+    <string name="browse_favorites_empty_phone">Balayez un titre ou une chaîne vers la droite, ou appuyez longuement dessus, pour l’ajouter aux favoris.</string>
     <string name="browse_open_categories">Parcourir les catégories</string>
     <string name="category_all_title">Toutes les catégories</string>
     <string name="category_all_filter">Trouver une catégorie</string>
-    <string name="category_all_none">Aucune catégorie n\'a cela dans son nom.</string>
+    <string name="category_all_none">Aucune catégorie n’a cela dans son nom.</string>
     <string name="browse_no_shows">Aucune série dans cette catégorie.</string>
     <string name="browse_select_to_view_films">Sélectionnez une catégorie pour voir ses films</string>
     <string name="browse_select_to_view_shows">Sélectionnez une catégorie pour voir ses séries</string>
@@ -1294,7 +1329,7 @@
     <string name="tv_search_placeholder_films">Rechercher des films</string>
     <string name="tv_search_placeholder_shows">Rechercher des séries</string>
     <!-- TV polish: settings and sources -->
-    <string name="settings_scope_device_section">S\'applique à cet appareil uniquement</string>
+    <string name="settings_scope_device_section">S’applique à cet appareil uniquement</string>
     <string name="epg_management_screen_title">Sources de guide</string>
     <!-- phone polish: search, settings, sources -->
     <string name="settings_diagnostics_clear_confirm_title">Effacer le journal ?</string>
@@ -1306,8 +1341,8 @@
     <!-- TV navigation rail -->
     <string name="tv_nav_rail_home">Accueil</string>
     <string name="home_title">Accueil</string>
-    <string name="home_empty">Les films et épisodes en cours et vos favoris s\'affichent ici.</string>
-    <string name="home_kids_empty">Rien à regarder pour l\'instant. Demande à un adulte d\'ajouter quelque chose.</string>
+    <string name="home_empty">Les films et épisodes en cours et vos favoris s’affichent ici.</string>
+    <string name="home_kids_empty">Rien à regarder pour l’instant. Demande à un adulte d’ajouter quelque chose.</string>
     <string name="tv_nav_rail_hint">Appuyez sur Gauche pour les sections</string>
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Chaînes favorites</string>
@@ -1322,9 +1357,9 @@
     <string name="recent_clear_confirm_title">Vider les récents\u00A0?</string>
     <string name="recent_clear_confirm_message">Tout quitte la liste des récents de cette section. La progression et les marques «\u00A0vu\u00A0» sont conservées.</string>
     <string name="tmdb_settings_title">Fiches des films et séries (TMDB)</string>
-    <string name="tmdb_settings_desc">Complète les résumés et classifications d\'âge manquants, et ajoute les logos de titre et « Dans le même genre », avec votre propre clé TMDB gratuite. La recherche demande aussi à TMDB les films et séries que vos sources n\'ont pas : ce que vous tapez dans la recherche est donc envoyé à TMDB. Sans clé, rien n\'est envoyé à TMDB.</string>
+    <string name="tmdb_settings_desc">Complète les résumés et classifications d’âge manquants, et ajoute les logos de titre et « Dans le même genre », avec votre propre clé TMDB gratuite. La recherche demande aussi à TMDB les films et séries que vos sources n’ont pas : ce que vous tapez dans la recherche est donc envoyé à TMDB. Sans clé, rien n’est envoyé à TMDB.</string>
     <string name="tmdb_key_label">Clé TMDB</string>
-    <string name="tmdb_key_hint">Obtenez une clé gratuite sur themoviedb.org (Paramètres › API). Une clé d\'API ou un jeton d\'accès en lecture conviennent.</string>
+    <string name="tmdb_key_hint">Obtenez une clé gratuite sur themoviedb.org (Paramètres › API). Une clé d’API ou un jeton d’accès en lecture conviennent.</string>
     <string name="tmdb_status_on">Activées</string>
     <string name="tmdb_status_rejected">Clé refusée</string>
     <string name="tmdb_rejected_message">TMDB a refusé cette clé : les fiches TMDB sont désactivées. Vérifiez la clé ou saisissez-en une nouvelle.</string>
@@ -1336,11 +1371,11 @@
     <string name="tmdb_remove_button">Supprimer la clé</string>
     <string name="tmdb_remove_confirm_title">Supprimer la clé TMDB ?</string>
     <string name="tmdb_remove_confirm_text">Les fiches TMDB seront désactivées sur cet appareil et sur tous ceux liés par la synchronisation.</string>
-    <string name="tmdb_attribution">Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</string>
+    <string name="tmdb_attribution">Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</string>
     <string name="tmdb_logo_description">Logo TMDB</string>
     <string name="tmdb_attribution_title">Données des films et séries</string>
-    <string name="epg_xmltv_url_hint">L\'adresse d\'un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
-    <string name="epg_timezone_hint">Seulement si les programmes s\'affichent à la mauvaise heure. En général 0.</string>
+    <string name="epg_xmltv_url_hint">L’adresse d’un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
+    <string name="epg_timezone_hint">Seulement si les programmes s’affichent à la mauvaise heure. En général 0.</string>
     <string name="settings_developer_mode_enabled">Ce profil est admin</string>
     <string name="settings_developer_mode_taps_left">Admin : encore %1$d</string>
     <string name="ui_style_standard">Standard</string>
@@ -1364,14 +1399,14 @@
         <item quantity="other">%1$d en échec</item>
     </plurals>
     <string name="home_sources_status_title">Vos sources</string>
-    <string name="home_no_sources">Ce profil n\'a encore aucune source.</string>
-    <string name="home_no_sources_ask">Ce profil n\'a encore aucune source. Demande à un adulte d\'en ajouter une.</string>
+    <string name="home_no_sources">Ce profil n’a encore aucune source.</string>
+    <string name="home_no_sources_ask">Ce profil n’a encore aucune source. Demande à un adulte d’en ajouter une.</string>
     <string name="home_only_browse_sources">Choisissez une source à parcourir.</string>
     <string name="settings_provider_expires_label">Expire le</string>
     <string name="settings_provider_max_connections_label">Connexions max.</string>
-    <string name="settings_provider_trial_account_label">Compte d\'essai</string>
+    <string name="settings_provider_trial_account_label">Compte d’essai</string>
     <string name="subscription_unlimited">Illimité</string>
-    <string name="source_expiry_today">%1$s expire aujourd\'hui</string>
+    <string name="source_expiry_today">%1$s expire aujourd’hui</string>
     <string name="source_expiry_tomorrow">%1$s expire demain</string>
     <plurals name="source_expiry_in_days">
         <item quantity="one">%1$s expire dans %2$d jour</item>
@@ -1389,7 +1424,7 @@
     <string name="profile_pin_remove">Supprimer le code PIN</string>
     <string name="profile_pin_remove_confirm_title">Supprimer le code PIN ?</string>
     <string name="profile_pin_remove_confirm_text">Les paramètres ne demanderont plus de code PIN sur ce profil.</string>
-    <string name="profile_pin_remove_last_expert">C\'est le dernier code PIN d\'un profil admin : le verrou enfant s\'arrête sur tous les appareils liés par la synchronisation.</string>
+    <string name="profile_pin_remove_last_expert">C’est le dernier code PIN d’un profil admin : le verrou enfant s’arrête sur tous les appareils liés par la synchronisation.</string>
     <string name="pin_choose">Choisissez un code PIN à 4 chiffres</string>
     <string name="pin_repeat">Saisissez de nouveau le même code PIN</string>
     <string name="pin_mismatch">Les deux codes PIN diffèrent : choisissez-en un de nouveau.</string>
@@ -1404,8 +1439,8 @@
     <string name="pin_seconds">%1$d s</string>
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Effacer</string>
-    <string name="pin_last_expert_warning">C\'est le seul profil admin : si son code PIN est oublié, seul l\'effacement des données de l\'application rend l\'administration.</string>
-    <string name="pin_enter_admin">Saisissez le code PIN d\'un profil admin</string>
+    <string name="pin_last_expert_warning">C’est le seul profil admin : si son code PIN est oublié, seul l’effacement des données de l’application rend l’administration.</string>
+    <string name="pin_enter_admin">Saisissez le code PIN d’un profil admin</string>
     <string name="pin_use_phone">Utiliser mon téléphone</string>
     <string name="pin_use_tv">Utiliser la télé</string>
     <string name="pin_phone_instructions">Ouvrez Fijerena sur votre téléphone et saisissez-y le code PIN.</string>
@@ -1413,7 +1448,7 @@
     <string name="pin_phone_cancelled">Annulé sur le téléphone.</string>
     <string name="pin_phone_no_answer">Pas de réponse du téléphone.</string>
     <string name="pin_asked_by">Demandé par %1$s</string>
-    <string name="profile_child_no_pin_warning">Aucun code PIN n\'est défini : cet enfant peut passer à n\'importe quel profil.</string>
+    <string name="profile_child_no_pin_warning">Aucun code PIN n’est défini : cet enfant peut passer à n’importe quel profil.</string>
     <string name="profile_child_set_pin">Définir un code PIN</string>
     <string name="settings_group_sync_backup">Synchronisation et sauvegarde</string>
     <string name="settings_guide_sources_desc">Les guides des chaînes de chaque source</string>
@@ -1425,11 +1460,11 @@
     <string name="settings_import_desc">Depuis un fichier de sauvegarde : vous choisissez quoi restaurer</string>
     <string name="provider_clear_library_desc">Supprime le catalogue téléchargé ; la prochaine synchronisation le télécharge à nouveau. Favoris et historique restent.</string>
     <string name="profile_section_look">Apparence</string>
-    <string name="ui_theme_title">Thème d\'interface</string>
-    <string name="ui_theme_desc">Choisit ensemble le thème et l\'apparence. Personnalisé : chacun se choisit.</string>
+    <string name="ui_theme_title">Thème d’interface</string>
+    <string name="ui_theme_desc">Choisir ensemble le thème et le style. Personnalisé : les choisir un par un.</string>
     <string name="ui_theme_custom">Personnalisé</string>
-    <string name="profile_poster_backdrop_title">Affiche en arrière-plan</string>
-    <string name="profile_poster_backdrop_desc">Affiche l\'image du titre sélectionné derrière l\'accueil et les listes. Désactivé, l\'app utilise moins de mémoire.</string>
+    <string name="profile_poster_backdrop_title">Affiche en fond</string>
+    <string name="profile_poster_backdrop_desc">Affiche l’image du titre sélectionné derrière l’accueil et les listes. Désactivé, l’app utilise moins de mémoire.</string>
     <string name="profile_section_admin">Administration</string>
     <string name="provider_danger_zone_summary">Effacer les favoris, la progression ou le catalogue téléchargé de cette source</string>
     <string name="provider_clear_type_format">Seulement le catalogue %1$s</string>
@@ -1461,9 +1496,9 @@
     <string name="parental_list_kids_film_categories">Catégories de films pour enfants</string>
     <string name="parental_list_kids_film_categories_desc">Visibles aussi, pour les catégories de films seulement.</string>
     <string name="parental_list_adult_categories">Catégories pour adultes</string>
-    <string name="parental_list_adult_categories_desc">Une catégorie avec un de ces mots n\'est jamais visible pour un enfant.</string>
+    <string name="parental_list_adult_categories_desc">Une catégorie avec un de ces mots n’est jamais visible pour un enfant.</string>
     <string name="parental_list_hidden_titles">Titres masqués</string>
-    <string name="parental_list_hidden_titles_desc">Un titre avec un de ces mots n\'est jamais visible pour un enfant, même dans une catégorie pour enfants.</string>
+    <string name="parental_list_hidden_titles_desc">Un titre avec un de ces mots n’est jamais visible pour un enfant, même dans une catégorie pour enfants.</string>
     <string name="parental_list_exceptions">Exceptions</string>
     <string name="parental_list_exceptions_desc">Un film ou une série avec un de ces mots est visible pour un enfant, même dans une catégorie masquée.</string>
     <plurals name="parental_list_entries">
@@ -1472,18 +1507,21 @@
     </plurals>
     <string name="parental_entry_add">Ajouter un mot</string>
     <string name="parental_entry_hint">Mots entiers, majuscules et accents ignorés. Finir par * pour toute fin : barn* trouve Barnefilmer.</string>
-    <string name="parental_entry_matches">Trouve %1$d</string>
+    <plurals name="parental_entry_matches">
+        <item quantity="one">%1$d trouvé</item>
+        <item quantity="other">%1$d trouvés</item>
+    </plurals>
     <string name="parental_entry_matches_none">Ne trouve rien sur vos sources</string>
-    <string name="parental_list_reset">Revenir à la liste de l\'app</string>
-    <string name="parental_list_reset_confirm">Remplacer cette liste par les mots de l\'app ? Vos changements de cette liste seront perdus.</string>
+    <string name="parental_list_reset">Revenir à la liste de l’app</string>
+    <string name="parental_list_reset_confirm">Remplacer cette liste par les mots de l’app ? Vos changements de cette liste seront perdus.</string>
     <string name="parental_check_title">Vérifier une source</string>
     <string name="parental_profile_filters_title">Filtres de contenu de chaque profil</string>
     <string name="parental_profile_filters_desc">Réglés sur la page de chaque profil, dans Profils</string>
-    <string name="parental_check_desc">Les catégories qu\'un enfant voit sur cette source avec les listes actuelles. Les filtres de contenu propres à l\'enfant ne sont pas inclus.</string>
+    <string name="parental_check_desc">Les catégories qu’un enfant voit sur cette source avec les listes actuelles. Les filtres de contenu propres à l’enfant ne sont pas inclus.</string>
     <string name="parental_check_shown">Visibles (%1$d)</string>
     <string name="parental_check_hidden">Masquées (%1$d)</string>
     <string name="parental_check_none">Un enfant ne voit aucune catégorie sur cette source. Ajoutez les mots de ses catégories pour enfants à Catégories pour enfants.</string>
-    <string name="parental_no_sources">Aucune source à vérifier pour l\'instant.</string>
+    <string name="parental_no_sources">Aucune source à vérifier pour l’instant.</string>
     <string name="parental_entry_remove">Retirer %1$s</string>
     <!-- Wanted titles: the wanted titles plan -->
     <string name="wanted_title">Liste de souhaits</string>
@@ -1492,21 +1530,27 @@
     <string name="wanted_not_in_sources">Absent de vos sources</string>
     <string name="wanted_not_available">Non disponible</string>
     <string name="wanted_available">Disponible</string>
-    <string name="wanted_no_source_yet">Aucune source n\'a encore ce titre.</string>
-    <string name="wanted_title_new_format">%1$s · %2$d nouveau(x)</string>
+    <string name="wanted_no_source_yet">Aucune source n’a encore ce titre.</string>
+    <plurals name="wanted_title_new_format">
+        <item quantity="one">%1$s · %2$d nouveau</item>
+        <item quantity="other">%1$s · %2$d nouveaux</item>
+    </plurals>
     <string name="wanted_banner_open">Voir la liste de souhaits</string>
     <plurals name="wanted_banner">
         <item quantity="one">%1$d titre de votre liste de souhaits est maintenant disponible</item>
         <item quantity="other">%1$d titres de votre liste de souhaits sont maintenant disponibles</item>
     </plurals>
-    <string name="favorite_gone_from_source">N\'est plus dans la source</string>
-    <string name="favorite_gone_count_format">%1$s · %2$d disparu(s)</string>
-    <string name="favorite_move_to_copy">Passer à l\'autre copie</string>
-    <string name="favorite_gone_message">%1$s n\'est plus dans sa source.</string>
+    <string name="favorite_gone_from_source">N’est plus dans la source</string>
+    <plurals name="favorite_gone_count_format">
+        <item quantity="one">%1$s · %2$d disparu</item>
+        <item quantity="other">%1$s · %2$d disparus</item>
+    </plurals>
+    <string name="favorite_move_to_copy">Passer à l’autre copie</string>
+    <string name="favorite_gone_message">%1$s n’est plus dans sa source.</string>
     <string name="wanted_kind_movie">Film</string>
     <string name="wanted_kind_show">Série</string>
     <string name="wanted_prompt_title">Retirer %1$s de votre liste de souhaits ?</string>
-    <string name="wanted_prompt_text">Vous l\'avez regardé.</string>
+    <string name="wanted_prompt_text">Vous l’avez regardé.</string>
     <string name="wanted_prompt_remove">Retirer</string>
     <string name="wanted_prompt_keep">Garder</string>
     <string name="wanted_coming">Sortie le %1$s</string>
@@ -1525,13 +1569,13 @@
     <string name="chart_top_rated_shows">Séries les mieux notées</string>
     <string name="category_charts">Classements</string>
     <string name="tmdb_charts_title">Classements TMDB</string>
-    <string name="tmdb_charts_desc">Des rangées de titres tendance de la semaine, populaires et les mieux notés sur l\'accueil, et une liste Classements dans Films et Séries. Seuls les titres de vos sources s\'affichent. Une clé TMDB est nécessaire. Cet appareil seulement.</string>
+    <string name="tmdb_charts_desc">Des rangées de titres tendance de la semaine, populaires et les mieux notés sur l’accueil, et une liste Classements dans Films et Séries. Seuls les titres de vos sources s’affichent. Une clé TMDB est nécessaire. Cet appareil seulement.</string>
     <string name="chart_missing_switch">Titres absents de vos sources : %1$s</string>
     <string name="chart_missing_on">oui</string>
     <string name="chart_missing_off">non</string>
     <string name="person_born">Naissance : %1$s</string>
     <string name="person_died">Décès : %1$s</string>
-    <string name="person_none_in_library">Aucun de ses titres n\'est dans votre bibliothèque.</string>
+    <string name="person_none_in_library">Aucun de ses titres n’est dans votre bibliothèque.</string>
     <string name="person_none_in_sources">Aucun dans vos sources</string>
     <string name="person_load_error">Impossible de charger la page de cette personne</string>
     <plurals name="person_episode_count" tools:ignore="ImpliedQuantity">
@@ -1542,11 +1586,11 @@
     <string name="person_episode_code">S%1$dE%2$d</string>
     <string name="person_episode_code_title">S%1$dE%2$d · %3$s</string>
     <string name="person_specials">Épisodes spéciaux</string>
-    <string name="person_not_in_source">%1$s n\'est pas dans votre source</string>
+    <string name="person_not_in_source">%1$s n’est pas dans votre source</string>
     <string name="person_missing_mark">Pas dans votre source</string>
     <string name="tmdb_charts_refresh_title">Actualiser les classements</string>
     <string name="tmdb_charts_refresh_desc">Relit les classements depuis TMDB maintenant, sans attendre un jour.</string>
-    <string name="tmdb_charts_refresh_done">Classements effacés. L\'accueil les relit.</string>
+    <string name="tmdb_charts_refresh_done">Classements effacés. L’accueil les relit.</string>
     <string name="sports_switch_title">Sports</string>
     <string name="sports_switch_desc">Trouver des équipes et des ligues, leurs prochains matchs et celles de vos chaînes qui les diffusent. Les données viennent de services sportifs gratuits (ESPN, NHL, MLB). Cet appareil seulement.</string>
 
@@ -1554,7 +1598,12 @@
     <string name="game_reminder_dismiss">Ignorer</string>
     <string name="game_reminder_banner_hint">Maintenez OK ou appuyez sur Menu pour choisir</string>
     <!-- The question before a channel that has not started: its title and the channel's source -->
-    <string name="watch_question_starts">Commence %1$s</string>
+    <string name="watch_question_starts">Début : %1$s</string>
     <string name="watch_question_source">Source : %1$s</string>
-    <string name="watch_question_aired">Diffusé %1$s</string>
+    <string name="watch_question_aired">Diffusion : %1$s</string>
+    <!-- Sizes (NumberUtils.formatBytes): the number, a no-break space, the unit -->
+    <string name="size_bytes">%1$s&#160;o</string>
+    <string name="size_kilobytes">%1$s&#160;Ko</string>
+    <string name="size_megabytes">%1$s&#160;Mo</string>
+    <string name="size_gigabytes">%1$s&#160;Go</string>
 </resources>

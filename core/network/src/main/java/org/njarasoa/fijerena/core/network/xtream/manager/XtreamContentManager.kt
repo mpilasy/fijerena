@@ -253,7 +253,7 @@ class XtreamContentManager(
 
                 val filters = categoryFilters()
                 val categories =
-                    if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty() && filters.child == null) {
+                    if (filters.filtersNothing) {
                         emptyList()
                     } else {
                         when (type) {

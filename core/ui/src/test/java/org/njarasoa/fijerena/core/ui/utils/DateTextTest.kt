@@ -107,6 +107,40 @@ class DateTextTest {
         assertEquals("11 Oktobra 2026, 18:25", DateText.dateTime(at(11, 18, 25) * 1000L, chicago, malagasy, clock24))
     }
 
+    /** Resources in [locale] with that language's words for today, tomorrow and yesterday. */
+    private fun resourcesWithWords(
+        locale: Locale,
+        words: Triple<String, String, String>,
+    ): Resources {
+        val base = resourcesIn(locale)
+        every { base.getString(R.string.epg_tab_today) } returns words.first
+        every { base.getString(R.string.epg_tab_tomorrow) } returns words.second
+        every { base.getString(R.string.epg_tab_yesterday) } returns words.third
+        return base
+    }
+
+    @Test
+    fun `dates follow the language of the Resources, not a stale default locale`() {
+        // The system sets the default locale back to the phone language (here Malagasy) on a
+        // configuration change, while the app is in another language.
+        val original = Locale.getDefault()
+        Locale.setDefault(malagasy)
+        try {
+            val frenchRes = resourcesWithWords(french, Triple("Aujourd'hui", "Demain", "Hier"))
+            val englishRes = resourcesWithWords(english, Triple("Today", "Tomorrow", "Yesterday"))
+            val malagasyRes = resourcesWithWords(malagasy, Triple("Anio", "Rahampitso", "Omaly"))
+            assertEquals("mardi 3 novembre 2026", DateText.dayLabel(frenchRes, tuesday, today))
+            assertEquals("mar. 3 nov.", DateText.shortDayLabel(frenchRes, tuesday, today))
+            assertEquals("Demain", DateText.shortDayLabel(frenchRes, today.plusDays(1), today))
+            assertEquals("Tuesday, 3 November 2026", DateText.dayLabel(englishRes, tuesday, today))
+            assertEquals("Talata 3 Novambra 2026", DateText.dayLabel(malagasyRes, tuesday, today))
+            Locale.setDefault(Locale.FRANCE)
+            assertEquals("Talata 3 Nov", DateText.shortDayLabel(malagasyRes, tuesday, today))
+        } finally {
+            Locale.setDefault(original)
+        }
+    }
+
     @Test
     fun `day and time is one unit that a line never breaks`() {
         assertEquals("Talata\u00A03\u00A0Nov\u00A0·\u00A014:00", DateText.dayAndTime("Talata 3 Nov", "14:00"))

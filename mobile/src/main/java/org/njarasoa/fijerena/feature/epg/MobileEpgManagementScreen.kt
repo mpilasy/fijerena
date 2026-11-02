@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -388,7 +389,7 @@ private fun EpgSourceCard(
                                 if (activeProgress.progressPercent >= 0) {
                                     stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent)
                                 } else {
-                                    NumberUtils.formatBytes(activeProgress.downloadedBytes)
+                                    NumberUtils.formatBytes(LocalResources.current, activeProgress.downloadedBytes)
                                 },
                             role = TextRole.Caption,
                             tone = TextTone.Accent,
@@ -434,15 +435,17 @@ private fun EpgSourceCard(
                             } else {
                                 listOf(
                                     stringResource(R.string.epg_source_stat_download) to
-                                        NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                        NumberUtils.formatDuration(LocalResources.current, source.lastDownloadDurationMs),
                                     stringResource(R.string.epg_source_stat_ingest) to
-                                        NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                        NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
                                 )
                             } +
                             listOf(
                                 stringResource(R.string.epg_source_stat_latest) to latestProgStr,
-                                stringResource(R.string.epg_source_stat_channels) to NumberUtils.formatCount(source.lastChannels),
-                                stringResource(R.string.epg_source_stat_programmes) to NumberUtils.formatCount(source.lastProgrammes),
+                                stringResource(R.string.epg_source_stat_channels) to
+                                    NumberUtils.formatCount(LocalResources.current, source.lastChannels),
+                                stringResource(R.string.epg_source_stat_programmes) to
+                                    NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
                             )
                     // Two stats in each row, each one half of the card: a date has room for one or
                     // two lines, also on a narrow phone.

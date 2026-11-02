@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -66,8 +67,6 @@ import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
-import org.njarasoa.fijerena.core.network.xmltv.formatCount
-import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgeKind
@@ -97,6 +96,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -257,7 +257,11 @@ internal fun MobileGuideSearchPane(
     val epgDbStats =
         when (val idx = indexState) {
             is EpgIndexState.Indexed -> {
-                stringResource(R.string.epg_browser_dev_stats_counts_format, formatCount(idx.programmeCount), formatCount(idx.channelCount))
+                stringResource(
+                    R.string.epg_browser_dev_stats_counts_format,
+                    NumberUtils.formatCount(LocalResources.current, idx.programmeCount),
+                    NumberUtils.formatCount(LocalResources.current, idx.channelCount),
+                )
             }
 
             else -> {
@@ -359,11 +363,15 @@ internal fun MobileGuideSearchPane(
             val idx = currentIndexState
             val progressText =
                 if (idx is EpgIndexState.Indexing) {
-                    stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
+                    stringResource(
+                        R.string.epg_indexing_progress_count,
+                        idx.progressPercent,
+                        NumberUtils.formatCount(LocalResources.current, idx.programmesIndexed),
+                    )
                 } else {
                     stringResource(
                         R.string.epg_browser_finalizing_format,
-                        formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                        NumberUtils.formatCount(LocalResources.current, (idx as EpgIndexState.Optimizing).programmeCount),
                     )
                 }
             val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f

@@ -303,7 +303,7 @@ private fun ParentalEntryRow(
             when (count) {
                 null -> null
                 0 -> stringResource(R.string.parental_entry_matches_none)
-                else -> stringResource(R.string.parental_entry_matches, count)
+                else -> pluralStringResource(R.plurals.parental_entry_matches, count, count)
             },
         onClick = onClick,
         modifier = Modifier.onFocusChanged { focused = it.isFocused },

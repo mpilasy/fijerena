@@ -219,7 +219,7 @@ fun MobileCategoryLinkRow(
     }
 }
 
-/** Wide enough for "Container:" / "Réalisateur :"; a longer label wraps under itself. */
+/** Wide enough for "Langue originale :"; the value wraps in its own column. */
 private val DETAIL_LABEL_WIDTH = MobileDimensions.detailLabelWidth
 
 /** Synopsis cut to [collapsedLines] lines; tap to expand or collapse. */

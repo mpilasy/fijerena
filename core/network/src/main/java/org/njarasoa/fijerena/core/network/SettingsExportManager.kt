@@ -965,22 +965,28 @@ class SettingsExportManager(
     ) {
         val isSuccess: Boolean get() = error == null
 
+        private fun count(
+            context: Context,
+            plural: Int,
+            n: Int,
+        ): String = context.resources.getQuantityString(plural, n, n)
+
         fun toSummary(context: Context): String {
             if (error != null) return context.getString(R.string.settings_export_summary_import_failed_format, error)
             val parts = mutableListOf<String>()
 
             if (providersAdded > 0 || providersUpdated > 0 || providersSkipped > 0) {
                 val p = mutableListOf<String>()
-                if (providersAdded > 0) p.add(context.getString(R.string.settings_export_item_added_format, providersAdded))
-                if (providersUpdated > 0) p.add(context.getString(R.string.settings_export_item_overwritten_format, providersUpdated))
-                if (providersSkipped > 0) p.add(context.getString(R.string.settings_export_item_skipped_format, providersSkipped))
+                if (providersAdded > 0) p.add(count(context, R.plurals.settings_export_item_added_format, providersAdded))
+                if (providersUpdated > 0) p.add(count(context, R.plurals.settings_export_item_overwritten_format, providersUpdated))
+                if (providersSkipped > 0) p.add(count(context, R.plurals.settings_export_item_skipped_format, providersSkipped))
                 parts.add(context.getString(R.string.settings_export_summary_providers_format, p.joinToString(", ")))
             }
 
             if (epgSourcesAdded > 0 || epgSourcesSkipped > 0) {
                 val e = mutableListOf<String>()
-                if (epgSourcesAdded > 0) e.add(context.getString(R.string.settings_export_item_added_format, epgSourcesAdded))
-                if (epgSourcesSkipped > 0) e.add(context.getString(R.string.settings_export_item_skipped_format, epgSourcesSkipped))
+                if (epgSourcesAdded > 0) e.add(count(context, R.plurals.settings_export_item_added_format, epgSourcesAdded))
+                if (epgSourcesSkipped > 0) e.add(count(context, R.plurals.settings_export_item_skipped_format, epgSourcesSkipped))
                 parts.add(context.getString(R.string.settings_export_summary_epg_sources_format, e.joinToString(", ")))
             }
 

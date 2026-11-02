@@ -327,8 +327,22 @@ class TmdbApiService(
         /** The single, process-wide [TmdbApiService] — see the class kdoc for why. */
         fun getInstance(context: Context): TmdbApiService =
             instance ?: synchronized(this) {
-                instance ?: TmdbKeyStore(context).let { TmdbApiService(it::activeKey, it::markRejected) }.also { instance = it }
+                instance ?: TmdbKeyStore(context)
+                    .let { TmdbApiService(it::activeKey, it::markRejected, appLanguage(context)) }
+                    .also { instance = it }
             }
+
+        /**
+         * The app language from the application's Resources, never the default locale: the system
+         * sets the default back to the phone language on a configuration change.
+         */
+        fun appLanguage(context: Context): () -> String {
+            val app = context.applicationContext
+            return {
+                app.resources.configuration.locales[0]
+                    .language
+            }
+        }
 
         /** TMDB v4 read access tokens are JWTs (Bearer); v3 keys are 32-char hex (query param). */
         fun isV4Token(key: String): Boolean = key.startsWith("eyJ")

@@ -73,7 +73,9 @@ object MobileDimensions {
     val streamThumbnailWidth: Dp = 96.dp
     val streamThumbnailHeight: Dp = 54.dp
     val channelSwipeThreshold: Dp = 56.dp
-    val detailLabelWidth: Dp = 112.dp
+
+    /** Wide enough for the longest French label ("Langue originale :") on one line. */
+    val detailLabelWidth: Dp = 148.dp
     val minTouchTarget: Dp = 48.dp
 
     /** A QR code a phone camera can read from another phone's screen. */

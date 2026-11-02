@@ -23,6 +23,28 @@ class SearchFacetsTest {
     }
 
     @Test
+    fun `the same genre in two languages is one choice, named in the app language`() {
+        val results =
+            listOf(
+                result("1", 2001, "Comedy"),
+                result("2", 2002, "Comédie", "Drame"),
+                result("3", 2003, "Drama", "Science-Fiction"),
+                result("4", 2004, "Sci-Fi"),
+            )
+        val french = searchFacets(results, emptyList(), SearchFacetChoice(), language = "fr")
+        assertEquals(
+            listOf("Comédie" to 2, "Drame" to 2, "Science-Fiction" to 2),
+            french.genres.map { it.label to it.count },
+        )
+        val english = searchFacets(results, emptyList(), SearchFacetChoice(), language = "en")
+        assertEquals(listOf("Comedy", "Drama"), english.genres.take(2).map { it.label })
+        // Choosing it keeps both spellings' results.
+        val comedy = SearchFacetChoice(genres = setOf(genreKey("Comédie")))
+        assertEquals(listOf("1", "2"), results.filter { it.matches(comedy) }.map { it.itemId })
+        assertEquals(listOf("Comédie"), splitGenres("Comédie, Comedy"))
+    }
+
+    @Test
     fun `the year is the item's, else its release date's, else the one in its name`() {
         assertEquals(1999, item("X", year = 1999, releaseDate = "2001-01-01").searchYear())
         assertEquals(2001, item("X (1980)", releaseDate = "2001-05-02").searchYear())

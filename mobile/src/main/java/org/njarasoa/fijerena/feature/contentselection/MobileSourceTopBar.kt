@@ -105,6 +105,9 @@ fun MobileSourceTopBar(
     val syncStates = rememberProfileSyncStates()
     val syncSummary = remember(syncStates) { syncSummary(syncStates, showUpdated = AppSettings(context).isDevMode) }
     var showSourcesSheet by remember { mutableStateOf(false) }
+    // A child's header has no sources line and its avatar no gear: sources are a grown-up's matter,
+    // and a child has no Settings (the TV kids' Home has neither).
+    val child = remember(activeProfile?.id) { activeProfile?.let { AppSettings(context).isChildProfile(it.id) } == true }
 
     // Collected live, so a guide that finishes indexing while the tab is up shows the button at once.
     val epgIndexState by remember { EpgIndexer.getInstance(context.applicationContext).state }.collectAsStateWithLifecycle()
@@ -117,7 +120,7 @@ fun MobileSourceTopBar(
             // top-right corner it has on every screen.
             // One row: the avatar, the title, then the icons, level with the clock.
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                activeProfile?.let { profile -> ProfileButton(profile.name, profile.colorIndex, onProfile) }
+                activeProfile?.let { profile -> ProfileButton(profile.name, profile.colorIndex, showSettings = !child, onProfile) }
                 CinemaText(
                     text = title,
                     maxLines = 1,
@@ -133,16 +136,18 @@ fun MobileSourceTopBar(
                     IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
                 }
             }
-            MobileSyncSummaryLine(
-                summary = syncSummary,
-                onClick = { showSourcesSheet = true },
-                // Under the title's text, not under the avatar.
-                modifier = Modifier.padding(start = if (activeProfile != null) MobileDimensions.minTouchTarget else CinemaSpacing.none),
-            )
+            if (!child) {
+                MobileSyncSummaryLine(
+                    summary = syncSummary,
+                    onClick = { showSourcesSheet = true },
+                    // Under the title's text, not under the avatar.
+                    modifier = Modifier.padding(start = if (activeProfile != null) MobileDimensions.minTouchTarget else CinemaSpacing.none),
+                )
+            }
         }
     }
 
-    if (showSourcesSheet) {
+    if (showSourcesSheet && !child) {
         MobileSourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
     }
 }
@@ -153,6 +158,7 @@ fun MobileSourceTopBar(
 private fun ProfileButton(
     name: String,
     colorIndex: Int,
+    showSettings: Boolean,
     onClick: () -> Unit,
 ) {
     val switchLabel = stringResource(R.string.profile_switch_description, name)
@@ -167,6 +173,7 @@ private fun ProfileButton(
                 colorIndex = colorIndex,
                 size = MobileDimensions.iconLarge,
                 initialRole = TextRole.Label,
+                showSettingsBadge = showSettings,
             )
         }
     }

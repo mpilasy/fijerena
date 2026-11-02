@@ -22,6 +22,10 @@ import org.njarasoa.fijerena.core.player.model.TimeFormat as CoreTimeFormat
  * - Timestamps (last refresh, last sync): [dateTime].
  *
  * The system has no Malagasy day or month names (it wrote "1978 Jan 20"), so Malagasy uses its own.
+ *
+ * The locale is always the app language of the Resources in use ([appLocale]), never the default
+ * locale: the system sets the default back to the phone language on a configuration change, which
+ * gave Malagasy dates in the French app.
  */
 object DateText {
     /** "Today", "Tomorrow", "Yesterday", else the full date ("Tuesday, 3 November 2026"). For day headers in lists. */
@@ -29,7 +33,7 @@ object DateText {
         resources: Resources,
         date: LocalDate,
         today: LocalDate = LocalDate.now(),
-        locale: Locale = Locale.getDefault(),
+        locale: Locale = resources.appLocale(),
     ): String = relativeDay(resources, date, today) ?: fullDate(date, locale)
 
     /** "Today", "Tomorrow", "Yesterday", else the short date ("Tue 3 Nov"). For compact places. */
@@ -37,7 +41,7 @@ object DateText {
         resources: Resources,
         date: LocalDate,
         today: LocalDate = LocalDate.now(),
-        locale: Locale = Locale.getDefault(),
+        locale: Locale = resources.appLocale(),
     ): String = relativeDay(resources, date, today) ?: shortDate(date, locale)
 
     /**
@@ -52,7 +56,7 @@ object DateText {
     /** "Tuesday, 3 November 2026" in the app language. */
     fun fullDate(
         date: LocalDate,
-        locale: Locale = Locale.getDefault(),
+        locale: Locale,
     ): String =
         if (locale.language == MALAGASY) {
             "${MALAGASY_DAYS[date.dayOfWeek.value - 1]} ${date.dayOfMonth} ${MALAGASY_MONTHS[date.monthValue - 1]} ${date.year}"
@@ -63,7 +67,7 @@ object DateText {
     /** "Tue 3 Nov" in the app language. */
     fun shortDate(
         date: LocalDate,
-        locale: Locale = Locale.getDefault(),
+        locale: Locale,
     ): String =
         if (locale.language == MALAGASY) {
             "${MALAGASY_DAYS[date.dayOfWeek.value - 1]} ${date.dayOfMonth} ${MALAGASY_MONTHS_SHORT[date.monthValue - 1]}"
@@ -74,7 +78,7 @@ object DateText {
     /** "3 Nov 2026" in the app language. */
     fun mediumDate(
         date: LocalDate,
-        locale: Locale = Locale.getDefault(),
+        locale: Locale,
     ): String =
         if (locale.language == MALAGASY) {
             "${date.dayOfMonth} ${MALAGASY_MONTHS[date.monthValue - 1]} ${date.year}"
@@ -103,7 +107,7 @@ object DateText {
         context: Context,
         startEpochSec: Long,
         endEpochSec: Long,
-    ): String = timeRange(startEpochSec, endEpochSec, ZoneId.systemDefault(), Locale.getDefault()) { time(context, it) }
+    ): String = timeRange(startEpochSec, endEpochSec, ZoneId.systemDefault(), context.resources.appLocale()) { time(context, it) }
 
     internal fun timeRange(
         startEpochSec: Long,
@@ -137,7 +141,7 @@ object DateText {
     fun dateTime(
         context: Context,
         epochMs: Long,
-    ): String = dateTime(epochMs, ZoneId.systemDefault(), Locale.getDefault()) { time(context, it) }
+    ): String = dateTime(epochMs, ZoneId.systemDefault(), context.resources.appLocale()) { time(context, it) }
 
     internal fun dateTime(
         epochMs: Long,

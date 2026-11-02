@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.ui.utils
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalResources
 import java.time.LocalDate
 import java.util.Locale
 
@@ -10,10 +12,14 @@ import java.util.Locale
  */
 fun displayDate(
     raw: String,
-    locale: Locale = Locale.getDefault(),
+    locale: Locale,
 ): String {
     val day = runCatching { LocalDate.parse(raw.trim().take(ISO_DAY_LENGTH)) }.getOrNull() ?: return raw
     return DateText.mediumDate(day, locale)
 }
+
+/** [displayDate] in the app language of the screen's Resources. */
+@Composable
+fun displayDate(raw: String): String = displayDate(raw, LocalResources.current.appLocale())
 
 private const val ISO_DAY_LENGTH = 10

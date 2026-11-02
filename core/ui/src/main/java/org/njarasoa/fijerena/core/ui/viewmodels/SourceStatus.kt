@@ -6,6 +6,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.DateText
+import org.njarasoa.fijerena.core.ui.utils.appLocale
 import org.njarasoa.fijerena.core.ui.utils.nameRes
 
 /**
@@ -55,6 +56,6 @@ private fun formatExpiryDate(
         }
 
         else -> {
-            expDate.toLongOrNull()?.let { epoch -> DateText.mediumDate(DateText.day(epoch)) } ?: expDate
+            expDate.toLongOrNull()?.let { epoch -> DateText.mediumDate(DateText.day(epoch), context.resources.appLocale()) } ?: expDate
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -423,8 +424,9 @@ fun MobileSettingsScreen(
             } else {
                 // Admin: each Expert group under its own header, in TV's rail order.
                 ExpertGroup.visibleFor(admin = true).forEach { group ->
-                    // Every group under its heading, the first one too, so the groups read apart.
-                    item { SettingsGroupHeader(stringResource(group.titleRes)) }
+                    // Every group under its heading, the first one too, so the groups read apart;
+                    // not a group of one row with the same name, which the heading only repeats.
+                    item { if (group.headed) SettingsGroupHeader(stringResource(group.titleRes)) else Spacer(Modifier.height(Spacing.lg)) }
                     when (group) {
                         // The list of every profile; a profile's row opens its page, with its Admin rows.
                         ExpertGroup.PROFILES -> {
@@ -639,12 +641,13 @@ fun MobileSettingsScreen(
                         (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
                     ) {
                         val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
-                        val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
+                        val duration = NumberUtils.formatDuration(LocalResources.current, uiState.lastShrinkDurationMs)
                         SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
-                        val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
+                        val bytesStr = NumberUtils.formatBytes(LocalResources.current, uiState.lastShrinkBytesReclaimed)
                         SettingsMessage(
-                            stringResource(
-                                R.string.settings_shrink_database_dev_stats_delta,
+                            pluralStringResource(
+                                R.plurals.settings_shrink_database_dev_stats_delta,
+                                uiState.lastShrinkRowsRemoved.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                                 uiState.lastShrinkRowsRemoved,
                                 bytesStr,
                             ),
@@ -662,10 +665,12 @@ fun MobileSettingsScreen(
  */
 enum class ExpertGroup(
     @StringRes val titleRes: Int,
+    /** False for a group of one row named as the group: a gap sets it apart, with no heading. */
+    val headed: Boolean = true,
 ) {
     // With Expert mode, the list of every profile (SG-D2).
     PROFILES(R.string.settings_profiles_title),
-    PARENTAL_CONTROLS(R.string.parental_controls_title),
+    PARENTAL_CONTROLS(R.string.parental_controls_title, headed = false),
     THIS_DEVICE(R.string.settings_group_this_device),
     SOURCE_GUIDE(R.string.settings_group_source_guide),
     SYNC_BACKUP(R.string.settings_group_sync_backup),
@@ -748,7 +753,7 @@ private fun WatchDelayPickerDialog(
             )
         }
     SettingsPickerDialog(
-        title = stringResource(R.string.settings_watch_delay_label),
+        title = stringResource(R.string.settings_watch_delay_row_title),
         options = presetOptions + storedOption + (stringResource(R.string.common_custom) to WATCH_DELAY_CUSTOM),
         selected = if (customOpen) WATCH_DELAY_CUSTOM else seconds,
         onSelect = { value ->

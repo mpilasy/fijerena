@@ -12,6 +12,8 @@ RIGHT	Search films, shows and channels
 DOWN	
 LEFT	Search
 RIGHT	
+# Up from the recent searches → Clear all, Up again → the field.
+UP	Clear all
 UP	Search films, shows and channels
 # No search button beside the field (TV UI audit #14): the field searches on its own, and the
 # clear × only shows with text.

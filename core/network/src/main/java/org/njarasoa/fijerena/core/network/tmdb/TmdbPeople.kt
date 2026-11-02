@@ -15,7 +15,6 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
-import java.util.Locale
 
 /**
  * The people read from TMDB, kept 7 days for the device (docs/plans/20261030_cast-tab-plan.md,
@@ -142,10 +141,11 @@ class TmdbPeople(
             instance ?: synchronized(this) {
                 instance ?: run {
                     val tmdb = TmdbApiService.getInstance(context)
+                    val appLanguage = TmdbApiService.appLanguage(context)
                     TmdbPeople(
                         File(context.applicationContext.cacheDir, "tmdb_people"),
                         tmdb::getPerson,
-                        language = { TmdbApiService.tmdbLanguage(Locale.getDefault().language) },
+                        language = { TmdbApiService.tmdbLanguage(appLanguage()) },
                         fetchCredit = tmdb::getCredit,
                     )
                 }.also { instance = it }

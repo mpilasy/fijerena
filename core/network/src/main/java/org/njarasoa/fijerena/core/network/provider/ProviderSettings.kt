@@ -88,6 +88,12 @@ data class CategoryFilters(
     val child: ParentalRules? = null,
 ) {
     /**
+     * True when these filters hide no category: no rule, no script and not a child profile. A
+     * child's rules alone hide every category that is not a kids' one.
+     */
+    val filtersNothing: Boolean get() = rules.isEmpty() && allowedScripts.isEmpty() && child == null
+
+    /**
      * Both rule and script filters must pass (AND logic).
      */
     fun shouldShowCategory(

@@ -8,7 +8,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.Locale
 
 /**
  * Locale-aware time formatting that respects the OS 24h/12h setting.
@@ -37,6 +36,6 @@ object TimeFormat {
         date: Date,
     ): String {
         val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
-        return SimpleDateFormat(pattern, Locale.getDefault()).format(date)
+        return SimpleDateFormat(pattern, context.resources.configuration.locales[0]).format(date)
     }
 }
