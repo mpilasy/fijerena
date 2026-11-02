@@ -40,6 +40,26 @@ emulators (findings of the walks are added as they come).
 | 18 | Phone Search filter pop-up ends on an empty "Type" heading and covers the header | phone Search |
 | 19 | Guide source card: one stat wraps to five lines in a narrow column | phone guide sources |
 | 20 | Lists end under the bottom bar on some pages (Parental controls, Search's "Not in your sources") | |
+| 21 | TV source menu: Delete is a full-width red button and there is no Cancel; other menus have a removal row and Cancel | TV Sources |
+| 22 | Clearing history: Search and Search the Guide bins clear at once (no question, no Undo) and focus is lost; Clear Recent asks; bins grey here, red elsewhere | TV, phone Search |
+| 23 | "Add" actions in four forms: + icon (Sources), text buttons (Add guide source, Add a device, Add login), a "+ Add Profile" row, an inline field (Add a word) | TV and phone Settings |
+| 24 | The same title's menu differs by entry point (Mark show as watched in TV Shows Recent, not in Home Continue Watching) | TV |
+| 25 | Dialog footers: Close vs Cancel; first focus on a text box in Your Sources; tall dialogs touch the top edge | TV |
+| 26 | Date headers: serif white in Search Teams, grey sans in Sports | TV, phone |
+| 27 | Source badge left of the title on Home cards and the category pane, right of it in rows | TV |
+| 28 | Category rows: no tile in the left pane, a letter tile in Recent Categories | TV |
+| 29 | Film and show pages order the same buttons differently; Play orange on the hero, grey outline in the show's sticky header | TV |
+| 30 | Language label: "en" plain in Films, "EN" chip elsewhere | TV |
+| 31 | Tabs and chips: serif page and Live TV tabs, sans Search and season chips; selected marker underline vs left bar | TV |
+| 32 | Text fields: floating-label outlined (Name) vs icon + filled + accent border (Search, Add a word) | TV |
+| 33 | Empty, loading and prompt states built several ways ("No guide", "Couldn't load the guide", Search prompt, "No matched results", Search the Guide prompt, "Searching.." orange serif) | TV |
+| 34 | Refresh label on focus in full-screen Live TV, none in the preview | TV |
+| 35 | Long-press on a game's channel row opens the channel; the hint says "Hold OK Options" | TV game sheet |
+| 36 | Sources row focus ring covers part of the row | TV Settings |
+| 37 | Status line "Updated 1d ago• 1 stale" without a space; "1 categories" | TV, phone |
+| 38 | Titles cut without an ellipsis in the Live TV preview; cards cut titles to a few letters with room for two lines; team tiles cut | TV |
+| 39 | Metadata and clock hard to read over bright artwork; Details "Stream Name" drop-down in another font and misaligned | TV film page |
+| 40 | Team page header scrolls half off screen on first focus; the rail keeps Home lit on Browse | TV |
 
 ## Design
 
@@ -68,4 +88,5 @@ emulators (findings of the walks are added as they come).
 | 2 | Choice and toggle rows (finding 4): row components, every picker and filter moved (phone Search filter as a dialog with radio and check rows, as on TV), gate | Not started |
 | 3 | Feedback and empty states (findings 5, 6, 7): one undo host per app, no Toast, favourite Undo on the phone, empty states through the components, gate | In progress |
 | 4 | Leftovers (findings 8, 9, 10 to 20): text roles, sheet and dialog spacing, one dialog button layout per Look, raw `Icon(`/`Slider`/`PullToRefreshBox`/`TooltipBox`, clickable rows, row actions and delete icons, search field, Settings pages, text not in the app language, lists under the bar, gate; then the TV walk's findings | Not started |
+| 4b | TV walk findings (22, 23, 24, 26 to 40) on both apps where the same job exists, gate where a class allows it | Not started |
 | 5 | Walk every screen, dialog, menu, sheet and picker on both emulators again; docs | Not started |
