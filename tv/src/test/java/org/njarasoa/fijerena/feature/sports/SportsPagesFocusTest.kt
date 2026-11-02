@@ -1,9 +1,14 @@
 package org.njarasoa.fijerena.feature.sports
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
@@ -11,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,14 +74,16 @@ class SportsPagesFocusTest {
         created.forEach { it.viewModelScope.cancel() }
     }
 
-    private class FakeData : SportsPageData {
+    private class FakeData(
+        val games: List<SportsGame> = GAMES,
+    ) : SportsPageData {
         val follows = MutableStateFlow(FollowedSports.Followed())
 
         override val devMode = false
 
-        override suspend fun teamGames(team: SportsTeam) = GAMES
+        override suspend fun teamGames(team: SportsTeam) = games
 
-        override suspend fun leagueGames(league: SportsLeague) = GAMES
+        override suspend fun leagueGames(league: SportsLeague) = games
 
         override suspend fun leagueTeams(league: SportsLeague) = listOf(ARSENAL, LIVERPOOL)
 
@@ -194,6 +202,38 @@ class SportsPagesFocusTest {
         walk.run(down("C / Arsenal v Chelsea"))
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    fun `the header stays whole on screen while focus is on the first game, with the TV pivot`() {
+        // Enough games, one a day, to make the list scroll.
+        val more =
+            (3..8).map { SportsGame(SportsSource.ESPN, "$it", 4_000_000_000L + it * 90_000L, CHELSEA, ARSENAL, LEAGUE) }
+        val vm = SportsTeamViewModel(FakeData(GAMES + more), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells {
+                CompositionLocalProvider(LocalBringIntoViewSpec provides TvPivot) {
+                    SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm)
+                }
+            }
+        }
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        assertHeaderWhole()
+        walk.run(right("Remind me"))
+        assertHeaderWhole()
+    }
+
+    // The header's title starts at or below the top of the screen.
+    private fun assertHeaderWhole() {
+        rule.waitForIdle()
+        val top =
+            rule
+                .onAllNodesWithText("Arsenal")
+                .onFirst()
+                .fetchSemanticsNode()
+                .positionInRoot.y
+        assertTrue("The header is cut at the top ($top)", top >= 0f)
+    }
+
     @Test
     fun `league page - its teams come after its games`() {
         val vm = SportsLeagueViewModel(FakeData(), LEAGUE).also { created += it }
@@ -216,6 +256,21 @@ class SportsPagesFocusTest {
     }
 
     private companion object {
+        // Like the spec Android TV gives a list by default: each focused child to 30 % of the
+        // screen's height (1080 px here). A fixed target: the pinned day heading changes the
+        // container size, and a target from it never settles under Robolectric.
+        const val PIVOT_PX = 324f
+
+        @OptIn(ExperimentalFoundationApi::class)
+        val TvPivot =
+            object : BringIntoViewSpec {
+                override fun calculateScrollDistance(
+                    offset: Float,
+                    size: Float,
+                    containerSize: Float,
+                ): Float = offset - PIVOT_PX
+            }
+
         val ARSENAL = SportsTeam(SportsSource.ESPN, "soccer/359", "Arsenal", sport = "soccer", leagueName = "Premier League")
         val CHELSEA = SportsTeam(SportsSource.ESPN, "soccer/363", "Chelsea", sport = "soccer")
         val LIVERPOOL = SportsTeam(SportsSource.ESPN, "soccer/364", "Liverpool", sport = "soccer")
