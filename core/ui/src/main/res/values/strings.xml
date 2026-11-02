@@ -1117,7 +1117,7 @@
     <string name="provider_logins_as_of_format">%1$s · as of %2$s</string>
     <string name="provider_logins_main_format">Main login · %1$s</string>
     <string name="epg_source_use_label">Use this guide</string>
-    <string name="epg_source_own_guide_hint">This source\'s own guide. Turn it on or off with Provides a Guide in Edit Source.</string>
+    <string name="epg_source_own_guide_hint">This source\'s own guide. Turn it on or off with \"Provides a Guide\" in Edit Source.</string>
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · last refresh %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · never refreshed</string>
