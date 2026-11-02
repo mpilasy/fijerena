@@ -1613,15 +1613,7 @@ private fun ProgramDetailsDialog(
     val description = program.description?.takeIf { it.isNotBlank() }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                text = program.title,
-                role = TextRole.Title,
-                tone = TextTone.Primary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
+        title = program.title,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 BadgedTitle(channel.name, tone = TextTone.Secondary)
@@ -1651,7 +1643,6 @@ private fun ProgramDetailsDialog(
             },
         others = if (onWatchFromStart != null) listOf(watchChannel) else emptyList(),
         cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 

@@ -126,11 +126,7 @@ internal fun SourcesStatusSheet(
     CinemaAlertDialog(
         initialFocus = firstRow,
         onDismissRequest = onDismiss,
-        // The darkest surface behind the rows, as the TV pickers (TV UI audit #3).
-        containerColor = CinemaTheme.colors.background,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
-        title = { CinemaText(stringResource(R.string.home_sources_status_title), role = TextRole.Title) },
+        title = stringResource(R.string.home_sources_status_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

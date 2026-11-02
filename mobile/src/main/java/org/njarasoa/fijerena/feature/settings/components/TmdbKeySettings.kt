@@ -67,7 +67,7 @@ fun TmdbKeyDialog(
     var draft by rememberSaveable(uiState.savedKey) { mutableStateOf(uiState.savedKey) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.tmdb_settings_title), role = TextRole.Title) },
+        title = stringResource(R.string.tmdb_settings_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

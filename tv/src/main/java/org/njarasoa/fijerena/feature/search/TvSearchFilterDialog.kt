@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.FacetCount
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchFacetChoice
@@ -93,15 +94,11 @@ internal fun TvSearchFilterDialog(
     CinemaAlertDialog(
         initialFocus = entry,
         onDismissRequest = onDismiss,
-        // The darkest surface behind the rows, as the other TV pickers (TV UI audit #3).
-        containerColor = CinemaTheme.colors.background,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
-        title = { CinemaText(stringResource(R.string.search_filter_label), role = TextRole.Title) },
+        title = stringResource(R.string.search_filter_label),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
             ) {
                 // It closes the dialog: the row goes once nothing is chosen, and focus would go with it.
                 if (active) {

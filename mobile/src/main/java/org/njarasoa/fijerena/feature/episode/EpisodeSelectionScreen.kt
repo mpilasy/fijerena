@@ -87,6 +87,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
@@ -114,7 +115,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
@@ -617,16 +620,24 @@ private fun EpisodeListContent(
             seasonMenu = season to mediaRepository.episodesWatchState(seriesDetail.id, season)
         }
     }
+    seasonMenu?.let { (season, allWatched) ->
+        CinemaActionMenu(
+            title = stringResource(R.string.series_season_name_format, season),
+            actions =
+                listOf(
+                    MenuAction(
+                        icon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+                        label = stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
+                        onClick = { markEpisodesWatched(season, allWatched != true) },
+                    ),
+                ),
+            onDismiss = { seasonMenu = null },
+        )
+    }
     markManyError?.let { message ->
         CinemaAlertDialog(
             onDismissRequest = { markManyError = null },
-            title = {
-                CinemaText(
-                    stringResource(R.string.watched_mark_many_failed),
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                )
-            },
+            title = stringResource(R.string.watched_mark_many_failed),
             text = {
                 CinemaText(
                     message,
@@ -1010,33 +1021,6 @@ private fun EpisodeListContent(
                         selectedSeason = resumeState.selectedSeason,
                         onSeasonSelected = { resumeState.selectSeason(it) },
                         onSeasonLongPress = if (canMarkManyWatched) openSeasonMenu else null,
-                        seasonMenu = { season ->
-                            val menu = seasonMenu
-                            val allWatched = menu?.second == true
-                            DropdownMenu(expanded = menu?.first == season, onDismissRequest = { seasonMenu = null }) {
-                                DropdownMenuItem(
-                                    text = {
-                                        CinemaText(
-                                            stringResource(
-                                                if (allWatched) R.string.watched_unmark_season else R.string.watched_mark_season,
-                                            ),
-                                            role = TextRole.Label,
-                                            tone = TextTone.Inherit,
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = if (allWatched) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        seasonMenu = null
-                                        markEpisodesWatched(season, !allWatched)
-                                    },
-                                )
-                            }
-                        },
                     )
                 }
             }
@@ -1190,17 +1174,11 @@ private fun StreamNamePicker(
     }
 
     var expanded by remember { mutableStateOf(false) }
-    // The row often sits near the bottom of the visible screen; a Popup can't render below the
-    // screen edge, so without this the menu flips far above the row to find room instead of
-    // opening flush beneath it.
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
-    Box(modifier = modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+    Box(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier.clickable {
-                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                     expanded = true
                 },
         ) {
@@ -1217,36 +1195,23 @@ private fun StreamNamePicker(
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = {
-                    CinemaText(
-                        currentName,
-                        role = TextRole.Body,
-                        tone = TextTone.Accent,
-                    )
+        if (expanded) {
+            // The copies of this title: this one marked, each other one opens there; with several
+            // sources, each copy's own.
+            SettingsPickerDialog(
+                title = stringResource(R.string.details_other_instances),
+                options =
+                    listOf(currentName to null) +
+                        alternates.map { alternate ->
+                            (sourceNames[alternate.providerId]?.let { "${alternate.name} · $it" } ?: alternate.name) to alternate
+                        },
+                selected = null,
+                onSelect = { alternate ->
+                    expanded = false
+                    alternate?.let(onSelect)
                 },
-                leadingIcon = { CinemaIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
-                onClick = { expanded = false },
+                onDismiss = { expanded = false },
             )
-            alternates.forEach { alternate ->
-                DropdownMenuItem(
-                    text = {
-                        CinemaText(
-                            alternate.name,
-                            role = TextRole.Label,
-                            keepCase = true,
-                            tone = TextTone.Inherit,
-                        )
-                    },
-                    // With several sources, each copy's own (it opens there).
-                    leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
-                    onClick = {
-                        expanded = false
-                        onSelect(alternate)
-                    },
-                )
-            }
         }
     }
 }
@@ -1565,7 +1530,6 @@ private fun SeasonTabs(
     selectedSeason: Int?,
     onSeasonSelected: (Int) -> Unit,
     onSeasonLongPress: ((Int) -> Unit)? = null,
-    seasonMenu: @Composable (season: Int) -> Unit = {},
 ) {
     val rowState = rememberLazyListState()
     val selectedIndex = seasons.indexOfFirst { it.seasonNumber == selectedSeason }
@@ -1618,7 +1582,7 @@ private fun SeasonTabs(
     ) {
         items(seasons, key = { it.seasonNumber }) { season ->
             val isSelected = season.seasonNumber == selectedSeason
-            // Long-press: the season's menu (mark it watched or unwatched), anchored on the chip.
+            // Long-press: the season's menu (mark it watched or unwatched).
             Box {
                 CinemaText(
                     text = stringResource(R.string.series_season_name_format, season.seasonNumber),
@@ -1634,7 +1598,6 @@ private fun SeasonTabs(
                             ) { onSeasonSelected(season.seasonNumber) }
                             .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
                 )
-                seasonMenu(season.seasonNumber)
             }
         }
     }

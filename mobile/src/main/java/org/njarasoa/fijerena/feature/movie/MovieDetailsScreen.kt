@@ -70,6 +70,7 @@ import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
@@ -737,17 +738,11 @@ private fun StreamNamePicker(
     }
 
     var expanded by remember { mutableStateOf(false) }
-    // The row often sits near the bottom of the visible screen, past the last text before the
-    // category button; a Popup can't render below the screen edge, so without this the menu
-    // flips far above the row to find room instead of opening flush beneath it.
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
-    Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+    Box(modifier = Modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier.clickable {
-                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                     expanded = true
                 },
         ) {
@@ -763,36 +758,23 @@ private fun StreamNamePicker(
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = {
-                    CinemaText(
-                        currentName,
-                        role = TextRole.Body,
-                        tone = TextTone.Accent,
-                    )
+        if (expanded) {
+            // The copies of this title: this one marked, each other one opens there; with several
+            // sources, each copy's own.
+            SettingsPickerDialog(
+                title = stringResource(R.string.details_other_instances),
+                options =
+                    listOf(currentName to null) +
+                        alternates.map { alternate ->
+                            (sourceNames[alternate.providerId]?.let { "${alternate.name} · $it" } ?: alternate.name) to alternate
+                        },
+                selected = null,
+                onSelect = { alternate ->
+                    expanded = false
+                    alternate?.let(onSelect)
                 },
-                leadingIcon = { CinemaIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
-                onClick = { expanded = false },
+                onDismiss = { expanded = false },
             )
-            alternates.forEach { alternate ->
-                DropdownMenuItem(
-                    text = {
-                        CinemaText(
-                            alternate.name,
-                            role = TextRole.Label,
-                            keepCase = true,
-                            tone = TextTone.Inherit,
-                        )
-                    },
-                    // With several sources, each copy's own (it opens there).
-                    leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
-                    onClick = {
-                        expanded = false
-                        onSelect(alternate)
-                    },
-                )
-            }
         }
     }
 }

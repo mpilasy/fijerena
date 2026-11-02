@@ -797,9 +797,7 @@ fun ProfileEditPane(
             }
             CinemaAlertDialog(
                 onDismissRequest = closeOptions,
-                containerColor = CinemaTheme.colors.background,
-                titleContentColor = CinemaTheme.colors.textPrimary,
-                title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title) },
+                title = stringResource(R.string.profile_pin_title),
                 main = DialogAction(stringResource(R.string.profile_pin_change), onClick = pinFlow::change),
                 danger = DialogAction(stringResource(R.string.profile_pin_remove), onClick = pinFlow::remove),
                 cancel = DialogAction(stringResource(R.string.common_cancel), onClick = closeOptions),
@@ -952,7 +950,7 @@ internal fun ProfileAddDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.profile_dialog_add_title), role = TextRole.Title) },
+        title = stringResource(R.string.profile_dialog_add_title),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 ReadOnlyFieldWithEdit(

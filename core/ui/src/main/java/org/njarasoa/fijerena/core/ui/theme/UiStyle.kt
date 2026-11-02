@@ -80,6 +80,11 @@ data class UiDialogTokens(
      * bottom with a drag handle, as a centred panel, or full screen.
      */
     val sheet: DialogPosition = DialogPosition.BOTTOM_SHEET,
+    /**
+     * The gap between the parts of a dialog's body: the rows of a menu or a list, a field and the
+     * line under it. Read it through [CinemaSpacing.dialogBody], which applies the Look's density.
+     */
+    val bodyGap: Dp = CinemaSpacing.Base.xs,
 )
 
 @Immutable

@@ -214,6 +214,69 @@ done < <(find tv/src/main/java mobile/src/main/java -name '*.kt' -not -name '*Em
     ' "$f"
 done || true)
 
+# Dialog bodies and menus (docs/plans/20261101_consistency-round-2-plan.md, Phase 1), outside the
+# components (ui/components):
+#   - a button in a CinemaAlertDialog( call (its body): the dialog takes its buttons as data
+#     (main, others, danger, cancel); a list of actions is an action menu (phone CinemaActionMenu,
+#     TV TvActionMenu). A form's own control (an inline Add) is marked `// look-ok: <reason>` on its line.
+#   - a colour given to a dialog (containerColor =, titleContentColor =, textContentColor = in a
+#     CinemaAlertDialog( call): the dialog takes its colours from the theme.
+#   - a Cancel row (onClick = onDismiss within 3 lines of a TvInputListItem( / TvOptionRow( call):
+#     Cancel is the dialog's cancel action, a button.
+#   - a raw drop-down (DropdownMenu, DropdownMenuItem, ExposedDropdownMenu…): a menu of actions is an
+#     action menu, one choice of a list is a picker dialog.
+DIALOG_BUTTON='(^|[^A-Za-z0-9_])(Cinema(Outlined|Text|Primary|Secondary|Danger)?Button|CinemaTextLabelButton|ProviderDangerButton|TvSelectableButton)\('
+DIALOG_COLOUR='(^|[^A-Za-z0-9_])(containerColor|titleContentColor|textContentColor)[[:space:]]*='
+while IFS= read -r file; do
+    is_component "$file" && continue
+    # Tracks the bracket depth from each CinemaAlertDialog( call to its closing bracket. Strings
+    # and comments are taken out of the line first, so their brackets do not count.
+    BTN="$DIALOG_BUTTON" COL="$DIALOG_COLOUR" awk '
+        BEGIN { btn = ENVIRON["BTN"]; col = ENVIRON["COL"] }
+        {
+            raw = $0
+            line = $0
+            gsub(/"([^"\\]|\\.)*"/, "\"\"", line)
+            sub(/\/\/.*/, "", line)
+            if (line ~ /^[[:space:]]*(\*|\/\*)/) next
+            start = 0
+            if (depth == 0 && match(line, /(^|[^A-Za-z0-9_])CinemaAlertDialog\(/)) {
+                start = 1
+                line = substr(line, RSTART + RLENGTH - 1)
+            }
+            if (depth > 0 || start) {
+                if (raw !~ /\/\/ look-ok:/ && line ~ btn) printf "%s:%d: a button in a dialog body — give the dialog DialogAction data, or use an action menu.\n", FILENAME, FNR
+                if (line ~ col) printf "%s:%d: a colour given to a dialog — the dialog takes its colours from the theme.\n", FILENAME, FNR
+                n = length(line)
+                for (i = 1; i <= n; i++) {
+                    c = substr(line, i, 1)
+                    if (c == "(") depth++
+                    else if (c == ")") depth--
+                }
+                if (depth < 0) depth = 0
+            }
+        }
+    ' "$file"
+done < <(find tv/src/main/java mobile/src/main/java -name '*.kt' | sort) >"${TMPDIR:-/tmp}/dialog-gate.$$"
+while IFS= read -r hit; do
+    echo "$hit"
+    failures=$((failures + 1))
+done <"${TMPDIR:-/tmp}/dialog-gate.$$"
+rm -f "${TMPDIR:-/tmp}/dialog-gate.$$"
+
+while IFS= read -r hit; do
+    echo "$hit: a Cancel row — Cancel is the dialog's cancel action (DialogAction), not a row."
+    failures=$((failures + 1))
+done < <(grep -rn -A3 --include='*.kt' -E '(^|[^A-Za-z0-9_])(TvInputListItem|TvOptionRow)\(' tv/src/main |
+    grep -E 'onClick[[:space:]]*=[[:space:]]*onDismiss([^A-Za-z0-9_]|$)' | grep -v '/ui/components/' |
+    sed -E 's/^([^:]+)-([0-9]+)-.*/\1:\2/' || true)
+
+while IFS= read -r hit; do
+    echo "$hit: a raw drop-down — use an action menu (CinemaActionMenu, TvActionMenu) or a picker dialog."
+    failures=$((failures + 1))
+done < <(grep -rn --include='*.kt' -E '(^|[^A-Za-z0-9_.])(DropdownMenu(Item)?|ExposedDropdownMenu(Box)?)\(' tv/src/main mobile/src/main |
+    grep -v '/ui/components/' | cut -d: -f1,2 || true)
+
 if [ "$failures" -gt 0 ]; then
     echo
     echo "$failures problem(s). Looks come from CinemaTheme and the style classes (see docs/plans/20261016_design-system-plan.md)."

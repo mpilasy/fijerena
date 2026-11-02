@@ -1,10 +1,8 @@
 package org.njarasoa.fijerena.ui.components
 
-import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -18,6 +16,10 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog as CoreAlertDi
  * The phone dialog: [org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog] with the phone's
  * own buttons. Give the actions as data ([main], [others], [danger], [cancel]); the Look and Feel
  * lays them out and the dialog picks each button's kind.
+ *
+ * The [title] is text: the dialog gives it its role. [header] replaces it only where the title
+ * needs more than text (the PIN dialog's note above its centred title). The colours come from the
+ * theme.
  */
 @Composable
 fun CinemaAlertDialog(
@@ -28,13 +30,10 @@ fun CinemaAlertDialog(
     danger: DialogAction? = null,
     cancel: DialogAction? = null,
     icon: (@Composable () -> Unit)? = null,
-    title: (@Composable () -> Unit)? = null,
+    title: String? = null,
+    header: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
     initialFocus: FocusRequester? = null,
-    containerColor: Color = AlertDialogDefaults.containerColor,
-    iconContentColor: Color = AlertDialogDefaults.iconContentColor,
-    titleContentColor: Color = AlertDialogDefaults.titleContentColor,
-    textContentColor: Color = AlertDialogDefaults.textContentColor,
     properties: DialogProperties = DialogProperties(),
 ) = CoreAlertDialog(
     onDismissRequest = onDismissRequest,
@@ -49,12 +48,8 @@ fun CinemaAlertDialog(
     danger = danger,
     cancel = cancel,
     icon = icon,
-    title = title,
+    title = header ?: title?.let { { CinemaText(it, role = TextRole.Title) } },
     text = text,
     initialFocus = initialFocus,
-    containerColor = containerColor,
-    iconContentColor = iconContentColor,
-    titleContentColor = titleContentColor,
-    textContentColor = textContentColor,
     properties = properties,
 )

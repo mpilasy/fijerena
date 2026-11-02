@@ -55,8 +55,6 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -170,6 +168,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
@@ -225,7 +224,6 @@ import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
-import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -320,7 +318,7 @@ fun MobileCategoryListScreen(
             onDismiss = { goneMenu = null },
             actions =
                 listOf(
-                    ItemMenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.favorite_move_to_copy)) {
+                    MenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.favorite_move_to_copy)) {
                         viewModel.moveToCopy(item, gone)
                     },
                 ),
@@ -813,7 +811,7 @@ fun MobileCategoryListScreen(
     if (confirmClearRecent) {
         CinemaAlertDialog(
             onDismissRequest = { confirmClearRecent = false },
-            title = { CinemaText(stringResource(R.string.recent_clear_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.recent_clear_confirm_title),
             text = { CinemaText(stringResource(R.string.recent_clear_confirm_message), tone = TextTone.Secondary) },
             danger =
                 DialogAction(stringResource(R.string.recent_clear)) {
@@ -1759,7 +1757,7 @@ private fun AllCategoriesDialog(
         }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.category_all_title), role = TextRole.Title) },
+        title = stringResource(R.string.category_all_title),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                 CinemaSearchField(
@@ -1790,7 +1788,7 @@ private fun AllCategoriesDialog(
                 }
             }
         },
-        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -1830,7 +1828,7 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
     }
 
 /**
- * A category chip. A long-press opens a one-item menu to add the category to Favorite Categories
+ * A category chip. A long-press opens its action menu ([ItemActionsDialog]) to add the category to Favorite Categories
  * or take it off (phone UI audit P3) — it replaced a ☆ on every chip.
  *
  * FilterChip has no long-click of its own, so the hold is timed from its press interactions: a
@@ -1906,25 +1904,13 @@ private fun CategoryChip(
                         )
                 },
         )
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(
-                text = {
-                    CinemaText(
-                        favoriteLabel,
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    menuOpen = false
-                    onToggleFavorite()
-                },
+        if (menuOpen) {
+            // The phone's long-press menu, as on a list row: the favourite action.
+            ItemActionsDialog(
+                title = name,
+                isFavorite = isFavorite,
+                onToggleFavorite = onToggleFavorite,
+                onDismiss = { menuOpen = false },
             )
         }
     }
@@ -2292,7 +2278,7 @@ private fun StreamsList(
                         onDismiss = { rowMenu = null },
                         actions =
                             listOf(
-                                ItemMenuAction(CinemaIcons.Delete, stringResource(R.string.wanted_remove)) {
+                                MenuAction(CinemaIcons.Delete, stringResource(R.string.wanted_remove), removal = true) {
                                     onRemoveWanted?.invoke(menu.item)
                                 },
                             ),
@@ -2312,7 +2298,7 @@ private fun StreamsList(
                         ).map { action ->
                             when (action) {
                                 RowMenuAction.MARK_WATCHED -> {
-                                    ItemMenuAction(
+                                    MenuAction(
                                         icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                                         label = stringResource(if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark),
                                         onClick = { onToggleWatched(item) },
@@ -2320,7 +2306,7 @@ private fun StreamsList(
                                 }
 
                                 RowMenuAction.MARK_SHOW_WATCHED -> {
-                                    ItemMenuAction(
+                                    MenuAction(
                                         icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                                         label =
                                             stringResource(
@@ -2331,9 +2317,10 @@ private fun StreamsList(
                                 }
 
                                 RowMenuAction.REMOVE_FROM_RECENT -> {
-                                    ItemMenuAction(
+                                    MenuAction(
                                         icon = CinemaIcons.Delete,
                                         label = stringResource(R.string.recent_remove),
+                                        removal = true,
                                         onClick = { onRemoveItem?.invoke(item) },
                                     )
                                 }

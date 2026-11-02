@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.sourceStatusLine
@@ -43,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SourceStatus
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -143,7 +145,7 @@ fun MobileProviderSelectionScreen(
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
-            title = { CinemaText(stringResource(R.string.provider_delete_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.provider_delete_confirm_title),
             text = {
                 CinemaText(stringResource(R.string.provider_delete_confirm_message, provider.name), tone = TextTone.Secondary)
             },
@@ -189,7 +191,7 @@ fun MobileProviderSelectionScreen(
     copyResultMessage?.let { message ->
         CinemaAlertDialog(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
-            title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title) },
+            title = stringResource(R.string.provider_copy_to_title),
             text = { CinemaText(message, tone = TextTone.Secondary) },
             main = DialogAction(stringResource(R.string.common_ok)) { viewModel.clearCopyResultMessage() },
         )
@@ -276,81 +278,33 @@ private fun MobileProviderRow(
                     )
                 }
             }
-            Box {
-                IconAction(
-                    onClick = { menuOpen = true },
-                    icon = CinemaIcons.MoreVert,
-                    label = stringResource(R.string.provider_more_actions_for_format, provider.name),
-                )
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    // Guide sources only apply to sources that carry live channels
-                    if (MediaProviderFactory.hasLiveTv(provider)) {
-                        DropdownMenuItem(
-                            text = {
-                                CinemaText(
-                                    stringResource(R.string.epg_sources_header),
-                                    role = TextRole.Label,
-                                    tone = TextTone.Inherit,
-                                )
-                            },
-                            leadingIcon = { Icon(CinemaIcons.LiveTv, contentDescription = null) },
-                            onClick = {
-                                menuOpen = false
-                                onManageEpg(provider.id)
-                            },
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = {
-                            CinemaText(
+            IconAction(
+                onClick = { menuOpen = true },
+                icon = CinemaIcons.MoreVert,
+                label = stringResource(R.string.provider_more_actions_for_format, provider.name),
+            )
+            if (menuOpen) {
+                // As TV's source menu, with Guide sources first where the source has live channels.
+                CinemaActionMenu(
+                    title = provider.name,
+                    actions =
+                        listOfNotNull(
+                            MenuAction(CinemaIcons.LiveTv, stringResource(R.string.epg_sources_header)) { onManageEpg(provider.id) }
+                                .takeIf { MediaProviderFactory.hasLiveTv(provider) },
+                            MenuAction(
+                                CinemaIcons.ContentCopy,
                                 stringResource(R.string.provider_duplicate_button),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        },
-                        leadingIcon = { Icon(CinemaIcons.ContentCopy, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            onDuplicate(provider)
-                        },
-                    )
-                    if (canCopyTo) {
-                        DropdownMenuItem(
-                            text = {
-                                CinemaText(
-                                    stringResource(R.string.provider_copy_to_button),
-                                    role = TextRole.Label,
-                                    tone = TextTone.Inherit,
-                                )
-                            },
-                            leadingIcon = { Icon(CinemaIcons.SwapHoriz, contentDescription = null) },
-                            onClick = {
-                                menuOpen = false
-                                onCopyTo(provider)
-                            },
-                        )
-                    }
-                    CinemaDivider()
-                    DropdownMenuItem(
-                        text = {
-                            CinemaText(
+                            ) { onDuplicate(provider) },
+                            MenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.provider_copy_to_button)) { onCopyTo(provider) }
+                                .takeIf { canCopyTo },
+                            MenuAction(
+                                CinemaIcons.Delete,
                                 stringResource(R.string.provider_delete_button),
-                                role = TextRole.Label,
-                                tone = TextTone.Inherit,
-                            )
-                        },
-                        leadingIcon = { Icon(CinemaIcons.Delete, contentDescription = null) },
-                        colors =
-                            MenuDefaults.itemColors(
-                                textColor = CinemaTheme.colors.danger,
-                                leadingIconColor = CinemaTheme.colors.danger,
-                            ),
-                        onClick = {
-                            menuOpen = false
-                            onDelete(provider)
-                        },
-                    )
-                }
+                                removal = true,
+                            ) { onDelete(provider) },
+                        ),
+                    onDismiss = { menuOpen = false },
+                )
             }
         }
     }

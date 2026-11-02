@@ -129,6 +129,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.SectionPanel
@@ -192,7 +193,7 @@ import org.njarasoa.fijerena.feature.sports.GameSheetOverlay
 import org.njarasoa.fijerena.feature.sports.RETURN_SHEET_PREFIX
 import org.njarasoa.fijerena.feature.sports.TvGameBell
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
-import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -944,38 +945,39 @@ fun ContentTypeSelectionScreen(
     }
     goneMenu?.let { (item, type, gone) ->
         val copy = gone.copy
-        DetailsMoreMenu(
+        TvActionMenu(
             title = stringResource(R.string.favorite_gone_message, parseDisplayTitle(item.name).title.ifBlank { item.name }),
-            refreshLabel = stringResource(R.string.favorite_move_to_copy),
-            icon = CinemaIcons.SwapHoriz,
-            onRefresh = {
-                val merged = mergedLists
-                if (merged != null && copy != null) {
-                    // The user's move: the copy becomes the favourite, then the old one goes.
-                    coroutineScope.launchGuarded("Home.moveToCopy") {
-                        merged.repoFor(copy.providerId).addFavoriteSuspend(copy.itemId, copy.name, copy.categoryId, type)
-                        merged.repoFor(gone.providerId).removeFavoriteSuspend(item.id, type)
-                        wantedTitles.refresh()
-                        reloadFavorites(merged, type)
-                    }
-                }
-            },
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.SwapHoriz, label = stringResource(R.string.favorite_move_to_copy), onClick = {
+                        val merged = mergedLists
+                        if (merged != null && copy != null) {
+                            // The user's move: the copy becomes the favourite, then the old one goes.
+                            coroutineScope.launchGuarded("Home.moveToCopy") {
+                                merged.repoFor(copy.providerId).addFavoriteSuspend(copy.itemId, copy.name, copy.categoryId, type)
+                                merged.repoFor(gone.providerId).removeFavoriteSuspend(item.id, type)
+                                wantedTitles.refresh()
+                                reloadFavorites(merged, type)
+                            }
+                        }
+                    }),
+                ),
             onDismiss = { goneMenu = null },
         )
     }
     // A Wanted card's menu: Remove from Wanted, with its Undo.
     wantedMenu?.let { card ->
-        DetailsMoreMenu(
+        TvActionMenu(
             title = card.entity.title,
-            refreshLabel = stringResource(R.string.wanted_remove),
-            icon = CinemaIcons.Delete,
-            removes = true,
-            onRefresh = {
-                removeCard(wantedShelves.first { it.wantedContentType == card.entity.contentType }, card.key, card.entity.title) {
-                    wantedTitles.remove(card.wantedKey)
-                    suspend { wantedTitles.add(card.entity) }
-                }
-            },
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.Delete, label = stringResource(R.string.wanted_remove), removal = true, onClick = {
+                        removeCard(wantedShelves.first { it.wantedContentType == card.entity.contentType }, card.key, card.entity.title) {
+                            wantedTitles.remove(card.wantedKey)
+                            suspend { wantedTitles.add(card.entity) }
+                        }
+                    }),
+                ),
             onDismiss = { wantedMenu = null },
         )
     }

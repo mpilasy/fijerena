@@ -77,7 +77,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
     if (showClearConfirm) {
         CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { CinemaText(stringResource(R.string.settings_diagnostics_clear_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.settings_diagnostics_clear_confirm_title),
             danger =
                 DialogAction(stringResource(R.string.settings_diagnostics_clear)) {
                     viewModel.clear()

@@ -97,11 +97,8 @@ fun TvPinDialog(
             },
         initialFocus = firstKey,
         onDismissRequest = onCancel,
-        containerColor = CinemaTheme.colors.background,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
-        // Centred over the dots and pad.
-        title = { CinemaText(state.title, role = TextRole.Title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        // Centred over the dots and pad: more than a plain title.
+        header = { CinemaText(state.title, role = TextRole.Title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
         text = {
             Column(
                 modifier =

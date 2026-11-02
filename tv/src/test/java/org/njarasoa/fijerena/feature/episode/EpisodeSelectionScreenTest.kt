@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -203,11 +204,17 @@ class EpisodeSelectionScreenTest {
             .onNodeWithTag("episode_list")
             .performScrollToNode(hasTestTag("stream_name_picker"))
 
-        // Open the stream-name dropdown and pick the alternate — same interaction as switching
-        // sources on a real device. Plain Modifier.clickable, so a raw touch tap (performClick)
-        // is enough, same as the season tab above.
+        // Open the copies picker and pick the alternate with the remote — same interaction as
+        // switching sources on a real device. The row is plain Modifier.clickable, so a raw touch
+        // tap (performClick) opens it, same as the season tab above; the picker opens on this copy,
+        // Down goes to the alternate and OK picks it.
         composeTestRule.onNodeWithTag("stream_name_picker").performClick()
-        composeTestRule.onNodeWithText(alternate.name).performClick()
+        composeTestRule.waitForIdle()
+        // The screen behind keeps its own focus (Play): the dialog's focused row is the one in it.
+        composeTestRule.onNode(isFocused() and hasText("Test Series")).performKeyInput { pressKey(Key.DirectionDown) }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNode(isFocused() and hasText(alternate.name)).performKeyInput { pressKey(Key.DirectionCenter) }
+        composeTestRule.waitForIdle()
 
         // The switch claims focus for the stream-name row, not Play — that's the whole point of
         // streamSwitchSignal.

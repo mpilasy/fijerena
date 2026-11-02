@@ -106,7 +106,7 @@ fun QuickConnectDialog(
 
         CinemaAlertDialog(
             onDismissRequest = { onShowQuickConnectDialogChange(false) },
-            title = { CinemaText(stringResource(R.string.provider_quick_connect_title), role = TextRole.Title) },
+            title = stringResource(R.string.provider_quick_connect_title),
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

@@ -37,17 +37,11 @@ fun MobileSourceChooserDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.source_chooser_title),
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(R.string.source_chooser_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
             ) {
                 sources.forEach { (id, name) ->
                     CinemaChoiceRow(

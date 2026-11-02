@@ -22,9 +22,11 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
+import org.njarasoa.fijerena.core.ui.home.browseSectionAction
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaChoiceRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -89,43 +91,13 @@ fun MobileProfileMenu(
     }
 
     browseChoice?.let { (browsed, contentTypes) ->
-        CinemaAlertDialog(
-            onDismissRequest = { browseChoice = null },
-            title = {
-                CinemaText(
-                    stringResource(R.string.browse_source, browsed.name),
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    contentTypes.forEach { contentType ->
-                        CinemaChoiceRow(
-                            onClick = {
-                                browseChoice = null
-                                onBrowseSection(browsed.providerId, contentType)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            CinemaText(
-                                text =
-                                    stringResource(
-                                        when (contentType) {
-                                            ContentType.LIVE_TV -> R.string.provider_live_tv_label
-                                            ContentType.MOVIES -> R.string.provider_movies_label
-                                            else -> R.string.provider_tv_shows_label
-                                        },
-                                    ),
-                                modifier = Modifier.padding(CinemaSpacing.md),
-                                role = TextRole.Heading,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                    }
-                }
-            },
-            cancel = DialogAction(stringResource(R.string.common_cancel)) { browseChoice = null },
+        CinemaActionMenu(
+            title = stringResource(R.string.browse_source, browsed.name),
+            actions =
+                contentTypes.map { contentType ->
+                    browseSectionAction(contentType) { onBrowseSection(browsed.providerId, contentType) }
+                },
+            onDismiss = { browseChoice = null },
         )
     }
 }

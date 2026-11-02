@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -42,15 +43,11 @@ fun TvSourceChooserDialog(
     CinemaAlertDialog(
         initialFocus = firstRow,
         onDismissRequest = onDismiss,
-        // The darkest surface behind the rows, as the other TV pickers (TV UI audit #3).
-        containerColor = CinemaTheme.colors.background,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
-        title = { CinemaText(stringResource(R.string.source_chooser_title), role = TextRole.Title) },
+        title = stringResource(R.string.source_chooser_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
             ) {
                 sources.forEachIndexed { index, (id, name) ->
                     TvOptionRow(

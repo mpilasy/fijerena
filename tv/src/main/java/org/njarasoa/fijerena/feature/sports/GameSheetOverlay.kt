@@ -199,7 +199,7 @@ private fun WatchOrRemindDialog(
     val canCalendar = remember { canOpenCalendar(context) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(watchQuestionTitle(game.startEpochSec), role = TextRole.Title) },
+        title = watchQuestionTitle(game.startEpochSec),
         text = { WatchQuestionBody(channel.stream.name, channel.stream.providerId) },
         main = DialogAction(stringResource(R.string.epg_browser_watch_now_btn), onClick = onWatch),
         others =
@@ -222,7 +222,6 @@ private fun WatchOrRemindDialog(
                 },
             ),
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 

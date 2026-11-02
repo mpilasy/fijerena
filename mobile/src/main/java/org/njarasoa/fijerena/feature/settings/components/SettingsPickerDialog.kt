@@ -58,7 +58,7 @@ fun <T> SettingsPickerDialog(
     val dialog: @Composable () -> Unit = {
         CinemaAlertDialog(
             onDismissRequest = onDismiss,
-            title = { CinemaText(title, role = TextRole.Title) },
+            title = title,
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     options.forEach { (label, value) ->

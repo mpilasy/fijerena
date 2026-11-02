@@ -192,7 +192,7 @@ fun ColumnScope.ProviderLoginsSection(
         val promoted = loginsViewModel.promotedOnRemove(username)
         CinemaAlertDialog(
             onDismissRequest = { removeUsername = null },
-            title = { CinemaText(stringResource(R.string.provider_logins_remove_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.provider_logins_remove_confirm_title),
             text = {
                 CinemaText(
                     if (promoted != null) {
@@ -227,7 +227,7 @@ private fun AddLoginDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     CinemaAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Title) },
+        title = stringResource(R.string.provider_logins_add),
         text = {
             Column {
                 CinemaTextField(

@@ -45,7 +45,7 @@ fun DuplicateProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_duplicate_title), role = TextRole.Title) },
+        title = stringResource(R.string.provider_duplicate_title),
         text = {
             CinemaTextField(
                 value = name,
@@ -77,7 +77,7 @@ fun CopyProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title) },
+        title = stringResource(R.string.provider_copy_to_title),
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 CinemaText(stringResource(R.string.provider_copy_to_target_label), role = TextRole.Heading)

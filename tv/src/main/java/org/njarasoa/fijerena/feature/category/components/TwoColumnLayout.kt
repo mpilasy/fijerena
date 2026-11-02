@@ -408,17 +408,12 @@ private fun ClearRecentDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(text = stringResource(R.string.recent_clear_confirm_title), role = TextRole.Heading)
-        },
+        title = stringResource(R.string.recent_clear_confirm_title),
         text = {
             CinemaText(text = stringResource(R.string.recent_clear_confirm_message), tone = TextTone.Secondary)
         },
         danger = DialogAction(stringResource(R.string.recent_clear), onClick = onConfirm),
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }
 

@@ -30,14 +30,17 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
+import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -218,84 +221,49 @@ fun ColumnScope.ProviderDangerZoneSection(
         )
     }
     if (open) {
-        CinemaAlertDialog(
-            onDismissRequest = { open = false },
-            cancel = DialogAction(stringResource(R.string.common_close)) { open = false },
-            title = {
-                CinemaText(stringResource(R.string.provider_section_danger_zone), role = TextRole.Title, tone = TextTone.Danger)
-            },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    // One row per action: what it removes, and a small Clear (each opens its confirm).
-                    DangerRow(label = stringResource(R.string.provider_clear_favorites_desc), onClear = onClearFavorites)
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    DangerRow(label = stringResource(R.string.provider_clear_progress_desc), onClear = onClearProgress)
-
-                    cacheStats?.let { stats ->
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        DangerRow(label = stringResource(R.string.provider_clear_library_desc), onClear = onClearAllCache)
-
-                        // Per-type clears: only for types that have something to clear
-                        if (stats.liveTv.itemsCount > 0) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            DangerRow(
-                                label =
-                                    stringResource(
-                                        R.string.provider_clear_type_format,
-                                        stringResource(R.string.provider_live_tv_label),
-                                    ),
-                                onClear = onClearLiveTvCache,
-                            )
-                        }
-                        if (stats.movies.itemsCount > 0) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            DangerRow(
-                                label = stringResource(R.string.provider_clear_type_format, stringResource(R.string.provider_movies_label)),
-                                onClear = onClearMoviesCache,
-                            )
-                        }
-                        if (stats.tvShows.itemsCount > 0) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            DangerRow(
-                                label =
-                                    stringResource(
-                                        R.string.provider_clear_type_format,
-                                        stringResource(R.string.provider_tv_shows_label),
-                                    ),
-                                onClear = onClearTvShowsCache,
-                            )
-                        }
-                    }
-                }
-            },
+        // An action menu of removals: each row says what it removes and opens its confirm; the
+        // per-type clears only for types that have something cached.
+        val type: @Composable (Int) -> String = { label -> stringResource(R.string.provider_clear_type_format, stringResource(label)) }
+        CinemaActionMenu(
+            title = stringResource(R.string.provider_section_danger_zone),
+            actions =
+                listOfNotNull(
+                    MenuAction(
+                        CinemaIcons.Delete,
+                        stringResource(R.string.provider_clear_favorites_desc),
+                        removal = true,
+                        onClick = onClearFavorites,
+                    ),
+                    MenuAction(
+                        CinemaIcons.Delete,
+                        stringResource(R.string.provider_clear_progress_desc),
+                        removal = true,
+                        onClick = onClearProgress,
+                    ),
+                    cacheStats?.let {
+                        MenuAction(
+                            CinemaIcons.Delete,
+                            stringResource(R.string.provider_clear_library_desc),
+                            removal = true,
+                            onClick = onClearAllCache,
+                        )
+                    },
+                    cacheStats?.takeIf { it.liveTv.itemsCount > 0 }?.let {
+                        MenuAction(CinemaIcons.Delete, type(R.string.provider_live_tv_label), removal = true, onClick = onClearLiveTvCache)
+                    },
+                    cacheStats?.takeIf { it.movies.itemsCount > 0 }?.let {
+                        MenuAction(CinemaIcons.Delete, type(R.string.provider_movies_label), removal = true, onClick = onClearMoviesCache)
+                    },
+                    cacheStats?.takeIf { it.tvShows.itemsCount > 0 }?.let {
+                        MenuAction(
+                            CinemaIcons.Delete,
+                            type(R.string.provider_tv_shows_label),
+                            removal = true,
+                            onClick = onClearTvShowsCache,
+                        )
+                    },
+                ),
+            onDismiss = { open = false },
         )
-    }
-}
-
-@Composable
-private fun DangerRow(
-    label: String,
-    onClear: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CinemaText(label, modifier = Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-        DangerButton(onClick = onClear, text = stringResource(R.string.provider_clear_button))
-    }
-}
-
-/** Wipes this source's data ([ButtonKind.Danger]). */
-@Composable
-private fun DangerButton(
-    onClick: () -> Unit,
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    CinemaButton(onClick = onClick, modifier = modifier, kind = ButtonKind.Danger) {
-        CinemaText(text, role = TextRole.Label, tone = TextTone.Inherit)
     }
 }

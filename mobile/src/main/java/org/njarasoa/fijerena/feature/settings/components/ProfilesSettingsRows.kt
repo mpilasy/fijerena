@@ -171,7 +171,7 @@ internal fun ProfileAddDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.profile_dialog_add_title), role = TextRole.Title) },
+        title = stringResource(R.string.profile_dialog_add_title),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                 ProfileNameField(

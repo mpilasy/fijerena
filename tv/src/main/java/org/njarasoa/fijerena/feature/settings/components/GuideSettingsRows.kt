@@ -137,13 +137,7 @@ fun GuideMaintenancePane(
                     showClearConfirm = false
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
-            title = {
-                CinemaText(
-                    stringResource(R.string.epg_clear_db_confirm_title),
-                    role = TextRole.Title,
-                    tone = TextTone.Primary,
-                )
-            },
+            title = stringResource(R.string.epg_clear_db_confirm_title),
             text = {
                 CinemaText(
                     stringResource(R.string.epg_clear_db_confirm_message),
@@ -151,7 +145,6 @@ fun GuideMaintenancePane(
                     tone = TextTone.Secondary,
                 )
             },
-            containerColor = CinemaTheme.colors.surface,
         )
     }
 }

@@ -341,7 +341,7 @@ private fun AddLoginDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Title, tone = TextTone.Primary) },
+        title = stringResource(R.string.provider_logins_add),
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 ReadOnlyFieldWithEdit(
@@ -373,6 +373,5 @@ private fun AddLoginDialog(
                 onAdd(username, password.trim())
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }

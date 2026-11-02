@@ -120,13 +120,7 @@ fun MobileSourcesStatusSheet(
     val now = rememberMinuteTick()
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.home_sources_status_title),
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(R.string.home_sources_status_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

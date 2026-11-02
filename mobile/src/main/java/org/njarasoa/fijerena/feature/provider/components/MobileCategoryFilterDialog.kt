@@ -87,7 +87,7 @@ fun MobileCategoryFilterDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(title, role = TextRole.Title) },
+        title = title,
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -146,7 +146,7 @@ fun MobileCategoryFilterDialog(
                         singleLine = false,
                         minLines = 2,
                     )
-                    CinemaOutlinedButton(
+                    CinemaOutlinedButton( // look-ok: form control: adds the typed rules
                         onClick = {
                             val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                             if (values.isNotEmpty()) {
@@ -182,12 +182,16 @@ fun MobileCategoryFilterDialog(
                                 }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                CinemaButton(onClick = {
-                                    rules = rules.withAddedRules(values, pendingAddMatchType)
-                                    addRulesText = ""
-                                    pendingAddValues = null
-                                }) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
-                                CinemaOutlinedButton(onClick = { pendingAddValues = null }) {
+                                CinemaButton( // look-ok: form control: sets the match type of the new rules
+                                    onClick = {
+                                        rules = rules.withAddedRules(values, pendingAddMatchType)
+                                        addRulesText = ""
+                                        pendingAddValues = null
+                                    },
+                                ) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
+                                CinemaOutlinedButton( // look-ok: form control: drops the new rules
+                                    onClick = { pendingAddValues = null },
+                                ) {
                                     CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                                 }
                             }
@@ -245,23 +249,27 @@ fun MobileCategoryFilterDialog(
                                         }
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                        CinemaButton(onClick = {
-                                            val trimmed = editingValue.trim()
-                                            if (trimmed.isNotEmpty()) {
-                                                rules =
-                                                    rules.toMutableList().also {
-                                                        it[index] = CategoryMatcher(trimmed, editingMatchType)
-                                                    }
-                                            }
-                                            editingIndex = null
-                                        }) {
+                                        CinemaButton( // look-ok: form control: saves the rule being edited
+                                            onClick = {
+                                                val trimmed = editingValue.trim()
+                                                if (trimmed.isNotEmpty()) {
+                                                    rules =
+                                                        rules.toMutableList().also {
+                                                            it[index] = CategoryMatcher(trimmed, editingMatchType)
+                                                        }
+                                                }
+                                                editingIndex = null
+                                            },
+                                        ) {
                                             CinemaText(
                                                 stringResource(R.string.common_ok),
                                                 role = TextRole.Label,
                                                 tone = TextTone.Inherit,
                                             )
                                         }
-                                        CinemaOutlinedButton(onClick = { editingIndex = null }) {
+                                        CinemaOutlinedButton( // look-ok: form control: stops editing the rule
+                                            onClick = { editingIndex = null },
+                                        ) {
                                             CinemaText(
                                                 stringResource(R.string.common_cancel),
                                                 role = TextRole.Label,

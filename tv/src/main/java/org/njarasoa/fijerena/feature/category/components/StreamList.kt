@@ -84,6 +84,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
@@ -114,7 +115,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
 import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.core.ui.wanted.route
-import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.UndoBarState
@@ -264,22 +265,27 @@ internal fun StreamList(
     // their source): with another copy, a menu moves it there; without, a message says so.
     var goneMenu by remember { mutableStateOf<Pair<MediaItem, GoneFavorite>?>(null) }
     goneMenu?.let { (item, gone) ->
-        DetailsMoreMenu(
+        TvActionMenu(
             title = stringResource(R.string.favorite_gone_message, parseDisplayTitle(item.name).title.ifBlank { item.name }),
-            refreshLabel = stringResource(R.string.favorite_move_to_copy),
-            icon = CinemaIcons.SwapHoriz,
-            onRefresh = { categoryViewModel.moveToCopy(item, gone) },
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.SwapHoriz, label = stringResource(R.string.favorite_move_to_copy), onClick = {
+                        categoryViewModel.moveToCopy(item, gone)
+                    }),
+                ),
             onDismiss = { goneMenu = null },
         )
     }
     val goneResources = LocalResources.current
     wantedMenuItem?.let { item ->
-        DetailsMoreMenu(
+        TvActionMenu(
             title = item.name,
-            refreshLabel = stringResource(R.string.wanted_remove),
-            icon = CinemaIcons.Delete,
-            removes = true,
-            onRefresh = { removeWanted(item) },
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.Delete, label = stringResource(R.string.wanted_remove), removal = true, onClick = {
+                        removeWanted(item)
+                    }),
+                ),
             onDismiss = { wantedMenuItem = null },
         )
     }

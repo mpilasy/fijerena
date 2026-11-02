@@ -41,7 +41,7 @@ fun ImportOptionsDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.settings_import_select_title), role = TextRole.Title) },
+        title = stringResource(R.string.settings_import_select_title),
         text = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -97,7 +97,7 @@ fun ImportConflictDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.settings_import_provider_conflict_title), role = TextRole.Title) },
+        title = stringResource(R.string.settings_import_provider_conflict_title),
         text = {
             CinemaText(
                 stringResource(

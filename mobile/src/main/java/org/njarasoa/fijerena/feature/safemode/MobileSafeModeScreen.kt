@@ -88,7 +88,7 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
     if (confirmingClear) {
         CinemaAlertDialog(
             onDismissRequest = { confirmingClear = false },
-            title = { CinemaText(stringResource(R.string.safe_mode_clear_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.safe_mode_clear_confirm_title),
             text = { CinemaText(stringResource(R.string.safe_mode_clear_confirm_message), tone = TextTone.Secondary) },
             danger =
                 DialogAction(stringResource(R.string.safe_mode_clear_confirm)) {

@@ -256,7 +256,7 @@ private fun ResetListDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.parental_list_reset), role = TextRole.Title) },
+        title = stringResource(R.string.parental_list_reset),
         text = { CinemaText(stringResource(R.string.parental_list_reset_confirm), tone = TextTone.Secondary) },
         danger = DialogAction(stringResource(R.string.parental_list_reset), onClick = onConfirm),
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
