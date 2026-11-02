@@ -331,6 +331,20 @@ class TitleLanguageTest {
     }
 
     @Test
+    fun `episode own title drops a leading separator and a repeated number`() {
+        assertEquals("Chapter 1", episodeOwnTitle("- S01E01 - Chapter 1"))
+        assertEquals("Chapter 1", episodeOwnTitle("S01E01 - S01E01 - Chapter 1"))
+        assertEquals("Chapter 1", episodeOwnTitle("Lupin - S01E01 - S01E01 - Chapter 1"))
+        assertEquals("Chapter 1", episodeOwnTitle("S01E01: Chapter 1"))
+        assertEquals("Chapter 1", episodeOwnTitle("S01E01 Chapter 1"))
+        assertEquals("Chapter 1", episodeOwnTitle("- Chapter 1"))
+        assertEquals("", episodeOwnTitle("- S01E01"))
+        assertEquals("", episodeOwnTitle("- S01E01 - S01E01"))
+        assertEquals("Twenty-One", episodeOwnTitle("Twenty-One"))
+        assertEquals("Chapter 1", playerEpisodeName("- S01E01 - Chapter 1"))
+    }
+
+    @Test
     fun `player episode name`() {
         assertEquals("", playerEpisodeName("EN - The King of Queens - S01E22"))
         assertEquals("Whatever You Do", playerEpisodeName("4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do"))

@@ -1729,7 +1729,8 @@ private fun SeriesDetailsTabContent(
  * progress bars already show, not new behaviour. Plain text, not a card (UX overhaul Part II
  * Phase 6, F-E-6): the glass card with a thumbnail it used to be looked like a button and wasn't
  * one. It stays non-focusable — Play, one press away, names the same episode and plays it — so it
- * is drawn as text (shadowed, to stay legible over the backdrop) and nothing about it says "press".
+ * is drawn as text (on the hero's side scrim, with a halo, to stay legible over the backdrop; one line
+ * each, cut with "…") and nothing about it says "press".
  */
 @Composable
 private fun NextUpCard(
@@ -1746,6 +1747,8 @@ private fun NextUpCard(
             text = stringResource(R.string.series_next_up_title),
             role = TextRole.Label,
             tone = TextTone.Secondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
         val label =
@@ -1753,7 +1756,7 @@ private fun NextUpCard(
                 episode.seasonNumber?.let { stringResource(R.string.series_season_label, it) },
                 stringResource(R.string.series_episode_label, episode.episodeNumber),
             ).joinToString(" · ")
-        TvBackdropText(text = label, role = TextRole.Heading)
+        TvBackdropText(text = label, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
         val ownTitle = episodeOwnTitle(episode.title)
         if (ownTitle.isNotBlank()) {
             TvBackdropText(
@@ -1779,6 +1782,8 @@ private fun NextUpCard(
                     text = stringResource(R.string.series_remaining_format, it),
                     role = TextRole.Caption,
                     tone = TextTone.Secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

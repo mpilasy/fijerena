@@ -9,9 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
@@ -61,3 +63,20 @@ fun initialOf(name: String): String {
     val trimmed = name.trim()
     return if (trimmed.isEmpty()) "" else String(Character.toChars(trimmed.codePointAt(0))).uppercase()
 }
+
+/** The names of the [CinemaProfileColors.palette] colours, in the same order. */
+private val PROFILE_COLOUR_NAMES =
+    listOf(
+        R.string.profile_color_blue,
+        R.string.profile_color_red,
+        R.string.profile_color_green,
+        R.string.profile_color_orange,
+        R.string.profile_color_purple,
+        R.string.profile_color_cyan,
+        R.string.profile_color_pink,
+        R.string.profile_color_brown,
+    )
+
+/** The name of the profile colour at [index], for the colour picker ("Blue", "Red", ...). */
+@Composable
+fun profileColourName(index: Int): String = stringResource(PROFILE_COLOUR_NAMES[Math.floorMod(index, PROFILE_COLOUR_NAMES.size)])

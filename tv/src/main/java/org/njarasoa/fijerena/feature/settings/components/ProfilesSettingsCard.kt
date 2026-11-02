@@ -61,6 +61,7 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.profileColourName
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.rememberProfilePinFlow
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
@@ -352,7 +353,7 @@ fun ProfileEditPane(
             options =
                 CinemaProfileColors.palette.indices.map { index ->
                     PickerOption(
-                        label = stringResource(R.string.profile_color_option_format, index + 1),
+                        label = profileColourName(index),
                         value = index,
                         preview = { ColourDot(index, scale) },
                     )
@@ -1020,7 +1021,7 @@ private fun ColorSwatch(
     scale: Float,
 ) {
     val color = CinemaProfileColors.forIndex(index)
-    val label = stringResource(R.string.profile_color_option_format, index + 1)
+    val label = profileColourName(index)
     TvCard(
         onClick = onClick,
         modifier =

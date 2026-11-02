@@ -99,4 +99,17 @@ class TvSectionsTest {
         assertNull(TvSection.of(RailItem.SEARCH))
         assertNull(TvSection.of("ALL"))
     }
+
+    @Test
+    fun `the rail's Search covers everything, the section's pill chosen`() {
+        // A section's Search keeps the Teams and Guide types: it is over everything, its type as a pill.
+        assertEquals(Screen.Search("ALL", initialTypeFilter = ContentType.MOVIES), railSearch(RailItem.MOVIES))
+        assertEquals(Screen.Search("ALL", initialTypeFilter = ContentType.TV_SHOWS), railSearch(RailItem.TV_SHOWS))
+        assertEquals(Screen.Search("ALL", initialTypeFilter = ContentType.LIVE_TV), railSearch(RailItem.LIVE_TV))
+        // From Home, Sports and Settings: everything, no pill.
+        assertEquals(Screen.Search("ALL"), railSearch(RailItem.HOME))
+        assertEquals(Screen.Search("ALL"), railSearch(RailItem.SPORTS))
+        assertEquals(Screen.Search("ALL"), railSearch(RailItem.SETTINGS))
+        assertEquals(Screen.Search("ALL"), railSearch(null))
+    }
 }

@@ -376,18 +376,32 @@ fun episodeTitleWithoutSeries(
 
 // "EN - The King of Queens - S01E22", "4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do":
 // anything before the episode number, the number, then the episode's own title if there is one.
-private val NUMBERED_EPISODE_TITLE = Regex("""^(?:.*?\s-\s)?S\d{1,3}\s?E\d{1,4}(?:\s-\s(.*))?$""", RegexOption.IGNORE_CASE)
+// A dash, a colon or a dot can come after the number in place of " - ".
+private val NUMBERED_EPISODE_TITLE =
+    Regex("""^(?:.*?\s[-–—|]\s)?S\d{1,3}\s?E\d{1,4}(?:\s*[-–—:|·•.]\s*(.*)|\s+(.*))?$""", RegexOption.IGNORE_CASE)
+
+// A separator at the start of a title, left by a provider that cut the show's name off: "- Chapter 1".
+private val LEADING_SEPARATOR = Regex("""^(?:[-–—:|·•]\s*)+""")
 
 /**
  * The episode's own title out of a provider's episode title: "Whatever You Do" from
- * "4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do", and "" from
+ * "4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do", "Chapter 1" from
+ * "- S01E01 - Chapter 1" and from "S01E01 - S01E01 - Chapter 1", and "" from
  * "EN - The King of Queens - S01E22", which only repeats the show and the number the screen
- * already shows. A title without an "S01E22" number ("The Body in the Library") is returned as is.
+ * already shows. A title without an "S01E22" number ("The Body in the Library") is returned as is,
+ * without a separator at its start.
  */
 fun episodeOwnTitle(raw: String): String {
-    val text = raw.trim()
-    val match = NUMBERED_EPISODE_TITLE.matchEntire(text) ?: return text
-    return match.groupValues[1].trim()
+    var text = raw.trim().replace(LEADING_SEPARATOR, "").trim()
+    // A loop: the number can come again after the number ("S01E01 - S01E01 - Chapter 1").
+    while (true) {
+        val match = NUMBERED_EPISODE_TITLE.matchEntire(text) ?: return text
+        text =
+            match.groupValues[1]
+                .ifEmpty { match.groupValues[2] }
+                .replace(LEADING_SEPARATOR, "")
+                .trim()
+    }
 }
 
 /**

@@ -40,12 +40,18 @@ object SearchSession {
         typeFilter: String? = null,
         source: Long? = null,
         guideTab: Boolean = false,
+        teamsTab: Boolean = false,
     ) {
         query?.takeIf { it.isNotBlank() }?.let { this.query = it }
         this.typeFilter = typeFilter
         this.source = source
         facets = SearchFacetChoice()
-        tab = if (guideTab) SearchTab.GUIDE else SearchTab.CATALOGUE
+        tab =
+            when {
+                teamsTab -> SearchTab.TEAMS
+                guideTab -> SearchTab.GUIDE
+                else -> SearchTab.CATALOGUE
+            }
     }
 
     /** Called by each Search screen with the profile in use: another profile's search is dropped. */

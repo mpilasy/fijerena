@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.ui.components.initialOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRail
@@ -224,3 +225,14 @@ internal fun TvSectionRail(
         onBrowse = onBrowse,
     )
 }
+
+/**
+ * The rail's Search, as the phone's section Search: over everything, with the type pill of the
+ * section lit on the rail ([current]) chosen. The Teams and Guide types stay, and All shows all the
+ * content again. From Home, Sports, Settings and the rest, no pill is chosen.
+ */
+internal fun railSearch(current: RailItem?): Screen.Search =
+    Screen.Search(
+        SearchViewModel.CONTENT_TYPE_ALL,
+        initialTypeFilter = current?.let(TvSection::of)?.contentType?.takeIf { it != SPORTS_SECTION },
+    )

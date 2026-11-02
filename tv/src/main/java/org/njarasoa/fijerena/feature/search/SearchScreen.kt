@@ -217,6 +217,10 @@ fun SearchScreen(
     onCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
+    // A section's Search: over everything, this type's pill chosen; All shows all the content again.
+    initialTypeFilter: String? = null,
+    // Opened on the Teams type: the Sports section's Find Teams.
+    initialTeamsTab: Boolean = false,
     // A Guide tab result: its channel, as on Search the guide.
     onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
     // A section's Search found nothing: the same words over everything (null on "ALL").
@@ -286,12 +290,13 @@ fun SearchScreen(
     val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child, sportsOn = sportsOn)
     val showsTabs = tabs.isNotEmpty()
     SearchSession.forProfile(profileId)
-    // A screen opened anew starts on the catalogue with no type, source, decade or genre left from
-    // an earlier Search; Back to it keeps what was chosen (SearchSession.arrive).
+    // A screen opened anew starts on the type and pill its route brings (the catalogue, no pill, when
+    // none), with no source, decade or genre left from an earlier Search; Back to it keeps what was
+    // chosen (SearchSession.arrive).
     var arrived by rememberSaveable { mutableStateOf(false) }
     if (!arrived) {
         arrived = true
-        SearchSession.arrive()
+        SearchSession.arrive(typeFilter = initialTypeFilter, teamsTab = initialTeamsTab)
     }
     var selectedTab by SearchSession::tab
     val activeTab = activeSearchTab(selectedTab, tabs)

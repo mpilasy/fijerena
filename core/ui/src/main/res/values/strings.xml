@@ -907,7 +907,14 @@
     <string name="profile_own_page_title">Your Profile</string>
     <string name="profile_name_label">Name</string>
     <string name="profile_color_label">Colour</string>
-    <string name="profile_color_option_format">Colour %1$d</string>
+    <string name="profile_color_blue">Blue</string>
+    <string name="profile_color_red">Red</string>
+    <string name="profile_color_green">Green</string>
+    <string name="profile_color_orange">Orange</string>
+    <string name="profile_color_purple">Purple</string>
+    <string name="profile_color_cyan">Cyan</string>
+    <string name="profile_color_pink">Pink</string>
+    <string name="profile_color_brown">Brown</string>
     <string name="profile_save_button">Save</string>
     <string name="profile_delete_button">Delete profile</string>
     <string name="profile_error_name_required">Enter a name</string>

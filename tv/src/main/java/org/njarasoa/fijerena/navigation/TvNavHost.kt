@@ -301,17 +301,11 @@ fun TvNavHost(
                 )
             }
 
-            // The current section's Search; everything from Home, Settings and the rest.
+            // Search over everything, the current section's type chosen (railSearch).
             item == RailItem.SEARCH -> {
                 if (rail.current != RailItem.SEARCH) {
-                    // Sports searches everything (its Teams type among them).
-                    val contentType =
-                        rail.current
-                            ?.let(TvSection::of)
-                            ?.contentType
-                            ?.takeIf { it != SPORTS_SECTION } ?: SearchViewModel.CONTENT_TYPE_ALL
                     // The only Search: an older one, and what it opened, goes first.
-                    navController.navigateToSearch(Screen.Search(contentType))
+                    navController.navigateToSearch(railSearch(rail.current))
                 }
             }
 
@@ -878,7 +872,7 @@ fun TvNavHost(
                                 onTeamSelected = { navController.navigateOnce(it) },
                                 onLeagueSelected = { navController.navigateOnce(it) },
                                 onFindTeams = {
-                                    navController.navigateToSearch(teamsSearch(AppSettings(context.applicationContext).activeProfileId))
+                                    navController.navigateToSearch(teamsSearch())
                                 },
                                 onPlay = { navController.navigateOnce(it) },
                             )
@@ -1019,6 +1013,8 @@ fun TvNavHost(
                             val searchScreen = backStackEntry.toRoute<Screen.Search>()
                             SearchScreen(
                                 contentType = searchScreen.contentType,
+                                initialTypeFilter = searchScreen.initialTypeFilter,
+                                initialTeamsTab = searchScreen.initialTeamsTab,
                                 onTmdbTitleSelected = { navController.navigateOnce(it.route()) },
                                 onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
                                 onTeamSelected = { navController.navigateOnce(it) },

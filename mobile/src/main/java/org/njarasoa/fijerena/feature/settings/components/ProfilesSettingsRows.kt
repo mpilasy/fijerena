@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panelOutline
+import org.njarasoa.fijerena.core.ui.components.profileColourName
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -251,7 +252,7 @@ private fun ColorSwatch(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val label = stringResource(R.string.profile_color_option_format, index + 1)
+    val label = profileColourName(index)
     Row(
         modifier =
             Modifier
