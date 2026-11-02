@@ -24,7 +24,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
@@ -37,13 +41,18 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * Look and Feel gives its corners and scrim (`UiDialogTokens`) and the theme its surface colour, as
  * for `CinemaAlertDialog`; on TV it stays centred in every Look and Feel (D3).
  *
- * Focus stays in the panel (CONTRIBUTING.md → In-tree overlays trap focus), and the panel scrolls
- * to the focused row. Back closes it with [onDismiss]. The caller puts the initial focus in
- * [content].
+ * Focus stays in the panel (CONTRIBUTING.md → In-tree overlays trap focus). Back closes it with
+ * [onDismiss]. The caller puts the initial focus in [content].
+ *
+ * The [title] stays at the top and the [footer] (the Cancel button) at the bottom; only [content]
+ * (the rows) scrolls between them, to the focused row. The rows run to the edges of that part, so
+ * a list that does not fit shows that it goes on, with no blank band under it.
  */
 @Composable
 fun TvOverlayPanel(
     onDismiss: () -> Unit,
+    title: String? = null,
+    footer: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val tokens = LocalUiStyle.current.dialog
@@ -79,19 +88,49 @@ fun TvOverlayPanel(
             Column(
                 modifier =
                     Modifier
-                        .padding(Spacing.xxl)
-                        .verticalScroll(rememberScrollState())
                         // Keep focus inside the panel. It is in the screen's own tree, not a Dialog
                         // window, so without the cancelled exit a D-pad press past the first or last
                         // row, or Left/Right, moves on to the controls behind it. focusProperties
                         // must sit right before focusGroup so the exit belongs to the group: without
-                        // the group it froze focus on the row the panel opened on. The scroll brings
-                        // each focused row into view, so long lists follow focus.
+                        // the group it froze focus on the row the panel opened on.
                         .focusProperties { onExit = { cancelFocusChange() } }
                         .focusGroup(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                content = content,
-            )
+            ) {
+                if (title != null) {
+                    CinemaText(
+                        text = title,
+                        role = TextRole.Title,
+                        tone = TextTone.Primary,
+                        emphasis = true,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xxl, bottom = Spacing.sm),
+                    )
+                }
+                // The rows: the only part that scrolls. Its padding is inside the scroll, so the
+                // rows meet the title and the footer while the list scrolls.
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(
+                                start = Spacing.xxl,
+                                end = Spacing.xxl,
+                                top = if (title == null) Spacing.xxl else Spacing.xs,
+                                bottom = if (footer == null) Spacing.xxl else Spacing.xs,
+                            ),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    content = content,
+                )
+                if (footer != null) {
+                    Column(
+                        modifier = Modifier.padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.sm, bottom = Spacing.xxl),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                        content = footer,
+                    )
+                }
+            }
         }
     }
 }

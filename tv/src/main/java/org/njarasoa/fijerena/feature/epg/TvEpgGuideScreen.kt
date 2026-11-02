@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -20,6 +23,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * The TV Guide. Loading, the grid and "No listings" share one chrome ([TvGuideGrid]: title, date
@@ -63,34 +68,40 @@ fun TvEpgGuideScreen(
         when (val state = uiState) {
             // Not a failure: Retry could only find no guide again.
             is EpgViewModel.UiState.NoGuide -> {
-                TvEmptyState(
-                    message = stringResource(R.string.epg_guide_no_guide_title),
-                    secondary = stringResource(R.string.epg_guide_no_guide_message),
-                    icon = CinemaIcons.LiveTv,
-                    actionLabel = stringResource(R.string.common_back),
-                    onAction = onBack,
-                    onBack = onBack,
-                )
+                GuideStatePage(categoryName) {
+                    TvEmptyState(
+                        message = stringResource(R.string.epg_guide_no_guide_title),
+                        secondary = stringResource(R.string.epg_guide_no_guide_message),
+                        icon = CinemaIcons.LiveTv,
+                        actionLabel = stringResource(R.string.common_back),
+                        onAction = onBack,
+                        onBack = onBack,
+                    )
+                }
             }
 
             is EpgViewModel.UiState.NoChannels -> {
-                TvEmptyState(
-                    message = stringResource(R.string.epg_guide_no_channels),
-                    icon = CinemaIcons.LiveTv,
-                    actionLabel = stringResource(R.string.common_back),
-                    onAction = onBack,
-                    onBack = onBack,
-                )
+                GuideStatePage(categoryName) {
+                    TvEmptyState(
+                        message = stringResource(R.string.epg_guide_no_channels),
+                        icon = CinemaIcons.LiveTv,
+                        actionLabel = stringResource(R.string.common_back),
+                        onAction = onBack,
+                        onBack = onBack,
+                    )
+                }
             }
 
             is EpgViewModel.UiState.Error -> {
-                TvErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadEpgData() },
-                    title = stringResource(R.string.epg_error_loading),
-                    onBack = onBack,
-                    backLabel = stringResource(R.string.common_back),
-                )
+                GuideStatePage(categoryName) {
+                    TvErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadEpgData() },
+                        title = stringResource(R.string.epg_error_loading),
+                        onBack = onBack,
+                        backLabel = stringResource(R.string.common_back),
+                    )
+                }
             }
 
             else -> {
@@ -118,5 +129,25 @@ fun TvEpgGuideScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * A guide with nothing to show (no guide, no channels, an error): the guide's header over the
+ * state, as on every other page, so the page still says where it is.
+ */
+@Composable
+private fun GuideStatePage(
+    categoryName: String,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+    ) {
+        TvScreenHeader(title = stringResource(R.string.common_tv_guide), subtitle = categoryName)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
     }
 }

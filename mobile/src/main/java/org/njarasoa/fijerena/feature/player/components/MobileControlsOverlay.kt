@@ -221,8 +221,10 @@ fun MobileControlsOverlay(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        // A scrim that fades out below the text, so it reads over a bright frame.
+                        .panel(PanelFill.OsdTop)
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
-                        .padding(CinemaSpacing.md),
+                        .padding(start = CinemaSpacing.md, end = CinemaSpacing.md, top = CinemaSpacing.md, bottom = CinemaSpacing.xl),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -351,6 +353,8 @@ fun MobileControlsOverlay(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        // A scrim behind the glass, so the title and the times read over a bright frame.
+                        .panel(PanelFill.OsdBottom)
                         .onSizeChanged { onPanelHeightChanged(it.height) },
                 backgroundAlpha = CinemaAlpha.osdPanel,
             ) {

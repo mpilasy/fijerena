@@ -402,6 +402,12 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(grep -n '▶' core/*/src/main/res/values*/strings.xml tv/src/main/res/values*/strings.xml mobile/src/main/res/values*/strings.xml 2>/dev/null || true)
 
+# Text that goes on ends with the ellipsis character "…", never three dots (TV walk, Copy to…).
+while IFS= read -r hit; do
+    echo "$hit: three dots in a string — use the ellipsis character …."
+    failures=$((failures + 1))
+done < <(grep -n '\.\.\.' core/*/src/main/res/values*/strings.xml tv/src/main/res/values*/strings.xml mobile/src/main/res/values*/strings.xml 2>/dev/null | grep -v '<!--' || true)
+
 # A phone page gives MobileScreenHeader its title as text (title =, subtitle =), so the Look sets
 # where it goes: the content form (a whole bar of its own) is for a tab root only
 # (MobileSourceTopBar.kt). A page that built its own title there was left at the start of the bar.

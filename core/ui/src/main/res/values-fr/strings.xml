@@ -5,11 +5,11 @@
     <string name="slow_connection_banner">Connexion trop lente pour cette vidéo</string>
 
     <!-- EPG Management -->
-    <string name="epg_refresh_in_queue">Mise à jour déjà en file d\'attente...</string>
+    <string name="epg_refresh_in_queue">Mise à jour déjà en file d\'attente…</string>
     <string name="epg_up_to_date">Le guide TV est à jour.</string>
     <plurals name="epg_refreshing_stale">
-        <item quantity="one">Mise à jour de %1$d source de guide périmée...</item>
-        <item quantity="other">Mise à jour de %1$d sources de guide périmées...</item>
+        <item quantity="one">Mise à jour de %1$d source de guide périmée…</item>
+        <item quantity="other">Mise à jour de %1$d sources de guide périmées…</item>
     </plurals>
     <string name="epg_no_stale_sources">Aucune source de guide périmée à mettre à jour.</string>
     <string name="epg_no_failed_sources">Aucune source de guide en échec trouvée.</string>
@@ -568,7 +568,7 @@
     <string name="epg_browser_indexing_label">Indexation…</string>
     <string name="epg_browser_optimizing_label">Optimisation…</string>
     <string name="epg_browser_hint_search_titles">Rechercher des titres de programmes</string>
-    <string name="epg_browser_no_file_message">Pas encore de guide.\nAjoutez une source de guide dans Modifier la source → Sources de guide.</string>
+    <string name="epg_browser_no_file_message">Pas encore de guide.\nAjoutez une source de guide dans Paramètres → Sources et guide → Sources de guide.</string>
     <string name="epg_browser_watch_now_btn">Regarder maintenant</string>
     <string name="epg_browser_add_calendar_btn">Ajouter au calendrier</string>
     <string name="epg_browser_no_calendar_app">Aucune application de calendrier trouvée sur cet appareil</string>
@@ -1004,7 +1004,8 @@
     <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
     <string name="epg_guide_no_guide_title">Pas de guide</string>
     <string name="epg_guide_no_channels">Aucune chaîne pour laquelle afficher un guide.</string>
-    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Modifier la source → Sources de guide.</string>
+    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Sources et guide → Sources de guide.</string>
+    <string name="epg_search_no_results_stale">Le guide n\'est plus à jour : il n\'a peut-être pas encore ce programme. Actualisez-le, puis cherchez à nouveau.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connexion</string>
     <string name="provider_save_connection_button">Enregistrer la connexion</string>
@@ -1049,7 +1050,7 @@
     <string name="provider_logins_as_of_format">%1$s · au %2$s</string>
     <string name="provider_logins_main_format">Identifiant principal · %1$s</string>
     <string name="epg_source_use_label">Utiliser ce guide</string>
-    <string name="epg_source_own_guide_hint">Guide propre à cette source : son interrupteur est Fournit un guide dans Modifier la source.</string>
+    <string name="epg_source_own_guide_hint">Guide propre à cette source. Activez-le ou désactivez-le avec « Fournit un guide » dans Modifier la source.</string>
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · dernière actualisation %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · jamais actualisée</string>

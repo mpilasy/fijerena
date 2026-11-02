@@ -480,7 +480,16 @@ class PlaybackViewModel(
                             label =
                                 format.label ?: format.language
                                     ?: context.getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
-                            mimeType = format.sampleMimeType ?: "unknown",
+                            // Subtitles the player reads ahead come as its own cue format, with the
+                            // file's format kept in codecs.
+                            mimeType =
+                                (
+                                    if (format.sampleMimeType == androidx.media3.common.MimeTypes.APPLICATION_MEDIA3_CUES) {
+                                        format.codecs
+                                    } else {
+                                        format.sampleMimeType
+                                    }
+                                ) ?: "unknown",
                             isSelected = isSelected,
                         ),
                     )

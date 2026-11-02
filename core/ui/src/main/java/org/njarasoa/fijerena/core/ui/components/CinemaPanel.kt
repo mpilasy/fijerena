@@ -48,8 +48,17 @@ enum class PanelFill {
     /** Over artwork: clear at the top, [Media] at the bottom, so text at the bottom stays legible. */
     MediaFade,
 
-    /** Over video: the ground at the top, clear at the bottom, so the player's top line stays legible. */
-    TopFade,
+    /**
+     * Behind the player controls' top text (the logo, the stats line, the clock): dark at the top,
+     * clear at the bottom, so the text reads over any frame, a bright one too.
+     */
+    OsdTop,
+
+    /**
+     * Behind the player controls' bottom panel (the title, the overview, the times, the buttons):
+     * dark at the bottom, less dark at the top, so the text reads over any frame.
+     */
+    OsdBottom,
 
     /** Over the whole video while the player's controls show. */
     Osd,
@@ -150,8 +159,8 @@ fun panelShape(corner: PanelCorner): Shape =
     }
 
 /**
- * The colour of [fill] in the active colour theme. [PanelFill.MediaFade] and [PanelFill.TopFade]
- * are fades, which only [panel] draws: here they give their dark end.
+ * The colour of [fill] in the active colour theme. [PanelFill.MediaFade], [PanelFill.OsdTop] and
+ * [PanelFill.OsdBottom] are fades, which only [panel] draws: here they give their dark end.
  */
 @Composable
 @ReadOnlyComposable
@@ -165,7 +174,7 @@ fun panelColor(fill: PanelFill): Color {
         PanelFill.High -> colors.surfaceHigh
         PanelFill.Glass -> colors.glass
         PanelFill.Media, PanelFill.MediaFade -> colors.mediaScrim
-        PanelFill.TopFade -> colors.background.copy(alpha = CinemaAlpha.textMedium)
+        PanelFill.OsdTop, PanelFill.OsdBottom -> colors.mediaScrim.copy(alpha = CinemaAlpha.osdTextScrimDeep)
         PanelFill.Osd -> colors.mediaScrim.copy(alpha = CinemaAlpha.osdScrim)
         PanelFill.Veil -> colors.background.copy(alpha = CinemaAlpha.tint)
         PanelFill.Dim -> colors.background.copy(alpha = CinemaAlpha.scrim)
@@ -199,9 +208,31 @@ fun Modifier.panel(
             background(remember(dark) { Brush.verticalGradient(listOf(colors.clear, dark)) }, shape)
         }
 
-        PanelFill.TopFade -> {
-            val dark = panelColor(fill)
-            background(remember(dark) { Brush.verticalGradient(listOf(dark, colors.clear)) }, shape)
+        PanelFill.OsdTop -> {
+            val scrim = colors.mediaScrim
+            val clear = colors.clear
+            background(
+                remember(scrim, clear) {
+                    Brush.verticalGradient(
+                        0f to scrim.copy(alpha = CinemaAlpha.osdTextScrimDeep),
+                        CinemaAlpha.osdTextFadeStop to scrim.copy(alpha = CinemaAlpha.osdTextScrim),
+                        1f to clear,
+                    )
+                },
+                shape,
+            )
+        }
+
+        PanelFill.OsdBottom -> {
+            val scrim = colors.mediaScrim
+            background(
+                remember(scrim) {
+                    Brush.verticalGradient(
+                        listOf(scrim.copy(alpha = CinemaAlpha.osdTextScrim), scrim.copy(alpha = CinemaAlpha.osdTextScrimDeep)),
+                    )
+                },
+                shape,
+            )
         }
 
         else -> {

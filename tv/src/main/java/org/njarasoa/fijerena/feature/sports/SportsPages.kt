@@ -68,6 +68,7 @@ import org.njarasoa.fijerena.core.ui.sports.teamDetails
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.TvDayHeading
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -324,10 +325,10 @@ private fun TvSportsPage(
                 is GamesState.Loaded -> {
                     if (games.games.isEmpty()) {
                         item(key = "no_games") {
-                            CinemaText(
-                                text = stringResource(R.string.sports_no_games),
-                                tone = TextTone.Secondary,
-                                modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.lg),
+                            TvEmptyState(
+                                message = stringResource(R.string.sports_no_games),
+                                icon = CinemaIcons.DateRange,
+                                takeFocus = false,
                             )
                         }
                     } else {

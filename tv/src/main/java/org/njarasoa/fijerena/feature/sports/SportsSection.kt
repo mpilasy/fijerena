@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.sports.route
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.ui.components.TvDayHeading
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -286,10 +287,10 @@ fun SportsSectionScreen(
                         is GamesState.Loaded -> {
                             if (state.games.isEmpty()) {
                                 item(key = "no_games") {
-                                    CinemaText(
-                                        text = stringResource(R.string.sports_no_games),
-                                        tone = TextTone.Secondary,
-                                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.lg),
+                                    TvEmptyState(
+                                        message = stringResource(R.string.sports_no_games),
+                                        icon = CinemaIcons.DateRange,
+                                        takeFocus = false,
                                     )
                                 }
                             }
@@ -343,7 +344,7 @@ private fun FollowedCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TvCard(onClick = onClick, look = TvCardLooks.shelf(), modifier = modifier.width(TvDimensions.followedCardWidth)) {
+    TvCard(onClick = onClick, look = TvCardLooks.tile(), modifier = modifier.width(TvDimensions.followedCardWidth)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(Spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,

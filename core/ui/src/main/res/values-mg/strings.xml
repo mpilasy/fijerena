@@ -5,11 +5,11 @@
     <string name="slow_connection_banner">Miadana loatra ny fifandraisana ho an\'ity fandefasana ity</string>
 
     <!-- EPG Management -->
-    <string name="epg_refresh_in_queue">Efa manandrana...</string>
+    <string name="epg_refresh_in_queue">Efa manandrana…</string>
     <string name="epg_up_to_date">Vaovao ny fandaharana.</string>
     <plurals name="epg_refreshing_stale">
-        <item quantity="one">Manavao ny %1$d lany andro...</item>
-        <item quantity="other">Manavao ny %1$d lany andro...</item>
+        <item quantity="one">Manavao ny %1$d lany andro…</item>
+        <item quantity="other">Manavao ny %1$d lany andro…</item>
     </plurals>
     <string name="epg_no_stale_sources">Tsy misy mila havaozina.</string>
     <string name="epg_no_failed_sources">Tsy nisy maty ny fangalana vaovao.</string>
@@ -499,7 +499,7 @@
     <string name="epg_browser_indexing_label">Mandahatra…</string>
     <string name="epg_browser_optimizing_label">Manatsara…</string>
     <string name="epg_browser_hint_search_titles">Karohy ny lohatenin\'ny fandaharana</string>
-    <string name="epg_browser_no_file_message">Mbola tsy misy fandaharana.\nAmpio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
+    <string name="epg_browser_no_file_message">Mbola tsy misy fandaharana.\nAmpio loharanon\'ny fitarihana ao amin\'ny Fandrindrana → Loharano sy fitarihana → Loharanon\'ny fitarihana.</string>
     <string name="epg_browser_watch_now_btn">Hijery izao</string>
     <string name="epg_browser_add_calendar_btn">Ampidiro ao amin\'ny alimanaka</string>
     <string name="epg_browser_no_calendar_app">Tsy misy rindrankajy alimanaka hita amin\'ity fitaovana ity</string>
@@ -769,7 +769,8 @@
     <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
     <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
     <string name="epg_guide_no_channels">Tsy misy fantsona hasehoana fitarihana.</string>
-    <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
+    <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Fandrindrana → Loharano sy fitarihana → Loharanon\'ny fitarihana.</string>
+    <string name="epg_search_no_results_stale">Lany andro ny fitarihana, ka mety mbola tsy ao ity fandaharana ity. Havaozy izy, dia mitadiava indray.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Fifandraisana</string>
     <string name="provider_save_connection_button">Tehirizo ny fifandraisana</string>

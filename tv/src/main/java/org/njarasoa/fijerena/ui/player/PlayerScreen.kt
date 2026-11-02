@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -563,7 +564,9 @@ fun PlayerScreen(
             ) {
                 TvPlayerControlsOverlay(
                     playbackState = currentPs,
-                    metadata = state.displayedMetadata,
+                    // While a channel tunes (or did not start), the header names that channel, not
+                    // the one that played before.
+                    metadata = osdMetadata(state.displayedMetadata, tuningChannelName ?: unavailableChannelName, tuningLogoUrl),
                     viewModel = viewModel,
                     livePosition = state.livePosition,
                     liveDuration = state.liveDuration,
@@ -656,6 +659,23 @@ fun PlayerScreen(
         }
     }
 }
+
+/**
+ * The metadata the OSD shows. [PlayerScreenState.displayedMetadata] changes only once the new
+ * stream plays, so while a live channel tunes ([tuningName]: the channel being tuned, or the one
+ * that did not start) the header names that channel with its logo, and drops the old channel's
+ * description.
+ */
+internal fun osdMetadata(
+    displayed: PlayerMetadata,
+    tuningName: String?,
+    tuningLogoUrl: String?,
+): PlayerMetadata =
+    if (tuningName == null || !displayed.isLive || tuningName == displayed.channelName) {
+        displayed
+    } else {
+        displayed.copy(title = tuningName, channelName = tuningName, logoUrl = tuningLogoUrl, description = null)
+    }
 
 /** Space between the lifted subtitles and the controls' panel, as a share of the screen's height. */
 private const val SUBTITLE_GAP_FRACTION = 0.02f

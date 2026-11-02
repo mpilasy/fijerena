@@ -166,11 +166,9 @@ fun MobileSportsSectionScreen(
                         is GamesState.Loaded -> {
                             if (state.games.isEmpty()) {
                                 item(key = "no_games") {
-                                    CinemaText(
-                                        text = stringResource(R.string.sports_no_games),
-                                        role = TextRole.Body,
-                                        tone = TextTone.Secondary,
-                                        modifier = Modifier.padding(vertical = Spacing.md),
+                                    MobileEmptyState(
+                                        message = stringResource(R.string.sports_no_games),
+                                        icon = CinemaIcons.DateRange,
                                     )
                                 }
                             }

@@ -73,6 +73,19 @@ class TvSectionsTest {
     }
 
     @Test
+    fun `a team or league page lights Sports, whatever section it was opened from`() {
+        assertEquals(RailItem.SPORTS, railCurrent(TopScreen.SPORTS, TvSection.LIVE_TV))
+        assertEquals(RailItem.SPORTS, railCurrent(TopScreen.SPORTS, null))
+    }
+
+    @Test
+    fun `a Browse entry's list lights that entry, even over a section`() {
+        assertEquals(7L, litBrowse(7L, listOf(3L, 7L)))
+        assertNull(litBrowse(2L, listOf(3L, 7L)))
+        assertNull(litBrowse(null, listOf(3L, 7L)))
+    }
+
+    @Test
     fun `any other screen lights its section, or Home outside the sections`() {
         assertEquals(RailItem.TV_SHOWS, railCurrent(TopScreen.OTHER, TvSection.TV_SHOWS))
         assertEquals(RailItem.HOME, railCurrent(TopScreen.OTHER, null))

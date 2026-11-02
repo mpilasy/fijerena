@@ -101,6 +101,39 @@ object TvCardLooks {
         )
     }
 
+    /**
+     * A small tile in a row of choices (Sports' followed teams): raised at rest; focus lifts it with
+     * the white ring of every focused row, as the guide cells, not the shelves' accent glow.
+     */
+    @Composable
+    fun tile(): TvCardLook {
+        val shape = CinemaTheme.shapes.card
+        val ring = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline), shape = shape)
+        return TvCardLook(
+            colors =
+                CardDefaults.colors(
+                    containerColor = CinemaTheme.colors.surface,
+                    contentColor = CinemaTheme.colors.textPrimary,
+                    focusedContainerColor = TvFocusTokens.focusedContainer,
+                    focusedContentColor = CinemaTheme.colors.textPrimary,
+                ),
+            border =
+                CardDefaults.border(
+                    border = Border(BorderStroke(TvFocusTokens.borderThin, CinemaTheme.colors.glassBorder)),
+                    focusedBorder = ring,
+                    pressedBorder = ring,
+                ),
+            scale =
+                CardDefaults.scale(
+                    scale = TvFocusTokens.defaultScale,
+                    focusedScale = TvFocusTokens.focusedScale,
+                    pressedScale = TvFocusTokens.pressedScaleSubtle,
+                ),
+            glow = CardDefaults.glow(),
+            shape = CardDefaults.shape(shape = shape),
+        )
+    }
+
     /** A recent-search chip: raised at rest, a faint accent fill on focus. */
     @Composable
     fun chip(): TvCardLook =
@@ -120,10 +153,14 @@ object TvCardLooks {
             shape = CardDefaults.shape(shape = CinemaTheme.shapes.card),
         )
 
-    /** A TV Guide cell (channel or programme): focus lifts it, lighter, with a glow. */
+    /**
+     * A TV Guide cell (channel or programme): focus lifts it, lighter, with the white ring of every
+     * focused row (one TV focus look), not an accent glow, which read as faint on a narrow cell.
+     */
     @Composable
     fun guideCell(): TvCardLook {
         val shape = CinemaTheme.shapes.card
+        val ring = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline), shape = shape)
         return TvCardLook(
             colors =
                 CardDefaults.colors(
@@ -132,15 +169,14 @@ object TvCardLooks {
                     focusedContainerColor = TvFocusTokens.focusedContainer,
                     focusedContentColor = CinemaTheme.colors.textPrimary,
                 ),
-            border =
-                CardDefaults.border(focusedBorder = TvFocusTokens.cardFocusBorder(shape)),
+            border = CardDefaults.border(focusedBorder = ring, pressedBorder = ring),
             scale =
                 CardDefaults.scale(
                     scale = TvFocusTokens.defaultScale,
                     focusedScale = TvFocusTokens.focusedScaleContent,
                     pressedScale = TvFocusTokens.pressedScaleSubtle,
                 ),
-            glow = CardDefaults.glow(focusedGlow = TvFocusTokens.cardFocusGlow),
+            glow = CardDefaults.glow(),
             shape = CardDefaults.shape(shape = shape),
         )
     }

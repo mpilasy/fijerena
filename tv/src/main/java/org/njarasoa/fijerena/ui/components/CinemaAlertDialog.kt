@@ -36,6 +36,7 @@ fun CinemaAlertDialog(
     initialFocus: FocusRequester? = null,
     properties: DialogProperties = DialogProperties(),
     wide: Boolean = false,
+    stackActions: Boolean = false,
 ) = CoreAlertDialog(
     onDismissRequest = onDismissRequest,
     actionButton = { action, kind, buttonModifier ->
@@ -61,4 +62,5 @@ fun CinemaAlertDialog(
     textContentColor = CinemaTheme.colors.textSecondary,
     properties = properties,
     wide = wide,
+    stackActions = stackActions,
 )

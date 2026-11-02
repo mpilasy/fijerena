@@ -291,10 +291,10 @@ private fun LazyListScope.bestGameRows(
         is GamesState.Loaded -> {
             if (games.games.isEmpty()) {
                 item(key = "best_no_games", contentType = "note") {
-                    CinemaText(
-                        text = stringResource(R.string.sports_no_games),
-                        tone = TextTone.Secondary,
-                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                    TvEmptyState(
+                        message = stringResource(R.string.sports_no_games),
+                        icon = CinemaIcons.DateRange,
+                        takeFocus = false,
                     )
                 }
             }
