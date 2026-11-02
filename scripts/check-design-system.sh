@@ -39,7 +39,11 @@
 # CinemaButton family. Feedback and empty states: a SnackbarHost or a Toast outside ui/components
 # (a plain message goes through AppNotices, an Undo through the phone's LocalCinemaSnackbar or
 # TvUndoBar); TvUndoBar given an alignment or a padding (it places itself); a CinemaText of a
-# *_no_results* / *_empty* string outside the *EmptyState components.
+# *_no_results* / *_empty* string outside the *EmptyState components. Leftover raw Material outside
+# ui/components: Icon( (CinemaIcon / TvIcon), Slider( (CinemaSlider), PullToRefreshBox(
+# (CinemaPullToRefresh), TooltipBox( (CinemaTooltip); and a raw .clickable / .combinedClickable /
+# .toggleable / .selectable in feature code (a row component; `// look-ok: <reason>` for a tap
+# target that is not a row).
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -174,6 +178,7 @@ code_hits() {
             BEGIN { pat = ENVIRON["PAT"] }
             /\/\/ look-ok:/ { marked = FNR }
             $0 ~ /^[[:space:]]*(\/\/|\*|\/\*)/ { next }
+            $0 ~ /^import / { next }
             {
                 line = $0
                 sub(/\/\/.*/, "", line)
@@ -276,6 +281,39 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(grep -rn --include='*.kt' -E '(^|[^A-Za-z0-9_.])(DropdownMenu(Item)?|ExposedDropdownMenu(Box)?)\(' tv/src/main mobile/src/main |
     grep -v '/ui/components/' | cut -d: -f1,2 || true)
+# Leftover raw Material (docs/plans/20261101_consistency-round-2-plan.md, Phase 4): an icon is
+# CinemaIcon / TvIcon with a tone, the phone's slider CinemaSlider, pull to refresh
+# CinemaPullToRefresh, a tooltip CinemaTooltip (or IconAction, which has one); only ui/components
+# call the Material ones.
+while IFS= read -r hit; do
+    echo "$hit: raw Icon, Slider, PullToRefreshBox or TooltipBox outside ui/components — use CinemaIcon / TvIcon (with a tone), CinemaSlider, CinemaPullToRefresh or CinemaTooltip."
+    failures=$((failures + 1))
+done < <(code_hits '(^|[^A-Za-z0-9_.])(Icon|Slider|PullToRefreshBox|TooltipBox)\(' tv/src/main/java mobile/src/main/java core/ui/src/main/java |
+    grep -v '/ui/components/' || true)
+
+# A tappable row is a row component (phone CinemaRow, SettingsListRow, CinemaChoiceRow, a
+# CinemaCard with onClick; TV TvCard with a TvCardLooks look), never a raw clickable,
+# combinedClickable, toggleable or selectable in feature code. A tap target that is not a row (a
+# whole-screen tap catcher, a guide cell, a dock tab) is marked `// look-ok: <reason>`.
+while IFS= read -r hit; do
+    echo "$hit: a raw clickable / combinedClickable / toggleable / selectable outside ui/components — use CinemaRow, SettingsListRow, CinemaChoiceRow, CinemaCard(onClick) or TvCard; mark a tap target that is not a row with // look-ok: <reason>."
+    failures=$((failures + 1))
+done < <(code_hits '\.(clickable|combinedClickable|toggleable|selectable)([^A-Za-z0-9_]|$)' tv/src/main/java mobile/src/main/java core/ui/src/main/java |
+    grep -v '/ui/components/' || true)
+
+# Phone lists end clear of the bottom bar: a phone page (a file that calls MobileScreenHeader) with
+# a scrolling list or column (LazyColumn, LazyVerticalGrid, verticalScroll) ends it with
+# LocalDockInset of space. The check is per file: a file with a scroll that is not under the bar (a
+# sheet's text) carries `// dock-ok: <reason>`.
+while IFS= read -r file; do
+    echo "$file: a phone page with a scrolling list and no LocalDockInset — end the list with LocalDockInset.current of space (contentPadding or padding), or mark a scroll that is not under the bar with // dock-ok: <reason>."
+    failures=$((failures + 1))
+done < <(find mobile/src/main/java -name '*.kt' -not -path '*/ui/components/*' | sort | while IFS= read -r f; do
+    if grep -qE '(^|[^A-Za-z0-9_])(LazyColumn|LazyVerticalGrid|LazyVerticalStaggeredGrid|verticalScroll)\(' "$f" &&
+        grep -q 'MobileScreenHeader(' "$f" && ! grep -q 'LocalDockInset' "$f" && ! grep -q '// dock-ok:' "$f"; then
+        echo "$f"
+    fi
+done)
 
 if [ "$failures" -gt 0 ]; then
     echo

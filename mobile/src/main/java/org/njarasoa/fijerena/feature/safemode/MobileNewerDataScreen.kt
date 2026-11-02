@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -56,7 +57,8 @@ fun MobileNewerDataScreen() {
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(CinemaSpacing.md),
+                    .padding(CinemaSpacing.md)
+                    .padding(bottom = LocalDockInset.current),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             CinemaText(

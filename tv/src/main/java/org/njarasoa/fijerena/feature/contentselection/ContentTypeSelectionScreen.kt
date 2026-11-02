@@ -99,7 +99,6 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
@@ -195,6 +194,7 @@ import org.njarasoa.fijerena.feature.sports.TvGameBell
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -1267,6 +1267,7 @@ fun ContentTypeSelectionScreen(
                                             .accentFocusOutline(summaryFocused, PanelCorner.Dialog)
                                             .leftToRail()
                                             .onFocusChanged { summaryFocused = it.isFocused }
+                                            // look-ok: the Home sync summary panel, one focus stop that opens the sources sheet
                                             .clickable(role = Role.Button) { showSourcesSheet = true }
                                             .semantics { contentDescription = summaryDescription },
                                 ) {
@@ -1284,7 +1285,7 @@ fun ContentTypeSelectionScreen(
                                             .then(if (summaryOpens) Modifier else Modifier.leftToRail())
                                             .navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
                                     icon = {
-                                        Icon(
+                                        TvIcon(
                                             imageVector = CinemaIcons.MenuBook,
                                             contentDescription = stringResource(R.string.epg_browser_title),
                                         )

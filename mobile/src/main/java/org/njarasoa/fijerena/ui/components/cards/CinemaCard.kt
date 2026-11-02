@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.ui.components.cards
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
@@ -8,6 +10,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
@@ -73,6 +76,34 @@ fun CinemaCard(
         modifier = modifier,
         enabled = enabled,
         shape = cornerShape(CinemaCornerRadius.medium),
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        content = content,
+    )
+}
+
+/**
+ * A card with a tap and a long press (a list row whose long press opens its actions), see
+ * [CinemaCard]. [onLongClickLabel] names the long press for TalkBack.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CinemaCard(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    onLongClickLabel: String? = null,
+    colors: CardColors = CardDefaults.cardColors(),
+    elevation: CardElevation = defaultCardElevation(),
+    border: BorderStroke? = cinemaCardHairlineBorder(),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    CinemaCard(
+        modifier =
+            modifier
+                .clip(cornerShape(CinemaCornerRadius.medium))
+                .combinedClickable(onLongClickLabel = onLongClickLabel, onLongClick = onLongClick, onClick = onClick),
         colors = colors,
         elevation = elevation,
         border = border,

@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
@@ -248,6 +249,7 @@ private fun MobileProviderRow(
         modifier =
             Modifier
                 .fillMaxWidth()
+                // look-ok: the source card on its glass panel, not a list row
                 .clickable { onEdit(provider.id) },
     ) {
         Row(

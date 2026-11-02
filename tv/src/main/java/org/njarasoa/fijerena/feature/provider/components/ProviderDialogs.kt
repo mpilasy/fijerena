@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -283,14 +282,19 @@ fun CategoryFilterDialog(
                                     editingValue = rule.value
                                     editingMatchType = rule.matchType
                                 },
-                                icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule)) },
+                                icon = {
+                                    TvIcon(
+                                        CinemaIcons.Edit,
+                                        contentDescription = stringResource(R.string.provider_filter_edit_rule),
+                                    )
+                                },
                                 size = TvDimensions.iconLarge * 0.75f,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerIconButton(
                                 onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
                                 icon = {
-                                    Icon(
+                                    TvIcon(
                                         CinemaIcons.Delete,
                                         contentDescription = stringResource(R.string.provider_filter_delete_rule),
                                     )

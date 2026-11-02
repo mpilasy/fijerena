@@ -61,9 +61,11 @@ import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonStack
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.buttons.StackButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -322,23 +324,17 @@ private fun LinkedPanel(
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm), modifier = Modifier.padding(top = CinemaSpacing.xs)) {
-                CinemaButton(onClick = onAddDevice, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    CinemaText(stringResource(R.string.live_sync_add_device), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-                CinemaOutlinedButton(onClick = onScan, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    CinemaText(stringResource(R.string.live_sync_scan_code), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            }
-            // Same weight as Scan a code: one primary (Add a device) per card (M-11).
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                CinemaOutlinedButton(onClick = onSyncNow, enabled = !status.syncing, modifier = Modifier.weight(1f)) {
-                    CinemaText(stringResource(R.string.live_sync_now), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-                CinemaOutlinedButton(onClick = onResyncAll, enabled = !status.syncing, modifier = Modifier.weight(1f)) {
-                    CinemaText(stringResource(R.string.live_sync_full_resync), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-            }
+            // One stack of buttons of the same size; one main action (Add a device) per card (M-11).
+            CinemaButtonStack(
+                buttons =
+                    listOf(
+                        StackButton(stringResource(R.string.live_sync_add_device), ButtonKind.Main, !busy, onAddDevice),
+                        StackButton(stringResource(R.string.live_sync_scan_code), enabled = !busy, onClick = onScan),
+                        StackButton(stringResource(R.string.live_sync_now), enabled = !status.syncing, onClick = onSyncNow),
+                        StackButton(stringResource(R.string.live_sync_full_resync), enabled = !status.syncing, onClick = onResyncAll),
+                    ),
+                modifier = Modifier.padding(top = CinemaSpacing.xs),
+            )
         }
     }
 }

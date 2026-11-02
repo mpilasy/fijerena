@@ -637,6 +637,7 @@
     <string name="device_info_form_tv">Téléviseur</string>
     <string name="device_info_form_mobile">Téléphone ou tablette</string>
     <string name="device_info_device_type">Détecté comme</string>
+    <string name="device_info_type_other_tv">Autre téléviseur</string>
     <string name="device_info_ram">Mémoire (RAM)</string>
     <string name="device_info_low_memory_now">Mémoire faible maintenant</string>
     <string name="device_info_low_memory_threshold">Seuil de mémoire faible</string>
@@ -938,6 +939,7 @@
     <string name="settings_group_display">Affichage</string>
     <string name="settings_group_this_device">Cet appareil</string>
     <string name="settings_group_admin">Administration</string>
+    <string name="settings_group_admin_desc">Profils, contrôle parental, cet appareil, sources, synchronisation et sauvegardes</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>

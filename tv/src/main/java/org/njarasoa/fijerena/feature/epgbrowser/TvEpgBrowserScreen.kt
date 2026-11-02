@@ -72,7 +72,6 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -96,6 +95,7 @@ import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -634,23 +634,22 @@ private fun EpgSearchHistorySection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(text = stringResource(R.string.epg_browser_recent_searches), role = TextRole.Title)
-            CinemaIconButton(
-                onClick = onClearAll,
-                icon = {
-                    Icon(
-                        imageVector = CinemaIcons.Delete,
-                        contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                    )
-                },
-            )
-        }
+        SectionHeader(
+            title = stringResource(R.string.epg_browser_recent_searches),
+            trailing = {
+                CinemaIconButton(
+                    onClick = onClearAll,
+                    icon = {
+                        TvIcon(
+                            imageVector = CinemaIcons.Delete,
+                            contentDescription = stringResource(R.string.epg_browser_clear_all_description),
+                            tone = TextTone.Danger,
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                    },
+                )
+            },
+        )
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
         // and a D-pad user should not have to scroll a rail to reach the last entry.
         FlowRow(

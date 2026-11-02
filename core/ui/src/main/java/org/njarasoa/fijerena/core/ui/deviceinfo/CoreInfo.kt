@@ -13,6 +13,7 @@ import android.view.Display
 import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
+import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -135,10 +136,20 @@ private fun deviceSection(context: Context): DeviceInfoSection {
                 isTv?.let { UiText.StringResource(if (it) R.string.device_info_form_tv else R.string.device_info_form_mobile) }
                     ?: missingValue(),
             ),
-            infoRow(R.string.device_info_device_type, readOrNull { DeviceDetector.detect().deviceType.name }),
+            infoRow(R.string.device_info_device_type, readOrNull { deviceTypeText(DeviceDetector.detect().deviceType) } ?: missingValue()),
         ),
     )
 }
+
+/** The kind of device the player tunes itself for, as the user reads it (a brand name, or a translated kind). */
+internal fun deviceTypeText(type: DeviceType): UiText =
+    when (type) {
+        DeviceType.NVIDIA_SHIELD -> UiText.DynamicString("NVIDIA Shield")
+        DeviceType.SONY_BRAVIA -> UiText.DynamicString("Sony Bravia")
+        DeviceType.CHROMECAST_TV -> UiText.DynamicString("Chromecast")
+        DeviceType.GENERIC_TV -> UiText.StringResource(R.string.device_info_type_other_tv)
+        DeviceType.GENERIC_MOBILE -> UiText.StringResource(R.string.device_info_form_mobile)
+    }
 
 private fun memorySection(context: Context): DeviceInfoSection {
     val am = context.getSystemService(ActivityManager::class.java)

@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
@@ -175,7 +176,8 @@ fun MobileProfileEditScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState())
-                        .padding(vertical = Spacing.sm),
+                        // The page ends clear of the bottom bar.
+                        .padding(top = Spacing.sm, bottom = Spacing.sm + LocalDockInset.current),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
                 // The personal rows, as Settings shows them for the profile in use.

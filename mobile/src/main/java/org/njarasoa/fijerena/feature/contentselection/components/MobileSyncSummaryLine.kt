@@ -70,6 +70,7 @@ fun MobileSyncSummaryLine(
 ) {
     // Ticks so "Updated 2 minutes ago" keeps counting while the tab stays up; only this line recomposes.
     val text = syncSummaryText(summary, rememberMinuteTick())
+    // look-ok: a status line that opens the sources sheet, not a list row
     val clickModifier = if (summary.opensSheet) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier
     Row(
         modifier = modifier.minimumInteractiveComponentSize().then(clickModifier),

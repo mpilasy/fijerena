@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.provider.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -28,6 +27,8 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.ui.components.CinemaRow
+import org.njarasoa.fijerena.ui.components.CinemaRowDefaults
 
 /**
  * Guide, for a source with live channels: an Xtream source's **Provides a guide** switch (plan
@@ -80,9 +81,10 @@ fun ColumnScope.ProviderGuideSection(
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
             }
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onGuideSourcesClick).padding(vertical = CinemaSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
+            CinemaRow(
+                onClick = onGuideSourcesClick,
+                contentPadding = CinemaRowDefaults.inPanel(),
+                horizontalArrangement = Arrangement.Start,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     CinemaText(stringResource(R.string.epg_sources_header), role = TextRole.Heading)

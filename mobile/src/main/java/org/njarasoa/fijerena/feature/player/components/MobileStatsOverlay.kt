@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.GroupHeading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
@@ -355,6 +356,7 @@ fun MobileStatsOverlay(
                         text = stringResource(R.string.player_stats_title),
                         role = TextRole.Heading,
                         tone = TextTone.Primary,
+                        emphasis = true,
                     )
                     IconAction(
                         onClick = onClose,
@@ -543,12 +545,7 @@ fun MobileStatsOverlay(
 
 @Composable
 private fun SectionHeader(title: String) {
-    CinemaText(
-        text = title,
-        modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
-        role = TextRole.Heading,
-        tone = TextTone.Primary,
-    )
+    GroupHeading(title, modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs))
 }
 
 /** A label and a long value (a provider's raw name): the label keeps its width, the value wraps to two lines. */

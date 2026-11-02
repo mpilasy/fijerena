@@ -24,7 +24,6 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
@@ -57,8 +56,8 @@ fun ProfileSheet(
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
     LeaveChildPinDialog(viewModel, onProfileChosen)
-    CinemaSheet(onDismissRequest = onDismiss, dismissible = !mustChoose) {
-        Column(modifier = Modifier.padding(bottom = CinemaSpacing.md)) {
+    CinemaSheet(onDismissRequest = onDismiss, dismissible = !mustChoose, rows = true) {
+        Column {
             val switchingName = switchingTo
             if (switchingName != null) {
                 // A switch can take a while (it re-applies the profile's category filters): say

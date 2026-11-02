@@ -54,7 +54,6 @@ import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -109,16 +108,33 @@ fun MobileEpgManagementScreen(
 
     // Opened on a source: once the list has loaded, scroll to its group.
     val listState = rememberLazyListState()
-    val bulkRow = staleSourceCount > 0 || failedSourceCount > 0
     LaunchedEffect(groups != null) {
         if (openGroup != null && !sources.isNullOrEmpty()) {
-            listState.scrollToItem(groupHeaderIndex(groupList, openGroup.provider.id, if (bulkRow) 1 else 0))
+            listState.scrollToItem(groupHeaderIndex(groupList, openGroup.provider.id))
         }
     }
 
     Scaffold(
         topBar = {
+            // The page's actions in the top bar, as on the other Settings pages: refresh the stale
+            // sources and try the failed ones again (only when there are some), and Add.
             MobileScreenHeader(title = stringResource(R.string.epg_management_screen_title), onBack = onBack) {
+                if (staleSourceCount > 0) {
+                    IconAction(
+                        onClick = { viewModel.refreshStale() },
+                        icon = CinemaIcons.Refresh,
+                        label = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
+                        tone = TextTone.Warning,
+                    )
+                }
+                if (failedSourceCount > 0) {
+                    IconAction(
+                        onClick = { viewModel.refreshFailed() },
+                        icon = CinemaIcons.Replay,
+                        label = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
+                        tone = TextTone.Warning,
+                    )
+                }
                 IconAction(onClick = { showAddDialog = true }, icon = CinemaIcons.Add, label = stringResource(R.string.epg_add_source))
             }
         },
@@ -146,40 +162,6 @@ fun MobileEpgManagementScreen(
                     ),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
-                if (bulkRow) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                        ) {
-                            if (staleSourceCount > 0) {
-                                CinemaButton(
-                                    onClick = { viewModel.refreshStale() },
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    CinemaText(
-                                        stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
-                                        role = TextRole.Label,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                            if (failedSourceCount > 0) {
-                                CinemaButton(
-                                    onClick = { viewModel.refreshFailed() },
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    CinemaText(
-                                        stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
-                                        role = TextRole.Label,
-                                        tone = TextTone.Inherit,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 groupList.forEach { group ->
                     item(key = "group-${group.provider.id}", contentType = "group") { GuideGroupHeader(group) }
                     if (group.sources.isEmpty()) {
@@ -277,16 +259,12 @@ fun MobileEpgManagementScreen(
     }
 }
 
-/**
- * The list index of [providerId]'s group header: after [leadingItems] (the bulk actions row), each
- * group's header, then its cards (or its "none" line).
- */
+/** The list index of [providerId]'s group header: each group's header, then its cards (or its "none" line). */
 private fun groupHeaderIndex(
     groups: List<EpgManagementViewModel.GuideGroup>,
     providerId: Long,
-    leadingItems: Int,
 ): Int {
-    var index = leadingItems
+    var index = 0
     for (group in groups) {
         if (group.provider.id == providerId) return index
         index += 1 + maxOf(group.sources.size, 1)
@@ -388,8 +366,6 @@ private fun EpgSourceCard(
                         )
                     }
                 }
-
-                IconAction(onClick = onRefresh, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
             }
 
             if (activeProgress != null) {
@@ -466,15 +442,16 @@ private fun EpgSourceCard(
                                 stringResource(R.string.epg_source_stat_channels) to NumberUtils.formatCount(source.lastChannels),
                                 stringResource(R.string.epg_source_stat_programmes) to NumberUtils.formatCount(source.lastProgrammes),
                             )
-                    // Fixed 6-item stat grid, chunked into rows instead of FlowRow — see
-                    // MatchTypeChipRow note in tv/ProviderDialogs.kt for why.
+                    // Two stats in each row, each one half of the card: a date has room for one or
+                    // two lines, also on a narrow phone.
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     ) {
-                        stats.chunked(3).forEach { rowStats ->
+                        stats.chunked(2).forEach { rowStats ->
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
-                                rowStats.forEach { (label, value) -> SourceStat(label, value) }
+                                rowStats.forEach { (label, value) -> SourceStat(label, value, Modifier.weight(1f)) }
+                                if (rowStats.size == 1) Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
@@ -493,20 +470,22 @@ private fun EpgSourceCard(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
+            // The card's actions, in the same order and tones as on TV: Refresh, Edit, Auto Refresh, Delete.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconAction(
-                    onClick = onAutoRefresh,
-                    icon = CinemaIcons.Sync,
-                    label = stringResource(R.string.epg_auto_refresh_title),
-                )
+                IconAction(onClick = onRefresh, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
                 IconAction(
                     onClick = onEdit,
                     icon = CinemaIcons.Edit,
                     label = stringResource(R.string.provider_edit_button),
+                )
+                IconAction(
+                    onClick = onAutoRefresh,
+                    icon = CinemaIcons.Schedule,
+                    label = stringResource(R.string.epg_auto_refresh_title),
                 )
                 IconAction(
                     onClick = { showDeleteConfirm = true },
@@ -587,8 +566,9 @@ private fun StatusIndicator(
 private fun SourceStat(
     label: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
+    Column(modifier = modifier) {
         CinemaText(
             text = label,
             role = TextRole.Caption,
@@ -670,6 +650,7 @@ private fun EpgSourceEditDialog(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier =
+                                // look-ok: a hand-built check row; the toggle row components replace it
                                 Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox) { on ->
                                     checkedFor = if (on) checkedFor + source.id else checkedFor - source.id
                                 },

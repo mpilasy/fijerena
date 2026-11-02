@@ -1,10 +1,13 @@
 package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -26,11 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ApplyDialogScrim
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -51,7 +58,11 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * A swipe down, a tap on the scrim or Back calls [onDismissRequest]. When [dismissible] is false,
  * none of them closes the sheet (the caller closes it). [content] gets `close`: it closes the sheet
  * as the Look and Feel does (a bottom sheet slides down first) and then calls [onDismissRequest].
- * The content sets its own side padding.
+ *
+ * The sheet sets the content's padding in every Look: a gap under the content and, while [rows] is
+ * false, the side margin. Give [rows] true when the content is a list of full-width rows that pad
+ * their own sides (`SettingsListRow`, `CinemaRow`), and put a title over the rows with
+ * [CinemaSheetHeader]. The content adds no side or bottom padding of its own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,8 +70,10 @@ fun CinemaSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     dismissible: Boolean = true,
+    rows: Boolean = false,
     content: @Composable ColumnScope.(close: () -> Unit) -> Unit,
 ) {
+    val sides = if (rows) Modifier else Modifier.padding(horizontal = CinemaSpacing.md)
     val tokens = LocalUiStyle.current.dialog
     val color = CinemaTheme.colors.surface
     val canDismiss by rememberUpdatedState(dismissible)
@@ -88,7 +101,7 @@ fun CinemaSheet(
                 properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissible),
             ) {
                 ProvideUiScaledDensity {
-                    Column(modifier = Modifier.fillMaxWidth()) { content(close) }
+                    Column(modifier = Modifier.fillMaxWidth().padding(bottom = CinemaSpacing.md).then(sides)) { content(close) }
                 }
             }
         }
@@ -126,7 +139,7 @@ fun CinemaSheet(
                             shape = cornerShape(tokens.cornerRadius),
                             color = color,
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = CinemaSpacing.md)) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = CinemaSpacing.md).then(sides)) {
                                 content(onDismissRequest)
                             }
                         }
@@ -159,11 +172,35 @@ fun CinemaSheet(
                                     )
                                 }
                             }
-                            content(onDismissRequest)
+                            Column(modifier = Modifier.fillMaxWidth().weight(1f, fill = false).then(sides)) {
+                                content(onDismissRequest)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * The title over a [CinemaSheet] of rows (`rows = true`): [title], an optional [subtitle] under it,
+ * and optional icon [actions] at the end, with the sheet's side margin.
+ */
+@Composable
+fun CinemaSheetHeader(
+    title: String,
+    subtitle: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+            CinemaText(text = title, role = TextRole.Title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) CinemaText(text = subtitle, role = TextRole.BodySmall, tone = TextTone.Secondary)
+        }
+        actions()
     }
 }

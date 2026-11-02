@@ -13,7 +13,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +71,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.HeaderGround
@@ -193,7 +193,7 @@ fun MobileMovieDetailsScreen(
                 }
 
                 shown != null -> {
-                    PullToRefreshBox(
+                    CinemaPullToRefresh(
                         isRefreshing = isRefreshing,
                         onRefresh = { viewModel.refreshMovieInfo() },
                         modifier = Modifier.fillMaxSize(),
@@ -742,6 +742,7 @@ private fun StreamNamePicker(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
+                // look-ok: a picker that opens its list, not a list row
                 Modifier.clickable {
                     expanded = true
                 },

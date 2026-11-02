@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.provider.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -44,6 +43,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaRow
+import org.njarasoa.fijerena.ui.components.CinemaRowDefaults
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -74,14 +75,10 @@ private fun ProviderChoiceRow(
     value: String,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = MobileDimensions.minTouchTarget)
-                .clickable(onClick = onClick)
-                .padding(vertical = CinemaSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
+    CinemaRow(
+        onClick = onClick,
+        contentPadding = CinemaRowDefaults.inPanel(),
+        horizontalArrangement = Arrangement.Start,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             CinemaText(title, role = TextRole.Heading)

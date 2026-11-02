@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -119,6 +118,7 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaActionMenu
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.HeaderGround
@@ -351,7 +351,7 @@ fun MobileEpisodeSelectionScreen(
                 }
 
                 displaySeriesDetail != null -> {
-                    PullToRefreshBox(
+                    CinemaPullToRefresh(
                         isRefreshing = isRefreshing,
                         onRefresh = { viewModel.refreshSeriesInfo() },
                         modifier = Modifier.fillMaxSize(),
@@ -1178,6 +1178,7 @@ private fun StreamNamePicker(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
+                // look-ok: a picker that opens its list, or a season tab, not a list row
                 Modifier.clickable {
                     expanded = true
                 },
@@ -1592,6 +1593,7 @@ private fun SeasonTabs(
                     modifier =
                         Modifier
                             .panel(if (isSelected) PanelFill.Selected else PanelFill.Clear, PanelCorner.Card)
+                            // look-ok: a picker that opens its list, or a season tab, not a list row
                             .combinedClickable(
                                 role = Role.Button,
                                 onLongClick = onSeasonLongPress?.let { { it(season.seasonNumber) } },

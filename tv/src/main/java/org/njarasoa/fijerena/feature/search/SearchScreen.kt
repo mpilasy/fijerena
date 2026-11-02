@@ -82,7 +82,6 @@ import androidx.tv.material3.CardGlow
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -104,6 +103,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -1027,23 +1027,22 @@ private fun SearchHistorySection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(text = stringResource(R.string.epg_browser_recent_searches), role = TextRole.Title)
-            CinemaIconButton(
-                onClick = onClearAll,
-                icon = {
-                    Icon(
-                        imageVector = CinemaIcons.Delete,
-                        contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                        modifier = Modifier.size(TvDimensions.iconSmall),
-                    )
-                },
-            )
-        }
+        SectionHeader(
+            title = stringResource(R.string.epg_browser_recent_searches),
+            trailing = {
+                CinemaIconButton(
+                    onClick = onClearAll,
+                    icon = {
+                        TvIcon(
+                            imageVector = CinemaIcons.Delete,
+                            contentDescription = stringResource(R.string.epg_browser_clear_all_description),
+                            tone = TextTone.Danger,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                    },
+                )
+            },
+        )
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
         // and a D-pad user should not have to scroll a rail to reach the last entry.
         FlowRow(
@@ -1430,17 +1429,11 @@ internal fun SearchSectionHeader(
     count: Int,
     hiddenCount: Int,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CinemaText(text = title, role = TextRole.Title)
-        Spacer(Modifier.weight(1f))
-        CinemaText(text = searchCountLabel(count, hiddenCount), tone = TextTone.Secondary)
-    }
+    SectionHeader(
+        title = title,
+        count = searchCountLabel(count, hiddenCount),
+        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
+    )
 }
 
 @Composable
@@ -1464,28 +1457,26 @@ private fun CollapsibleHeader(
         // (light lift, white outline) when focused.
         look = TvCardLooks.foldingHeader(),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CinemaText(text = title, role = TextRole.Title)
-            Spacer(Modifier.weight(1f))
-            CinemaText(
-                text = searchCountLabel(count, hiddenCount),
-                tone = TextTone.Secondary,
-                modifier = Modifier.padding(end = Spacing.sm),
-            )
-            TvIcon(
-                imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-                contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tone = TextTone.Secondary,
-                modifier = Modifier.size(TvDimensions.iconMedium),
-            )
-        }
+        SectionHeader(
+            title = title,
+            count = searchCountLabel(count, hiddenCount),
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            trailing = {
+                TvIcon(
+                    imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
+                    contentDescription =
+                        if (isExpanded) {
+                            stringResource(
+                                R.string.common_collapse,
+                            )
+                        } else {
+                            stringResource(R.string.common_expand)
+                        },
+                    tone = TextTone.Secondary,
+                    modifier = Modifier.size(TvDimensions.iconMedium),
+                )
+            },
+        )
     }
 }
 

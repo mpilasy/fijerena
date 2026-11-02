@@ -58,12 +58,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LeadingIconTab
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -72,11 +70,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -220,8 +213,10 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaIconTab
 import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
+import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
+import org.njarasoa.fijerena.ui.components.CinemaTooltip
 import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
@@ -841,20 +836,7 @@ fun MobileCategoryListScreen(
                                     // Names the category it opens (G-M4): the selected chip may
                                     // sit under the dock, out of sight. Long-press shows it.
                                     val guideLabel = stringResource(R.string.epg_guide_header_title_format, selectedCatName)
-                                    TooltipBox(
-                                        positionProvider =
-                                            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                                        tooltip = {
-                                            PlainTooltip {
-                                                CinemaText(
-                                                    guideLabel,
-                                                    role = TextRole.BodySmall,
-                                                    tone = TextTone.Inherit,
-                                                )
-                                            }
-                                        },
-                                        state = rememberTooltipState(),
-                                    ) {
+                                    CinemaTooltip(label = guideLabel, below = true) {
                                         CinemaIconButton(
                                             onClick = {
                                                 stopDockThen {
@@ -1065,7 +1047,7 @@ fun MobileCategoryListScreen(
                                                 onSelect = { listSource = it },
                                             )
                                         }
-                                        PullToRefreshBox(
+                                        CinemaPullToRefresh(
                                             isRefreshing = displayedStreamsLoading,
                                             onRefresh = {
                                                 if (showsCategory) {
@@ -1297,6 +1279,7 @@ fun MobileCategoryListScreen(
                                                         .fillMaxWidth()
                                                         .clip(CinemaTheme.shapes.card)
                                                         .panel(PanelFill.Surface)
+                                                        // look-ok: a tap target on the video dock or a swipe action, not a list row
                                                         .clickable(onClick = { promoteDock() }),
                                             ) {
                                                 val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
@@ -1393,6 +1376,7 @@ fun MobileCategoryListScreen(
                                                         // category/last-watched data and watch-history
                                                         // recording already happened at dock time, so
                                                         // promoting needs no extra reload.
+                                                        // look-ok: a tap target on the video dock or a swipe action, not a list row
                                                         .clickable(onClick = { promoteDock() }),
                                             ) {
                                                 // TextureView — see the landscape dock box above.
@@ -1535,6 +1519,7 @@ private fun DockUnavailable(
         modifier =
             modifier
                 .panel(PanelFill.Media)
+                // look-ok: a tap target on the video dock or a swipe action, not a list row
                 .then(if (onNext != null) Modifier.clickable(onClickLabel = nextLabel, onClick = onNext) else Modifier)
                 .padding(CinemaSpacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1574,6 +1559,7 @@ private fun SwipeActionButton(
                 .size(MobileDimensions.swipeActionCircleSize)
                 .clip(CinemaTheme.shapes.control)
                 .panel(fill)
+                // look-ok: a tap target on the video dock or a swipe action, not a list row
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -1765,7 +1751,7 @@ private fun AllCategoriesDialog(
                     onValueChange = { filter = it },
                     placeholder = stringResource(R.string.category_all_filter),
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(CinemaIcons.Search, contentDescription = null) },
+                    leadingIcon = { CinemaIcon(CinemaIcons.Search, contentDescription = null) },
                 )
                 if (shown.isEmpty()) {
                     CinemaText(stringResource(R.string.category_all_none), tone = TextTone.Secondary)
@@ -2169,6 +2155,7 @@ private fun StreamsList(
                                         .fillMaxHeight()
                                         .clip(CinemaTheme.shapes.card)
                                         .panel(PanelFill.Surface)
+                                        // look-ok: a tap target on the video dock or a swipe action, not a list row
                                         .clickable(
                                             indication = null,
                                             interactionSource = remember { MutableInteractionSource() },
@@ -2239,6 +2226,7 @@ private fun StreamsList(
                                             .fillMaxHeight()
                                             .clip(CinemaTheme.shapes.card)
                                             .panel(PanelFill.Surface)
+                                            // look-ok: a tap target on the video dock or a swipe action, not a list row
                                             .clickable(
                                                 indication = null,
                                                 interactionSource = remember { MutableInteractionSource() },
@@ -2469,15 +2457,13 @@ internal fun StreamCard(
     modifier: Modifier = Modifier,
 ) {
     CinemaCard(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = onLongClickLabel,
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = StreamCardMinHeight)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    onLongClickLabel = onLongClickLabel,
-                ),
+                .heightIn(min = StreamCardMinHeight),
         colors = cardColors,
         border =
             if (isCurrentlyPlaying) {
