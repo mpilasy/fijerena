@@ -6,15 +6,20 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
@@ -57,11 +62,15 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaPanel
+import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.DialogAction
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
@@ -111,10 +120,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
-import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -201,9 +210,10 @@ fun MobileSearchScreen(
             onDismiss = { tmdbMenu = null },
             actions =
                 listOf(
-                    ItemMenuAction(
+                    MenuAction(
                         if (on) CinemaIcons.Delete else CinemaIcons.BookmarkBorder,
                         stringResource(if (on) R.string.wanted_remove else R.string.wanted_add),
+                        removal = on,
                     ) { viewModel.toggleWishlist(title) },
                 ),
         )
@@ -626,8 +636,8 @@ internal fun MobileSearchTabs(
 }
 
 /**
- * The filter icon in the field: a menu with a section each for the results' sources (one choice),
- * decades and genres (several), with their counts; **Clear filters** while one is active. The menu
+ * The filter icon in the field: a dialog with a section each for the results' sources (one choice),
+ * decades and genres (several), with their counts; **Clear filters** while one is active. The dialog
  * stays open as choices are made; the icon takes the accent colour while one is active.
  */
 @Composable
@@ -649,105 +659,140 @@ private fun SearchFilterAction(
             label = stringResource(R.string.search_filter_label),
             tone = if (active) TextTone.Accent else TextTone.Primary,
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            @Composable
-            fun Heading(text: String) {
-                CinemaText(
-                    text,
-                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    role = TextRole.Caption,
-                    tone = TextTone.Secondary,
-                )
-            }
+        if (expanded) {
+            CinemaAlertDialog(
+                onDismissRequest = { expanded = false },
+                title = stringResource(R.string.search_filter_label),
+                text = {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
+                    ) {
+                        @Composable
+                        fun Heading(text: String) {
+                            CinemaText(
+                                text,
+                                modifier = Modifier.padding(top = Spacing.xs),
+                                role = TextRole.Caption,
+                                tone = TextTone.Secondary,
+                            )
+                        }
 
-            @Composable
-            fun Choice(
-                label: String,
-                on: Boolean,
-                check: Boolean,
-                onClick: () -> Unit,
-            ) {
-                DropdownMenuItem(
-                    text = { CinemaText(label, role = TextRole.Label, tone = TextTone.Inherit) },
-                    onClick = onClick,
-                    leadingIcon = {
-                        Icon(
-                            imageVector =
-                                when {
-                                    check && on -> CinemaIcons.CheckBox
-                                    check -> CinemaIcons.CheckBoxOutlineBlank
-                                    on -> CinemaIcons.RadioButtonChecked
-                                    else -> CinemaIcons.RadioButtonUnchecked
-                                },
-                            contentDescription = null,
-                        )
-                    },
-                )
-            }
-            if (active) {
-                DropdownMenuItem(
-                    text = { CinemaText(stringResource(R.string.search_filter_clear), role = TextRole.Label, tone = TextTone.Inherit) },
-                    onClick = {
-                        onSelectSource(null)
-                        onChoiceChange(SearchFacetChoice())
-                        expanded = false
-                    },
-                    leadingIcon = { Icon(imageVector = CinemaIcons.Close, contentDescription = null) },
-                )
-            }
-            if (sources.isNotEmpty()) {
-                Heading(stringResource(R.string.search_filter_source))
-                Choice(
-                    "${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})",
-                    selectedSource == null,
-                    check = false,
-                ) {
-                    onSelectSource(null)
-                }
-                for (source in sources) {
-                    Choice("${source.name} (${source.count})", selectedSource == source.providerId, check = false) {
-                        onSelectSource(source.providerId)
+                        // One choice: the whole row takes the tap. A radio for the source (one choice), a
+                        // check box for the others (several).
+                        @Composable
+                        fun Choice(
+                            label: String,
+                            on: Boolean,
+                            check: Boolean,
+                            onClick: () -> Unit,
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = Spacing.xxs),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (check) {
+                                    CinemaCheckbox(
+                                        checked = on,
+                                        onCheckedChange = null,
+                                    )
+                                } else {
+                                    CinemaRadioButton(selected = on, onClick = null)
+                                }
+                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                CinemaText(label, modifier = Modifier.weight(1f))
+                            }
+                        }
+                        if (sources.isNotEmpty()) {
+                            Heading(stringResource(R.string.search_filter_source))
+                            Choice(
+                                "${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})",
+                                selectedSource == null,
+                                check = false,
+                            ) {
+                                onSelectSource(null)
+                            }
+                            for (source in sources) {
+                                Choice("${source.name} (${source.count})", selectedSource == source.providerId, check = false) {
+                                    onSelectSource(source.providerId)
+                                }
+                            }
+                        }
+                        if (facets.decades.isNotEmpty()) {
+                            Heading(stringResource(R.string.search_filter_decade))
+                            for (decade in facets.decades) {
+                                val on = decade.value in choice.decades
+                                Choice("${labels.decade(decade.value)} (${decade.count})", on, check = true) {
+                                    onChoiceChange(
+                                        choice.copy(
+                                            decades =
+                                                if (on) {
+                                                    choice.decades - decade.value
+                                                } else {
+                                                    choice.decades +
+                                                        decade.value
+                                                },
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        if (facets.genres.isNotEmpty()) {
+                            Heading(stringResource(R.string.search_filter_genre))
+                            for (genre in facets.genres) {
+                                val on = genre.value in choice.genres
+                                Choice("${genre.label} (${genre.count})", on, check = true) {
+                                    onChoiceChange(
+                                        choice.copy(genres = if (on) choice.genres - genre.value else choice.genres + genre.value),
+                                    )
+                                }
+                            }
+                        }
+                        if (facets.languages.isNotEmpty()) {
+                            Heading(stringResource(R.string.search_filter_language))
+                            for (language in facets.languages) {
+                                val on = language.value in choice.languages
+                                Choice("${labels.language(language.value)} (${language.count})", on, check = true) {
+                                    onChoiceChange(
+                                        choice.copy(
+                                            languages = if (on) choice.languages - language.value else choice.languages + language.value,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        if (facets.regions.isNotEmpty()) {
+                            Heading(stringResource(R.string.search_filter_region))
+                            for (region in facets.regions) {
+                                val on = region.value in choice.regions
+                                Choice("${labels.region(region.value)} (${region.count})", on, check = true) {
+                                    onChoiceChange(
+                                        choice.copy(
+                                            regions =
+                                                if (on) {
+                                                    choice.regions - region.value
+                                                } else {
+                                                    choice.regions +
+                                                        region.value
+                                                },
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
-            }
-            if (facets.decades.isNotEmpty()) {
-                Heading(stringResource(R.string.search_filter_decade))
-                for (decade in facets.decades) {
-                    val on = decade.value in choice.decades
-                    Choice("${labels.decade(decade.value)} (${decade.count})", on, check = true) {
-                        onChoiceChange(choice.copy(decades = if (on) choice.decades - decade.value else choice.decades + decade.value))
-                    }
-                }
-            }
-            if (facets.genres.isNotEmpty()) {
-                Heading(stringResource(R.string.search_filter_genre))
-                for (genre in facets.genres) {
-                    val on = genre.value in choice.genres
-                    Choice("${genre.label} (${genre.count})", on, check = true) {
-                        onChoiceChange(choice.copy(genres = if (on) choice.genres - genre.value else choice.genres + genre.value))
-                    }
-                }
-            }
-            if (facets.languages.isNotEmpty()) {
-                Heading(stringResource(R.string.search_filter_language))
-                for (language in facets.languages) {
-                    val on = language.value in choice.languages
-                    Choice("${labels.language(language.value)} (${language.count})", on, check = true) {
-                        onChoiceChange(
-                            choice.copy(languages = if (on) choice.languages - language.value else choice.languages + language.value),
-                        )
-                    }
-                }
-            }
-            if (facets.regions.isNotEmpty()) {
-                Heading(stringResource(R.string.search_filter_region))
-                for (region in facets.regions) {
-                    val on = region.value in choice.regions
-                    Choice("${labels.region(region.value)} (${region.count})", on, check = true) {
-                        onChoiceChange(choice.copy(regions = if (on) choice.regions - region.value else choice.regions + region.value))
-                    }
-                }
-            }
+                },
+                // As on TV, while a filter is on; it closes the dialog.
+                others =
+                    listOfNotNull(
+                        DialogAction(stringResource(R.string.search_filter_clear)) {
+                            onSelectSource(null)
+                            onChoiceChange(SearchFacetChoice())
+                            expanded = false
+                        }.takeIf { active },
+                    ),
+                cancel = DialogAction(stringResource(R.string.common_close)) { expanded = false },
+            )
         }
     }
 }
@@ -1543,14 +1588,14 @@ internal fun MobileSearchFavoriteDialog(
         actions =
             listOfNotNull(
                 onToggleWatched?.let { toggle ->
-                    ItemMenuAction(
+                    MenuAction(
                         icon = if (isWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                         label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                         onClick = toggle,
                     )
                 },
                 onToggleShowWatched?.let { toggle ->
-                    ItemMenuAction(
+                    MenuAction(
                         icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                         label = showWatchedLabel,
                         onClick = toggle,

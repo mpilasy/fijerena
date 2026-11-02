@@ -204,13 +204,7 @@ fun TvProviderSelectionScreen(
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
-            title = {
-                CinemaText(
-                    stringResource(R.string.provider_delete_confirm_title),
-                    role = TextRole.Title,
-                    tone = TextTone.Primary,
-                )
-            },
+            title = stringResource(R.string.provider_delete_confirm_title),
             text = {
                 CinemaText(
                     stringResource(R.string.provider_delete_confirm_message, provider.name),
@@ -224,7 +218,6 @@ fun TvProviderSelectionScreen(
                     deleteConfirmProvider = null
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { deleteConfirmProvider = null },
-            containerColor = CinemaTheme.colors.surface,
         )
     }
 
@@ -265,10 +258,9 @@ fun TvProviderSelectionScreen(
     copyResultMessage?.let { message ->
         CinemaAlertDialog(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
-            title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title, tone = TextTone.Primary) },
+            title = stringResource(R.string.provider_copy_to_title),
             text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
             main = DialogAction(stringResource(R.string.common_ok)) { viewModel.clearCopyResultMessage() },
-            containerColor = CinemaTheme.colors.surface,
         )
     }
 }

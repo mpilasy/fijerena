@@ -41,8 +41,6 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -138,6 +136,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
@@ -169,9 +168,9 @@ import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.feature.contentselection.components.openActionsOnMenuKey
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvBackdropText
 import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
@@ -179,6 +178,7 @@ import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvOtherCopiesList
+import org.njarasoa.fijerena.ui.components.TvPickerDialog
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.WishlistRemovePrompt
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -578,10 +578,12 @@ internal fun EpisodeListContent(
         }
     }
     if (showMoreMenu) {
-        DetailsMoreMenu(
+        TvActionMenu(
             title = tmdbTitle ?: cleanTitle(seriesDetail.name.ifEmpty { seriesName }),
-            refreshLabel = stringResource(R.string.series_refresh_info),
-            onRefresh = onRefresh,
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.Refresh, label = stringResource(R.string.series_refresh_info), onClick = onRefresh),
+                ),
             onDismiss = { showMoreMenu = false },
         )
     }
@@ -783,12 +785,17 @@ internal fun EpisodeListContent(
         }
     }
     seasonMenu?.let { (season, allWatched) ->
-        SeasonActionsMenu(
+        // Hold OK or Menu on a season tab: mark the season watched or unwatched.
+        TvActionMenu(
             title = stringResource(R.string.series_season_label, season),
-            actionLabel =
-                stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
-            actionIcon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
-            onAction = { markEpisodesWatched(season, allWatched != true) },
+            actions =
+                listOf(
+                    MenuAction(
+                        icon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+                        label = stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
+                        onClick = { markEpisodesWatched(season, allWatched != true) },
+                    ),
+                ),
             onDismiss = { seasonMenu = null },
         )
     }
@@ -1832,12 +1839,7 @@ private fun StreamNamePicker(
 
     var expanded by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
-    // The row often sits near the bottom of the visible screen; a Popup can't render below the
-    // screen edge, so without this the menu flips far above the row to find room instead of
-    // opening flush beneath it.
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
-    Box(modifier = modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+    Box(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
@@ -1849,7 +1851,6 @@ private fun StreamNamePicker(
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
                     }.clickable {
-                        coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
@@ -1860,28 +1861,18 @@ private fun StreamNamePicker(
                 tone = TextTone.Primary,
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // The menu is a Popup, so it gets its own window and loses the scaled density.
-            ProvideUiScaledDensity {
-                Column {
-                    DropdownMenuItem(
-                        text = { CinemaText(currentName, role = TextRole.Heading, tone = TextTone.Accent) },
-                        leadingIcon = { TvIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
-                        onClick = { expanded = false },
-                    )
-                    alternates.forEach { alternate ->
-                        DropdownMenuItem(
-                            text = { CinemaText(alternate.name, role = TextRole.Heading) },
-                            // With several sources, each copy's own (it opens there).
-                            leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
-                            onClick = {
-                                expanded = false
-                                onSelect(alternate)
-                            },
-                        )
-                    }
-                }
-            }
+        if (expanded) {
+            // The copies of this title: this one marked, each other one opens there.
+            TvPickerDialog(
+                title = stringResource(R.string.details_other_instances),
+                options = listOf(currentName to null) + alternates.map { it.name to it },
+                selected = null,
+                onSelect = { alternate -> alternate?.let(onSelect) },
+                onDismiss = { expanded = false },
+                // With several sources, each copy's own (it opens there).
+                subtitle = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                role = TextRole.Heading,
+            )
         }
     }
 }
@@ -2353,73 +2344,6 @@ private fun SeasonTab(
     }
 }
 
-/**
- * What holding OK or Menu on a season tab opens: mark the season watched or unwatched, then
- * Cancel. Focus opens on the action; Back or Cancel closes.
- */
-@Composable
-private fun SeasonActionsMenu(
-    title: String,
-    actionLabel: String,
-    actionIcon: ImageVector,
-    onAction: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val firstItemFocusRequester = remember { FocusRequester() }
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            CinemaText(text = title, role = TextRole.Heading, maxLines = 2)
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                TvInputListItem(
-                    selected = false,
-                    onClick = {
-                        onAction()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth().focusRequester(firstItemFocusRequester),
-                    leadingContent = {
-                        TvIcon(
-                            imageVector = actionIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tone = TextTone.Accent,
-                        )
-                    },
-                    headlineContent = {
-                        CinemaText(text = actionLabel)
-                    },
-                )
-                TvInputListItem(
-                    selected = false,
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingContent = {
-                        TvIcon(
-                            imageVector = CinemaIcons.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tone = TextTone.Secondary,
-                        )
-                    },
-                    headlineContent = {
-                        CinemaText(text = stringResource(R.string.common_cancel), tone = TextTone.Secondary)
-                    },
-                )
-            }
-        },
-        initialFocus = firstItemFocusRequester,
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
-    )
-}
-
 /** A season or show mark that failed (its episodes couldn't be loaded): what went wrong, and OK. */
 @Composable
 private fun MarkWatchedErrorDialog(
@@ -2428,12 +2352,9 @@ private fun MarkWatchedErrorDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.watched_mark_many_failed), role = TextRole.Title) },
+        title = stringResource(R.string.watched_mark_many_failed),
         text = { CinemaText(message, tone = TextTone.Secondary) },
         main = DialogAction(stringResource(R.string.common_ok), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }
 

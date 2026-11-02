@@ -566,9 +566,7 @@ fun TvEpgManagementScreen(
                     deletingSource = null
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { deletingSource = null },
-            title = {
-                CinemaText(stringResource(R.string.epg_delete_source_confirm_title), role = TextRole.Title)
-            },
+            title = stringResource(R.string.epg_delete_source_confirm_title),
             text = {
                 CinemaText(
                     stringResource(
@@ -580,7 +578,6 @@ fun TvEpgManagementScreen(
                     tone = TextTone.Secondary,
                 )
             },
-            containerColor = CinemaTheme.colors.surface,
         )
     }
 }
@@ -703,16 +700,7 @@ private fun EpgSourceEditDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                if (initialSource == null) {
-                    stringResource(R.string.epg_add_source_title)
-                } else {
-                    stringResource(R.string.epg_edit_source_title)
-                },
-                role = TextRole.Title,
-            )
-        },
+        title = stringResource(if (initialSource == null) R.string.epg_add_source_title else R.string.epg_edit_source_title),
         main =
             DialogAction(
                 stringResource(R.string.provider_save_button),
@@ -729,7 +717,6 @@ private fun EpgSourceEditDialog(
                 )
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
         text = {
             // Scrolls: with several sources the Use for list runs past the dialog's height, and
             // rows cut off below took focus out of sight.

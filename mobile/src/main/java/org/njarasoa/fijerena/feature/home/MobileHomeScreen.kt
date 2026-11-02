@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.SectionPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -99,7 +100,6 @@ import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CardLines
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
-import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.PosterCard
@@ -187,7 +187,7 @@ fun MobileHomeScreen(
             onDismiss = { goneMenu = null },
             actions =
                 listOf(
-                    ItemMenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.favorite_move_to_copy)) {
+                    MenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.favorite_move_to_copy)) {
                         val lists = merged
                         if (lists != null && copy != null) {
                             // The user's move: the copy becomes the favourite, then the old one goes.
@@ -325,7 +325,7 @@ fun MobileHomeScreen(
                     onDismiss = { homeMenu = null },
                     actions =
                         listOf(
-                            ItemMenuAction(CinemaIcons.Delete, stringResource(R.string.recent_remove)) {
+                            MenuAction(CinemaIcons.Delete, stringResource(R.string.recent_remove), removal = true) {
                                 if (lists != null) {
                                     wantedScope.launchGuarded("Home.removeFromRecent") {
                                         val removal = lists.removeFromRecent(menu.providerId, menu.itemId, menu.contentType)
@@ -384,7 +384,7 @@ fun MobileHomeScreen(
                     onDismiss = { homeMenu = null },
                     actions =
                         listOf(
-                            ItemMenuAction(CinemaIcons.Delete, stringResource(R.string.wanted_remove)) {
+                            MenuAction(CinemaIcons.Delete, stringResource(R.string.wanted_remove), removal = true) {
                                 wantedScope.launchGuarded("Home.removeWanted") {
                                     wantedTitles.remove(card.wantedKey)
                                     undo.show(card.entity.title) {

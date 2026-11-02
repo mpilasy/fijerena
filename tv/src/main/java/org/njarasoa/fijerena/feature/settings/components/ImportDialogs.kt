@@ -55,7 +55,7 @@ fun ImportOptionsDialog(
                 )
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onCancel),
-        title = { CinemaText(stringResource(R.string.settings_import_select_title), role = TextRole.Title, tone = TextTone.Primary) },
+        title = stringResource(R.string.settings_import_select_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -134,9 +134,7 @@ fun ConflictResolutionDialog(
                 },
             ),
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onCancel),
-        title = {
-            CinemaText(stringResource(R.string.settings_import_provider_conflict_title), role = TextRole.Title, tone = TextTone.Primary)
-        },
+        title = stringResource(R.string.settings_import_provider_conflict_title),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

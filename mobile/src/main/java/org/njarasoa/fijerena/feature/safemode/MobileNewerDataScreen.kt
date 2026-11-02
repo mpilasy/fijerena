@@ -81,7 +81,7 @@ fun MobileNewerDataScreen() {
     if (confirmingReset) {
         CinemaAlertDialog(
             onDismissRequest = { confirmingReset = false },
-            title = { CinemaText(stringResource(R.string.newer_data_reset_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.newer_data_reset_confirm_title),
             text = { CinemaText(stringResource(R.string.newer_data_reset_confirm_message), tone = TextTone.Secondary) },
             danger =
                 DialogAction(stringResource(R.string.newer_data_reset_confirm)) {

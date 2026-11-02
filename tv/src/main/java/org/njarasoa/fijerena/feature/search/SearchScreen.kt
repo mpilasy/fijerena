@@ -102,6 +102,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -147,7 +148,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
-import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
@@ -244,12 +245,22 @@ fun SearchScreen(
     var tmdbMenu by remember { mutableStateOf<TmdbTitle?>(null) }
     tmdbMenu?.let { title ->
         val on = title.key in wishlistKeys
-        DetailsMoreMenu(
+        TvActionMenu(
             title = title.title,
-            refreshLabel = stringResource(if (on) R.string.wanted_remove else R.string.wanted_add),
-            icon = if (on) CinemaIcons.Delete else CinemaIcons.BookmarkBorder,
-            removes = on,
-            onRefresh = { viewModel.toggleWishlist(title) },
+            actions =
+                listOf(
+                    MenuAction(
+                        icon = if (on) CinemaIcons.Delete else CinemaIcons.BookmarkBorder,
+                        label =
+                            stringResource(
+                                if (on) R.string.wanted_remove else R.string.wanted_add,
+                            ),
+                        removal = on,
+                        onClick = {
+                            viewModel.toggleWishlist(title)
+                        },
+                    ),
+                ),
             onDismiss = { tmdbMenu = null },
         )
     }

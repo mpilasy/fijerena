@@ -70,6 +70,11 @@ object CinemaSpacing {
         @Composable @ReadOnlyComposable
         get() = scaled(Base.xxl)
 
+    /** The gap between the parts of a dialog's body (the Look's [UiDialogTokens.bodyGap]). */
+    val dialogBody: Dp
+        @Composable @ReadOnlyComposable
+        get() = scaled(LocalUiStyle.current.dialog.bodyGap)
+
     /** [base] times the Look and Feel's density; [base] itself at 1.0. */
     @Composable
     @ReadOnlyComposable

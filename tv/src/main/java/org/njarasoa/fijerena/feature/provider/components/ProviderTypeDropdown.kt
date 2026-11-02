@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,12 +27,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.ui.components.TvContentText
+import org.njarasoa.fijerena.ui.components.TvPickerDialog
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * The source type, as a row like Settings' (TV UI audit, X5): "Source Type … Xtream IPTV". Adding a
- * source, OK on the row opens the list of types. With [enabled] false (editing an existing source)
+ * source, OK on the row opens the list of types ([TvPickerDialog]). With [enabled] false (editing an existing source)
  * it is read-only text, not focusable: the type of a source is fixed.
  */
 @Composable
@@ -69,30 +68,14 @@ fun ProviderTypeDropdown(
         ) {
             TvContentText(label, role = TextRole.Heading)
         }
-        DropdownMenu(
-            expanded = typeDropdownExpanded,
-            onDismissRequest = { typeDropdownExpanded = false },
-            containerColor = CinemaTheme.colors.surface,
-        ) {
-            // The menu is a Popup, so it gets its own window and loses the scaled density.
-            ProvideUiScaledDensity {
-                Column {
-                    types.forEach { type ->
-                        DropdownMenuItem(
-                            text = {
-                                CinemaText(
-                                    text = type.displayName,
-                                    tone = if (type == selectedType) TextTone.Accent else TextTone.Primary,
-                                )
-                            },
-                            onClick = {
-                                onTypeSelected(type)
-                                typeDropdownExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
+        if (typeDropdownExpanded) {
+            TvPickerDialog(
+                title = label,
+                options = types.map { it.displayName to it },
+                selected = selectedType,
+                onSelect = onTypeSelected,
+                onDismiss = { typeDropdownExpanded = false },
+            )
         }
     }
 }

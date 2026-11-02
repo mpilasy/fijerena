@@ -1,40 +1,16 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.TextRole
-import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.ui.components.TvIcon
-import org.njarasoa.fijerena.ui.components.input.TvInputListItem
-import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 
 /**
- * Themed context menu dialog for a category/stream row (long-press OK or the Menu key — UX
+ * The action menu ([TvActionMenu]) of a category/stream row (long-press OK or the Menu key — UX
  * overhaul plan Part II P3): favorite toggle always, watched toggle too when [onToggleWatched] is
  * given — `target.isWatched == null` (Live TV, categories) is what keeps callers from passing one.
  * A show row gets "Mark show watched / unwatched" ([onToggleShowWatched]) in place of that toggle.
@@ -46,7 +22,6 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * no safe action, focus opens on Cancel. Removals are not confirmed: the caller shows an Undo bar
  * instead (`TvUndoBar`).
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FavoriteContextMenuDialog(
     target: FavoriteMenuTarget,
@@ -63,160 +38,41 @@ fun FavoriteContextMenuDialog(
     val isWatched = streamTarget?.isWatched
     val isInRecent = streamTarget?.isInRecent == true
 
-    val favoriteActionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
-    val watchedActionText =
-        if (isWatched == true) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark)
-    val recentActionText = stringResource(R.string.recent_remove)
-
-    val firstActionFocusRequester = remember { FocusRequester() }
-    val showsWatched = onToggleWatched != null && isWatched != null
-    // The first safe action takes focus; with none (only removals), Cancel.
-    val firstSafe =
-        when {
-            !isFavorite -> MenuAction.FAVORITE
-            showsWatched -> MenuAction.WATCHED
-            onToggleShowWatched != null -> MenuAction.SHOW_WATCHED
-            else -> MenuAction.CANCEL
+    val favoriteAction =
+        if (isFavorite) {
+            MenuAction(CinemaIcons.StarBorder, stringResource(R.string.favorite_remove), removal = true, onClick = onConfirm)
+        } else {
+            MenuAction(CinemaIcons.Star, stringResource(R.string.favorite_add), onClick = onConfirm)
         }
-    val focusIf: (MenuAction) -> Modifier = { action ->
-        if (action == firstSafe) Modifier.focusRequester(firstActionFocusRequester) else Modifier
-    }
+    val watchedAction =
+        if (onToggleWatched != null && isWatched != null) {
+            MenuAction(
+                icon = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
+                label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                onClick = onToggleWatched,
+            )
+        } else {
+            null
+        }
+    val showWatchedAction =
+        onToggleShowWatched?.let { toggle ->
+            val showWatched = streamTarget?.isShowWatched == true
+            MenuAction(
+                icon = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
+                label = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                onClick = toggle,
+            )
+        }
+    val recentAction =
+        onRemoveFromRecent?.takeIf { isInRecent }?.let { remove ->
+            MenuAction(CinemaIcons.Delete, stringResource(R.string.recent_remove), removal = true, onClick = remove)
+        }
 
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            CinemaText(text = itemName, role = TextRole.Heading, maxLines = 2)
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                val removeFromRecentItem: @Composable (Modifier) -> Unit = { itemModifier ->
-                    TvInputListItem(
-                        selected = false,
-                        onClick = {
-                            onRemoveFromRecent?.invoke()
-                            onDismiss()
-                        },
-                        modifier = itemModifier.fillMaxWidth(),
-                        leadingContent = {
-                            TvIcon(
-                                imageVector = CinemaIcons.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconSmall),
-                                tone = TextTone.Danger,
-                            )
-                        },
-                        headlineContent = {
-                            CinemaText(text = recentActionText, tone = TextTone.Danger)
-                        },
-                    )
-                }
-
-                // Add to Favourites is safe: first. Remove from Favourites is a removal: last.
-                val favoriteItem: @Composable (Modifier) -> Unit = { itemModifier ->
-                    TvInputListItem(
-                        selected = false,
-                        onClick = {
-                            onConfirm()
-                            onDismiss()
-                        },
-                        modifier = itemModifier.fillMaxWidth(),
-                        leadingContent = {
-                            TvIcon(
-                                imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconSmall),
-                                tone = if (isFavorite) TextTone.Danger else TextTone.Accent,
-                            )
-                        },
-                        headlineContent = {
-                            CinemaText(text = favoriteActionText, tone = if (isFavorite) TextTone.Danger else TextTone.Primary)
-                        },
-                    )
-                }
-
-                if (!isFavorite) favoriteItem(focusIf(MenuAction.FAVORITE))
-
-                if (onToggleWatched != null && isWatched != null) {
-                    TvInputListItem(
-                        selected = false,
-                        onClick = {
-                            onToggleWatched()
-                            onDismiss()
-                        },
-                        modifier = focusIf(MenuAction.WATCHED).fillMaxWidth(),
-                        leadingContent = {
-                            TvIcon(
-                                imageVector = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconSmall),
-                                tone = TextTone.Accent,
-                            )
-                        },
-                        headlineContent = {
-                            CinemaText(text = watchedActionText)
-                        },
-                    )
-                }
-
-                if (onToggleShowWatched != null) {
-                    val showWatched = streamTarget?.isShowWatched == true
-                    TvInputListItem(
-                        selected = false,
-                        onClick = {
-                            onToggleShowWatched()
-                            onDismiss()
-                        },
-                        modifier = focusIf(MenuAction.SHOW_WATCHED).fillMaxWidth(),
-                        leadingContent = {
-                            TvIcon(
-                                imageVector = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconSmall),
-                                tone = TextTone.Accent,
-                            )
-                        },
-                        headlineContent = {
-                            CinemaText(text = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show))
-                        },
-                    )
-                }
-
-                // The removals last, just above Cancel.
-                if (isFavorite) favoriteItem(Modifier)
-                if (onRemoveFromRecent != null && isInRecent) removeFromRecentItem(Modifier)
-
-                TvInputListItem(
-                    selected = false,
-                    onClick = onDismiss,
-                    modifier = focusIf(MenuAction.CANCEL).fillMaxWidth(),
-                    leadingContent = {
-                        TvIcon(
-                            imageVector = CinemaIcons.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tone = TextTone.Secondary,
-                        )
-                    },
-                    headlineContent = {
-                        CinemaText(text = stringResource(R.string.common_cancel), tone = TextTone.Secondary)
-                    },
-                )
-            }
-        },
-        initialFocus = firstActionFocusRequester,
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
+    // Add to Favourites is safe: first. Remove from Favourites is a removal: last, before Remove
+    // from Recent (the menu puts the removals last).
+    TvActionMenu(
+        title = itemName,
+        actions = listOfNotNull(favoriteAction, watchedAction, showWatchedAction, recentAction),
+        onDismiss = onDismiss,
     )
-}
-
-/** The menu's actions that can take its first focus. */
-private enum class MenuAction {
-    FAVORITE,
-    WATCHED,
-    SHOW_WATCHED,
-    CANCEL,
 }

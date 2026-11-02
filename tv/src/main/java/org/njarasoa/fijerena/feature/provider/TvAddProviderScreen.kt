@@ -860,13 +860,7 @@ fun TvAddProviderScreen(
                     showDiscardDialog = false
                     discardThen = null
                 },
-                title = {
-                    CinemaText(
-                        stringResource(R.string.provider_discard_changes_title),
-                        role = TextRole.Title,
-                        tone = TextTone.Primary,
-                    )
-                },
+                title = stringResource(R.string.provider_discard_changes_title),
                 text = {
                     CinemaText(
                         stringResource(R.string.provider_discard_changes_message),
@@ -886,7 +880,6 @@ fun TvAddProviderScreen(
                         showDiscardDialog = false
                         discardThen = null
                     },
-                containerColor = CinemaTheme.colors.surface,
             )
         }
 
@@ -902,13 +895,7 @@ fun TvAddProviderScreen(
 
             CinemaAlertDialog(
                 onDismissRequest = { viewModel.resetSaveState() },
-                title = {
-                    CinemaText(
-                        stringResource(R.string.provider_connection_failed),
-                        role = TextRole.Title,
-                        tone = TextTone.Primary,
-                    )
-                },
+                title = stringResource(R.string.provider_connection_failed),
                 text = {
                     CinemaText(
                         failedState.errorMessage,
@@ -939,7 +926,6 @@ fun TvAddProviderScreen(
                             )
                         },
                     ),
-                containerColor = CinemaTheme.colors.surface,
             )
         }
 

@@ -42,13 +42,7 @@ fun AudioTrackSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.player_select_audio),
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(R.string.player_select_audio),
         text = {
             if (audioTracks.isEmpty()) {
                 CinemaText(
@@ -101,7 +95,7 @@ fun AudioTrackSelectorDialog(
                 }
             }
         },
-        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -118,13 +112,7 @@ fun SubtitleSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.player_select_subtitles),
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(R.string.player_select_subtitles),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -201,7 +189,7 @@ fun SubtitleSelectorDialog(
                 }
             }
         },
-        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
@@ -218,13 +206,7 @@ fun QualitySelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.player_select_quality),
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(R.string.player_select_quality),
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -311,6 +293,6 @@ fun QualitySelectorDialog(
                 }
             }
         },
-        cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }

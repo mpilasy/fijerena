@@ -324,7 +324,7 @@ fun MobileProfileEditScreen(
                 // Each switch is saved at once, like the filters' own Save; Close only closes.
                 CinemaAlertDialog(
                     onDismissRequest = { editingSources = false },
-                    title = { CinemaText(stringResource(R.string.profile_sources_title), role = TextRole.Title) },
+                    title = stringResource(R.string.profile_sources_title),
                     text = {
                         Column(
                             modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -348,7 +348,7 @@ fun MobileProfileEditScreen(
             if (confirmDelete) {
                 CinemaAlertDialog(
                     onDismissRequest = { confirmDelete = false },
-                    title = { CinemaText(stringResource(R.string.profile_delete_confirm_title, profile.name), role = TextRole.Title) },
+                    title = stringResource(R.string.profile_delete_confirm_title, profile.name),
                     text = { CinemaText(stringResource(R.string.profile_delete_confirm_text), tone = TextTone.Secondary) },
                     danger =
                         DialogAction(stringResource(R.string.profile_delete_button)) {
@@ -487,17 +487,10 @@ internal fun ProfileOwnRows(
     if (pinFlow.step == ProfilePinFlow.Step.OPTIONS) {
         CinemaAlertDialog(
             onDismissRequest = pinFlow::cancel,
-            title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title, tone = TextTone.Inherit) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                    CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main, modifier = Modifier.fillMaxWidth()) {
-                        CinemaText(stringResource(R.string.profile_pin_change), role = TextRole.Label, tone = TextTone.Inherit)
-                    }
-                    CinemaButton(onClick = pinFlow::remove, kind = ButtonKind.Danger, modifier = Modifier.fillMaxWidth()) {
-                        CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
-                    }
-                }
-            },
+            title = stringResource(R.string.profile_pin_title),
+            // As on TV: Change PIN the main action, Remove PIN the danger one (it asks to confirm).
+            main = DialogAction(stringResource(R.string.profile_pin_change), onClick = pinFlow::change),
+            danger = DialogAction(stringResource(R.string.profile_pin_remove), onClick = pinFlow::remove),
             cancel = DialogAction(stringResource(R.string.common_cancel), onClick = pinFlow::cancel),
         )
     }
@@ -506,7 +499,7 @@ internal fun ProfileOwnRows(
         val lastAdminPin = remember(profileId, profiles) { viewModel.isLastAdminPin(profileId) }
         CinemaAlertDialog(
             onDismissRequest = pinFlow::cancel,
-            title = { CinemaText(stringResource(R.string.profile_pin_remove_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.profile_pin_remove_confirm_title),
             text = {
                 CinemaText(
                     listOfNotNull(

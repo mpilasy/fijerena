@@ -1269,7 +1269,7 @@
     <string name="tmdb_settings_title">Antsipirian\'ny sarimihetsika sy andian-tantara (TMDB)</string>
     <string name="tmdb_settings_desc">Mameno ny famintinana sy ny sokajin-taona tsy ampy, ary manampy ny sary lohateny sy ny « Mitovitovy amin\'ity », amin\'ny lakile TMDB maimaim-poana anao manokana. Manontany ny TMDB koa ny fikarohana momba ireo sarimihetsika sy andian-tantara tsy ananan\'ny loharanonao, ka alefa any amin\'ny TMDB izay soratanao amin\'ny fikarohana. Raha tsy misy lakile dia tsy misy alefa any amin\'ny TMDB.</string>
     <string name="tmdb_key_label">Lakile TMDB</string>
-    <string name="tmdb_key_hint">Makà lakile maimaim-poana ao amin\'ny themoviedb.org (Settings › API). Samy mety na ny lakile API na ny token fidirana hamakiana.</string>
+    <string name="tmdb_key_hint">Makà lakile maimaim-poana ao amin\'ny themoviedb.org (Fikirana › API, « Settings » amin\'ny tranonkala). Samy mety na ny lakile API na ny token fidirana hamakiana.</string>
     <string name="tmdb_status_on">Mandeha</string>
     <string name="tmdb_status_rejected">Nolavina ny lakile</string>
     <string name="tmdb_rejected_message">Nolavin\'ny TMDB ity lakile ity, ka tsy mandeha ny antsipiriany avy amin\'ny TMDB. Hamarino ny lakile na ampidiro lakile vaovao.</string>

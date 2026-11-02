@@ -15,11 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -81,6 +77,8 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.feature.provider.components.SourceAdvancedSection
 import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
+import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -353,7 +351,7 @@ fun MobileAddProviderScreen(
                     .padding(CinemaSpacing.md)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Provider type: a dropdown when adding, a disabled field when editing (the type of
+            // Provider type: a picker row when adding, a disabled field when editing (the type of
             // an existing source cannot change).
             if (isEditMode) {
                 ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
@@ -367,40 +365,25 @@ fun MobileAddProviderScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
-                var typeDropdownExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = typeDropdownExpanded,
-                    onExpandedChange = { typeDropdownExpanded = it },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CinemaTextField(
-                        value = selectedType.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = stringResource(R.string.provider_type_label),
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
+                // A row like Settings' (as on TV); the types open in a picker.
+                var typePickerOpen by remember { mutableStateOf(false) }
+                SettingsListRow(
+                    title = stringResource(R.string.provider_type_label),
+                    summary = selectedType.displayName,
+                    onClick = { typePickerOpen = true },
+                )
+                if (typePickerOpen) {
+                    SettingsPickerDialog(
+                        title = stringResource(R.string.provider_type_label),
+                        options = addSourceTypes(BuildConfig.DEBUG, editedType).map { it.displayName to it },
+                        selected = selectedType,
+                        onSelect = { type ->
+                            selectedType = type
+                            error = null
+                            typePickerOpen = false
                         },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        onDismiss = { typePickerOpen = false },
                     )
-                    ExposedDropdownMenu(
-                        expanded = typeDropdownExpanded,
-                        onDismissRequest = { typeDropdownExpanded = false },
-                    ) {
-                        addSourceTypes(BuildConfig.DEBUG, editedType).forEach { type ->
-                            DropdownMenuItem(
-                                text = { CinemaText(type.displayName, role = TextRole.Label, tone = TextTone.Inherit) },
-                                onClick = {
-                                    selectedType = type
-                                    error = null
-                                    typeDropdownExpanded = false
-                                },
-                            )
-                        }
-                    }
                 }
             }
 
@@ -562,7 +545,7 @@ fun MobileAddProviderScreen(
                         showDiscardDialog = false
                         discardThen = null
                     },
-                    title = { CinemaText(stringResource(R.string.provider_discard_changes_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_discard_changes_title),
                     text = { CinemaText(stringResource(R.string.provider_discard_changes_message), tone = TextTone.Secondary) },
                     danger =
                         DialogAction(stringResource(R.string.provider_discard_button)) {
@@ -594,7 +577,7 @@ fun MobileAddProviderScreen(
 
                 CinemaAlertDialog(
                     onDismissRequest = { viewModel.resetSaveState() },
-                    title = { CinemaText(stringResource(R.string.provider_connection_failed), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_connection_failed),
                     text = { CinemaText(failedState.errorMessage, tone = TextTone.Secondary) },
                     // Going back to fix the login is the main action; saving anyway stays secondary.
                     main = DialogAction(stringResource(R.string.provider_go_back)) { viewModel.resetSaveState() },
@@ -624,7 +607,7 @@ fun MobileAddProviderScreen(
             if (showClearCacheDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearCacheDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_cache_all_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_cache_all_title),
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_cache_all_message), tone = TextTone.Secondary)
                     },
@@ -643,7 +626,7 @@ fun MobileAddProviderScreen(
             if (showClearLiveTvCacheDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearLiveTvCacheDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_cache_live_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_cache_live_title),
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_live_message), tone = TextTone.Secondary) },
                     danger =
                         DialogAction(stringResource(R.string.provider_clear_button)) {
@@ -660,7 +643,7 @@ fun MobileAddProviderScreen(
             if (showClearMoviesCacheDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearMoviesCacheDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_cache_movies_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_cache_movies_title),
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_movies_message), tone = TextTone.Secondary) },
                     danger =
                         DialogAction(stringResource(R.string.provider_clear_button)) {
@@ -677,7 +660,7 @@ fun MobileAddProviderScreen(
             if (showClearTvShowsCacheDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearTvShowsCacheDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_cache_tvshows_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_cache_tvshows_title),
                     text = { CinemaText(stringResource(R.string.provider_clear_cache_tvshows_message), tone = TextTone.Secondary) },
                     danger =
                         DialogAction(stringResource(R.string.provider_clear_button)) {
@@ -693,7 +676,7 @@ fun MobileAddProviderScreen(
             if (showClearFavoritesDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearFavoritesDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_favorites_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_favorites_title),
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_favorites_message), tone = TextTone.Secondary)
                     },
@@ -714,7 +697,7 @@ fun MobileAddProviderScreen(
             if (showClearProgressDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearProgressDialog = false },
-                    title = { CinemaText(stringResource(R.string.provider_clear_progress_title), role = TextRole.Title) },
+                    title = stringResource(R.string.provider_clear_progress_title),
                     text = {
                         CinemaText(stringResource(R.string.provider_clear_progress_message), tone = TextTone.Secondary)
                     },

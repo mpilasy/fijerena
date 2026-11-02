@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -71,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -98,12 +100,11 @@ fun ConfirmActionDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
+        title = title,
         text = { CinemaText(text, role = TextRole.Body, tone = TextTone.Secondary) },
         main = if (isDanger) null else DialogAction(confirmText, onClick = onConfirm),
         danger = if (isDanger) DialogAction(confirmText, onClick = onConfirm) else null,
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -165,7 +166,7 @@ fun CategoryFilterDialog(
         // controls in a full-screen panel.
         modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
         wide = true,
-        title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
+        title = title,
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -180,13 +181,13 @@ fun CategoryFilterDialog(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TvSelectableButton(
+                    TvSelectableButton( // look-ok: form control: picks the filter mode
                         selected = filterMode == FilterMode.EXCLUDE,
                         onSelect = { filterMode = FilterMode.EXCLUDE },
                         text = stringResource(R.string.provider_filter_exclude),
                         modifier = Modifier.focusRequester(firstControlFocusRequester),
                     )
-                    TvSelectableButton(
+                    TvSelectableButton( // look-ok: form control: picks the filter mode
                         selected = filterMode == FilterMode.INCLUDE,
                         onSelect = { filterMode = FilterMode.INCLUDE },
                         text = stringResource(R.string.provider_filter_include_short),
@@ -225,7 +226,7 @@ fun CategoryFilterDialog(
                             )
                             MatchTypeChipRow(selected = editingMatchType, onSelect = { editingMatchType = it })
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                CinemaButton(
+                                CinemaButton( // look-ok: form control: saves the rule being edited
                                     onClick = {
                                         val trimmed = editingValue.trim()
                                         if (trimmed.isNotEmpty()) {
@@ -244,7 +245,7 @@ fun CategoryFilterDialog(
                                         tone = TextTone.Inherit,
                                     )
                                 }
-                                CinemaButton(
+                                CinemaButton( // look-ok: form control: stops editing the rule
                                     onClick = { editingIndex = null },
                                     kind = ButtonKind.Other,
                                 ) {
@@ -316,7 +317,7 @@ fun CategoryFilterDialog(
                     label = stringResource(R.string.provider_filter_add_rules_label),
                     placeholder = stringResource(R.string.provider_filter_rules_placeholder),
                 )
-                CinemaButton(
+                CinemaButton( // look-ok: form control: adds the typed rules
                     onClick = {
                         val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         if (values.isNotEmpty()) {
@@ -337,7 +338,7 @@ fun CategoryFilterDialog(
                         )
                         MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                            CinemaButton(
+                            CinemaButton( // look-ok: form control: sets the match type of the new rules
                                 onClick = {
                                     rules = rules.withAddedRules(values, pendingAddMatchType)
                                     addRulesText = ""
@@ -351,7 +352,7 @@ fun CategoryFilterDialog(
                                     tone = TextTone.Inherit,
                                 )
                             }
-                            CinemaButton(
+                            CinemaButton( // look-ok: form control: drops the new rules
                                 onClick = { pendingAddValues = null },
                                 kind = ButtonKind.Other,
                             ) {
@@ -395,7 +396,6 @@ fun CategoryFilterDialog(
                 onSave(newFilters)
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -462,13 +462,7 @@ fun QuickConnectDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                stringResource(R.string.provider_quick_connect_title),
-                role = TextRole.Title,
-                tone = TextTone.Primary,
-            )
-        },
+        title = stringResource(R.string.provider_quick_connect_title),
         text = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -525,7 +519,6 @@ fun QuickConnectDialog(
             }
         },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -541,7 +534,7 @@ fun DuplicateProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_duplicate_title), role = TextRole.Title, tone = TextTone.Primary) },
+        title = stringResource(R.string.provider_duplicate_title),
         text = {
             ReadOnlyFieldWithEdit(
                 value = name,
@@ -552,15 +545,14 @@ fun DuplicateProviderDialog(
         },
         main = DialogAction(stringResource(R.string.provider_duplicate_button)) { onConfirm(name.trim().ifBlank { defaultName }) },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }
 
 /**
  * Overflow menu for a source row's actions, in the shared order of
- * the ux overhaul plan Part I ("Source actions"): Duplicate, Copy to…, then Delete last and set
- * apart. Opens with focus on Duplicate; Back closes it (the dialog dismisses on Back, so there is
- * no Cancel row) — T-10. Edit is OK on the row and Guide sources is the row's Guide slot, so the
+ * the ux overhaul plan Part I ("Source actions"): Duplicate, Copy to…, then Delete last, as an
+ * action menu ([TvActionMenu]). Opens with focus on Duplicate; Back or Cancel closes it — T-10.
+ * Delete opens its confirm. Edit is OK on the row and Guide sources is the row's Guide slot, so the
  * menu does not repeat them (the settings flow review, E6).
  */
 @Composable
@@ -572,85 +564,19 @@ fun ProviderActionsMenuDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val firstFocusRequester = remember { FocusRequester() }
-
-    @Composable
-    fun MenuRow(
-        icon: androidx.compose.ui.graphics.vector.ImageVector,
-        label: String,
-        onClick: () -> Unit,
-        modifier: Modifier = Modifier,
-    ) {
-        TvInputListItem(
-            selected = false,
-            onClick = {
-                onClick()
-                onDismiss()
-            },
-            modifier = modifier.fillMaxWidth(),
-            leadingContent = {
-                TvIcon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(TvDimensions.iconSmall),
-                    tone = TextTone.Accent,
-                )
-            },
-            headlineContent = {
-                CinemaText(
-                    label,
-                    role = TextRole.Body,
-                    tone = TextTone.Primary,
-                )
-            },
-        )
-    }
-
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                provider.name,
-                maxLines = 2,
-                role = TextRole.Heading,
-                tone = TextTone.Primary,
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                MenuRow(
-                    icon = CinemaIcons.ContentCopy,
-                    label = stringResource(R.string.provider_duplicate_button),
-                    onClick = onDuplicate,
-                    modifier = Modifier.focusRequester(firstFocusRequester),
-                )
-                if (canCopyTo) {
-                    MenuRow(
-                        icon = CinemaIcons.SwapHoriz,
-                        label = stringResource(R.string.provider_copy_to_button),
-                        onClick = onCopyTo,
-                    )
-                }
-                CinemaDivider()
-                // Outlined in the error colour, filled only while focused: the delete confirm
-                // that follows carries the filled error button (T5, follow-up from T4).
-                ProviderDangerButton(
-                    onClick = {
-                        onDelete()
-                        onDismiss()
-                    },
-                    text = stringResource(R.string.provider_delete_button),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        initialFocus = firstFocusRequester,
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
+    TvActionMenu(
+        title = provider.name,
+        actions =
+            listOfNotNull(
+                MenuAction(CinemaIcons.ContentCopy, stringResource(R.string.provider_duplicate_button), onClick = onDuplicate),
+                MenuAction(
+                    CinemaIcons.SwapHoriz,
+                    stringResource(R.string.provider_copy_to_button),
+                    onClick = onCopyTo,
+                ).takeIf { canCopyTo },
+                MenuAction(CinemaIcons.Delete, stringResource(R.string.provider_delete_button), removal = true, onClick = onDelete),
+            ),
+        onDismiss = onDismiss,
     )
 }
 
@@ -671,7 +597,7 @@ fun CopyProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title, tone = TextTone.Primary) },
+        title = stringResource(R.string.provider_copy_to_title),
         text = {
             Column(
                 modifier = Modifier.heightIn(max = TvDimensions.dialogWidth).verticalScroll(rememberScrollState()),
@@ -741,6 +667,5 @@ fun CopyProviderDialog(
                 )
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
-        containerColor = CinemaTheme.colors.surface,
     )
 }

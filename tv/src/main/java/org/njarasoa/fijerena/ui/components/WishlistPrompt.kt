@@ -21,12 +21,9 @@ fun WishlistRemovePrompt(
 ) {
     CinemaAlertDialog(
         onDismissRequest = { onAnswer(false) },
-        title = { CinemaText(text = stringResource(R.string.wanted_prompt_title, title), role = TextRole.Heading) },
+        title = stringResource(R.string.wanted_prompt_title, title),
         text = { CinemaText(text = stringResource(R.string.wanted_prompt_text), tone = TextTone.Secondary) },
         danger = DialogAction(stringResource(R.string.wanted_prompt_remove)) { onAnswer(true) },
         cancel = DialogAction(stringResource(R.string.wanted_prompt_keep)) { onAnswer(false) },
-        containerColor = CinemaTheme.colors.surface,
-        titleContentColor = CinemaTheme.colors.textPrimary,
-        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }

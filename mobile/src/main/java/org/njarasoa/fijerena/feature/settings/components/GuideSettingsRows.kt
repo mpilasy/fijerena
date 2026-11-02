@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.feature.epg.localizedEpgPhase
@@ -75,29 +76,21 @@ private fun GuideMaintenanceDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.settings_guide_maintenance_title), role = TextRole.Title) },
+        title = stringResource(R.string.settings_guide_maintenance_title),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody)) {
                 GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
                 CinemaText(stringResource(R.string.epg_maintenance_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                // One under the other: each label says what it deletes.
-                CinemaOutlinedButton(onClick = { viewModel.cleanupFiles() }, modifier = Modifier.fillMaxWidth()) {
-                    CinemaText(stringResource(R.string.epg_cleanup_btn), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-                CinemaOutlinedButton(onClick = { viewModel.purgeOldProgrammes() }, modifier = Modifier.fillMaxWidth()) {
-                    CinemaText(stringResource(R.string.epg_purge_btn), role = TextRole.Label, tone = TextTone.Inherit)
-                }
-                CinemaButton(
-                    onClick = { showClearConfirm = true },
-                    kind = ButtonKind.Danger,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(CinemaIcons.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    CinemaText(stringResource(R.string.epg_clear_all_data_btn), role = TextRole.Label, tone = TextTone.Inherit)
-                }
             }
         },
+        // The dialog's own buttons, as TV's maintenance page: each label says what it deletes. Clear
+        // All Data asks to confirm first.
+        others =
+            listOf(
+                DialogAction(stringResource(R.string.epg_cleanup_btn)) { viewModel.cleanupFiles() },
+                DialogAction(stringResource(R.string.epg_purge_btn)) { viewModel.purgeOldProgrammes() },
+            ),
+        danger = DialogAction(stringResource(R.string.epg_clear_all_data_btn)) { showClearConfirm = true },
         cancel = DialogAction(stringResource(R.string.common_close), onClick = onDismiss),
     )
 
@@ -110,7 +103,7 @@ private fun GuideMaintenanceDialog(
                     showClearConfirm = false
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
-            title = { CinemaText(stringResource(R.string.epg_clear_db_confirm_title), role = TextRole.Title) },
+            title = stringResource(R.string.epg_clear_db_confirm_title),
             text = { CinemaText(stringResource(R.string.epg_clear_db_confirm_message), tone = TextTone.Secondary) },
         )
     }

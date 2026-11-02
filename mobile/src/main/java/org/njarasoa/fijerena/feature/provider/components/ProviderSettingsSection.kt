@@ -236,7 +236,7 @@ private fun ShortNameDialog(
     var taken by remember { mutableStateOf<String?>(null) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.provider_short_name_label), role = TextRole.Title) },
+        title = stringResource(R.string.provider_short_name_label),
         text = {
             CinemaTextField(
                 value = value,

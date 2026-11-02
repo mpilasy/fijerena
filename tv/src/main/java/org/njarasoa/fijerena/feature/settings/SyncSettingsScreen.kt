@@ -423,7 +423,7 @@ private fun RenameDialog(
     var name by remember(device.id) { mutableStateOf(device.name) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(stringResource(R.string.live_sync_device_rename_title, device.name), role = TextRole.Title) },
+        title = stringResource(R.string.live_sync_device_rename_title, device.name),
         text = {
             androidx.compose.material3.OutlinedTextField(
                 value = name,
@@ -459,7 +459,7 @@ private fun ConfirmDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { CinemaText(title, role = TextRole.Title) },
+        title = title,
         text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
         danger = DialogAction(confirm, onClick = onConfirm),
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),

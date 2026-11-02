@@ -527,13 +527,7 @@ private fun EpgSourceCard(
                     showDeleteConfirm = false
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { showDeleteConfirm = false },
-            title = {
-                CinemaText(
-                    stringResource(R.string.epg_delete_source_confirm_title),
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                )
-            },
+            title = stringResource(R.string.epg_delete_source_confirm_title),
             text = {
                 CinemaText(
                     stringResource(R.string.epg_delete_source_confirm_message, source.label),
@@ -624,19 +618,7 @@ private fun EpgSourceEditDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            CinemaText(
-                if (initialSource ==
-                    null
-                ) {
-                    stringResource(R.string.epg_add_source_title)
-                } else {
-                    stringResource(R.string.epg_edit_source_title)
-                },
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-            )
-        },
+        title = stringResource(if (initialSource == null) R.string.epg_add_source_title else R.string.epg_edit_source_title),
         main =
             DialogAction(
                 stringResource(R.string.provider_save_button),

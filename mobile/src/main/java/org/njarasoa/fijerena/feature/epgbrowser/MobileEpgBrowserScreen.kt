@@ -682,9 +682,7 @@ private fun MobileProgramCard(
                 val reminder = programmeReminderOf(program.title, pending, nowEpoch)?.takeUnless { bells.reminded.hasProgramme(it) }
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = {
-                        CinemaText(watchQuestionTitle(pending.startEpoch), role = TextRole.Title, tone = TextTone.Inherit)
-                    },
+                    title = watchQuestionTitle(pending.startEpoch),
                     text = { WatchQuestionBody(pending.channelName, matched.providerId) },
                     main =
                         DialogAction(stringResource(R.string.epg_browser_watch_now_btn)) {

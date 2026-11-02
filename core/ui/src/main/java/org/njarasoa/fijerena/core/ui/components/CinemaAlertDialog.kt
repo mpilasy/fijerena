@@ -162,7 +162,10 @@ fun CinemaAlertDialog(
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
                 ProvideUiScaledDensity {
+                    // A safe margin above and below: a tall dialog stops short of the screen edges
+                    // (the TV's overscan margin), and its body yields and scrolls.
                     Surface(
+                        modifier = Modifier.padding(vertical = CinemaSpacing.xl),
                         shape = shape,
                         color = containerColor,
                         tonalElevation = AlertDialogDefaults.TonalElevation,
@@ -313,7 +316,8 @@ private fun dialogActions(
 
 /**
  * The dialog's buttons as [tokens] say. A stack puts the first action on top; a row puts it at
- * the end and goes to a stack when it has more than two actions or its labels do not fit.
+ * the end and goes to a stack of full-width buttons when it has more than two actions or its labels
+ * do not fit.
  */
 @Composable
 private fun DialogActionArea(
@@ -338,11 +342,14 @@ private fun DialogActionArea(
             tokens.arrangement == DialogActionArrangement.ROW &&
                 measurables.size <= 2 &&
                 if (full) labels.max() <= share else labels.sum() + gaps <= width
+        // A row that cannot hold its buttons becomes a stack of full-width buttons, so every stack
+        // in a Look of rows has the same look, whatever the length of its labels.
+        val stackFull = full || tokens.arrangement == DialogActionArrangement.ROW
         val widths =
             when {
                 inRow && full -> List(measurables.size) { share }
                 inRow -> labels
-                full -> List(measurables.size) { width }
+                stackFull -> List(measurables.size) { width }
                 else -> List(measurables.size) { labels.max().coerceAtMost(width) }
             }
         // Every button as tall as the tallest, so a label that wraps does not make one button

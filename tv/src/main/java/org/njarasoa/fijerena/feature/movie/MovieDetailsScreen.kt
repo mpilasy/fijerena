@@ -28,8 +28,6 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -105,15 +104,16 @@ import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.WishlistControl
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
-import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.TvActionMenu
 import org.njarasoa.fijerena.ui.components.TvCreditsTabContent
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvOtherCopiesList
+import org.njarasoa.fijerena.ui.components.TvPickerDialog
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.WishlistRemovePrompt
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -417,10 +417,12 @@ private fun MovieDetailsContent(
         }
     }
     if (showMoreMenu) {
-        DetailsMoreMenu(
+        TvActionMenu(
             title = tmdbTitle ?: cleanTitle(movieDetail.name.ifEmpty { movieName }),
-            refreshLabel = stringResource(R.string.movie_refresh_info),
-            onRefresh = onRefresh,
+            actions =
+                listOf(
+                    MenuAction(icon = CinemaIcons.Refresh, label = stringResource(R.string.movie_refresh_info), onClick = onRefresh),
+                ),
             onDismiss = { showMoreMenu = false },
         )
     }
@@ -1007,12 +1009,7 @@ private fun StreamNamePicker(
 
     var expanded by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
-    // The row often sits near the bottom of the visible screen; a Popup can't render below the
-    // screen edge, so without this the menu flips far above the row to find room instead of
-    // opening flush beneath it.
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
-    Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+    Box(modifier = Modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
@@ -1024,7 +1021,6 @@ private fun StreamNamePicker(
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
                     }.clickable {
-                        coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
@@ -1035,28 +1031,18 @@ private fun StreamNamePicker(
                 tone = TextTone.Primary,
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // The menu is a Popup, so it gets its own window and loses the scaled density.
-            ProvideUiScaledDensity {
-                Column {
-                    DropdownMenuItem(
-                        text = { CinemaText(currentName, role = TextRole.Heading, tone = TextTone.Accent) },
-                        leadingIcon = { TvIcon(CinemaIcons.CheckCircle, contentDescription = null, tone = TextTone.Accent) },
-                        onClick = { expanded = false },
-                    )
-                    alternates.forEach { alternate ->
-                        DropdownMenuItem(
-                            text = { CinemaText(alternate.name, role = TextRole.Heading) },
-                            // With several sources, each copy's own (it opens there).
-                            leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
-                            onClick = {
-                                expanded = false
-                                onSelect(alternate)
-                            },
-                        )
-                    }
-                }
-            }
+        if (expanded) {
+            // The copies of this title: this one marked, each other one opens there.
+            TvPickerDialog(
+                title = stringResource(R.string.details_other_instances),
+                options = listOf(currentName to null) + alternates.map { it.name to it },
+                selected = null,
+                onSelect = { alternate -> alternate?.let(onSelect) },
+                onDismiss = { expanded = false },
+                // With several sources, each copy's own (it opens there).
+                subtitle = { alternate -> alternate?.let { sourceNames[it.providerId] } },
+                role = TextRole.Heading,
+            )
         }
     }
 }

@@ -57,8 +57,8 @@ fun PinDialog(
                 dismissOnClickOutside = cancellable,
                 securePolicy = SecureFlagPolicy.SecureOn,
             ),
-        // Centred over the dots.
-        title = {
+        // Centred over the dots, with the note above it: more than a title.
+        header = {
             Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 // Who asks, for a request from another device ("Living Room asks").
                 note?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Secondary, textAlign = TextAlign.Center) }
