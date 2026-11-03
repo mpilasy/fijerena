@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261103162615
 
 - **Sharing the logs no longer closes the app:** on the phone, Settings → About → Logs → Share closed the app when the log was large. Share now sends the whole log as a text file, with its logins masked as before. When no app can take it, or the file cannot be written, a message says so. Phone.
 - **Search the logs:** Settings → About → Logs has a search field. It shows only the entries whose title, message or causes contain what you type, in capitals or not; when nothing matches, it says so. Share still sends the whole log. On TV the field is above the first entry: Up from the first entry reaches it, OK opens the keyboard. TV and phone.
