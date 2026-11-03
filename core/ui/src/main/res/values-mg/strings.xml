@@ -775,7 +775,7 @@
     <string name="settings_group_this_device">Ity fitaovana ity</string>
     <string name="settings_group_admin">Fitantanana</string>
     <string name="settings_group_admin_desc">Mombamomba, fanaraha-maso ny ray aman-dreny, ity fitaovana ity, loharano, fampifanarahana sy tahiry</string>
-    <string name="settings_group_this_device_desc">Fiteny, Vao haingana ary ora, amin\'ity fitaovana ity ihany</string>
+    <string name="settings_group_this_device_desc">Fiteny, Vao haingana ary famataranandro, amin\'ity fitaovana ity ihany</string>
     <string name="settings_group_source_guide_desc">Loharano, fitarihana, antsipirian\'ny sarimihetsika, laharana ary fanatanjahantena</string>
     <string name="settings_group_sync_backup_desc">Fampifanarahana amin\'ireo fitaovanao hafa, ary tahiry ao anaty rakitra</string>
     <string name="settings_open_admin">Sokafy ny fitantanana</string>
