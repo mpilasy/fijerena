@@ -52,6 +52,16 @@
             android:foregroundServiceType="dataSync|mediaPlayback"
             tools:ignore="MissingClass"
             tools:node="merge" />
+        <!-- Shares the Logs file with another app (a log is too big for an intent extra). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <service
             android:name="org.njarasoa.fijerena.core.player.service.StreamingPlaybackService"
             android:exported="false"

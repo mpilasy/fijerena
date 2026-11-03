@@ -971,6 +971,9 @@
     <string name="settings_diagnostics_show_details">Asehoy ny antsipiriany</string>
     <string name="settings_diagnostics_hide_details">Afeno ny antsipiriany</string>
     <string name="settings_diagnostics_copy">Kopiao</string>
+    <string name="settings_diagnostics_share_subject">Tatitra Fijerena</string>
+    <string name="settings_diagnostics_share_no_app">Tsy misy rindrankajy amin\'ity fitaovana ity afaka mizara ny tatitra</string>
+    <string name="settings_diagnostics_share_failed">Tsy afaka nanomana ny tatitra hozaraina</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Momba ny fitaovana</string>
     <string name="device_info_desc">Ity rindranasa sy fitaovana ity: dikan-teny, fitadidiana, toerana fitehirizana, efijery, mpamaky media, tambajotra ary asa ao ambadika</string>

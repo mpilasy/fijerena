@@ -665,6 +665,9 @@
     <string name="settings_diagnostics_show_details">Afficher les détails</string>
     <string name="settings_diagnostics_hide_details">Masquer les détails</string>
     <string name="settings_diagnostics_copy">Copier</string>
+    <string name="settings_diagnostics_share_subject">Journaux de Fijerena</string>
+    <string name="settings_diagnostics_share_no_app">Aucune application de cet appareil ne peut partager le journal</string>
+    <string name="settings_diagnostics_share_failed">Impossible de préparer le journal à partager</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Infos sur l’appareil</string>
     <string name="device_info_desc">Cette application et cet appareil : versions, mémoire, stockage, écran, décodeurs, réseau et activité en arrière-plan</string>
