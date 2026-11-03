@@ -28,6 +28,7 @@ Four changes from the user (2026-11-03):
 | RQ-5 | Admin sections on TV | **Same as the phone.** The Admin pane lists the sections; OK opens a section's pane in place, Back returns to its row. |
 | RQ-6 | Shrink Database | **At the end of Sources & Guide.** |
 | NR-Q1 | Role name | **English "Nerd", French "Nerd", Malagasy "Mahay".** |
+| RQ-7 | One name for Admin in code | **"admin" everywhere.** "dev mode", "developer mode" and "Expert" in code, keys, string ids and tests become admin. Runs last, after every lane is merged. |
 | RQ-4 | Borderline items | **To Nerd:** the source type on the Home sources sheet, the Search "N hidden" count, raw error text on the Admin-only screens. **Unchanged:** the phone player's Stats button stays for everyone. |
 
 ## What exists (survey 2026-11-03)
@@ -185,6 +186,23 @@ Four changes from the user (2026-11-03):
   from the last success and the failed state from the error. The lane checks each reader in
   "What exists".
 
+### X — One name for Admin (last)
+
+- **Code:** `isDevMode`, `devMode(id)`, `setDevMode`, `observeDevMode`, `removeDevMode`,
+  `KEY_DEV_MODE` → `isAdmin`, `admin(id)`, `setAdmin`, `observeAdmin`, `removeAdmin`,
+  `KEY_ADMIN`. "Expert" names (`ProfileActor.isExpert`, `ensureAnExpert`, `clearChildExperts`,
+  `isExpertOnly`, `ExpertGroup`, `isLastExpert`, test class names) → admin. String ids
+  `settings_developer_mode_*`, `*_last_expert*` → `settings_admin_*`, `*_last_admin*` (values
+  unchanged). KDoc and comments follow.
+- **Stored key:** `admin_<profileId>`. A one-time upgrade copies `dev_mode_<id>` (and the old
+  install-wide `dev_mode`) to it and removes the old keys.
+- **Live sync:** sends `admin`; still applies a `dev_mode` record from an older build. An older
+  build ignores `admin`, so every device needs the update before Admin changes reach it.
+- **Backup:** writes the Admin flag as `isAdmin`; still reads `isDevMode` from an older file.
+- **Docs:** DATABASE_SCHEMA §5 and the sync list, CONTRIBUTING, FEATURES. Open plans keep their
+  text (they are history); source comments that cite them stay valid.
+- Mechanical: no behaviour change except the key copy. Lead does it, or one agent once G is merged.
+
 ## Parallel execution (max 4 agents)
 
 ```
@@ -194,7 +212,8 @@ t0  ┌ Lane R  (agent) reminder focus (small) ─┐
     └ Phase 0 (lead)  Nerd API + LocalNerd    │              │
 t1                    Lane N (agent, in R's slot) rules, editors, strings ┐
 t1'                   Lane G (agent, next free slot) info gates to Nerd   ┤
-t2  lead merges in order of finishing → full suite → emulator walks
+t2  lead merges in order of finishing
+t3  Phase X (one name for Admin) on main → full suite → emulator walks
 ```
 
 - Never more than 4 agents: R, S and A start at once; N takes R's slot when R ends (R is small);
@@ -227,6 +246,7 @@ t2  lead merges in order of finishing → full suite → emulator walks
 | S | agent | Design S | Migration 17→18 JVM test, `SettingsDatabaseMigrationTest` list, DAO tests (count, reset), `FakeEpgSourceDao`, `EpgFileManagerChangeDetectionTest`, `SettingsSyncTriggersTest` (new columns do not queue), Device info and Home status tests | DATABASE_SCHEMA (v18), FEATURES (Guide Sources, Library Data), RELEASE_NOTES |
 | A | agent | Design A, TV and phone | TV focus tests: Admin list → section → back to its row; picker inside a section returns to the section; lock closes the section. Phone: each row opens its page, Back returns | FEATURES (Settings), NAVIGATION_GUIDE (Settings), RELEASE_NOTES |
 | N | agent | Design N: rules, repository, sync, export, editors, strings | `ProfileRulesTest` (Nerd cases), `SyncApplier` child-clears-Nerd, export child-clears-Nerd, editor row tests TV and phone | FEATURES (new "Roles" text: Child, Admin, Nerd), CONTRIBUTING profile rules, RELEASE_NOTES |
+| X | lead or agent, last | Design X | Upgrade copies `dev_mode_<id>` to `admin_<id>`; a `dev_mode` sync record still applies; an old backup's `isDevMode` still imports; every renamed test passes | DATABASE_SCHEMA, CONTRIBUTING, FEATURES, RELEASE_NOTES |
 | G | agent | Design N gates: every information site to Nerd; Home "Updated" stays Admin | Update tests that assume the Admin flag shows info (`SyncSummaryTest` stays Admin); a test per kind: badges, raw errors, player stats | FEATURES "## Admin" → "## Nerd" (Admin keeps the Home line), CONTRIBUTING raw-error rule, RELEASE_NOTES |
 
 ## Progress
@@ -239,4 +259,5 @@ t2  lead merges in order of finishing → full suite → emulator walks
 | A | In progress | |
 | N | Not started | |
 | G | Not started | |
+| X | Not started | |
 | Walk | Not started | |
