@@ -7,14 +7,16 @@ Room's own exported schema for `xtream_v2.db` and `providers.db` is committed un
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 17
+**Version:** 18
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 `providers.providerKey` and `sync_tombstone` for live sync; v14 added `epg_source.source_key`,
 `sync_outbox` and `sync_clock`, filled by triggers; v15 turned `sync_outbox` into `sync_version`;
 v16 added `epg_source.refresh_interval_hours`; v17, no schema change, dropped the login from
-automatic Xtream guide source URLs.)
+automatic Xtream guide source URLs; v18 added the last failure time and the failure count,
+`providers.lastFailedAtMs` / `failuresSinceSuccess` and `epg_source.last_failed_at_ms` /
+`failures_since_success`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -80,16 +82,22 @@ the live sync plan → Deletions). Written in the same transaction as the delete
 | `createdAt` | INTEGER | Timestamp when created |
 | `lastUsedAt` | INTEGER | Timestamp of last access |
 | `isActive` | INTEGER | Unused since multi-source Phase 6 (there is no current source): never written, kept to avoid a migration. Only the one-time upgrade to per-profile sources reads what an older build left (`ProviderDao.legacyActiveProviderKey`) |
-| `lastSyncedAtMs` | INTEGER | Timestamp of last manual/background content sync (added v6) |
-| `lastSyncDurationMs` | INTEGER | Duration of last sync (added v6) |
-| `lastSyncError` | TEXT | Error message from last failed sync, if any (added v6) |
+| `lastSyncedAtMs` | INTEGER | End time of the last **successful** manual/background content sync, 0 = never (added v6). Until v18 every run wrote it, failed runs too: `MIGRATION_17_18` leaves the value of a row with an error as it is (it cannot know if an earlier sync succeeded), so that row shows its last failure time here until its next success |
+| `lastSyncDurationMs` | INTEGER | Duration of the last successful sync (added v6; failed runs write it until v18) |
+| `lastSyncError` | TEXT | Error of the last sync (a `StoredError` code), null when it succeeded (added v6) |
 | `lastSyncInserted` | INTEGER | Rows inserted by the last sync (added v9) |
 | `lastSyncUpdated` | INTEGER | Rows updated by the last sync (added v9) |
 | `lastSyncDeleted` | INTEGER | Rows deleted by the last sync (added v9) |
 | `providerKey` | TEXT (unique) | Random UUID naming the provider in live sync — the same on every device, unlike `id`, and unchanged by editing URL or name. Backfilled for existing rows by `MIGRATION_12_13` (added v13) |
+| `lastFailedAtMs` | INTEGER (nullable) | End time of the last failed sync; null after a success. `MIGRATION_17_18` sets it to `lastSyncedAtMs` on rows with an error (added v18) |
+| `failuresSinceSuccess` | INTEGER | Failed syncs since the last success, 0 after a success. `MIGRATION_17_18` sets 1 on rows with an error (added v18) |
 
 The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successful** sync's `SyncDelta`
 (they are `COALESCE`d, not zeroed, on a failed run). All three zero means the catalog did not change.
+`ProviderDao.updateSyncStats` writes a run: a success writes the time, duration and counts and clears
+`lastSyncError`, `lastFailedAtMs` and `failuresSinceSuccess`; a failure keeps the time, duration and
+counts and writes the error, `lastFailedAtMs` and one more failure. A cancelled run writes nothing.
+None of these sync bookkeeping columns is synced, exported or backed up.
 
 ### Table: `epg_source`
 | Column | Type | Description |
@@ -101,7 +109,7 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `timezone_offset_hours` | INTEGER | Manual offset for parsing |
 | `added_at_ms` | INTEGER | Timestamp when added |
 | `last_ingested_at_ms` | INTEGER | Timestamp of last successful sync |
-| `last_error` | TEXT | Last error message if sync failed |
+| `last_error` | TEXT | Error of the last refresh, null when it succeeded |
 | `enabled` | INTEGER | Boolean (0/1) toggle |
 | `last_channels` | INTEGER | Channel count from last ingest |
 | `last_programmes` | INTEGER | Programme count from last ingest |
@@ -114,12 +122,14 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `last_modified_header` | TEXT | `Last-Modified` from the last download, sent back as `If-Modified-Since` (added v10) |
 | `source_key` | TEXT (unique) | Random UUID naming the source in live sync, like `providers.providerKey`; backfilled by `MIGRATION_13_14` (added v14) |
 | `refresh_interval_hours` | INTEGER (nullable) | The source's own auto-refresh interval in hours, `-1` = off; synced. Null = not set: rows from before v16 (`MIGRATION_15_16` adds the column with no default) and rows received from an older app version. A not-set row uses the retired device-wide interval (`epg_auto_refresh` / `epg_refresh_interval`, §5) until the one-time copy (`epg_refresh_interval_copied_v1`) fills it — the copy fills only null rows, with the sync triggers silenced. Sources added on v16 start at 24 (added v16) |
+| `last_failed_at_ms` | INTEGER (nullable) | Time of the last failed refresh (`EpgSourceDao.markError`); null after a success (`markIngested`, `markUnchanged`) or an ingest reset. `MIGRATION_17_18` sets the migration time on rows with an error, which kept no failure time (added v18) |
+| `failures_since_success` | INTEGER | Failed refreshes since the last success, 0 after a success or an ingest reset. `MIGRATION_17_18` sets 1 on rows with an error (added v18) |
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
 
 `last_content_sha256`, `etag` and `last_modified_header` drive refresh change detection — see
 `docs/epg_guide.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
-other ingest bookkeeping whenever the guide index is destroyed.
+other ingest bookkeeping (the failure time and count too) whenever the guide index is destroyed.
 
 ### Tables: `sync_version` (v15; `sync_outbox` in v14), `sync_clock` (added v14)
 The `providers.db` counterparts of `xtream_v2.db`'s (§3): `sync_version` holds the sync version of

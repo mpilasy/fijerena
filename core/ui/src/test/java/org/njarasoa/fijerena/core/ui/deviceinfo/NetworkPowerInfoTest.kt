@@ -132,24 +132,31 @@ class NetworkPowerInfoTest {
 
     @Test
     fun `a source row is labelled with its name and shows time, seconds and OK`() {
-        val row = syncRow("EN - My TV", catalogSync = true, lastSyncMs = at, durationMs = 41_600, error = null)
+        val row = syncRow("EN - My TV", catalogSync = true, lastSyncMs = at, durationMs = 41_600, failedAtMs = null, error = null)
         assertEquals(UiText.DynamicString("EN - My TV"), row.label)
         assertEquals(R.string.device_info_sync_ok, row.value.res())
         assertEquals(listOf<Any>("2026-10-04 12:34", 42L), row.value.argList())
     }
 
     @Test
-    fun `a failed sync keeps only the friendly first line, redacted`() {
+    fun `a failed sync shows its failure time and only the friendly first line, redacted`() {
         val error = "Network error http://user:secret@host/x\n\n[dev] UnknownHostException: Unable to resolve host \"server.example\""
-        val row = syncRow("Mine", catalogSync = true, lastSyncMs = at, durationMs = 2_000, error = error)
+        val row = syncRow("Mine", catalogSync = true, lastSyncMs = at - 86_400_000, durationMs = 2_000, failedAtMs = at, error = error)
         assertEquals(R.string.device_info_sync_failed, row.value.res())
-        assertEquals(listOf<Any>("2026-10-04 12:34", 2L, "Network error http://***@host/x"), row.value.argList())
+        assertEquals(listOf<Any>("2026-10-04 12:34", "Network error http://***@host/x"), row.value.argList())
+    }
+
+    @Test
+    fun `a source whose syncs all failed shows the failure, not never synced`() {
+        val row = syncRow("New", catalogSync = true, lastSyncMs = 0, durationMs = 0, failedAtMs = at, error = "No server")
+        assertEquals(R.string.device_info_sync_failed, row.value.res())
+        assertEquals(listOf<Any>("2026-10-04 12:34", "No server"), row.value.argList())
     }
 
     @Test
     fun `a source never synced, or of a type without catalog sync`() {
-        assertEquals(R.string.device_info_sync_never, syncRow("X", true, 0, 0, null).value.res())
-        assertEquals(R.string.device_info_sync_not_applicable, syncRow("J", false, 0, 0, null).value.res())
+        assertEquals(R.string.device_info_sync_never, syncRow("X", true, 0, 0, null, null).value.res())
+        assertEquals(R.string.device_info_sync_not_applicable, syncRow("J", false, 0, 0, null, null).value.res())
     }
 
     @Test

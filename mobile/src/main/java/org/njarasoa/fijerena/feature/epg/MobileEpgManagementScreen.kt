@@ -447,7 +447,23 @@ private fun EpgSourceCard(
                                     NumberUtils.formatCount(LocalResources.current, source.lastChannels),
                                 stringResource(R.string.epg_source_stat_programmes) to
                                     NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
-                            )
+                            ) +
+                            // The last refresh failed: its time and the failures since the last
+                            // success; the reason follows under the stats.
+                            if (source.lastError != null) {
+                                listOfNotNull(
+                                    source.lastFailedAtMs?.let { failedAt ->
+                                        stringResource(R.string.epg_source_stat_last_failure) to
+                                            DateText.dateTime(LocalContext.current, failedAt)
+                                    },
+                                    (
+                                        stringResource(R.string.epg_source_stat_failures) to
+                                            NumberUtils.formatCount(LocalResources.current, source.failuresSinceSuccess)
+                                    ).takeIf { source.failuresSinceSuccess > 0 },
+                                )
+                            } else {
+                                emptyList()
+                            }
                     // Two stats in each row, each one half of the card: a date has room for one or
                     // two lines, also on a narrow phone.
                     Column(

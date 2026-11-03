@@ -773,6 +773,8 @@ fun TvAddProviderScreen(
                                 lastSyncedAtMs = currentProvider?.lastSyncedAtMs ?: 0L,
                                 lastSyncDurationMs = currentProvider?.lastSyncDurationMs ?: 0L,
                                 lastSyncError = currentProvider?.lastSyncError,
+                                lastFailedAtMs = currentProvider?.lastFailedAtMs,
+                                failuresSinceSuccess = currentProvider?.failuresSinceSuccess ?: 0,
                                 lastSyncInserted = currentProvider?.lastSyncInserted ?: 0,
                                 lastSyncUpdated = currentProvider?.lastSyncUpdated ?: 0,
                                 lastSyncDeleted = currentProvider?.lastSyncDeleted ?: 0,

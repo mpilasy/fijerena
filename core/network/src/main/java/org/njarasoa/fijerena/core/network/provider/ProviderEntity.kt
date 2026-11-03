@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.provider
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -32,12 +33,20 @@ data class ProviderEntity(
      * here ([ProviderDao.legacyActiveProviderKey]).
      */
     val isActive: Boolean = false,
+    /** When the last successful sync ended; 0 = never (a failed sync leaves it, since v18). */
     val lastSyncedAtMs: Long = 0,
+    /** How long the last successful sync took (a failed sync leaves it, since v18). */
     val lastSyncDurationMs: Long = 0,
+    /** The error of the last sync, null when it succeeded. */
     val lastSyncError: String? = null,
     /** Rows inserted/updated/deleted by the last sync. All zero means the catalog didn't change. */
     val lastSyncInserted: Int = 0,
     val lastSyncUpdated: Int = 0,
     val lastSyncDeleted: Int = 0,
     val providerKey: String = UUID.randomUUID().toString(),
+    /** When the last failed sync ended; null after a success (added v18). Local, never synced. */
+    val lastFailedAtMs: Long? = null,
+    /** Failed syncs since the last success; 0 after a success (added v18). Local, never synced. */
+    @ColumnInfo(defaultValue = "0")
+    val failuresSinceSuccess: Int = 0,
 )

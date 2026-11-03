@@ -64,12 +64,20 @@ interface ProviderDao {
     @Query("SELECT * FROM sync_tombstone")
     suspend fun getAllTombstones(): List<SettingsTombstoneEntity>
 
+    // A success ([error] null) writes the time, the duration and the counts, and clears the error,
+    // the failure time and the failure count. A failure keeps the last success's time, duration
+    // and counts, and writes the error, the failure time ([timestamp]) and one more failure.
     // inserted/updated/deleted are nullable and COALESCE onto the existing value when null: a
     // failed sync (delta unknown) must leave the last real delta in place rather than overwrite
     // it with zeros, which would read identically to a sync that genuinely found no changes.
     @Query(
         """
-        UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error,
+        UPDATE providers SET
+            lastSyncedAtMs = CASE WHEN :error IS NULL THEN :timestamp ELSE lastSyncedAtMs END,
+            lastSyncDurationMs = CASE WHEN :error IS NULL THEN :durationMs ELSE lastSyncDurationMs END,
+            lastSyncError = :error,
+            lastFailedAtMs = CASE WHEN :error IS NULL THEN NULL ELSE :timestamp END,
+            failuresSinceSuccess = CASE WHEN :error IS NULL THEN 0 ELSE failuresSinceSuccess + 1 END,
             lastSyncInserted = COALESCE(:inserted, lastSyncInserted),
             lastSyncUpdated = COALESCE(:updated, lastSyncUpdated),
             lastSyncDeleted = COALESCE(:deleted, lastSyncDeleted)

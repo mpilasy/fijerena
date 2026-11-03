@@ -48,7 +48,10 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
-/** Library data: sync, last sync, totals and per-type counts. Clearing lives in [ProviderDangerZoneSection]. */
+/**
+ * Library data: sync, the last successful sync, the last failure (its time, reason and the failures
+ * since the last success), totals and per-type counts. Clearing lives in [ProviderDangerZoneSection].
+ */
 @Composable
 fun ColumnScope.DataManagementSection(
     isEditMode: Boolean,
@@ -92,8 +95,14 @@ fun ColumnScope.DataManagementSection(
                             )
                         }
 
-                        if ((currentProvider?.lastSyncedAtMs ?: 0L) > 0L) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
+                        Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
+                        if ((currentProvider?.lastSyncedAtMs ?: 0L) <= 0L) {
+                            CinemaText(
+                                stringResource(R.string.provider_last_sync_never),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
+                        } else {
                             val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
                             val duration = NumberUtils.formatDuration(LocalResources.current, currentProvider?.lastSyncDurationMs ?: 0L)
                             CinemaText(
@@ -126,8 +135,28 @@ fun ColumnScope.DataManagementSection(
                             val errorMsg =
                                 ((syncState as? SyncState.Error)?.message ?: currentProvider?.lastSyncError?.let { storedErrorText(it) })
                                     ?.let(Redact::text)
+                            val storedError = currentProvider?.lastSyncError
+                            val failedAt = currentProvider?.lastFailedAtMs
+                            if (storedError != null && failedAt != null) {
+                                CinemaText(
+                                    stringResource(
+                                        R.string.provider_last_failure_status,
+                                        NumberUtils.formatTimestamp(LocalContext.current, failedAt),
+                                    ),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
+                                )
+                            }
                             if (errorMsg != null) {
                                 CinemaText(errorMsg, role = TextRole.BodySmall, tone = TextTone.Danger)
+                            }
+                            val failures = currentProvider?.failuresSinceSuccess ?: 0
+                            if (storedError != null && failures > 0) {
+                                CinemaText(
+                                    stringResource(R.string.provider_failures_since_success, failures),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
+                                )
                             }
                         }
                         if (syncState is SyncState.Success) {

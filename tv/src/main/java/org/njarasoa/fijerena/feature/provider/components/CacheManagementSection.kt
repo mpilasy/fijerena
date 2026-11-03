@@ -60,7 +60,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
 /**
- * Library data: Sync now (Xtream), the last sync, totals and per-type counts. Clearing lives in
+ * Library data: Sync now (Xtream), the last successful sync, the last failure (its time, reason and
+ * the failures since the last success), totals and per-type counts. Clearing lives in
  * [ProviderDangerZoneSection].
  */
 @Composable
@@ -72,6 +73,8 @@ fun CacheManagementSection(
     lastSyncedAtMs: Long = 0L,
     lastSyncDurationMs: Long = 0L,
     lastSyncError: String? = null,
+    lastFailedAtMs: Long? = null,
+    failuresSinceSuccess: Int = 0,
     lastSyncInserted: Int = 0,
     lastSyncUpdated: Int = 0,
     lastSyncDeleted: Int = 0,
@@ -98,9 +101,11 @@ fun CacheManagementSection(
                 modifier = Modifier.paneItem(pane, "sync"),
             )
 
-            if (lastSyncedAtMs > 0L) {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                val context = androidx.compose.ui.platform.LocalContext.current
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+            if (lastSyncedAtMs <= 0L) {
+                CinemaText(stringResource(R.string.provider_last_sync_never), role = TextRole.BodySmall, tone = TextTone.Secondary)
+            } else {
                 val time = NumberUtils.formatTimestamp(context, lastSyncedAtMs)
                 val duration = NumberUtils.formatDuration(LocalResources.current, lastSyncDurationMs)
                 CinemaText(
@@ -130,12 +135,26 @@ fun CacheManagementSection(
 
             if (syncState is SyncState.Error || (syncState is SyncState.Idle && lastSyncError != null)) {
                 val errorMsg = ((syncState as? SyncState.Error)?.message ?: lastSyncError?.let { storedErrorText(it) })?.let(Redact::text)
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                if (lastSyncError != null && lastFailedAtMs != null) {
+                    CinemaText(
+                        stringResource(R.string.provider_last_failure_status, NumberUtils.formatTimestamp(context, lastFailedAtMs)),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
+                    )
+                }
                 if (errorMsg != null) {
-                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(
                         errorMsg,
                         role = TextRole.BodySmall,
                         tone = TextTone.Danger,
+                    )
+                }
+                if (lastSyncError != null && failuresSinceSuccess > 0) {
+                    CinemaText(
+                        stringResource(R.string.provider_failures_since_success, failuresSinceSuccess),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
             }

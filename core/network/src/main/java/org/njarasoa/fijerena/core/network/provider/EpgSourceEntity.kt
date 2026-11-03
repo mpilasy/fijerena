@@ -58,6 +58,12 @@ data class EpgSourceEntity(
      */
     @ColumnInfo(name = "refresh_interval_hours")
     val refreshIntervalHours: Int? = DEFAULT_REFRESH_INTERVAL_HOURS,
+    /** When the last failed refresh happened; null after a success (added v18). Local, never synced. */
+    @ColumnInfo(name = "last_failed_at_ms")
+    val lastFailedAtMs: Long? = null,
+    /** Failed refreshes since the last success; 0 after a success (added v18). Local, never synced. */
+    @ColumnInfo(name = "failures_since_success", defaultValue = "0")
+    val failuresSinceSuccess: Int = 0,
 ) {
     companion object {
         const val REFRESH_OFF = -1

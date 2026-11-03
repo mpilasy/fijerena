@@ -36,7 +36,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 17
+        const val DB_VERSION = 18
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -350,6 +350,35 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 17→18: the last failure of each source's catalogue sync and each guide source's
+         * refresh, kept apart from the last success. `providers.lastFailedAtMs` and
+         * `epg_source.last_failed_at_ms` (null), `failuresSinceSuccess` and `failures_since_success`
+         * (0). A row with an error now gets a failure count of 1 and a failure time: a source's
+         * `lastSyncedAtMs` (until now the time of the last attempt, failed or not), a guide source's
+         * time of the migration (it kept no time for a failure). A source's `lastSyncedAtMs` stays
+         * as it is: the migration cannot know if an earlier sync succeeded, and 0 means "never
+         * synced" to its readers (the first-sync "library still loading" state, the hidden Live TV
+         * section). These columns are local: the live sync triggers do not watch them.
+         */
+        val MIGRATION_17_18 =
+            object : Migration(17, 18) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `providers` ADD COLUMN `lastFailedAtMs` INTEGER")
+                    db.execSQL("ALTER TABLE `providers` ADD COLUMN `failuresSinceSuccess` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `last_failed_at_ms` INTEGER")
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `failures_since_success` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL(
+                        "UPDATE `providers` SET `lastFailedAtMs` = `lastSyncedAtMs`, `failuresSinceSuccess` = 1 " +
+                            "WHERE `lastSyncError` IS NOT NULL",
+                    )
+                    db.execSQL(
+                        "UPDATE `epg_source` SET `last_failed_at_ms` = ?, `failures_since_success` = 1 WHERE `last_error` IS NOT NULL",
+                        arrayOf<Any>(System.currentTimeMillis()),
+                    )
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -382,6 +411,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {
