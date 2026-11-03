@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,7 +60,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * The banner takes focus when it shows (Watch, or Dismiss without a channel), over whatever is on
  * screen, full-screen playback included, and keeps it on its buttons until it closes. Back or
  * Dismiss gives focus back to the control that had it ([reminderBannerContent], a `focusRestorer`
- * on the screen's content). The banner goes by itself after [CinemaAnimation.reminderBannerDismissMs].
+ * on the screen's content), else to the content's first control, never to nothing. The banner goes by itself after [CinemaAnimation.reminderBannerDismissMs].
  */
 @Stable
 class ReminderBannerState {
@@ -70,9 +71,26 @@ class ReminderBannerState {
     /** Focus is on one of the banner's buttons. */
     internal var holdsFocus by mutableStateOf(false)
 
-    /** Gives focus back to the screen's content (the control that had it), then closes [alert]. */
+    /** Focus is on a control of the screen's content ([reminderBannerContent]). */
+    internal var contentHasFocus by mutableStateOf(false)
+
+    /**
+     * Counts the closes where the content had no control to take focus (the control that had it
+     * is gone and its list loads again): the banner's effect then tries again over the next
+     * frames, so focus never stays on nothing.
+     */
+    internal var refocusRequests by mutableIntStateOf(0)
+
+    /**
+     * Gives focus back to the screen's content (the control that had it, else the content's first
+     * one) before [alert] closes. The result of `requestFocus` is not used: through the
+     * `focusRestorer` it is false even when focus moves, so [contentHasFocus] tells.
+     */
     internal fun close(alert: GameReminderAlert?) {
-        if (holdsFocus) contentFocus.requestFocus(FocusDirection.Enter)
+        if (holdsFocus) {
+            contentFocus.requestFocus(FocusDirection.Enter)
+            if (!contentHasFocus) refocusRequests++
+        }
         alert?.let(GameReminderAlerts::dismissBanner)
     }
 }
@@ -84,7 +102,11 @@ fun rememberReminderBannerState(): ReminderBannerState = remember { ReminderBann
  * On the screen's content (every screen, the rail and their overlays, not the banner): focus
  * entering it from the banner goes back to the control that had it.
  */
-fun Modifier.reminderBannerContent(state: ReminderBannerState): Modifier = focusRequester(state.contentFocus).focusRestorer().focusGroup()
+fun Modifier.reminderBannerContent(state: ReminderBannerState): Modifier =
+    onFocusChanged { state.contentHasFocus = it.hasFocus }
+        .focusRequester(state.contentFocus)
+        .focusRestorer()
+        .focusGroup()
 
 /**
  * The reminder that rang while the TV app is on screen ([GameReminderAlerts.banner]): "Arsenal v
@@ -102,6 +124,11 @@ fun TvGameReminderBanner(
     LifecycleStartEffect(Unit) {
         GameReminderAlerts.bannerHostStarted()
         onStopOrDispose { GameReminderAlerts.bannerHostStopped() }
+    }
+    // Before the return: it runs after the banner has gone too.
+    val refocus = state.refocusRequests
+    LaunchedEffect(refocus) {
+        if (refocus > 0) state.contentFocus.requestFocusWithRetry(landed = { state.contentHasFocus })
     }
     val alert by GameReminderAlerts.banner.collectAsStateWithLifecycle()
     val current = alert ?: return

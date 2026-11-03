@@ -22,19 +22,23 @@ const val FOCUS_RETRY_MAX_FRAMES = 30
  * instead of throwing `IllegalStateException`, so `try { requestFocus() } catch (_: IllegalStateException)`
  * retries nothing. Call from a `LaunchedEffect` (a frame clock is needed). See
  * the next level rock solid resilience plan → R-05.
+ *
+ * [landed] tells when focus is already where it must go, before each try: give it for a requester
+ * on a `focusRestorer` group, whose `requestFocus` returns false even when the restore moves focus.
  */
 suspend fun FocusRequester.requestFocusWithRetry(
     maxFrames: Int = FOCUS_RETRY_MAX_FRAMES,
     fallback: FocusRequester? = null,
+    landed: () -> Boolean = { false },
 ): Boolean {
-    var focused = requestFocus(FocusDirection.Enter)
+    var focused = landed() || requestFocus(FocusDirection.Enter)
     var frames = 0
     var gap = 1
     while (!focused && frames < maxFrames) {
         repeat(gap) { withFrameNanos { } }
         frames += gap
         gap *= 2
-        focused = requestFocus(FocusDirection.Enter)
+        focused = landed() || requestFocus(FocusDirection.Enter)
     }
     if (!focused && fallback != null) focused = fallback.requestFocus(FocusDirection.Enter)
     return focused
