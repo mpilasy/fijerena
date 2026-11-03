@@ -229,8 +229,8 @@
     <string name="epg_source_stat_channels">Fantsona</string>
     <string name="epg_source_stat_programmes">Fandaharana</string>
     <string name="epg_source_stat_unchanged">Tsy niova</string>
-    <string name="epg_source_stat_last_failure">Tsy fahombiazana farany</string>
-    <string name="epg_source_stat_failures">Tsy fahombiazana hatramin\'ny fahombiazana farany</string>
+    <string name="epg_source_stat_last_failure">Tsy nety farany</string>
+    <string name="epg_source_stat_failures">Tsy nety hatramin\'ny fahombiazana farany</string>
     <string name="epg_source_never">Mbola tsy nisy</string>
     <string name="epg_source_none">Tsy misy</string>
     <string name="epg_add_source_title">Hampiditra loharanon\'ny fitarihana</string>
@@ -371,8 +371,8 @@
     <string name="provider_sync_now_button">Ampifanaraho izao</string>
     <string name="provider_last_sync_status">Fampifanarahana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
     <string name="provider_last_sync_never">Fampifanarahana farany: mbola tsy nisy</string>
-    <string name="provider_last_failure_status">Tsy fahombiazana farany: %1$s</string>
-    <string name="provider_failures_since_success">Tsy fahombiazana hatramin\'ny fahombiazana farany: %1$d</string>
+    <string name="provider_last_failure_status">Tsy nety farany: %1$s</string>
+    <string name="provider_failures_since_success">Tsy nety hatramin\'ny fahombiazana farany: %1$d</string>
     <string name="provider_sync_success">Vita soa aman-tsara ny fampifanarahana</string>
     <string name="provider_sync_no_changes">Tsy nisy fiovana hatramin\'ny fampifanarahana farany</string>
     <plurals name="provider_sync_added">
