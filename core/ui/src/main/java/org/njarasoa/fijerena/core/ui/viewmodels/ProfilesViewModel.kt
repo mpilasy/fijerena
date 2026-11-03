@@ -42,17 +42,17 @@ data class ProfileUi(
 
 /** A profile's own settings, edited on its profile page for whichever profile it is. */
 data class ProfileSettings(
-    val devMode: Boolean,
+    val admin: Boolean,
     val autoplayNextEpisode: Boolean,
-    /** A child profile (docs/plans/20261019_tv-household-ux-plan.md): adult categories hidden, never Expert. */
+    /** A child profile (docs/plans/20261019_tv-household-ux-plan.md): adult categories hidden, never Admin. */
     val child: Boolean = false,
     /** A Nerd ([AppSettings.nerdMode]): sees the stats and extra information. Never a child. */
     val nerd: Boolean = false,
 ) {
     /**
-     * The page shows the Name and PIN rows. A child's own page (seen without Expert mode,
+     * The page shows the Name and PIN rows. A child's own page (seen by a profile that is not an Admin,
      * [adminView] false) does not: a child does not rename itself or set, change or remove its
-     * PIN. An Expert on the child's page still edits both.
+     * PIN. An Admin on the child's page still edits both.
      */
     fun showsNameAndPin(adminView: Boolean): Boolean = adminView || !child
 }
@@ -101,7 +101,7 @@ class ProfilesViewModel(
      * launch picker that is the normal way in.
      *
      * The child lock ([ProfileRepository.needsAdminPinToSwitch]): a switch away from a child
-     * profile does not happen until an Expert's PIN is typed. It sets [leavingChild] instead, for
+     * profile does not happen until an Admin's PIN is typed. It sets [leavingChild] instead, for
      * the screen to show the prompt; the prompt calls this again with [pinTyped] true.
      */
     fun switchTo(
@@ -144,7 +144,7 @@ class ProfilesViewModel(
 
     private var switchJob: Job? = null
 
-    // A switch away from a child profile waiting for an Expert's PIN, for the screen to ask it.
+    // A switch away from a child profile waiting for an Admin's PIN, for the screen to ask it.
     private val _leavingChild = MutableStateFlow<PinRequest.LeaveChild?>(null)
     val leavingChild: StateFlow<PinRequest.LeaveChild?> = _leavingChild.asStateFlow()
 
@@ -162,30 +162,30 @@ class ProfilesViewModel(
     val message: StateFlow<String?> = _message.asStateFlow()
 
     /**
-     * Whether [id] is the only profile with Expert mode (the admin, for now): it can't turn it off,
-     * so there is always one (see [ProfileRepository.ensureAnExpert], the backstop). From the
+     * Whether [id] is the only Admin profile: it can't turn it off,
+     * so there is always one (see [ProfileRepository.ensureAnAdmin], the backstop). From the
      * listed profiles, which a profile page has read; true while they aren't, to be safe.
      */
-    fun isLastExpert(id: String): Boolean = profiles.value.none { it.id != id && appSettings.devMode(it.id) }
+    fun isLastAdmin(id: String): Boolean = profiles.value.none { it.id != id && appSettings.admin(it.id) }
 
     /** The profiles' optional PINs (the profile pin plan). */
     val pins = ProfilePins(appSettings)
 
     /**
-     * The Expert profiles (admin, for now) with a PIN, in list order (by name). Adding a profile
+     * The Admin profiles with a PIN, in list order (by name). Adding a profile
      * asks none (the profile rules plan, PR-D2).
      */
-    fun adminPinHolders(): List<String> = profiles.value.map { it.id }.filter { appSettings.devMode(it) && pins.hasPin(it) }
+    fun adminPinHolders(): List<String> = profiles.value.map { it.id }.filter { appSettings.admin(it) && pins.hasPin(it) }
 
     /**
-     * There is a child profile and no Expert has a PIN: Settings asks the admin to set one
+     * There is a child profile and no Admin has a PIN: Settings asks the admin to set one
      * (docs/plans/20261019_tv-household-ux-plan.md, Phase 3), since without it anyone can open
-     * Settings, change the filters or become Expert with the 7 taps.
+     * Settings, change the filters or become Admin with the 7 taps.
      */
     fun needsAdminPin(): Boolean = profiles.value.any { appSettings.isChildProfile(it.id) } && adminPinHolders().isEmpty()
 
     /**
-     * [id]'s PIN is the last Expert PIN and a child profile exists: removing it stops the child
+     * [id]'s PIN is the last Admin PIN and a child profile exists: removing it stops the child
      * lock, on every linked device (the PIN syncs). Remove PIN's confirm says so. From the listed
      * profiles, which a profile page has read.
      */
@@ -202,7 +202,7 @@ class ProfilesViewModel(
         nerd: Boolean = false,
         onAdded: (String) -> Unit = {},
     ) {
-        // A kid adds nothing; only an Expert adds a Nerd (ProfileRules).
+        // A kid adds nothing; only an Admin adds a Nerd (ProfileRules).
         val requested = ProfileSettings(false, true, child, nerd)
         val fields = ProfileRules.add(actor(), ProfileFields(name, colorIndex, requested)) ?: return
         viewModelScope.launch {
@@ -213,7 +213,7 @@ class ProfilesViewModel(
     /** The profile in use, for [ProfileRules]. */
     private fun actor(): ProfileActor {
         val id = appSettings.activeProfileId
-        return ProfileActor(id, appSettings.isChildProfile(id), appSettings.devMode(id))
+        return ProfileActor(id, appSettings.isChildProfile(id), appSettings.admin(id))
     }
 
     fun updateProfile(
@@ -235,15 +235,15 @@ class ProfilesViewModel(
                 ProfileFields(name, colorIndex, requested),
             ) ?: return
         val settings = allowed.settings
-        // The last Expert keeps it and can't become a child (its page disables both switches; this
-        // guards the rest). A child is never Expert: ProfileRepository.setChildProfile turns it off.
-        val lastExpert = isLastExpert(id)
-        val child = settings.child && !(stored.devMode && lastExpert)
+        // The last Admin keeps it and can't become a child (its page disables both switches; this
+        // guards the rest). A child is never Admin: ProfileRepository.setChildProfile turns it off.
+        val lastAdmin = isLastAdmin(id)
+        val child = settings.child && !(stored.admin && lastAdmin)
         if (child != stored.child) {
             viewModelScope.launchGuarded("ProfilesViewModel.setChildProfile") { repository.setChildProfile(id, child) }
         }
-        val devMode = settings.devMode || (stored.devMode && lastExpert)
-        if (!child && devMode != stored.devMode) appSettings.setDevMode(id, devMode)
+        val admin = settings.admin || (stored.admin && lastAdmin)
+        if (!child && admin != stored.admin) appSettings.setAdmin(id, admin)
         // A child is never a Nerd: ProfileRepository.setChildProfile turns it off.
         if (!child && settings.nerd != stored.nerd) appSettings.setNerdMode(id, settings.nerd)
         if (settings.autoplayNextEpisode != stored.autoplayNextEpisode) {
@@ -362,12 +362,12 @@ class ProfilesViewModel(
 
     /** [id]'s own settings — not necessarily the profile this device uses. */
 
-    /** The profile in use has Expert mode (admin, for now): it may change sources and content filters. */
-    val viewerIsAdmin: Boolean get() = appSettings.isDevMode
+    /** The profile in use is an Admin: it may change sources and content filters. */
+    val viewerIsAdmin: Boolean get() = appSettings.isAdmin
 
     fun settingsOf(id: String): ProfileSettings =
         ProfileSettings(
-            appSettings.devMode(id),
+            appSettings.admin(id),
             appSettings.autoplayNextEpisode(id),
             appSettings.isChildProfile(id),
             appSettings.nerdMode(id),
@@ -419,7 +419,7 @@ class ProfilesViewModel(
     fun lookLockedOf(id: String): Boolean = UiThemes.packaged(appSettings.uiThemeId(id)) != null
 
     fun deleteProfile(id: String) {
-        // Only an Expert deletes a profile (ProfileRules).
+        // Only an Admin deletes a profile (ProfileRules).
         if (!ProfileRules.delete(actor())) return
         viewModelScope.launch {
             _message.value =

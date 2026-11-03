@@ -62,7 +62,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
-import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
+import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -111,7 +111,7 @@ fun SettingsScreen(
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
-    // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
+    // "Switch to this profile" away from a child profile asks an Admin's PIN (the child lock).
     TvLeaveChildPinDialog(profilesViewModel, onProfileSwitched)
     // Settings opens without the PIN; Admin (shared setup, this device, every profile) asks the PIN
     // of the profile in use once, on the way into its pane (the admin settings plan).
@@ -224,7 +224,7 @@ fun SettingsScreen(
             val hasProvider = providerRepo.getProviderCount() > 0
             val hadOnLoad = hadProviderOnLoad
             viewModel.refreshProviderInfo()
-            viewModel.refreshDevMode()
+            viewModel.refreshAdmin()
             tmdbKeyViewModel.refresh()
 
             if (hadOnLoad == null) {
@@ -237,7 +237,7 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
-    val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
+    val onVersionClick = rememberAdminTapHandler(uiState.adminExists, viewModel::enableAdmin)
 
     // Two panes (plan Part I, B): a rail of the groups on the left, the selected group's
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
@@ -246,9 +246,9 @@ fun SettingsScreen(
     // The Admin section open in the pane in place of Admin's list of sections (null: the list).
     // Saveable as the rail row, for the same round trips.
     var adminSection by rememberSaveable { mutableStateOf<AdminPart?>(null) }
-    // Without Expert mode (admin, for now) Admin is not listed (a child profile has no Settings);
-    // Admin left selected when Expert mode was turned off falls back to Your Profile.
-    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode)
+    // For a profile that is not an Admin, the Admin group is not listed (a child profile has no
+    // Settings); the Admin group left selected when the Admin flag was turned off falls back to Your Profile.
+    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isAdmin)
     if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
     // Another rail row: Admin opens again on its list of sections.
     LaunchedEffect(selectedGroup) { if (selectedGroup != SettingsGroup.ADMIN) adminSection = null }
@@ -358,7 +358,7 @@ fun SettingsScreen(
     // Detail Screens"); the BackHandler stays as the fallback. A picker takes its own Back.
     var paneHasFocus by remember { mutableStateOf(false) }
     val backToRail = { coroutineScope.launch { railPane.focusEntry() } }
-    // Your Profile shows the page of the profile in use, for every profile (an Expert's too, with
+    // Your Profile shows the page of the profile in use, for every profile (an Admin's too, with
     // only its own rows), without taking focus from the rail. The page takes its own Back (after the
     // name field, which keeps Back to cancel its edit) and leaves to the rail; a new key drops what
     // was left unsaved.
@@ -547,20 +547,20 @@ fun SettingsScreen(
                                             viewModel = profilesViewModel,
                                             canDelete = !profile.isActive && profiles.size > 1,
                                             onSaved = {
-                                                viewModel.refreshDevMode()
+                                                viewModel.refreshAdmin()
                                                 if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false)
                                             },
                                             onSwitch = { profilesViewModel.switchTo(profile.id, onProfileSwitched) },
                                             onDeleted = { closeProfile(true) },
                                             onBack = { if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false) },
                                             scale = scale,
-                                            adminView = uiState.isDevMode,
+                                            adminView = uiState.isAdmin,
                                             // A profile's Admin rows show only in Admin → Profiles, also
-                                            // for the Expert's own profile (the admin settings plan, AS-D1).
-                                            adminRows = uiState.isDevMode && !ownProfilePage,
+                                            // for the Admin's own profile (the admin settings plan, AS-D1).
+                                            adminRows = uiState.isAdmin && !ownProfilePage,
                                             focusOnOpen = !ownProfilePage,
-                                            // A grown-up without Expert mode adds a profile from its own page.
-                                            canAddProfile = ownProfilePage && !uiState.isDevMode && !uiState.isChildProfile,
+                                            // A grown-up who is not an Admin adds a profile from its own page.
+                                            canAddProfile = ownProfilePage && !uiState.isAdmin && !uiState.isChildProfile,
                                             title =
                                                 if (ownProfilePage) {
                                                     stringResource(R.string.profile_own_page_title)
@@ -568,7 +568,7 @@ fun SettingsScreen(
                                                     stringResource(R.string.profile_dialog_edit_title)
                                                 },
                                             onParentalControls = {
-                                                viewModel.refreshDevMode()
+                                                viewModel.refreshAdmin()
                                                 openAdminPart(AdminPart.PARENTAL_CONTROLS)
                                             },
                                             entryModifier =
@@ -669,9 +669,9 @@ fun SettingsScreen(
                                                                                 profilesViewModel
                                                                                     .needsAdminPin()
                                                                             },
-                                                                        pinNudgeLastExpert =
+                                                                        pinNudgeLastAdmin =
                                                                             profiles.firstOrNull { it.isActive }?.let {
-                                                                                profilesViewModel.isLastExpert(it.id)
+                                                                                profilesViewModel.isLastAdmin(it.id)
                                                                             } == true,
                                                                         noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
                                                                     )
@@ -875,7 +875,7 @@ fun SettingsScreen(
                                                                             }
                                                                         },
                                                                         exportImportMessage = uiState.exportImportMessage,
-                                                                        isDevMode = uiState.isDevMode,
+                                                                        isAdmin = uiState.isAdmin,
                                                                         quickImportReady =
                                                                             remember {
                                                                                 exportManager.getQuickImportPath() != null
@@ -996,7 +996,7 @@ private const val PANE_WEIGHT = 0.7f
 enum class SettingsGroup(
     @StringRes val titleRes: Int,
     /**
-     * Admin, which only Expert mode (admin, for now) sees, and whose pane is entered after the PIN
+     * Admin, which only an Admin sees, and whose pane is entered after the PIN
      * of the profile in use (when it has one): every profile, the household's shared setup and this
      * device's settings, the [AdminPart]s.
      */
@@ -1011,7 +1011,7 @@ enum class SettingsGroup(
     val entryKey: String get() = "$name:first"
 
     companion object {
-        /** The groups the rail lists: without Expert mode ([admin] false), not Admin. */
+        /** The groups the rail lists: for a profile that is not an Admin ([admin] false), not Admin. */
         fun visibleFor(admin: Boolean): List<SettingsGroup> = entries.filter { admin || !it.adminOnly }
     }
 }

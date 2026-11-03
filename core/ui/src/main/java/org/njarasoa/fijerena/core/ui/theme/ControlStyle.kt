@@ -24,7 +24,7 @@ object ControlStyle {
     /** A progress bar's thickness, and how strongly its track shows. */
     val progressThickness: Dp = 3.dp
 
-    /** The buffering details' bar (Expert mode). */
+    /** The buffering details' bar (Nerd). */
     val bufferingBarWidth: Dp = 240.dp
 
     /** A title's logo art where it replaces the title, and the plate behind a dark logo. */

@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.network.profile
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** The child lock: who may switch where without an Expert's PIN (the settings flow review plan, SF-D6 to SF-D9). */
+/** The child lock: who may switch where without an Admin's PIN (the settings flow review plan, SF-D6 to SF-D9). */
 class SwitchLockTest {
     private val children = setOf("kid", "teen")
     private val adminPins = mutableSetOf("atr")
@@ -15,7 +15,7 @@ class SwitchLockTest {
     ) = SwitchLock.of(activeId, targetId, profileIds, { it in children }, { it in adminPins })
 
     @Test
-    fun `leaving a child asks an Expert's PIN, for a grown-up or another child`() {
+    fun `leaving a child asks an Admin's PIN, for a grown-up or another child`() {
         assertEquals(SwitchLock.AskPin(listOf("atr")), lock("kid", "mum"))
         assertEquals(SwitchLock.AskPin(listOf("atr")), lock("kid", "atr"))
         assertEquals(SwitchLock.AskPin(listOf("atr")), lock("kid", "teen"))
@@ -33,14 +33,14 @@ class SwitchLockTest {
     }
 
     @Test
-    fun `with no Expert PIN there is no lock`() {
+    fun `with no Admin PIN there is no lock`() {
         adminPins.clear()
 
         assertEquals(SwitchLock.Free, lock("kid", "mum"))
     }
 
     @Test
-    fun `every Expert with a PIN is offered, oldest first`() {
+    fun `every Admin with a PIN is offered, oldest first`() {
         adminPins += "mum"
 
         assertEquals(SwitchLock.AskPin(listOf("atr", "mum")), lock("kid", "mum"))

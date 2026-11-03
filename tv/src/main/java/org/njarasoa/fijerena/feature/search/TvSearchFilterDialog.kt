@@ -35,7 +35,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Search's filter on TV (the search decade genre filter plan, Phase 3): a
- * section each for the results' sources (one choice; Expert mode, two or more sources), decades,
+ * section each for the results' sources (one choice; Nerd, two or more sources), decades,
  * genres, languages and regions (several), with their counts, and a **Clear filters** button while one is
  * active. A dialog window: focus opens on the first chosen row, else the first choice (never on Clear
  * filters); OK changes a row and keeps focus on it; Clear filters, Close or Back closes it.

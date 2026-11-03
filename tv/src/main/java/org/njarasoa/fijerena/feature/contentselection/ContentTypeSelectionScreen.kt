@@ -230,7 +230,7 @@ fun ContentTypeSelectionScreen(
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
     // A "Browse <source>" entry of a profile with no Xtream source (O1): that source's sections.
     onBrowse: (BrowseSource) -> Unit = {},
-    // A profile with no source: Add Source. Null for a profile without Expert mode: it asks a grown-up.
+    // A profile with no source: Add Source. Null for a profile that is not an Admin: it asks a grown-up.
     onAddSource: (() -> Unit)? = null,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWantedSelected: (Screen) -> Unit = {},
@@ -259,7 +259,7 @@ fun ContentTypeSelectionScreen(
 
     // The header's one line for all the profile's sources (O3), and its sheet.
     val syncStates = rememberProfileSyncStates()
-    val syncSummary = remember(syncStates) { syncSummary(syncStates, showUpdated = AppSettings(context).isDevMode) }
+    val syncSummary = remember(syncStates) { syncSummary(syncStates, showUpdated = AppSettings(context).isAdmin) }
     var showSourcesSheet by remember { mutableStateOf(false) }
     val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
 
@@ -571,7 +571,7 @@ fun ContentTypeSelectionScreen(
         // The chart rows load after the others; a short wait more for them (a first TMDB read can be slow).
         withTimeoutOrNull(CHART_ENTRY_WAIT_MS) { snapshotFlow { chartsLoaded }.first { it } }
         // No merged sections: the panel's first button (Browse <source>, or Add Source); the rail
-        // when the panel has no button (no source and no Expert mode).
+        // when the panel has no button (no source and not an Admin).
         if (sections?.merged?.isEmpty() == true) {
             if (sections?.hasNoSources == true && onAddSource == null) {
                 rail?.entry?.requestFocusWithRetry()
@@ -1296,7 +1296,7 @@ fun ContentTypeSelectionScreen(
                 val loadedSections = sections
                 if (loadedSections != null && loadedSections.merged.isEmpty()) {
                     // No Xtream source: a Browse entry per source (O1); no source at all: Add Source,
-                    // or without Expert mode only the words, and focus stays on the rail.
+                    // or for a profile that is not an Admin only the words, and focus stays on the rail.
                     HomeSourcesPanel(
                         message =
                             stringResource(
@@ -1890,8 +1890,8 @@ private const val BACKDROP_SETTLE_MS = 250L
 
 /**
  * In place of the rows when the profile has no merged sections: [message] over one button per
- * action — a "Browse <source>" per source (O1), or Add Source with none (no button without Expert
- * mode). Buttons stack, so Up/Down walk them; each hands Left to the navigation rail.
+ * action — a "Browse <source>" per source (O1), or Add Source with none (no button for a profile
+ * that is not an Admin). Buttons stack, so Up/Down walk them; each hands Left to the navigation rail.
  */
 @Composable
 private fun HomeSourcesPanel(

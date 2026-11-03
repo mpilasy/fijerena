@@ -94,7 +94,7 @@ abstract class SettingsFocusTest {
         /** Admin's list of sections, in order; each row opens its section in place of the list. */
         val ADMIN_SECTIONS = listOf("Profiles", "Parental Controls", "This Device", "Sources & Guide", "Sync & Backup")
 
-        /** Admin → Parental Controls, as an Expert sees it on the fixture's data. */
+        /** Admin → Parental Controls, as an Admin sees it on the fixture's data. */
         val PARENTAL_ROWS =
             listOf(
                 "Kids' Categories",

@@ -848,7 +848,7 @@ internal fun StreamItem(
         // A category named by one tag ("en", "4k") shows as a badge, as a title's tags do.
         val categoryTag = remember(categoryName) { categoryNameAsTag(categoryName) }
         val categoryText = categoryName.takeIf { categoryTag == null }
-        // Badges show in Expert mode only (SourceBadge).
+        // Badges show for a Nerd only (SourceBadge).
         val sourceLine = sourceName?.takeIf { LocalNerd.current }
         val sourceLineText =
             when {
@@ -972,7 +972,7 @@ internal fun StreamItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
                     )
-                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    // The source (Nerd) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
                 // The second line: the catch-up badge and the title's badges, then the category,

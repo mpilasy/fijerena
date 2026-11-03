@@ -88,7 +88,7 @@ data class SourceSyncState(
  * never syncs its catalogue). A running sync wins ("Updating 1 of 3…"), then failures ("1 failed"),
  * then the least recent update ("Updated 2 hours ago" — the age of the stalest source, so the line
  * never says the library is fresher than it is); [SourceSyncStatus.NONE] when no source syncs.
- * Only an Expert sees "Updated …": for another profile the line then says nothing ([showUpdated]).
+ * Only an Admin sees "Updated …": for another profile the line then says nothing ([showUpdated]).
  */
 data class SyncSummary(
     val status: SourceSyncStatus,

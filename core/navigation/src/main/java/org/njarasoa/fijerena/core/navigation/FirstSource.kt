@@ -1,17 +1,17 @@
 package org.njarasoa.fijerena.core.navigation
 
 /*
- * The admin's first run (the settings flow review, E1): with no source at all, an Expert in use
+ * The admin's first run (the settings flow review, E1): with no source at all, an Admin in use
  * starts on Add Source, with Settings under it (Back goes to Settings); the first source saved
- * opens Home with the back stack cleared. A profile that is not Expert starts on Home, which tells
+ * opens Home with the back stack cleared. A profile that is not Admin starts on Home, which tells
  * it to ask a grown-up for a source.
  */
 
-/** With [hasSource] false and an Expert in use ([expert]), the app starts on Add Source over Settings. */
+/** With [hasSource] false and an Admin in use ([admin]), the app starts on Add Source over Settings. */
 fun startsOnAddSource(
     hasSource: Boolean,
-    expert: Boolean,
-): Boolean = !hasSource && expert
+    admin: Boolean,
+): Boolean = !hasSource && admin
 
 /**
  * A save on Add Source opens Home with the back stack cleared: a new source ([editId] < 0) when

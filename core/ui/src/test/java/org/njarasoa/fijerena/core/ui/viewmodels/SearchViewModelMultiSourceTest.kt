@@ -67,7 +67,7 @@ class SearchViewModelMultiSourceTest {
     fun `an Admin who is not a Nerd is not told how many results the filters hide`() {
         givenSources(xtream(A, "Alpha"))
         source(A, items = listOf(movie("1", "Matrix")), category = "Sci-fi", excluded = 2)
-        every { prefs.getBoolean(match { it.startsWith("dev_mode") }, any()) } returns true
+        every { prefs.getBoolean(match { it.startsWith("admin") }, any()) } returns true
 
         assertTrue(search("matrix").excludedCountByType.isEmpty())
     }

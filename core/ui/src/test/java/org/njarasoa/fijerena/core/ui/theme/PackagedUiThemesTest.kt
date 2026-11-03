@@ -16,8 +16,8 @@ class PackagedUiThemesTest {
     }
 
     @Test
-    fun `a UI theme with a light colour theme is Expert only`() {
-        UiThemes.packaged.filter { paletteById(it.themeId).isLight }.forEach { assertEquals(it.id, true, it.expertOnly) }
+    fun `a UI theme with a light colour theme is Admin only`() {
+        UiThemes.packaged.filter { paletteById(it.themeId).isLight }.forEach { assertEquals(it.id, true, it.adminOnly) }
     }
 
     @Test

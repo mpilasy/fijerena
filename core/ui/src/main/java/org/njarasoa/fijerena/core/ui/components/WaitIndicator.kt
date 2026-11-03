@@ -135,7 +135,7 @@ fun WaitIndicator(
 /**
  * The player's wait over the full screen: [WaitIndicator] in the centre, the title or channel logo
  * (or its name) at the top left unless [showBadge] is false (the TV banner shows it then), and
- * Expert mode's [BufferingDetails] under the indicator when [showDetails]. The indicator is always
+ * the Nerd's [BufferingDetails] under the indicator when [showDetails]. The indicator is always
  * at the centre of the screen; the details hang below it.
  */
 @Composable

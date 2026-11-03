@@ -54,7 +54,7 @@ fun ProfileSheet(
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
-    // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
+    // Leaving a child profile asks an Admin's PIN (the child lock); Cancel keeps the child.
     LeaveChildPinDialog(viewModel, onProfileChosen)
     CinemaSheet(onDismissRequest = onDismiss, dismissible = !mustChoose, rows = true) {
         Column {

@@ -15,19 +15,19 @@ import org.robolectric.RobolectricTestRunner
 /**
  * TV Settings → Admin → Profiles, the whole screen on the fixture's data
  * (`scripts/focus-walks/settings.txt`, the Profiles part): the list of profiles, a profile's page
- * with its Admin rows and the way back, for an Expert.
+ * with its Admin rows and the way back, for an Admin.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilesFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert walks the profiles and their pages`() {
+    fun `an Admin walks the profiles and their pages`() {
         open(SettingsFixture.ADMIN)
         walk.assertFocused("Your Profile")
         walk.run(
             down("Admin"),
             // Admin's list of sections, on Profiles: the names of the profiles under it.
             right("Profiles / Admin, Guest, Kid"),
-            // OK opens the section in place of the list. A child profile and no Expert PIN: the
+            // OK opens the section in place of the list. A child profile and no Admin PIN: the
             // reminder comes first, then the profiles.
             center("Set a PIN for Settings"),
             // Up at the top of the section stays put.
@@ -54,7 +54,7 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             left("A / Admin"),
             down("G / Guest"),
             down("K / Kid"),
-            // A child's page: no Expert mode row; its own rows after Child profile.
+            // A child's page: no Admin row; its own rows after Child profile.
             center("Edit Name / Name / Kid"),
             down("Colour"),
             down("PIN"),

@@ -13,7 +13,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
-/** "Play next episode automatically" is per profile and synced, like developer mode. */
+/** "Play next episode automatically" is per profile and synced, like Admin. */
 class AppSettingsAutoplayNextEpisodeTest {
     private lateinit var settings: AppSettings
 

@@ -8,7 +8,7 @@ import java.io.File
  * On-device record of what went wrong, for builds that ship without a crash reporter: every
  * uncaught exception (the process is about to die) and every exception an [AppScopes] scope
  * absorbed (the process lives on). Appended to `files/crashlog/crashes.log`, capped at
- * [MAX_BYTES] by dropping the oldest half. Shown in Settings → Diagnostics (developer mode); also
+ * [MAX_BYTES] by dropping the oldest half. Shown in Settings → Diagnostics (Admin); also
  * readable with `adb shell run-as <package> cat files/crashlog/crashes.log`.
  *
  * Plain blocking file I/O on purpose: the uncaught-exception path has no coroutine to suspend in

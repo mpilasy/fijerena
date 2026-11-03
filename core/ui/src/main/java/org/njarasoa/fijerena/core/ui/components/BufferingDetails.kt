@@ -36,7 +36,7 @@ import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 import java.util.Locale
 
 /**
- * Expert mode, under "Buffering…": how much video is held of what playback waits for, for how
+ * For a Nerd, under "Buffering…": how much video is held of what playback waits for, for how
  * long, the connection, the speed against what the stream needs and the server, and — only once
  * a load failed — the errors of this wait and what it received. Read from the playback service twice a second.
  */

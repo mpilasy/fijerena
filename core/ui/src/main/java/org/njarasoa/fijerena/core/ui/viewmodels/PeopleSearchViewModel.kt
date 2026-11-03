@@ -50,7 +50,7 @@ class PeopleSearchViewModel(
             val query: String,
         ) : State
 
-        /** TMDB could not be reached. [raw]: the failure's own text, in Expert mode only. */
+        /** TMDB could not be reached. [raw]: the failure's own text, for a Nerd only. */
         data class Failed(
             val query: String,
             val raw: String?,

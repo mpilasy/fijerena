@@ -17,8 +17,8 @@ data class CinemaThemePalette(
     @param:StringRes val nameRes: Int,
     /** A light theme: dark text on light surfaces, dark system-bar icons. */
     val isLight: Boolean,
-    /** Offered only to a profile with Expert mode (admin, for now): kept for testing, not for viewing. */
-    val expertOnly: Boolean = false,
+    /** Offered only to an Admin profile: kept for testing, not for viewing. */
+    val adminOnly: Boolean = false,
     // Primary accent
     val accent: Color,
     val accentDark: Color,
@@ -199,7 +199,7 @@ val DaylightPalette =
         nameRes = R.string.theme_daylight,
         isLight = true,
         // A streaming app is watched in dim rooms and its art is made for dark: kept for admins.
-        expertOnly = true,
+        adminOnly = true,
         accent = Color(0xFF1565C0),
         accentDark = Color(0xFF0D47A1),
         // On white the soft accent has to be the darker blue: it marks the current row, the selected tab and
@@ -454,7 +454,7 @@ val MeadowPalette =
         id = "meadow",
         nameRes = R.string.theme_meadow,
         isLight = true,
-        expertOnly = true,
+        adminOnly = true,
         accent = Color(0xFF4E6E3A),
         accentDark = Color(0xFF3B5A2B),
         // On cream the soft accent has to be the darker green: it marks the current row and the selected tab as text.
@@ -606,7 +606,7 @@ val AllPalettes: List<CinemaThemePalette> =
 fun palettesFor(
     admin: Boolean,
     current: String,
-): List<CinemaThemePalette> = AllPalettes.filter { admin || !it.expertOnly || it.id == current }
+): List<CinemaThemePalette> = AllPalettes.filter { admin || !it.adminOnly || it.id == current }
 
 /** Themes no longer offered, and the one each profile that had it now gets: Teal went 2026-10-19. */
 private val RETIRED_THEMES = mapOf("teal" to "aurora")

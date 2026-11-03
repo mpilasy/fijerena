@@ -2,14 +2,14 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 /**
  * The profile in use, as [ProfileRules] sees it: whether it is a kid (Child Profile on) and
- * whether it has Expert mode. A kid is never an Expert, whatever its stored flag says.
+ * whether it is an Admin. A kid is never an Admin, whatever its stored flag says.
  */
 data class ProfileActor(
     val id: String,
     val kid: Boolean,
-    private val expertFlag: Boolean,
+    private val adminFlag: Boolean,
 ) {
-    val isExpert: Boolean get() = expertFlag && !kid
+    val isAdmin: Boolean get() = adminFlag && !kid
 }
 
 /** A profile's fields the rules govern: its name, its colour and its own settings. */
@@ -25,17 +25,17 @@ data class ProfileFields(
  *
  * - A kid changes only its own personal settings: colour, UI Theme, Theme, Look and Feel, poster
  *   background and play next episode. It adds and deletes nothing, and is never a Nerd.
- * - A grown-up without Expert mode changes its own name, colour, personal settings and Nerd, and
- *   adds a profile (a kid or not, never an Expert or a Nerd). It does not make itself Expert or a
+ * - A grown-up who is not an Admin changes its own name, colour, personal settings and Nerd, and
+ *   adds a profile (a kid or not, never an Admin or a Nerd). It does not make itself Admin or a
  *   kid, and does not change another profile's Nerd.
- * - An Expert changes any profile, Expert mode, Child Profile and Nerd included, and deletes
+ * - An Admin changes any profile, Admin, Child Profile and Nerd included, and deletes
  *   profiles.
  * - Nerd alone gives no right to manage: it only shows the stats and extra information.
  *
- * The other checks (the last Expert, the profile in use, the last profile) stay where they are.
+ * The other checks (the last Admin, the profile in use, the last profile) stay where they are.
  */
 object ProfileRules {
-    /** The profile to add, Expert mode and Nerd off unless an Expert adds it; null when [actor] may not add. */
+    /** The profile to add, Admin and Nerd off unless an Admin adds it; null when [actor] may not add. */
     fun add(
         actor: ProfileActor,
         fields: ProfileFields,
@@ -47,8 +47,8 @@ object ProfileRules {
             fields.copy(
                 settings =
                     settings.copy(
-                        devMode = actor.isExpert && settings.devMode && !settings.child,
-                        nerd = actor.isExpert && settings.nerd && !settings.child,
+                        admin = actor.isAdmin && settings.admin && !settings.child,
+                        nerd = actor.isAdmin && settings.nerd && !settings.child,
                     ),
             )
         }
@@ -64,8 +64,8 @@ object ProfileRules {
         new: ProfileFields,
     ): ProfileFields? =
         when {
-            actor.isExpert -> {
-                // A kid is never a Nerd, also when an Expert turns Child on in the same change.
+            actor.isAdmin -> {
+                // A kid is never a Nerd, also when an Admin turns Child on in the same change.
                 new.copy(settings = new.settings.copy(nerd = new.settings.nerd && !new.settings.child))
             }
 
@@ -82,19 +82,19 @@ object ProfileRules {
             }
 
             else -> {
-                new.copy(settings = new.settings.copy(devMode = old.settings.devMode, child = old.settings.child))
+                new.copy(settings = new.settings.copy(admin = old.settings.admin, child = old.settings.child))
             }
         }
 
-    /** Only an Expert deletes a profile. */
-    fun delete(actor: ProfileActor): Boolean = actor.isExpert
+    /** Only an Admin deletes a profile. */
+    fun delete(actor: ProfileActor): Boolean = actor.isAdmin
 
-    /** The colour theme, UI Theme, Look and Feel and poster background of [targetId]: its own, or an Expert's. */
+    /** The colour theme, UI Theme, Look and Feel and poster background of [targetId]: its own, or an Admin's. */
     fun changesLook(
         actor: ProfileActor,
         targetId: String,
-    ): Boolean = actor.isExpert || targetId == actor.id
+    ): Boolean = actor.isAdmin || targetId == actor.id
 
-    /** A profile's sources, content filters and a child's favourites: an Expert's only. */
-    fun changesSetup(actor: ProfileActor): Boolean = actor.isExpert
+    /** A profile's sources, content filters and a child's favourites: an Admin's only. */
+    fun changesSetup(actor: ProfileActor): Boolean = actor.isAdmin
 }

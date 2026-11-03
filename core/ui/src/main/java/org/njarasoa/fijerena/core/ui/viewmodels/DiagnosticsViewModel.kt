@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.TraceCauses
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
- * Settings → Diagnostics (developer mode): exceptions this app recorded itself ([CrashLog]), the
+ * Settings → Diagnostics (Admin): exceptions this app recorded itself ([CrashLog]), the
  * server calls that failed ([ConnectionLog]) and how its recent processes ended according to the
  * system ([ProcessExits]), newest first. See
  * the rock solid stability resilience plan → F-30.

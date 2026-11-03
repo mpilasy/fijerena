@@ -18,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class SettingsSyncBackupFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert walks Sync and Backup`() {
+    fun `an Admin walks Sync and Backup`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toAdminSection("Sync & Backup"),

@@ -14,7 +14,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
-/** The per-wait counts behind the Expert-mode lines under "Buffering…". */
+/** The per-wait counts behind the Nerd's lines under "Buffering…". */
 class BufferingTrackerTest {
     private val tracker = BufferingTracker()
 

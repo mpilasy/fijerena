@@ -19,7 +19,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class SettingsThisDeviceFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert walks This Device`() {
+    fun `an Admin walks This Device`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toAdminSection("This Device"),

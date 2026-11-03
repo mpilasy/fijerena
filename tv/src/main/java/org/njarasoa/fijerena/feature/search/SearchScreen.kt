@@ -1414,7 +1414,7 @@ private fun SearchResultsList(
     }
 }
 
-/** Developer mode: the raw error of each source left out of the results (its search failed). */
+/** Nerd: the raw error of each source left out of the results (its search failed). */
 @Composable
 private fun SourceErrorsLine(
     text: String,

@@ -52,31 +52,31 @@ fun NavController.navigateOnce(
 }
 
 /**
- * The profile this page shows: the one the route names for an Expert; for any other profile, the
- * page of the profile in use ([activeId]). Only an Expert opens another profile's page (the
+ * The profile this page shows: the one the route names for an Admin; for any other profile, the
+ * page of the profile in use ([activeId]). Only an Admin opens another profile's page (the
  * profile rules plan, Design 5).
  */
 fun Screen.ProfileEdit.shownProfileId(
     activeId: String,
-    expert: Boolean,
-): String = if (expert) profileId else activeId
+    admin: Boolean,
+): String = if (admin) profileId else activeId
 
 /**
- * The page of the profile in use ([activeId]), opened by a profile without Expert mode. It holds
+ * The page of the profile in use ([activeId]), opened by a profile that is not an Admin. It holds
  * only that profile's look and playback, so it asks no PIN, as on TV (the settings flow review plan).
  */
-fun NavBackStackEntry?.isOwnPageOfNonExpert(
+fun NavBackStackEntry?.isOwnPageOfNonAdmin(
     activeId: String,
-    expert: Boolean,
+    admin: Boolean,
 ): Boolean =
-    !expert &&
+    !admin &&
         this != null &&
         destination.hasRoute<Screen.ProfileEdit>() &&
-        toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
+        toRoute<Screen.ProfileEdit>().shownProfileId(activeId, admin) == activeId
 
 /**
  * Settings and the screens only Settings opens: a child profile's phone has none of them (the
- * admin settings plan). The Admin screens are [isExpertOnly]'s. Logs ([Screen.Diagnostics]) is one,
+ * admin settings plan). The Admin screens are [isAdminOnly]'s. Logs ([Screen.Diagnostics]) is one,
  * except over Safe mode, which the caller checks.
  */
 fun NavBackStackEntry?.isSettingsArea(): Boolean =
@@ -91,11 +91,11 @@ fun NavBackStackEntry?.isSettingsArea(): Boolean =
 
 /**
  * The household's shared setup — sources (adding or editing one, Jellyfin's sign-in too), guide
- * sources, live sync, Parental controls: an Expert's only, whatever opened it (the profile rules
- * plan, PR-11, PR-12). For any other profile the screen closes at once; an Expert still types its
+ * sources, live sync, Parental controls: an Admin's only, whatever opened it (the profile rules
+ * plan, PR-11, PR-12). For any other profile the screen closes at once; an Admin still types its
  * PIN ([isPinGuarded]).
  */
-fun NavBackStackEntry?.isExpertOnly(): Boolean =
+fun NavBackStackEntry?.isAdminOnly(): Boolean =
     this?.destination?.let {
         it.hasRoute<Screen.AddProvider>() ||
             it.hasRoute<Screen.ProviderSelection>() ||

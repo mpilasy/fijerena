@@ -56,7 +56,7 @@ class ProfileRepository(
     }
 
     /**
-     * Makes [id] a child profile or not. A child is never Expert or Nerd, and loses the sources content
+     * Makes [id] a child profile or not. A child is never Admin or Nerd, and loses the sources content
      * filters can't reach (Remote M3U, Jellyfin…) while it keeps at least one; turning it off
      * gives nothing back. The hidden categories follow at once if it is this device's profile.
      */
@@ -68,7 +68,7 @@ class ProfileRepository(
         if (settings.isChildProfile(id) == child) return
         settings.setChildProfile(id, child)
         if (child) {
-            if (settings.devMode(id)) settings.setDevMode(id, false)
+            if (settings.admin(id)) settings.setAdmin(id, false)
             if (settings.storedNerdMode(id)) settings.setNerdMode(id, false)
             settings.profileSourceKeys(id)?.let { keys ->
                 val kept = filterableSourceKeys(keys)
@@ -100,7 +100,7 @@ class ProfileRepository(
                         null
                     }
                 SwitchLock.of(settings.activeProfileId, targetId, profileIds, settings::isChildProfile) {
-                    settings.devMode(it) && settings.pinHash(it) != null
+                    settings.admin(it) && settings.pinHash(it) != null
                 }
             }
         }
@@ -124,7 +124,7 @@ class ProfileRepository(
     }
 
     /**
-     * See [AppSettings.copyLegacyDevModeToProfiles], [AppSettings.copyLegacyLookToProfiles],
+     * See [AppSettings.upgradeAdminKeys], [AppSettings.copyLegacyLookToProfiles],
      * [AppSettings.moveLegacySearchHistoryToDefaultProfile] and
      * [AppSettings.seedProfileSourcesOnce], [seedProfileSourceRecordsOnce] and
      * [ProviderRepository.seedParentalListsOnce]; run once at startup.
@@ -132,47 +132,47 @@ class ProfileRepository(
     suspend fun migrateLegacyProfileSettings() {
         val settings = AppSettings(context)
         val profileIds = dao.getAll().map { it.id }
-        settings.copyLegacyDevModeToProfiles(profileIds)
+        settings.upgradeAdminKeys(profileIds)
         settings.copyLegacyLookToProfiles(profileIds)
         settings.moveLegacySearchHistoryToDefaultProfile()
         ProviderRepository(context).seedProfileSourcesOnce()
         ProviderRepository(context).movePerSourcePlaybackOnce()
         ProviderRepository(context).seedParentalListsOnce()
         seedProfileSourceRecordsOnce(settings)
-        clearChildExperts()
-        ensureAnExpert()
+        clearChildAdmins()
+        ensureAnAdmin()
     }
 
     /**
-     * A child profile is never Expert or Nerd, as [setChildProfile] keeps it for a change made
-     * here: turns Expert mode and Nerd off on every child profile that has them. For what comes in
+     * A child profile is never Admin or Nerd, as [setChildProfile] keeps it for a change made
+     * here: turns Admin and Nerd off on every child profile that has them. For what comes in
      * from elsewhere (live sync, an upgrade), whatever order the flags came in. Synced like any
-     * change, so every device ends with both off, not only this one. Run [ensureAnExpert] after
-     * it. Returns the ids of the profiles whose Expert mode it turned off.
+     * change, so every device ends with both off, not only this one. Run [ensureAnAdmin] after
+     * it. Returns the ids of the profiles whose Admin it turned off.
      */
-    suspend fun clearChildExperts(): List<String> =
+    suspend fun clearChildAdmins(): List<String> =
         withContext(Dispatchers.IO) {
             val settings = AppSettings(context)
             val children = dao.getAll().map { it.id }.filter { settings.isChildProfile(it) }
             children.filter { settings.storedNerdMode(it) }.forEach { settings.setNerdMode(it, false) }
             children
-                .filter { settings.devMode(it) }
-                .onEach { settings.setDevMode(it, false) }
+                .filter { settings.admin(it) }
+                .onEach { settings.setAdmin(it, false) }
         }
 
     /**
-     * Keeps at least one profile with Expert mode (the admin, for now), whatever changed it — an
+     * Keeps at least one Admin profile, whatever changed it — an
      * upgrade, a deletion, a sync from another device, a backup import: with none, the oldest
      * profile gets it, synced like any change (the same oldest profile on every device, so they
-     * agree). Returns that profile's id, or null when there was an Expert already (or no profile).
+     * agree). Returns that profile's id, or null when there was an Admin already (or no profile).
      * The profile pages also refuse to turn off the last one; this is the backstop.
      */
-    suspend fun ensureAnExpert(): String? =
+    suspend fun ensureAnAdmin(): String? =
         withContext(Dispatchers.IO) {
             val settings = AppSettings(context)
             val profiles = dao.getAll()
-            if (profiles.isEmpty() || profiles.any { settings.devMode(it.id) }) return@withContext null
-            // A child profile is never Expert: the oldest grown-up gets it, or with only children
+            if (profiles.isEmpty() || profiles.any { settings.admin(it.id) }) return@withContext null
+            // A child profile is never Admin: the oldest grown-up gets it, or with only children
             // the oldest stops being one.
             val oldest =
                 profiles
@@ -180,7 +180,7 @@ class ProfileRepository(
                     .ifEmpty { profiles }
                     .minWith(compareBy<ProfileEntity>({ it.createdAt }, { it.id }))
             if (settings.isChildProfile(oldest.id)) setChildProfile(oldest.id, false)
-            settings.setDevMode(oldest.id, true)
+            settings.setAdmin(oldest.id, true)
             oldest.id
         }
 
@@ -210,7 +210,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories and bookmarks on every
-     * provider, and its developer-mode flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
+     * provider, and its Admin flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -244,7 +244,7 @@ class ProfileRepository(
                         xtreamDb.syncVersionDao().deleteForProfile(id)
                     }
                     deleteProfilePrefs(id)
-                    AppSettings(context).removeDevMode(id)
+                    AppSettings(context).removeAdmin(id)
                     AppSettings(context).removeChildProfile(id)
                     AppSettings(context).removeNerdMode(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
@@ -256,7 +256,7 @@ class ProfileRepository(
                     AppSettings(context).removeProfileSources(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
-                    ensureAnExpert()
+                    ensureAnAdmin()
                     val settingsDb = SettingsDatabase.getInstance(context)
                     settingsDb.withTransaction {
                         dao.deleteRecordingTombstone(id)

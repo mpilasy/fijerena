@@ -11,6 +11,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNames
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
@@ -30,7 +31,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
  * Manages export and import of all application settings to/from a JSON file.
  *
  * Exported data:
- * - Global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, etc.)
+ * - Global AppSettings (theme, UI scale, Admin, EPG auto-refresh, etc.)
  * - Provider configurations (name, URL, username, type, config, per-provider settings)
  * - EPG sources (URL, label, timezone offset, enabled state), except an Xtream source's own
  *   `xmltv.php` guide, which carries its login: the source's next login adds it again
@@ -162,7 +163,9 @@ class SettingsExportManager(
         // ignored, a new file leaves it out.
         @EncodeDefault(EncodeDefault.Mode.NEVER)
         val uiScale: Float? = null,
-        val isDevMode: Boolean = false,
+        // The exporting profile is an Admin; an older file names it `isDevMode`.
+        @JsonNames("isDevMode")
+        val isAdmin: Boolean = false,
         // The exporting profile is a Nerd; false in a file from before Nerd existed.
         val isNerdMode: Boolean = false,
         // The retired device-wide guide auto-refresh switch: read from an older file only (see
@@ -332,7 +335,7 @@ class SettingsExportManager(
                 GlobalSettings(
                     themeId = appSettings.themeId,
                     uiStyleId = appSettings.uiStyleId,
-                    isDevMode = appSettings.isDevMode,
+                    isAdmin = appSettings.isAdmin,
                     isNerdMode = appSettings.isNerdMode,
                     cellularLiveMultiplier = appSettings.cellularLiveMultiplier,
                     cellularVodMultiplier = appSettings.cellularVodMultiplier,
@@ -611,15 +614,15 @@ class SettingsExportManager(
                     val appSettings = AppSettings(context)
                     appSettings.themeId = exported.global.themeId
                     exported.global.uiStyleId?.let { appSettings.uiStyleId = it }
-                    // A child is never Expert or Nerd, whatever the file says.
+                    // A child is never Admin or Nerd, whatever the file says.
                     val child = appSettings.isChildProfile(appSettings.activeProfileId)
-                    appSettings.isDevMode = exported.global.isDevMode && !child
+                    appSettings.isAdmin = exported.global.isAdmin && !child
                     appSettings.setNerdMode(appSettings.activeProfileId, exported.global.isNerdMode && !child)
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }
-                // A file from a non-Expert profile mustn't leave this install without one.
-                ProfileRepository(context).ensureAnExpert()
+                // A file from a non-Admin profile mustn't leave this install without one.
+                ProfileRepository(context).ensureAnAdmin()
 
                 val providerRepo = ProviderRepository(context)
                 val existingProviders = providerRepo.getAllProvidersList()

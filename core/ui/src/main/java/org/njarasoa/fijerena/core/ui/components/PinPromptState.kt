@@ -35,7 +35,7 @@ sealed interface PinRequest {
     ) : PinRequest
 
     /**
-     * Any of [profileIds]' PINs — the Expert profiles' (admin, for now): the 7 taps on the version.
+     * Any of [profileIds]' PINs — the Admin profiles': the 7 taps on the version.
      * [profileId] is the first of them.
      */
     data class AnyOf(
@@ -46,7 +46,7 @@ sealed interface PinRequest {
     }
 
     /**
-     * The child lock: any of [profileIds]' PINs (the Expert profiles with a PIN) before this device
+     * The child lock: any of [profileIds]' PINs (the Admin profiles with a PIN) before this device
      * leaves a child profile for [targetId]. Wrong tries count on the child lock's own count. When
      * the PIN is [targetId]'s own, [targetId] is unlocked too, so its Settings ask nothing more.
      */
@@ -58,7 +58,7 @@ sealed interface PinRequest {
         override val profileId: String get() = profileIds.first()
     }
 
-    /** A new PIN for [profileId], typed twice; [warning] shows under the dots (the last Expert's). */
+    /** A new PIN for [profileId], typed twice; [warning] shows under the dots (the last Admin's). */
     data class Choose(
         override val profileId: String,
         val warning: String? = null,

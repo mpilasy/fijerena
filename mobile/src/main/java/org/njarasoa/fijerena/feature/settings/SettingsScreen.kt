@@ -60,7 +60,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
-import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
+import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -88,8 +88,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings as one grouped preference list: Your Profile (the personal rows of the profile in use,
- * in place) and About, which everyone opens. With Expert mode an Admin row between them opens, after
- * the PIN, the list of the Expert groups (the admin settings plan); each group opens its own page.
+ * in place) and About, which everyone opens. For an Admin, an Admin row between them opens, after
+ * the PIN, the list of the Admin groups (the admin settings plan); each group opens its own page.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,12 +150,12 @@ fun MobileSettingsScreen(
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val tmdbKeyViewModel: TmdbKeyViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val lifecycleOwner = LocalLifecycleOwner.current
-    // Back from a profile's page: the profile in use may have had its developer mode changed; a
+    // Back from a profile's page: the profile in use may have had its Admin flag changed; a
     // TMDB 401 elsewhere may have turned the key's status to refused.
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {
-            viewModel.refreshDevMode()
+            viewModel.refreshAdmin()
             tmdbKeyViewModel.refresh()
         }
     }
@@ -321,10 +321,10 @@ fun MobileSettingsScreen(
     var adminOpen by rememberSaveable { mutableStateOf(false) }
     // The Admin section open as its own page, in place of Admin's list of sections (null: the list).
     // Back returns to the list. It is saveable, as adminOpen, for the same round trips.
-    var adminSection by rememberSaveable { mutableStateOf<ExpertGroup?>(null) }
-    // Expert mode turned off, or the session locked again (a long time in the background): back to
+    var adminSection by rememberSaveable { mutableStateOf<AdminGroup?>(null) }
+    // Admin turned off, or the session locked again (a long time in the background): back to
     // the list, so the Admin rows are not open without the PIN.
-    val adminLocked = adminOpen && (!uiState.isDevMode || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
+    val adminLocked = adminOpen && (!uiState.isAdmin || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
     LaunchedEffect(adminLocked) {
         if (adminLocked) {
             adminSection = null
@@ -369,8 +369,8 @@ fun MobileSettingsScreen(
                     }
                 }
 
-                // With Expert mode: Admin, the list of the Expert groups.
-                if (uiState.isDevMode) {
+                // For an Admin: the Admin row, the list of the Admin groups.
+                if (uiState.isAdmin) {
                     item {
                         // Under a heading of its own, as every group: without one it read as a row
                         // of the Playback group above it.
@@ -386,13 +386,13 @@ fun MobileSettingsScreen(
                 // === About ===
                 item {
                     SettingsGroupHeader(stringResource(R.string.settings_about_section_title))
-                    // Tapping the version 7 times turns Expert mode on while no profile is Expert (DeveloperModeTaps).
-                    val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
+                    // Tapping the version 7 times turns Admin on while no profile is Admin (AdminTaps).
+                    val onVersionClick = rememberAdminTapHandler(uiState.adminExists, viewModel::enableAdmin)
                     Column(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                // look-ok: the About text: seven taps turn Expert mode on, not a list row
+                                // look-ok: the About text: seven taps turn Admin on, not a list row
                                 .clickable(onClick = onVersionClick)
                                 .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                     ) {
@@ -443,11 +443,11 @@ fun MobileSettingsScreen(
                 // Admin: the list of its sections, in TV's order. Each row opens the page of its
                 // section; Parental Controls opens its own screen.
                 item {
-                    ExpertGroup.visibleFor(admin = true).forEach { group ->
+                    AdminGroup.visibleFor(admin = true).forEach { group ->
                         SettingsListRow(
                             title = stringResource(group.titleRes),
                             summary = group.summary(profiles),
-                            onClick = { if (group == ExpertGroup.PARENTAL_CONTROLS) onParentalControls() else adminSection = group },
+                            onClick = { if (group == AdminGroup.PARENTAL_CONTROLS) onParentalControls() else adminSection = group },
                         )
                     }
                 }
@@ -455,10 +455,10 @@ fun MobileSettingsScreen(
                 // One Admin section on its page, its rows in their order; the top bar has its name.
                 when (adminSection) {
                     // Never a page: its row opens its own screen.
-                    ExpertGroup.PARENTAL_CONTROLS, null -> {}
+                    AdminGroup.PARENTAL_CONTROLS, null -> {}
 
                     // The list of every profile; a profile's row opens its page, with its Admin rows.
-                    ExpertGroup.PROFILES -> {
+                    AdminGroup.PROFILES -> {
                         item {
                             ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, admin = true, onAdminProfile) {
                                 openWhenListed = it
@@ -467,7 +467,7 @@ fun MobileSettingsScreen(
                     }
 
                     // This device's settings.
-                    ExpertGroup.THIS_DEVICE -> {
+                    AdminGroup.THIS_DEVICE -> {
                         item {
                             SettingsListRow(
                                 title = stringResource(R.string.settings_language),
@@ -500,7 +500,7 @@ fun MobileSettingsScreen(
                         }
                     }
 
-                    ExpertGroup.SOURCE_GUIDE -> {
+                    AdminGroup.SOURCE_GUIDE -> {
                         item {
                             // Switching, editing and adding sources live on the Sources list (D6).
                             SettingsListRow(
@@ -561,7 +561,7 @@ fun MobileSettingsScreen(
                     }
 
                     // Shared setup and backups (with source logins).
-                    ExpertGroup.SYNC_BACKUP -> {
+                    AdminGroup.SYNC_BACKUP -> {
                         item {
                             LiveSyncRow(onOpen = onLiveSync)
                             SettingsListRow(
@@ -686,14 +686,14 @@ private fun ShrinkDatabaseRows(
 }
 
 /**
- * The phone's Expert groups, in TV's order: the sections that the Admin page lists, which opens
+ * The phone's Admin groups, in TV's order: the sections that the Admin page lists, which opens
  * after the PIN (the admin settings plan). Each one opens its own page; Parental Controls opens its
- * own screen. Only Expert mode lists them.
+ * own screen. Only Admin lists them.
  */
-enum class ExpertGroup(
+enum class AdminGroup(
     @StringRes val titleRes: Int,
 ) {
-    // With Expert mode, the list of every profile (SG-D2).
+    // For an Admin, the list of every profile (SG-D2).
     PROFILES(R.string.settings_profiles_title),
     PARENTAL_CONTROLS(R.string.parental_controls_title),
     THIS_DEVICE(R.string.settings_group_this_device),
@@ -702,20 +702,20 @@ enum class ExpertGroup(
     ;
 
     companion object {
-        /** The Expert groups Settings lists: all of them with Expert mode ([admin]), else none. */
-        fun visibleFor(admin: Boolean): List<ExpertGroup> = if (admin) entries else emptyList()
+        /** The Admin groups Settings lists: all of them for an Admin ([admin]), else none. */
+        fun visibleFor(admin: Boolean): List<AdminGroup> = if (admin) entries else emptyList()
     }
 }
 
 /** What a section's row on the Admin page says is inside it: the profiles' names, else what it holds. */
 @Composable
-private fun ExpertGroup.summary(profiles: List<ProfileUi>): String =
+private fun AdminGroup.summary(profiles: List<ProfileUi>): String =
     when (this) {
-        ExpertGroup.PROFILES -> profiles.joinToString { it.name }
-        ExpertGroup.PARENTAL_CONTROLS -> stringResource(R.string.profile_parental_controls_desc)
-        ExpertGroup.THIS_DEVICE -> stringResource(R.string.settings_group_this_device_desc)
-        ExpertGroup.SOURCE_GUIDE -> stringResource(R.string.settings_group_source_guide_desc)
-        ExpertGroup.SYNC_BACKUP -> stringResource(R.string.settings_group_sync_backup_desc)
+        AdminGroup.PROFILES -> profiles.joinToString { it.name }
+        AdminGroup.PARENTAL_CONTROLS -> stringResource(R.string.profile_parental_controls_desc)
+        AdminGroup.THIS_DEVICE -> stringResource(R.string.settings_group_this_device_desc)
+        AdminGroup.SOURCE_GUIDE -> stringResource(R.string.settings_group_source_guide_desc)
+        AdminGroup.SYNC_BACKUP -> stringResource(R.string.settings_group_sync_backup_desc)
     }
 
 // The pages of Settings that are not an Admin section, for their list states.
@@ -725,8 +725,8 @@ private const val ADMIN_LIST_PAGE = "admin"
 /**
  * Profiles' rows: on the Admin page ([admin]) every profile, else none (Settings shows the viewer's
  * own rows in place). Add Profile
- * for any grown-up, with no PIN (the profile rules plan, PR-D2), an Expert's in Admin; only an Expert
- * edits another profile, so only an Expert's new profile opens its page ([onAdded]).
+ * for any grown-up, with no PIN (the profile rules plan, PR-D2), an Admin's in Admin; only an Admin
+ * edits another profile, so only an Admin's new profile opens its page ([onAdded]).
  */
 @Composable
 private fun ProfilesRows(
@@ -743,14 +743,14 @@ private fun ProfilesRows(
         message = message,
         newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
         onAdd = { name, colorIndex, child, nerd ->
-            profilesViewModel.addProfile(name, colorIndex, child, nerd) { if (uiState.isDevMode) onAdded(it) }
+            profilesViewModel.addProfile(name, colorIndex, child, nerd) { if (uiState.isAdmin) onAdded(it) }
         },
         onEdit = onEditProfile,
         onDismissMessage = profilesViewModel::clearMessage,
-        expertMode = admin,
-        canAddProfile = !uiState.isChildProfile && admin == uiState.isDevMode,
+        adminMode = admin,
+        canAddProfile = !uiState.isChildProfile && admin == uiState.isAdmin,
         pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
-        pinNudgeLastExpert = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastExpert(it.id) } == true,
+        pinNudgeLastAdmin = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastAdmin(it.id) } == true,
         noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
     )
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sets up the test household of the nightly TV walk on a fresh install of the debug TV app: the fake
-# Xtream source (tools/fake-xtream/server.py) and the profiles Admin (Expert, in use), Guest (a
+# Xtream source (tools/fake-xtream/server.py) and the profiles Admin (an Admin, in use), Guest (a
 # grown-up) and Kid (a child profile). Then it waits until the source's catalogue is loaded.
 # Usage: scripts/seed-test-household.sh <serial> [server URL, default http://10.0.2.2:8090]
 # The app refuses when it has a source already (logcat: "TestHousehold: refused"): this is for a

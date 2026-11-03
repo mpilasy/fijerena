@@ -27,7 +27,7 @@ class TmdbTitleSearch(
 
     /**
      * At most [MAX_RESULTS] titles of [contentTypes] for [query], in TMDB's order. Throws when
-     * TMDB fails; the caller shows nothing then (the raw error in developer mode).
+     * TMDB fails; the caller shows nothing then (the raw error for a Nerd).
      */
     suspend fun search(
         query: String,

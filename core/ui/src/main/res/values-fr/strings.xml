@@ -37,7 +37,7 @@
 
     <!-- Loading Indicators -->
     <string name="loading_buffering">Chargement</string>
-    <!-- Expert mode, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
+    <!-- Nerd, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
     <string name="buffering_detail_progress">%1$s / %2$s s · %3$s s</string>
     <string name="buffering_detail_receiving">↓ %1$s</string>
     <string name="buffering_detail_stream_needs">le flux demande %1$s</string>
@@ -650,11 +650,11 @@
     <string name="terms_s8_title">Modifications</string>
     <string name="terms_s8_body">Ces conditions peuvent changer. La version présente dans l’application que vous utilisez est celle qui s’applique. Si une traduction diffère du texte anglais, le texte anglais prévaut.</string>
     <string name="provider_add_terms_notice">Vous seul êtes responsable des sources que vous ajoutez et de l’usage que vous en faites. Voir Paramètres → À propos → Conditions d’utilisation.</string>
-    <string name="settings_developer_mode_title">Admin</string>
-    <string name="settings_developer_mode_desc">Permet à ce profil de modifier les sources, les profils, le contrôle parental et les sauvegardes</string>
+    <string name="settings_admin_title">Admin</string>
+    <string name="settings_admin_desc">Permet à ce profil de modifier les sources, les profils, le contrôle parental et les sauvegardes</string>
     <string name="profile_nerd_title">Nerd</string>
     <string name="profile_nerd_desc">Affiche les détails techniques</string>
-    <string name="settings_developer_mode_last">Seul profil admin, il le reste : rendez d’abord un autre profil admin.</string>
+    <string name="settings_admin_last">Seul profil admin, il le reste : rendez d’abord un autre profil admin.</string>
     <string name="settings_diagnostics_title">Journaux</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l’application</string>
     <string name="settings_diagnostics_empty">Rien d’enregistré.</string>
@@ -908,7 +908,7 @@
     <string name="profile_favorites_search">Chercher films, séries et chaînes</string>
     <string name="profile_favorites_none">Pas encore de favoris. Cherchez pour en ajouter.</string>
     <string name="profile_favorites_no_results">Rien trouvé que %1$s puisse regarder.</string>
-    <string name="profile_child_last_expert">Le seul profil admin ne peut pas être un profil enfant : rendez d’abord un autre profil admin.</string>
+    <string name="profile_child_last_admin">Le seul profil admin ne peut pas être un profil enfant : rendez d’abord un autre profil admin.</string>
     <string name="profile_source_no_filters">Les filtres de contenu n’agissent pas sur cette source</string>
     <string name="settings_pin_nudge_title">Définir un code PIN pour les paramètres</string>
     <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil admin n’a de code PIN : un enfant peut passer à n’importe quel profil, et n’importe qui peut changer les sources, les filtres de contenu et les profils.</string>
@@ -1393,8 +1393,8 @@
     <string name="tmdb_attribution_title">Données des films et séries</string>
     <string name="epg_xmltv_url_hint">L’adresse d’un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
     <string name="epg_timezone_hint">Seulement si les programmes s’affichent à la mauvaise heure. En général 0.</string>
-    <string name="settings_developer_mode_enabled">Ce profil est admin</string>
-    <string name="settings_developer_mode_taps_left">Admin : encore %1$d</string>
+    <string name="settings_admin_enabled">Ce profil est admin</string>
+    <string name="settings_admin_taps_left">Admin : encore %1$d</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Arrondi</string>
     <string name="ui_style_sharp">Net</string>
@@ -1441,7 +1441,7 @@
     <string name="profile_pin_remove">Supprimer le code PIN</string>
     <string name="profile_pin_remove_confirm_title">Supprimer le code PIN ?</string>
     <string name="profile_pin_remove_confirm_text">Les paramètres ne demanderont plus de code PIN sur ce profil.</string>
-    <string name="profile_pin_remove_last_expert">C’est le dernier code PIN d’un profil admin : le verrou enfant s’arrête sur tous les appareils liés par la synchronisation.</string>
+    <string name="profile_pin_remove_last_admin">C’est le dernier code PIN d’un profil admin : le verrou enfant s’arrête sur tous les appareils liés par la synchronisation.</string>
     <string name="pin_choose">Choisissez un code PIN à 4 chiffres</string>
     <string name="pin_repeat">Saisissez de nouveau le même code PIN</string>
     <string name="pin_mismatch">Les deux codes PIN diffèrent : choisissez-en un de nouveau.</string>
@@ -1456,7 +1456,7 @@
     <string name="pin_seconds">%1$d s</string>
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Effacer</string>
-    <string name="pin_last_expert_warning">C’est le seul profil admin : si son code PIN est oublié, seul l’effacement des données de l’application rend l’administration.</string>
+    <string name="pin_last_admin_warning">C’est le seul profil admin : si son code PIN est oublié, seul l’effacement des données de l’application rend l’administration.</string>
     <string name="pin_enter_admin">Saisissez le code PIN d’un profil admin</string>
     <string name="pin_use_phone">Utiliser mon téléphone</string>
     <string name="pin_use_tv">Utiliser la télé</string>

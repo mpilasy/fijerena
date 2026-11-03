@@ -29,11 +29,11 @@ import org.njarasoa.fijerena.core.network.provider.SettingsSyncDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
- * A kid is never Expert, also when live sync brings the flags in: Expert mode is turned off on a
+ * A kid is never Admin, also when live sync brings the flags in: Admin is turned off on a
  * profile that is a child after the pass, whatever order the two flags came in, and the app still
- * keeps an Expert. Nerd likewise (the Nerd role plan). See the profile rules plan → PR-8.
+ * keeps an Admin. Nerd likewise (the Nerd role plan). See the profile rules plan → PR-8.
  */
-class SyncApplierChildExpertTest {
+class SyncApplierChildAdminTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)
     private val profiles = mockk<ProfileDao>(relaxed = true)
     private val settingsDb = mockk<SettingsDatabase>(relaxed = true)
@@ -84,67 +84,87 @@ class SyncApplierChildExpertTest {
     private val settings get() = AppSettings(context)
 
     @Test
-    fun `child and Expert in one pass leave the kid without Expert, child first`() =
+    fun `child and Admin in one pass leave the kid without Admin, child first`() =
         runBlocking {
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
 
-            applier().apply(listOf(setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 10), setting(DEV_MODE, KID, true, 11)))
+            applier().apply(listOf(setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 10), setting(ADMIN, KID, true, 11)))
 
             assertTrue(settings.isChildProfile(KID))
-            assertFalse(settings.devMode(KID))
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
-    fun `child and Expert in one pass leave the kid without Expert, Expert first`() =
+    fun `child and Admin in one pass leave the kid without Admin, Admin first`() =
         runBlocking {
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
 
-            applier().apply(listOf(setting(DEV_MODE, KID, true, 10), setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 11)))
+            applier().apply(listOf(setting(ADMIN, KID, true, 10), setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 11)))
 
             assertTrue(settings.isChildProfile(KID))
-            assertFalse(settings.devMode(KID))
+            assertFalse(settings.admin(KID))
         }
 
     @Test
-    fun `Expert alone on a kid is turned off, and the change is queued for sync`() =
+    fun `Admin alone on a kid is turned off, and the change is queued for sync`() =
         runBlocking {
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
             settings.setChildProfile(KID, true)
 
-            applier().apply(listOf(setting(DEV_MODE, KID, true, 10)))
+            applier().apply(listOf(setting(ADMIN, KID, true, 10)))
 
-            assertFalse(settings.devMode(KID))
-            // So every device ends with Expert off, not only this one.
-            coVerify(timeout = 2_000) { sync.queue(SyncKind.SETTING, KID, DEV_MODE) }
+            assertFalse(settings.admin(KID))
+            // So every device ends with Admin off, not only this one.
+            coVerify(timeout = 2_000) { sync.queue(SyncKind.SETTING, KID, ADMIN) }
         }
 
     @Test
-    fun `child alone on the only Expert turns Expert off and the oldest grown-up gets it`() =
+    fun `child alone on the only Admin turns Admin off and the oldest grown-up gets it`() =
         runBlocking {
-            settings.setDevMode(KID, true)
+            settings.setAdmin(KID, true)
 
             applier().apply(listOf(setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 10)))
 
-            assertFalse(settings.devMode(KID))
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
-    fun `Expert on a grown-up is left alone`() =
+    fun `Admin on a grown-up is left alone`() =
         runBlocking {
             settings.setChildProfile(KID, true)
 
-            applier().apply(listOf(setting(DEV_MODE, ProfileEntity.DEFAULT_ID, true, 10)))
+            applier().apply(listOf(setting(ADMIN, ProfileEntity.DEFAULT_ID, true, 10)))
 
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
-            assertFalse(settings.devMode(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
+        }
+
+    @Test
+    fun `a dev_mode record from an older build still sets the Admin flag`() =
+        runBlocking {
+            applier().apply(listOf(setting(LEGACY_DEV_MODE, ProfileEntity.DEFAULT_ID, true, 10)))
+
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
+        }
+
+    @Test
+    fun `a dev_mode record from an older build on a kid is turned off as admin`() =
+        runBlocking {
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
+            settings.setChildProfile(KID, true)
+
+            applier().apply(listOf(setting(LEGACY_DEV_MODE, KID, true, 10)))
+
+            assertFalse(settings.admin(KID))
+            coVerify(timeout = 2_000) { sync.queue(SyncKind.SETTING, KID, ADMIN) }
         }
 
     @Test
     fun `child and Nerd in one pass leave the kid without Nerd, in either order`() =
         runBlocking {
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
 
             applier().apply(listOf(setting(NERD_MODE, KID, true, 10), setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 11)))
 
@@ -157,7 +177,7 @@ class SyncApplierChildExpertTest {
     @Test
     fun `Nerd alone on a kid is turned off, and a grown-up keeps it`() =
         runBlocking {
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
             settings.setChildProfile(KID, true)
 
             applier().apply(listOf(setting(NERD_MODE, KID, true, 10), setting(NERD_MODE, ProfileEntity.DEFAULT_ID, true, 11)))
@@ -172,7 +192,10 @@ class SyncApplierChildExpertTest {
         // AppSettings.KEY_NERD_MODE, which is private.
         const val NERD_MODE = "nerd_mode"
 
-        // AppSettings.KEY_DEV_MODE, which is private.
-        const val DEV_MODE = "dev_mode"
+        // AppSettings.KEY_ADMIN, which is private.
+        const val ADMIN = "admin"
+
+        // The Admin flag's old name, which an older build still sends.
+        const val LEGACY_DEV_MODE = "dev_mode"
     }
 }

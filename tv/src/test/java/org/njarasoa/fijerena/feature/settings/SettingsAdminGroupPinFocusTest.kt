@@ -15,13 +15,13 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings with an Expert whose PIN was not typed yet in this session: entering Admin's pane
+ * TV Settings with an Admin whose PIN was not typed yet in this session: entering Admin's pane
  * (Right or OK on its rail row) asks the PIN first, Cancel keeps focus on the rail row, and once
  * typed the PIN holds for the session. Your Profile and About never ask it. A lock while a section
  * is open closes the section too.
  */
 @RunWith(RobolectricTestRunner::class)
-class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
+class SettingsAdminGroupPinFocusTest : SettingsFocusTest() {
     /** Admin in use with the PIN [SettingsFixture.PIN], locked as after a long time in the background. */
     private fun openLocked() {
         seed(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN))

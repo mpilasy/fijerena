@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 
 /**
  * The nightly TV walk's test household (debug builds only): on a fresh install, one Xtream source,
- * Admin (Expert), Guest and Kid (a child profile), all three with the source; never on an app that
+ * Admin (an Admin), Guest and Kid (a child profile), all three with the source; never on an app that
  * has a source already. Against a real in-memory `providers.db`.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -64,11 +64,11 @@ class TestHouseholdTest {
             val (admin, guest, kid) = profiles
             assertEquals(ProfileEntity.DEFAULT_ID, admin.id)
             val settings = AppSettings(context)
-            assertTrue(settings.devMode(admin.id))
-            assertFalse(settings.devMode(guest.id))
+            assertTrue(settings.admin(admin.id))
+            assertFalse(settings.admin(guest.id))
             assertFalse(settings.isChildProfile(guest.id))
             assertTrue(settings.isChildProfile(kid.id))
-            assertFalse(settings.devMode(kid.id))
+            assertFalse(settings.admin(kid.id))
             profiles.forEach { assertEquals(it.name, setOf(source.providerKey), settings.profileSourceKeys(it.id)) }
         }
 

@@ -145,7 +145,7 @@ class EpgManagementViewModel(
     private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
     val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
 
-    val isDevMode: Boolean get() = appSettings.isDevMode
+    val isAdmin: Boolean get() = appSettings.isAdmin
 
     /** How old [source] may get before its status reads stale — see [EpgRefreshSchedule.staleAfterMs]. */
     fun staleThresholdMs(source: EpgSourceEntity): Long = EpgRefreshSchedule.staleAfterMs(refreshIntervalHours(source))

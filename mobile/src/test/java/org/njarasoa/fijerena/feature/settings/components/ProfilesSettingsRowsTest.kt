@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Settings → Profiles (FEATURES → Profiles): with Expert mode every profile and Add profile; without
+ * Settings → Profiles (FEATURES → Profiles): for an Admin every profile and Add profile; without
  * it, no profile row (Settings shows the profile in use's own rows in place), and Add profile for a
  * grown-up only.
  */
@@ -27,8 +27,8 @@ class ProfilesSettingsRowsTest {
         )
 
     private fun show(
-        expertMode: Boolean,
-        canAddProfile: Boolean = expertMode,
+        adminMode: Boolean,
+        canAddProfile: Boolean = adminMode,
     ) {
         composeTestRule.setContent {
             ProfilesSettingsRows(
@@ -38,15 +38,15 @@ class ProfilesSettingsRowsTest {
                 onAdd = { _, _, _, _ -> },
                 onEdit = {},
                 onDismissMessage = {},
-                expertMode = expertMode,
+                adminMode = adminMode,
                 canAddProfile = canAddProfile,
             )
         }
     }
 
     @Test
-    fun `with Expert mode every profile and Add profile show`() {
-        show(expertMode = true)
+    fun `for an Admin every profile and Add profile show`() {
+        show(adminMode = true)
 
         composeTestRule.onNodeWithText("Main").assertExists()
         composeTestRule.onNodeWithText("Kid").assertExists()
@@ -54,30 +54,30 @@ class ProfilesSettingsRowsTest {
     }
 
     @Test
-    fun `without Expert mode no profile row shows`() {
-        show(expertMode = false)
+    fun `for a profile that is not an Admin no profile row shows`() {
+        show(adminMode = false)
 
         composeTestRule.onNodeWithText("Kid").assertDoesNotExist()
         composeTestRule.onNodeWithText("Main").assertDoesNotExist()
     }
 
     @Test
-    fun `a grown-up without Expert mode gets Add profile`() {
-        show(expertMode = false, canAddProfile = true)
+    fun `a grown-up who is not an Admin gets Add profile`() {
+        show(adminMode = false, canAddProfile = true)
 
         composeTestRule.onNodeWithContentDescription("Add Profile").assertExists()
     }
 
     @Test
     fun `a kid gets no Add profile`() {
-        show(expertMode = false, canAddProfile = false)
+        show(adminMode = false, canAddProfile = false)
 
         composeTestRule.onNodeWithContentDescription("Add Profile").assertDoesNotExist()
     }
 
     @Test
     fun `an Admin's Add Profile has the Nerd switch, gone when Child is on`() {
-        show(expertMode = true)
+        show(adminMode = true)
         composeTestRule.onNodeWithContentDescription("Add Profile").performClick()
 
         composeTestRule.onNodeWithText("Nerd").assertExists()
@@ -87,7 +87,7 @@ class ProfilesSettingsRowsTest {
 
     @Test
     fun `a grown-up's Add Profile has no Nerd switch`() {
-        show(expertMode = false, canAddProfile = true)
+        show(adminMode = false, canAddProfile = true)
         composeTestRule.onNodeWithContentDescription("Add Profile").performClick()
 
         composeTestRule.onNodeWithText("Child Profile").assertExists()

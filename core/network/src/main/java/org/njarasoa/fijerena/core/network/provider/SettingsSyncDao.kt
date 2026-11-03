@@ -213,7 +213,7 @@ interface SettingsSyncDao {
     @Query("DELETE FROM sync_version WHERE itemKey = :providerKey AND kind != 'provider'")
     suspend fun deleteForProviderKey(providerKey: String)
 
-    /** Entries of a deleted profile (its logins, filters, dev mode): its own tombstone covers them. */
+    /** Entries of a deleted profile (its logins, filters, Admin): its own tombstone covers them. */
     @Query("DELETE FROM sync_version WHERE profileId = :profileId")
     suspend fun deleteForProfile(profileId: String)
 }

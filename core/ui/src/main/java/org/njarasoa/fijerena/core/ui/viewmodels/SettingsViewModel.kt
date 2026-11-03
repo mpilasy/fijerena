@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.utils.DeveloperModeTaps
+import org.njarasoa.fijerena.core.ui.utils.AdminTaps
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
@@ -32,11 +32,11 @@ data class SettingsUiState(
     /** Each of [profileSources] with its URL and subscription, in the same order. */
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
-    val isDevMode: Boolean = false,
+    val isAdmin: Boolean = false,
     /** The profile in use is a Nerd: messages show their raw error text, Shrink Database its figures. */
     val isNerdMode: Boolean = false,
-    /** A profile is Expert, so the 7 taps on the version do nothing (PR-3). Yes until the list has loaded. */
-    val expertExists: Boolean = true,
+    /** A profile is Admin, so the 7 taps on the version do nothing (PR-3). Yes until the list has loaded. */
+    val adminExists: Boolean = true,
     /**
      * The profile in use is a child's: its Settings show only its own page and About, not the
      * groups that change the whole device (Playback, Display).
@@ -74,7 +74,7 @@ class SettingsViewModel(
             SettingsUiState(
                 themeId = appSettings.themeId,
                 uiStyleId = appSettings.uiStyleId,
-                isDevMode = appSettings.isDevMode,
+                isAdmin = appSettings.isAdmin,
                 isNerdMode = appSettings.isNerdMode,
                 isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
                 language = appSettings.language,
@@ -98,10 +98,10 @@ class SettingsViewModel(
         viewModelScope.launchGuarded("SettingsViewModel.followProfileSources") {
             providerRepo.profileSourceSet(appSettings.activeProfileId).collect { refreshProviderInfo() }
         }
-        // Expert mode as it changes, not only on resume: on a new install the first profile gets it
-        // in the background at start (ProfileRepository.ensureAnExpert), maybe after Settings opened.
-        viewModelScope.launchGuarded("SettingsViewModel.followDevMode") {
-            appSettings.observeDevMode().collect { refreshDevMode() }
+        // Admin as it changes, not only on resume: on a new install the first profile gets it
+        // in the background at start (ProfileRepository.ensureAnAdmin), maybe after Settings opened.
+        viewModelScope.launchGuarded("SettingsViewModel.followAdmin") {
+            appSettings.observeAdmin().collect { refreshAdmin() }
         }
         viewModelScope.launchGuarded("SettingsViewModel.followNerdMode") {
             appSettings.observeNerdMode().collect { nerd -> _uiState.value = _uiState.value.copy(isNerdMode = nerd) }
@@ -109,7 +109,7 @@ class SettingsViewModel(
         viewModelScope.launchGuarded("SettingsViewModel.followProfiles") {
             profileRepo.observeProfiles().collect { rows ->
                 profileIds = rows.map { it.id }
-                refreshDevMode()
+                refreshAdmin()
             }
         }
         // The profile's colour theme and Look and Feel, also when another device changes them.
@@ -144,66 +144,66 @@ class SettingsViewModel(
         }
     }
 
-    /** Re-reads the active profile's developer mode and child flag, which its profile page may have changed. */
-    fun refreshDevMode() {
+    /** Re-reads the active profile's Admin and child flag, which its profile page may have changed. */
+    fun refreshAdmin() {
         _uiState.value =
             _uiState.value.copy(
-                isDevMode = appSettings.isDevMode,
+                isAdmin = appSettings.isAdmin,
                 isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
-                expertExists = expertExists(),
+                adminExists = adminExists(),
             )
     }
 
-    private fun expertExists(): Boolean = DeveloperModeTaps.expertExists(profileIds, appSettings::devMode)
+    private fun adminExists(): Boolean = AdminTaps.adminExists(profileIds, appSettings::admin)
 
     /**
-     * The 7th tap on the version row: Expert mode on for the profile in use, only while no profile
-     * is Expert (the profile rules plan, PR-3). Returns whether it is on now.
+     * The 7th tap on the version row: Admin on for the profile in use, only while no profile
+     * is Admin (the profile rules plan, PR-3). Returns whether it is on now.
      */
-    fun enableDevMode(): Boolean {
-        // A child profile is never Expert (docs/plans/20261019_tv-household-ux-plan.md).
-        val allowed = !appSettings.isChildProfile(appSettings.activeProfileId) && !expertExists()
-        if (allowed) appSettings.isDevMode = true
-        refreshDevMode()
+    fun enableAdmin(): Boolean {
+        // A child profile is never Admin (docs/plans/20261019_tv-household-ux-plan.md).
+        val allowed = !appSettings.isChildProfile(appSettings.activeProfileId) && !adminExists()
+        if (allowed) appSettings.isAdmin = true
+        refreshAdmin()
         return allowed
     }
 
-    // Language, the Recent delay and Recent's size change the whole device: an Expert's only (the
-    // profile rules plan). The screens show them to an Expert only, behind its PIN.
+    // Language, the Recent delay and Recent's size change the whole device: an Admin's only (the
+    // profile rules plan). The screens show them to an Admin only, behind its PIN.
 
     fun updateLanguage(language: String) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         org.njarasoa.fijerena.core.ui.utils.LocaleManager
             .updateLocale(context, language)
         _uiState.value = _uiState.value.copy(language = language)
     }
 
     fun updateWatchDelay(seconds: Int) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         appSettings.watchDelaySeconds = seconds
         _uiState.value = _uiState.value.copy(watchDelaySeconds = seconds)
     }
 
     fun updateShowClock(show: Boolean) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         appSettings.showClock = show
         _uiState.value = _uiState.value.copy(showClock = show)
     }
 
     fun updateShowTmdbCharts(show: Boolean) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         appSettings.showTmdbCharts = show
         _uiState.value = _uiState.value.copy(showTmdbCharts = show)
     }
 
     fun updateShowSports(show: Boolean) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         appSettings.showSports = show
         _uiState.value = _uiState.value.copy(showSports = show)
     }
 
     fun updateRecentRowSize(size: Int) {
-        if (!appSettings.isDevMode) return
+        if (!appSettings.isAdmin) return
         appSettings.recentRowSize = size
         _uiState.value = _uiState.value.copy(recentRowSize = appSettings.recentRowSize)
     }
@@ -235,7 +235,7 @@ class SettingsViewModel(
                         _uiState.value.copy(
                             themeId = appSettings.themeId,
                             uiStyleId = appSettings.uiStyleId,
-                            isDevMode = appSettings.isDevMode,
+                            isAdmin = appSettings.isAdmin,
                             language = appSettings.language,
                             showClock = appSettings.showClock,
                             watchDelaySeconds = appSettings.watchDelaySeconds,

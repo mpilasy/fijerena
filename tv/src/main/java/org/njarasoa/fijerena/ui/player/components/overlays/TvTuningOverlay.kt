@@ -30,7 +30,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * over a dimmed picture. Drawn over whatever the surface shows — the engine's `stop()` + new media
  * source closes PlayerView's shutter, so after the first moment of a zap that is black, not the
  * last frame. Not focusable; the remote keeps zapping. The ring is full size in the preview pane too,
- * so a wide logo stays readable. [compact] is the preview pane; full screen shows Expert mode's
+ * so a wide logo stays readable. [compact] is the preview pane; full screen shows the Nerd's
  * [BufferingDetails] under the ring, as the loading indicator does.
  * [unavailable]: the screen gave up on the channel (its load failed, or no picture in 10 s) — no
  * ring, and a pill says "<name> is not available right now" rather than tuning for ever; OK then

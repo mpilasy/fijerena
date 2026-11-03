@@ -37,7 +37,7 @@
 
     <!-- Loading Indicators -->
     <string name="loading_buffering">Mitohana</string>
-    <!-- Expert mode, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
+    <!-- Nerd, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
     <string name="buffering_detail_progress">%1$s / %2$s s · %3$s s</string>
     <string name="buffering_detail_receiving">↓ %1$s</string>
     <string name="buffering_detail_stream_needs">mila %1$s ny fandefasana</string>
@@ -595,11 +595,11 @@
     <string name="terms_s8_title">Fanovana</string>
     <string name="terms_s8_body">Mety hiova ireto fepetra ireto. Ny dika ao amin\'ny rindrankajy ampiasainao no mihatra. Raha misy fahasamihafana amin\'ny lahatsoratra anglisy ny dikanteny, ny lahatsoratra anglisy no manan-kery.</string>
     <string name="provider_add_terms_notice">Ianao irery no tompon\'andraikitra amin\'ny loharano ampidirinao sy ny fomba fampiasanao azy. Jereo Fandrindrana → Momba → Fepetra fampiasana.</string>
-    <string name="settings_developer_mode_title">Mpitantana</string>
-    <string name="settings_developer_mode_desc">Mamela ity mombamomba ity hanova ny loharano, ny mombamomba, ny fanaraha-maso ny ray aman-dreny ary ny tahiry</string>
+    <string name="settings_admin_title">Mpitantana</string>
+    <string name="settings_admin_desc">Mamela ity mombamomba ity hanova ny loharano, ny mombamomba, ny fanaraha-maso ny ray aman-dreny ary ny tahiry</string>
     <string name="profile_nerd_title">Mahay</string>
     <string name="profile_nerd_desc">Mampiseho ny antsipiriany ara-teknika</string>
-    <string name="settings_developer_mode_last">Io ihany no mpitantana, ka mijanona ho mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
+    <string name="settings_admin_last">Io ihany no mpitantana, ka mijanona ho mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="settings_export_import_section_title">Tahiry</string>
     <string name="settings_export_import_desc">Ny loharano sy ny fidirana, ny ankafizina, ny tantaran\'ny fijerena ary ny fikirana</string>
     <string name="common_import">Ampidiro</string>
@@ -1085,7 +1085,7 @@
     <string name="profile_favorites_search">Mitady sarimihetsika, fandaharana ary fantsona</string>
     <string name="profile_favorites_none">Mbola tsy misy ankafizina. Mitadiava hanampiana.</string>
     <string name="profile_favorites_no_results">Tsy nisy hita azon\'i %1$s jerena.</string>
-    <string name="profile_child_last_expert">Tsy afaka ho mombamomba ankizy ny hany mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
+    <string name="profile_child_last_admin">Tsy afaka ho mombamomba ankizy ny hany mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="profile_source_no_filters">Tsy mahatratra ity loharano ity ny sivana votoaty</string>
     <string name="settings_pin_nudge_title">Mametraha PIN ho an\'ny Fandrindrana</string>
     <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy mpitantana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
@@ -1384,8 +1384,8 @@
     <string name="tmdb_attribution_title">Angona momba ny sarimihetsika sy andian-tantara</string>
     <string name="epg_xmltv_url_hint">Ny adiresin\'ny rakitra fandaharana XMLTV (.xml na .xml.gz), avy amin\'ny mpamatsy anao na tranonkala fandaharana.</string>
     <string name="epg_timezone_hint">Raha diso ora ihany ny fandaharana. Matetika 0.</string>
-    <string name="settings_developer_mode_enabled">Mpitantana ity mombamomba ity</string>
-    <string name="settings_developer_mode_taps_left" tools:ignore="PluralsCandidate">Mpitantana: %1$d sisa</string>
+    <string name="settings_admin_enabled">Mpitantana ity mombamomba ity</string>
+    <string name="settings_admin_taps_left" tools:ignore="PluralsCandidate">Mpitantana: %1$d sisa</string>
     <string name="ui_style_standard">Mahazatra</string>
     <string name="ui_style_rounded">Boribory</string>
     <string name="ui_style_sharp">Maranitra</string>
@@ -1432,7 +1432,7 @@
     <string name="profile_pin_remove">Esory ny PIN</string>
     <string name="profile_pin_remove_confirm_title">Hesorina ve ny PIN?</string>
     <string name="profile_pin_remove_confirm_text">Tsy hangataka PIN intsony ny Fandrindrana amin\'ity mombamomba ity.</string>
-    <string name="profile_pin_remove_last_expert">Ity no PIN farany an\'ny mpitantana: mijanona ny hidin\'ny ankizy amin\'ny fitaovana rehetra mifandray amin\'ny fampifanarahana.</string>
+    <string name="profile_pin_remove_last_admin">Ity no PIN farany an\'ny mpitantana: mijanona ny hidin\'ny ankizy amin\'ny fitaovana rehetra mifandray amin\'ny fampifanarahana.</string>
     <string name="pin_choose">Mifidiana PIN misy isa 4</string>
     <string name="pin_repeat">Ampidiro indray ilay PIN</string>
     <string name="pin_mismatch">Tsy mitovy ireo PIN roa: mifidiana indray.</string>
@@ -1447,7 +1447,7 @@
     <string name="pin_seconds">%1$d s</string>
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Fafao</string>
-    <string name="pin_last_expert_warning">Io ihany no mpitantana: raha hadino ny PIN-ny, ny famafana ny angon\'ny fampiharana ihany no mamerina ny fitantanana.</string>
+    <string name="pin_last_admin_warning">Io ihany no mpitantana: raha hadino ny PIN-ny, ny famafana ny angon\'ny fampiharana ihany no mamerina ny fitantanana.</string>
     <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba mpitantana</string>
     <string name="pin_use_phone">Ampiasao ny findaiko</string>
     <string name="pin_use_tv">Ampiasao ny fahitalavitra</string>

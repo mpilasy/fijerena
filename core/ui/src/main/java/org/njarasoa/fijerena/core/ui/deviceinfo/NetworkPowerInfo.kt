@@ -214,7 +214,7 @@ internal fun networkRows(facts: NetworkFacts): List<DeviceInfoRow> {
 }
 
 /**
- * The connection in use now, for the player's stats and Expert-mode buffering lines: "Ethernet",
+ * The connection in use now, for the player's stats and the Nerd's buffering lines: "Ethernet",
  * "Wi-Fi", "Mobile data"…, "Not connected"; null when the system refuses to say.
  */
 @StringRes
@@ -368,7 +368,7 @@ internal fun syncRows(facts: SyncFacts): List<DeviceInfoRow> {
 /**
  * One source's last catalog sync, labelled with the source's own name: a failure with its time
  * ([failedAtMs]) and reason, else the last success with its duration. Only the first line of
- * [error] is kept: a developer-mode error carries the raw exception below it, which can name the
+ * [error] is kept: a Nerd's error carries the raw exception below it, which can name the
  * server.
  */
 internal fun syncRow(

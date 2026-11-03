@@ -59,7 +59,7 @@ class StoredErrorTest {
     }
 
     @Test
-    fun theRawTextShowsOnlyInDeveloperMode() {
+    fun theRawTextShowsOnlyForANerd() {
         val stored = StoredError.of(SocketTimeoutException("read timed out"), french).encode()
 
         assertEquals("timeout", StoredError.message(stored, french, includeRaw = false))

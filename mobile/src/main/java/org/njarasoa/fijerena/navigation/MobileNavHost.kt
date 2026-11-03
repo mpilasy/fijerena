@@ -45,8 +45,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
-import org.njarasoa.fijerena.core.navigation.isExpertOnly
-import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonExpert
+import org.njarasoa.fijerena.core.navigation.isAdminOnly
+import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonAdmin
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.isSettingsArea
 import org.njarasoa.fijerena.core.navigation.navigateOnce
@@ -135,9 +135,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    // The profile in use has Expert mode: only then does it add sources (a tab's Add Source, the gate below).
-    val expert by remember { appSettings.observeDevMode().map { it.second } }
-        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
+    // The profile in use is an Admin: only then does it add sources (a tab's Add Source, the gate below).
+    val admin by remember { appSettings.observeAdmin().map { it.second } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isAdmin)
     // The clock over every screen, for every profile, when this device's Show Clock is on.
     val clock = remember { MobileClockState() }
     val showClock by remember { appSettings.observeShowClock() }.collectAsStateWithLifecycle(initialValue = appSettings.showClock)
@@ -355,7 +355,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
 
     // Async initialization: migrate legacy creds, determine start destination
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
-    // No source at all and an Expert in use: Add Source over Settings at start (E1).
+    // No source at all and an Admin in use: Add Source over Settings at start (E1).
     var addSourceAtStart by remember { mutableStateOf(false) }
 
     suspend fun initializeStartup() {
@@ -377,10 +377,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             profileSections = sections
             openingTab = startTab(appSettings.lastTab, sections.merged)
         } else {
-            // A new install's first profile becomes Expert in the background startup work, maybe
+            // A new install's first profile becomes Admin in the background startup work, maybe
             // after this point: the start needs it now (the call does nothing when there is one).
-            ProfileRepository(context.applicationContext).ensureAnExpert()
-            addSourceAtStart = startsOnAddSource(hasSource = false, expert = appSettings.isDevMode)
+            ProfileRepository(context.applicationContext).ensureAnAdmin()
+            addSourceAtStart = startsOnAddSource(hasSource = false, admin = appSettings.isAdmin)
         }
         hasProvider = anyProvider
     }
@@ -421,7 +421,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             // Add Source opens over it (the effect after the NavHost).
             Screen.Settings
         } else {
-            // With no source, Home says to ask a grown-up for one (not Expert).
+            // With no source, Home says to ask a grown-up for one (not Admin).
             openingTab.route
         }
 
@@ -461,9 +461,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         contentType: String,
     ) = leaveTabRoot { navController.navigateOnce(Screen.CategoryList(contentType = contentType, providerId = providerId)) }
 
-    // The sign-in is the source's form, an Expert's only (PR-12): anyone else asks an admin.
+    // The sign-in is the source's form, an Admin's only (PR-12): anyone else asks an admin.
     fun browseSignIn(providerId: Long) =
-        if (expert) {
+        if (admin) {
             leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
         } else {
             AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
@@ -491,7 +491,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
 
     // [tab]'s list under that top bar — or, while the profile has no merged sections, the sources
-    // panel: a Browse entry per source, or Add Source with none (for an Expert only).
+    // panel: a Browse entry per source, or Add Source with none (for an Admin only).
     val tabRoot: @Composable (MobileTab, @Composable () -> Unit) -> Unit = { tab, section ->
         TabRoot(
             sections = profileSections,
@@ -501,7 +501,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 coroutineScope.launch {
                     when (val opening = ProfileSections.opening(context, source.providerId)) {
                         ProfileSections.Opening.SignIn -> {
-                            if (expert) {
+                            if (admin) {
                                 navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
                             } else {
                                 AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
@@ -520,7 +520,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 }
             },
-            onAddSource = if (expert) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
+            onAddSource = if (admin) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
             section = section,
         )
     }
@@ -938,12 +938,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
                     MobileProfileEditScreen(
                         // A route without admin is always the page of the profile in use; Admin → Profiles
-                        // opens the one the route names, with its Admin rows (an Expert's only).
+                        // opens the one the route names, with its Admin rows (an Admin's only).
                         profileId =
-                            if (route.admin) route.shownProfileId(appSettings.activeProfileId, expert) else appSettings.activeProfileId,
+                            if (route.admin) route.shownProfileId(appSettings.activeProfileId, admin) else appSettings.activeProfileId,
                         viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
                         onBack = { navController.navigateUp() },
-                        adminRows = route.admin && expert,
+                        adminRows = route.admin && admin,
                         onParentalControls = { navController.navigateOnce(Screen.ParentalControls) },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous
@@ -1399,8 +1399,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val gateEntry = navController.currentBackStackEntryAsState().value
     val gateDestination = gateEntry?.destination
     // The household's shared setup (sources, guide sources, live sync, Parental controls) is
-    // the Expert's only, whatever opened it: closed at once.
-    val refused = !expert && gateEntry.isExpertOnly()
+    // the Admin's only, whatever opened it: closed at once.
+    val refused = !admin && gateEntry.isAdminOnly()
     LaunchedEffect(gateEntry, refused) { if (refused) navController.popBackStack() }
     // A child profile has no Settings: Settings, or a screen it opens, reached anyway (a restored
     // back stack, a switch to a child while it is open) gives way to Home. Safe mode keeps its Logs.
@@ -1413,7 +1413,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             !childRefused &&
             !showProfileMenu &&
             gateDestination.isPinGuarded() &&
-            !gateEntry.isOwnPageOfNonExpert(profile.id, expert) &&
+            !gateEntry.isOwnPageOfNonAdmin(profile.id, admin) &&
             profilesViewModel.needsPin(profile.id)
         ) {
             // Nothing of Settings shows behind the prompt.
@@ -1565,7 +1565,7 @@ private fun browseTargetRoute(
  * A bottom-bar tab's root: [section] — or, while the profile has no merged sections (no Xtream
  * source), the sources panel under [topBar]: a "Browse <source>" per source ([onBrowse], its first
  * section; the profile sheet lists them too), or Add Source with no source at all ([onAddSource];
- * null without Expert mode, which asks a grown-up instead).
+ * null for a profile that is not an Admin, which asks a grown-up instead).
  * [onEnter] runs on each visit.
  */
 @Composable

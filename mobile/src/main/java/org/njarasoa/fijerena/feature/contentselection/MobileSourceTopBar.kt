@@ -103,7 +103,7 @@ fun MobileSourceTopBar(
     // The summary line (phone home overhaul plan, Phase 2; one line for all sources since
     // multi-source Phase 6): re-read as each source's sync starts, ends and records its result.
     val syncStates = rememberProfileSyncStates()
-    val syncSummary = remember(syncStates) { syncSummary(syncStates, showUpdated = AppSettings(context).isDevMode) }
+    val syncSummary = remember(syncStates) { syncSummary(syncStates, showUpdated = AppSettings(context).isAdmin) }
     var showSourcesSheet by remember { mutableStateOf(false) }
     // A child's header has no sources line and its avatar no gear: sources are a grown-up's matter,
     // and a child has no Settings (the TV kids' Home has neither).

@@ -95,7 +95,7 @@ fun PosterCard(
 }
 
 /**
- * A card's clean name ("From (2022)", not "ES - From (2022)") with its source (Expert mode) at the
+ * A card's clean name ("From (2022)", not "ES - From (2022)") with its source (Nerd) at the
  * end of the name's line, then on one line its [rating], the name's tags as badges ("+N" for those that do not fit, CardBadgeLine) and
  * [subtitle] on [subtitleLines] lines — as TV Home's cards and the lists show it.
  * Without [tags], [title] shows as it is and has no badges: a TMDB list's title. Without
@@ -126,7 +126,7 @@ internal fun CardLines(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            // The source (Expert mode) ends the title line, as on the list rows and TV's cards.
+            // The source (Nerd) ends the title line, as on the list rows and TV's cards.
             sourceName?.let { SourceBadge(it, providerId = providerId) }
         }
         // One line of one height on every card: the badges that do not fit become "+N".

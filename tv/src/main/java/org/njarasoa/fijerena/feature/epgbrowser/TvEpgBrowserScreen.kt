@@ -189,12 +189,12 @@ fun TvEpgBrowserScreen(
     onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
-    // An Expert's only: the Guide Sources button (the profile rules plan, PR-11).
-    val expert =
+    // An Admin's only: the Guide Sources button (the profile rules plan, PR-11).
+    val admin =
         remember {
             org.njarasoa.fijerena.core.network
                 .AppSettings(context)
-                .isDevMode
+                .isAdmin
         }
     val viewModel: EpgBrowserViewModel =
         viewModel(
@@ -259,9 +259,9 @@ fun TvEpgBrowserScreen(
                     iconTone = if (staleSourceCount > 0) TextTone.Warning else null,
                     iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
                 )
-                // The guides this search runs over, of a source that can have them: an Expert's
+                // The guides this search runs over, of a source that can have them: an Admin's
                 // (the profile rules plan, PR-11).
-                if (guideSourceOwners.isNotEmpty() && expert) {
+                if (guideSourceOwners.isNotEmpty() && admin) {
                     TvIconAction(
                         onClick = {
                             headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)

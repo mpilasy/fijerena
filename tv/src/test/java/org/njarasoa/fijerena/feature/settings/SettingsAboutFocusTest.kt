@@ -14,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → Admin's list of sections, and About (`scripts/focus-walks/settings.txt`): the five
- * section rows, for an Expert; About for everyone, with Logs under Device Info. The About rows open
+ * section rows, for an Admin; About for everyone, with Logs under Device Info. The About rows open
  * other screens, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -22,7 +22,7 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
     private val logs get() = context.getString(R.string.settings_diagnostics_title)
 
     @Test
-    fun `an Expert walks Admin's list and About`() {
+    fun `an Admin walks Admin's list and About`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Admin"),
@@ -60,7 +60,7 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
             down(logs),
             down("Terms of Use"),
             down("Open-Source Licences"),
-            // No Shrink Database without Expert mode.
+            // No Shrink Database for a profile that is not an Admin.
             down("Film and Show Data / TMDB logo"),
             down("Film and Show Data / TMDB logo"),
             left("About"),

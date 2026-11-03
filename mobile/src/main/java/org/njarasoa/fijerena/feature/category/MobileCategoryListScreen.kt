@@ -1772,7 +1772,7 @@ private fun AllCategoriesDialog(
                             onClick = { onPick(category) },
                             label = category.name,
                             // The source as the badge at the end of the name, as on the chips
-                            // and every row (Expert mode only).
+                            // and every row (Nerd only).
                             sourceName = sourceNames[category.providerId],
                         )
                     }
@@ -2526,7 +2526,7 @@ internal fun StreamCard(
         // A category named by one tag ("en", "4k") shows as a badge, as a title's tags do (as on TV).
         val categoryTag = remember(categoryName) { categoryNameAsTag(categoryName) }
         val categoryText = categoryName.takeIf { categoryTag == null }
-        // Badges show in Expert mode only (SourceBadge).
+        // Badges show for a Nerd only (SourceBadge).
         val sourceLine = sourceName?.takeIf { LocalNerd.current }
         val sourceLineText =
             when {
@@ -2633,7 +2633,7 @@ internal fun StreamCard(
                         // end it, it would scroll for ever and cut the title's start.
                         modifier = Modifier.weight(1f),
                     )
-                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    // The source (Nerd) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
                 nowPlayingText?.let { text ->

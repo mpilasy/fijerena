@@ -37,7 +37,7 @@ data class ProfileSections(
     /** What a Browse entry opens. */
     sealed interface Opening {
         /**
-         * The source has no login yet (a Jellyfin server): its sign-in, which an Expert gives in
+         * The source has no login yet (a Jellyfin server): its sign-in, which an Admin gives in
          * Edit Source for the whole household; anyone else is asked to get an admin.
          */
         data object SignIn : Opening

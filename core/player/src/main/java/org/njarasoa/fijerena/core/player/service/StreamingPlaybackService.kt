@@ -716,7 +716,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
             )
         player.addAnalyticsListener(analyticsListener!!)
-        // The Expert-mode buffering line's error count: ExoPlayer retries a failed load itself, so
+        // The Nerd's buffering line's error count: ExoPlayer retries a failed load itself, so
         // these are the tries a wait went through, fatal or not.
         player.addAnalyticsListener(
             object : AnalyticsListener {
@@ -1214,7 +1214,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     /**
-     * The wait in progress, for the Expert-mode lines under "Buffering…"; null with no player.
+     * The wait in progress, for the Nerd's lines under "Buffering…"; null with no player.
      * Main thread (it reads the player).
      */
     fun bufferingInfo(): BufferingInfo? {

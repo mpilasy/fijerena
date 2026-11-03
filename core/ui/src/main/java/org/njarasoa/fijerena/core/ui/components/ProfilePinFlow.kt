@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.ui.R
 /**
  * The profile page's PIN row (the profile pin plan, Phase 2), the same on TV
  * and phone: without a PIN it chooses one; with one, the profile's own page asks for it first,
- * then offers Change or Remove — an Expert on another profile's page goes straight to those (the
+ * then offers Change or Remove — an Admin on another profile's page goes straight to those (the
  * "forgot my PIN" path). Remove asks for a confirm first. Saved at once, like the theme.
  */
 @Stable
@@ -80,17 +80,17 @@ class ProfilePinFlow internal constructor(
 }
 
 /**
- * [profileId]'s PIN row flow; [own] when it is the profile in use's own page, [lastExpert] when
- * it is the only Expert profile (choosing its PIN then warns how hard a forgotten one is).
+ * [profileId]'s PIN row flow; [own] when it is the profile in use's own page, [lastAdmin] when
+ * it is the only Admin profile (choosing its PIN then warns how hard a forgotten one is).
  */
 @Composable
 fun rememberProfilePinFlow(
     pins: ProfilePins,
     profileId: String,
     own: Boolean,
-    lastExpert: Boolean,
+    lastAdmin: Boolean,
 ): ProfilePinFlow {
     val currentTitle = stringResource(R.string.pin_enter_current)
-    val warning = if (lastExpert) stringResource(R.string.pin_last_expert_warning) else null
+    val warning = if (lastAdmin) stringResource(R.string.pin_last_admin_warning) else null
     return remember(profileId, own, warning) { ProfilePinFlow(pins, profileId, own, currentTitle, warning) }
 }

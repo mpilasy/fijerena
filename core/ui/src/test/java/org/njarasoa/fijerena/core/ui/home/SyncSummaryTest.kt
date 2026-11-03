@@ -76,7 +76,7 @@ class SyncSummaryTest {
     }
 
     @Test
-    fun `a profile that is not Expert sees no update age, but still sees a running sync and a failure`() {
+    fun `a profile that is not Admin sees no update age, but still sees a running sync and a failure`() {
         val updated = syncSummary(listOf(source(1, lastSyncedAtMs = 5_000L)), showUpdated = false)
         assertEquals(SourceSyncStatus.NONE, updated.status)
         assertEquals(false, updated.opensSheet)

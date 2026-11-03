@@ -49,7 +49,7 @@ class SyncSettingsViewModel(
     /** What the screen is doing beyond showing the status. */
     data class Ui(
         val busy: Boolean = false,
-        /** Friendly error for the last action (raw detail added in dev mode). */
+        /** Friendly error for the last action (raw detail added for a Nerd). */
         val error: String? = null,
         /** The server URL typed so far, and what checking it found. */
         val serverUrl: String = "",

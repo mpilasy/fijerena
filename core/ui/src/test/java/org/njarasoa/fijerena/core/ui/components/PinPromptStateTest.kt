@@ -49,21 +49,21 @@ class PinPromptStateTest {
     }
 
     @Test
-    fun `any Expert's PIN finishes an admin prompt`() {
+    fun `any Admin's PIN finishes an admin prompt`() {
         every { pins.checkAny(listOf("atr", "kid"), "2222") } returns ProfilePins.Check.Right
-        val state = prompt(PinRequest.AnyOf(listOf("atr", "kid"), "Enter an Expert's PIN"))
+        val state = prompt(PinRequest.AnyOf(listOf("atr", "kid"), "Enter an Admin's PIN"))
 
         state.replace("2222")
 
         assertEquals(1, done)
-        assertEquals("Enter an Expert's PIN", state.title)
+        assertEquals("Enter an Admin's PIN", state.title)
     }
 
     @Test
     fun `leaving a child with the target's own PIN unlocks the target too`() {
         PinSession.onActiveProfile("kid")
         every { pins.checkToLeaveChild(listOf("atr", "mum"), "2222") } returns ProfilePins.LeaveCheck(ProfilePins.Check.Right, "mum")
-        val state = prompt(PinRequest.LeaveChild(listOf("atr", "mum"), targetId = "mum", title = "Enter an Expert's PIN"))
+        val state = prompt(PinRequest.LeaveChild(listOf("atr", "mum"), targetId = "mum", title = "Enter an Admin's PIN"))
 
         state.replace("2222")
 
@@ -75,7 +75,7 @@ class PinPromptStateTest {
     }
 
     @Test
-    fun `leaving a child with another Expert's PIN unlocks nothing`() {
+    fun `leaving a child with another Admin's PIN unlocks nothing`() {
         PinSession.onActiveProfile("kid")
         every { pins.checkToLeaveChild(listOf("atr", "mum"), "1111") } returns ProfilePins.LeaveCheck(ProfilePins.Check.Right, "atr")
         val state = prompt(PinRequest.LeaveChild(listOf("atr", "mum"), targetId = "mum", title = "t"))

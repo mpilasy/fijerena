@@ -46,9 +46,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The phone's Settings by role (the admin settings plan): a grown-up sees its own rows under Your
- * Profile on Settings itself, never the Admin rows; then an Expert Admin, any other grown-up Add
+ * Profile on Settings itself, never the Admin rows; then an Admin sees Admin, any other grown-up Add
  * Profile, and About. A child has no Settings: its profile menu does not offer it. Admin asks the PIN once on the way in (Cancel stays on
- * the list), then lists the Expert groups; each opens its own page (Parental Controls its own
+ * the list), then lists the Admin groups; each opens its own page (Parental Controls its own
  * screen), Back returns to the list, and a recreate keeps the page. Admin → Profiles → a profile has
  * the Admin rows too.
  */
@@ -80,7 +80,7 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `an Expert sees its own rows on Settings, then Admin and About`() {
+    fun `an Admin sees its own rows on Settings, then Admin and About`() {
         showSettings(active = ADMIN)
 
         assertOwnRows()
@@ -285,7 +285,7 @@ class SettingsAdminTest {
             R.string.settings_autoplay_next_episode_title,
         ).forEach { scrollTo(text(it)) }
         rule.onNodeWithText(text(R.string.profile_section_admin)).assertDoesNotExist()
-        rule.onNodeWithText(text(R.string.settings_developer_mode_title)).assertDoesNotExist()
+        rule.onNodeWithText(text(R.string.settings_admin_title)).assertDoesNotExist()
         rule.onNodeWithText(text(R.string.profile_child_title)).assertDoesNotExist()
     }
 
@@ -296,7 +296,7 @@ class SettingsAdminTest {
 
         rule.onNodeWithText(text(R.string.profile_dialog_edit_title)).assertExists()
         scrollTo(text(R.string.profile_child_title))
-        scrollTo(text(R.string.settings_developer_mode_title))
+        scrollTo(text(R.string.settings_admin_title))
         scrollTo(text(R.string.profile_delete_button))
     }
 
@@ -393,7 +393,7 @@ class SettingsAdminTest {
         rule.waitForIdle()
     }
 
-    /** Ada (Expert), Guest (a grown-up) and Kid (a child); [active] in use, unlocked. */
+    /** Ada (an Admin), Guest (a grown-up) and Kid (a child); [active] in use, unlocked. */
     private fun seed(
         active: String,
         pins: Set<String> = emptySet(),
@@ -409,7 +409,7 @@ class SettingsAdminTest {
         profiles.insert(ProfileEntity(KID, "Kid", createdAt = 3, colorIndex = 2))
         val settings = AppSettings(context)
         settings.activeProfileId = active
-        settings.setDevMode(ADMIN, true)
+        settings.setAdmin(ADMIN, true)
         settings.setChildProfile(KID, true)
         pins.forEach { ProfilePins(settings).set(it, PIN) }
         if (active in pins) PinSession.unlock(active)

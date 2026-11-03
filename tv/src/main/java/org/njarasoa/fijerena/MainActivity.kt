@@ -26,7 +26,7 @@ import org.njarasoa.fijerena.ui.theme.autoUiScale
 
 class MainActivity : ComponentActivity() {
     /** Read once — a SharedPreferences hit per key event would be its own problem. */
-    private val logKeyEvents by lazy { AppSettings(applicationContext).isDevMode }
+    private val logKeyEvents by lazy { AppSettings(applicationContext).isAdmin }
 
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(LocaleManager.wrap(newBase))
@@ -89,9 +89,9 @@ class MainActivity : ComponentActivity() {
                         TrailerHost {
                             TvNavHost(
                                 onUiScaleChanged = { choice ->
-                                    // This device's setting: an Expert's only, like the language
+                                    // This device's setting: an Admin's only, like the language
                                     // (the profile rules plan, PR-10).
-                                    if (appSettings.isDevMode) {
+                                    if (appSettings.isAdmin) {
                                         appSettings.uiScaleChoice = choice
                                         uiScale = choice ?: autoUiScale(this@MainActivity)
                                     }
