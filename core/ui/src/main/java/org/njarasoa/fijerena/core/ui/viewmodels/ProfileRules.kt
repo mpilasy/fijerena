@@ -24,15 +24,18 @@ data class ProfileFields(
  * applies it below the screens, which also hide what is not allowed.
  *
  * - A kid changes only its own personal settings: colour, UI Theme, Theme, Look and Feel, poster
- *   background and play next episode. It adds and deletes nothing.
- * - A grown-up without Expert mode changes its own name, colour and personal settings, and adds a
- *   profile (a kid or not, never an Expert). It does not make itself Expert or a kid.
- * - An Expert changes any profile, Expert mode and Child Profile included, and deletes profiles.
+ *   background and play next episode. It adds and deletes nothing, and is never a Nerd.
+ * - A grown-up without Expert mode changes its own name, colour, personal settings and Nerd, and
+ *   adds a profile (a kid or not, never an Expert or a Nerd). It does not make itself Expert or a
+ *   kid, and does not change another profile's Nerd.
+ * - An Expert changes any profile, Expert mode, Child Profile and Nerd included, and deletes
+ *   profiles.
+ * - Nerd alone gives no right to manage: it only shows the stats and extra information.
  *
  * The other checks (the last Expert, the profile in use, the last profile) stay where they are.
  */
 object ProfileRules {
-    /** The profile to add, Expert mode off unless an Expert adds it; null when [actor] may not add. */
+    /** The profile to add, Expert mode and Nerd off unless an Expert adds it; null when [actor] may not add. */
     fun add(
         actor: ProfileActor,
         fields: ProfileFields,
@@ -41,7 +44,13 @@ object ProfileRules {
             null
         } else {
             val settings = fields.settings
-            fields.copy(settings = settings.copy(devMode = actor.isExpert && settings.devMode && !settings.child))
+            fields.copy(
+                settings =
+                    settings.copy(
+                        devMode = actor.isExpert && settings.devMode && !settings.child,
+                        nerd = actor.isExpert && settings.nerd && !settings.child,
+                    ),
+            )
         }
 
     /**
@@ -56,7 +65,8 @@ object ProfileRules {
     ): ProfileFields? =
         when {
             actor.isExpert -> {
-                new
+                // A kid is never a Nerd, also when an Expert turns Child on in the same change.
+                new.copy(settings = new.settings.copy(nerd = new.settings.nerd && !new.settings.child))
             }
 
             targetId != actor.id -> {

@@ -18,7 +18,8 @@ class ProfileRulesTest {
         devMode: Boolean = false,
         autoplay: Boolean = true,
         child: Boolean = false,
-    ) = ProfileFields(name, colorIndex, ProfileSettings(devMode, autoplay, child))
+        nerd: Boolean = false,
+    ) = ProfileFields(name, colorIndex, ProfileSettings(devMode, autoplay, child, nerd))
 
     // PR-1
 
@@ -133,5 +134,59 @@ class ProfileRulesTest {
     fun `an Expert turns Child Profile off`() {
         val allowed = ProfileRules.update(expert, "kid", fields(child = true), fields(child = false))
         assertFalse(allowed!!.settings.child)
+    }
+
+    // Nerd (the Nerd role plan, RQ-2)
+
+    @Test
+    fun `a kid never makes itself a Nerd`() {
+        val allowed = ProfileRules.update(kid, "kid", fields(child = true), fields(child = true, nerd = true))
+        assertFalse(allowed!!.settings.nerd)
+    }
+
+    @Test
+    fun `an Expert does not make a kid a Nerd`() {
+        val allowed = ProfileRules.update(expert, "kid", fields(child = true), fields(child = true, nerd = true))
+        assertFalse(allowed!!.settings.nerd)
+    }
+
+    @Test
+    fun `an Expert who turns Child on also turns Nerd off`() {
+        val allowed = ProfileRules.update(expert, "other", fields(nerd = true), fields(child = true, nerd = true))
+        assertTrue(allowed!!.settings.child)
+        assertFalse(allowed.settings.nerd)
+    }
+
+    @Test
+    fun `an Expert sets Nerd on any grown-up`() {
+        assertTrue(ProfileRules.update(expert, "other", fields(), fields(nerd = true))!!.settings.nerd)
+        assertFalse(ProfileRules.update(expert, "other", fields(nerd = true), fields(nerd = false))!!.settings.nerd)
+        assertTrue(ProfileRules.update(expert, "expert", fields(), fields(nerd = true))!!.settings.nerd)
+    }
+
+    @Test
+    fun `a grown-up sets its own Nerd`() {
+        assertTrue(ProfileRules.update(grownUp, "grown-up", fields(), fields(nerd = true))!!.settings.nerd)
+        assertFalse(ProfileRules.update(grownUp, "grown-up", fields(nerd = true), fields(nerd = false))!!.settings.nerd)
+    }
+
+    @Test
+    fun `a grown-up does not set another profile's Nerd`() {
+        assertNull(ProfileRules.update(grownUp, "other", fields(), fields(nerd = true)))
+    }
+
+    @Test
+    fun `a Nerd alone gets no right to manage`() {
+        // The actor's own Nerd flag is not part of ProfileActor: a Nerd without Expert mode is a grown-up.
+        assertFalse(ProfileRules.delete(grownUp))
+        assertFalse(ProfileRules.changesSetup(grownUp))
+        assertFalse(ProfileRules.update(grownUp, "grown-up", fields(nerd = true), fields(nerd = true, devMode = true))!!.settings.devMode)
+    }
+
+    @Test
+    fun `only an Expert adds a Nerd, and never a kid Nerd`() {
+        assertFalse(ProfileRules.add(grownUp, fields(nerd = true))!!.settings.nerd)
+        assertTrue(ProfileRules.add(expert, fields(nerd = true))!!.settings.nerd)
+        assertFalse(ProfileRules.add(expert, fields(nerd = true, child = true))!!.settings.nerd)
     }
 }

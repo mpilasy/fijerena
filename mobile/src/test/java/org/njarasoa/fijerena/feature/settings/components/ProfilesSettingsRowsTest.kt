@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.settings.components
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +35,7 @@ class ProfilesSettingsRowsTest {
                 profiles = profiles,
                 message = null,
                 newProfileColorIndex = { 2 },
-                onAdd = { _, _, _ -> },
+                onAdd = { _, _, _, _ -> },
                 onEdit = {},
                 onDismissMessage = {},
                 expertMode = expertMode,
@@ -72,5 +73,24 @@ class ProfilesSettingsRowsTest {
         show(expertMode = false, canAddProfile = false)
 
         composeTestRule.onNodeWithContentDescription("Add Profile").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an Admin's Add Profile has the Nerd switch, gone when Child is on`() {
+        show(expertMode = true)
+        composeTestRule.onNodeWithContentDescription("Add Profile").performClick()
+
+        composeTestRule.onNodeWithText("Nerd").assertExists()
+        composeTestRule.onNodeWithText("Child Profile").performClick()
+        composeTestRule.onNodeWithText("Nerd").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a grown-up's Add Profile has no Nerd switch`() {
+        show(expertMode = false, canAddProfile = true)
+        composeTestRule.onNodeWithContentDescription("Add Profile").performClick()
+
+        composeTestRule.onNodeWithText("Child Profile").assertExists()
+        composeTestRule.onNodeWithText("Nerd").assertDoesNotExist()
     }
 }

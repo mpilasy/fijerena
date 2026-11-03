@@ -599,8 +599,8 @@ fun SettingsScreen(
                                                                     message = profilesMessage,
                                                                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                                                                     // No PIN: any grown-up may add a profile (the profile rules plan, PR-D2).
-                                                                    onAdd = { name, colorIndex, child ->
-                                                                        profilesViewModel.addProfile(name, colorIndex, child) {
+                                                                    onAdd = { name, colorIndex, child, nerd ->
+                                                                        profilesViewModel.addProfile(name, colorIndex, child, nerd) {
                                                                             openWhenListed = it
                                                                         }
                                                                     },

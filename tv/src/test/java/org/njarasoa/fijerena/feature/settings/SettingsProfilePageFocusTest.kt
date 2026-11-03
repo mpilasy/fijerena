@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.feature.settings
 
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.testing.SettingsFixture
 import org.njarasoa.fijerena.testing.SettingsFocusTest
 import org.njarasoa.fijerena.testing.back
@@ -32,6 +34,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             center("Red"),
             left("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / Off"),
+            down("Nerd / Shows this profile the stats"),
             down("UI Theme"),
             down("Theme"),
             down("Look and Feel"),
@@ -47,12 +50,28 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     }
 
     @Test
+    fun `a grown-up turns its own Nerd on, without the PIN`() {
+        open(SettingsFixture.GUEST)
+        walk.run(
+            right("Edit Name / Name / Guest"),
+            down("Colour"),
+            down("PIN / Asked in Settings before sources, backups and profiles / Off"),
+            down("Nerd / Shows this profile the stats"),
+            center("Nerd / Shows this profile the stats"),
+        )
+        rule.waitForIdle()
+
+        assertTrue(AppSettings(context).nerdMode(SettingsFixture.GUEST))
+    }
+
+    @Test
     fun `a grown-up's own page ends on Add Profile, and Up goes back up the page`() {
         open(SettingsFixture.GUEST)
         walk.run(
             right("Edit Name / Name / Guest"),
             down("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / Off"),
+            down("Nerd / Shows this profile the stats"),
             down("UI Theme"),
             down("Theme"),
             down("Look and Feel"),
@@ -74,6 +93,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             right("Edit Name / Name / Admin"),
             down("Colour"),
             down("PIN"),
+            down("Nerd / Shows this profile the stats"),
             down("UI Theme"),
             down("Theme"),
             down("Look and Feel"),
@@ -97,6 +117,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             center("Edit Name / Name / Guest"),
             down("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / Off"),
+            down("Nerd / Shows this profile the stats"),
             down("UI Theme"),
             down("Theme"),
             down("Look and Feel"),

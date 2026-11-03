@@ -240,7 +240,10 @@ class AppSettings(
     val isNerdMode: Boolean get() = nerdMode(activeProfileId)
 
     /** [profileId] is a Nerd, whichever profile this device uses; never for a child. */
-    fun nerdMode(profileId: String): Boolean = !isChildProfile(profileId) && prefs.getBoolean(profileKey(KEY_NERD_MODE, profileId), false)
+    fun nerdMode(profileId: String): Boolean = !isChildProfile(profileId) && storedNerdMode(profileId)
+
+    /** [profileId]'s stored Nerd flag, also on a child, for the code that clears it there. */
+    fun storedNerdMode(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_NERD_MODE, profileId), false)
 
     fun setNerdMode(
         profileId: String,

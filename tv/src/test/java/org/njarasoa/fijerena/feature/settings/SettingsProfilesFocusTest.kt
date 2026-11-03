@@ -33,6 +33,7 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             center("Edit Name / Name / Admin"),
             down("Colour"),
             down("PIN"),
+            down("Nerd / Shows this profile the stats"),
             down("UI Theme"),
             down("Theme"),
             down("Look and Feel"),

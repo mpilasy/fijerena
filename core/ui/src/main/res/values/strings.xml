@@ -674,6 +674,8 @@
     <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → Terms of Use.</string>
     <string name="settings_developer_mode_title">Admin</string>
     <string name="settings_developer_mode_desc">Lets this profile change sources, profiles, parental controls and backups</string>
+    <string name="profile_nerd_title">Nerd</string>
+    <string name="profile_nerd_desc">Shows this profile the stats and extra information: source badges, stream statistics and raw error text</string>
     <string name="settings_developer_mode_last">The only admin profile stays an admin: make another profile an admin first.</string>
     <string name="settings_diagnostics_title">Logs</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>

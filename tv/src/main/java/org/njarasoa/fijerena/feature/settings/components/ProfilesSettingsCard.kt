@@ -116,7 +116,7 @@ fun ProfilesSettingsCard(
     profiles: List<ProfileUi>,
     message: String?,
     newProfileColorIndex: () -> Int,
-    onAdd: (name: String, colorIndex: Int, child: Boolean) -> Unit,
+    onAdd: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onEdit: (ProfileUi) -> Unit,
     onDismissMessage: () -> Unit,
     scale: Float,
@@ -213,13 +213,15 @@ fun ProfilesSettingsCard(
     if (adding) {
         ProfileAddDialog(
             initialColorIndex = remember { newProfileColorIndex() },
-            onSave = { name, color, child ->
-                onAdd(name, color, child)
+            onSave = { name, color, child, nerd ->
+                onAdd(name, color, child, nerd)
                 adding = false
             },
             onDismiss = { adding = false },
             scale = scale,
             noAdminPin = noAdminPin,
+            // Admin's card: an Admin adds a Nerd (ProfileRules).
+            nerdSwitch = true,
         )
     }
 }
@@ -267,6 +269,7 @@ fun ProfileEditPane(
     var devMode by rememberSaveable(profile.id) { mutableStateOf(stored.devMode) }
     var autoplayNextEpisode by rememberSaveable(profile.id) { mutableStateOf(stored.autoplayNextEpisode) }
     var child by rememberSaveable(profile.id) { mutableStateOf(stored.child) }
+    var nerd by rememberSaveable(profile.id) { mutableStateOf(stored.nerd) }
     // A child's own page has no Name and no PIN; the page then starts on Colour.
     val showsNameAndPin = stored.showsNameAndPin(adminView)
     var showNameError by remember { mutableStateOf(false) }
@@ -277,7 +280,7 @@ fun ProfileEditPane(
             profile.id,
             name.trim().ifEmpty { profile.name },
             colorIndex,
-            stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode, child = child),
+            stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode, child = child, nerd = nerd),
         )
     }
     val leave = {
@@ -549,6 +552,20 @@ fun ProfileEditPane(
                         focusRequester = pinFocus,
                     )
                 }
+                // Nerd (the Nerd role plan): never a child's; an Admin sets it on any grown-up, a
+                // grown-up on itself, without the PIN.
+                if (!child) {
+                    TvSwitchRow(
+                        checked = nerd,
+                        onCheckedChange = {
+                            nerd = it
+                            apply()
+                        },
+                        label = stringResource(R.string.profile_nerd_title),
+                        description = stringResource(R.string.profile_nerd_desc),
+                        enabled = adminView || profile.isActive,
+                    )
+                }
                 CinemaText(stringResource(R.string.profile_section_look), role = TextRole.Heading, tone = TextTone.Primary)
                 SettingsRow(
                     title = stringResource(R.string.ui_theme_title),
@@ -598,7 +615,10 @@ fun ProfileEditPane(
                         checked = child,
                         onCheckedChange = {
                             child = it
-                            if (it) devMode = false
+                            if (it) {
+                                devMode = false
+                                nerd = false
+                            }
                             apply()
                         },
                         label = stringResource(R.string.profile_child_title),
@@ -814,8 +834,8 @@ fun ProfileEditPane(
         if (adding) {
             ProfileAddDialog(
                 initialColorIndex = remember { viewModel.nextFreeColorIndex() },
-                onSave = { newName, color, newChild ->
-                    viewModel.addProfile(newName, color, newChild)
+                onSave = { newName, color, newChild, newNerd ->
+                    viewModel.addProfile(newName, color, newChild, newNerd)
                     adding = false
                     refocus = addFocus
                 },
@@ -825,6 +845,7 @@ fun ProfileEditPane(
                 },
                 scale = scale,
                 noAdminPin = viewModel.adminPinHolders().isEmpty(),
+                nerdSwitch = adminView,
             )
         }
         if (confirmDelete) {
@@ -914,21 +935,25 @@ private fun ProfileSourcesPane(
 }
 
 /**
- * New profile: a name, a colour and whether it is a child's. Its own settings start off; it's
- * edited on its page afterwards.
+ * New profile: a name, a colour, whether it is a child's and, for an Admin ([nerdSwitch]), whether
+ * it is a Nerd (never a child's). Its other settings start off; it's edited on its page afterwards.
  */
 @Composable
 internal fun ProfileAddDialog(
     initialColorIndex: Int,
-    onSave: (name: String, colorIndex: Int, child: Boolean) -> Unit,
+    onSave: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onDismiss: () -> Unit,
     scale: Float,
     /** No Expert has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
     noAdminPin: Boolean = false,
+    /** The profile in use is an Admin: the Nerd switch shows (only an Admin adds a Nerd). */
+    nerdSwitch: Boolean = false,
 ) {
     var name by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
     var child by remember { mutableStateOf(false) }
+    var nerd by remember { mutableStateOf(false) }
+    val showsNerd = nerdSwitch && !child
     var showNameError by remember { mutableStateOf(false) }
     // Without an initial focus the dialog opens with focus nowhere and D-pad presses go nowhere.
     val nameFocusRequester = remember { FocusRequester() }
@@ -980,8 +1005,17 @@ internal fun ProfileAddDialog(
                             stringResource(R.string.profile_child_desc),
                             if (SwitchLock.ON && child && noAdminPin) stringResource(R.string.profile_child_no_pin_warning) else null,
                         ).joinToString("\n"),
-                    modifier = Modifier.focusProperties { down = saveFocusRequester },
+                    modifier = if (showsNerd) Modifier else Modifier.focusProperties { down = saveFocusRequester },
                 )
+                if (showsNerd) {
+                    TvSwitchRow(
+                        checked = nerd,
+                        onCheckedChange = { nerd = it },
+                        label = stringResource(R.string.profile_nerd_title),
+                        description = stringResource(R.string.profile_nerd_desc),
+                        modifier = Modifier.focusProperties { down = saveFocusRequester },
+                    )
+                }
             }
         },
         main =
@@ -989,7 +1023,7 @@ internal fun ProfileAddDialog(
                 if (name.isBlank()) {
                     showNameError = true
                 } else {
-                    onSave(name, colorIndex, child)
+                    onSave(name, colorIndex, child, showsNerd && nerd)
                 }
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
