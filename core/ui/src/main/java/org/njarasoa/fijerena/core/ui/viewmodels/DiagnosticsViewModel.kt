@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +41,18 @@ class DiagnosticsViewModel(
     /** Null while loading. */
     private val _entries = MutableStateFlow<List<Entry>?>(null)
     val entries: StateFlow<List<Entry>?> = _entries.asStateFlow()
+
+    /**
+     * The search field's text ([filter] gives the entries it shows). Snapshot state, so the field
+     * gets each key at once; it stays while the view model stays (a rotation, a recreate). Share
+     * and Copy use [entries], the whole log.
+     */
+    var query by mutableStateOf("")
+        private set
+
+    fun updateQuery(text: String) {
+        query = text
+    }
 
     init {
         reload()
@@ -100,4 +115,26 @@ class DiagnosticsViewModel(
 
     private fun formatTime(epochMs: Long): String =
         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(epochMs))
+
+    companion object {
+        /**
+         * The entries whose title, detail or chain of causes contains [query], case ignored.
+         * A blank [query] keeps all of them.
+         */
+        fun filter(
+            entries: List<Entry>,
+            query: String,
+        ): List<Entry> {
+            val text = query.trim()
+            return if (text.isEmpty()) {
+                entries
+            } else {
+                entries.filter { entry ->
+                    entry.title.contains(text, ignoreCase = true) ||
+                        entry.detail.contains(text, ignoreCase = true) ||
+                        entry.causes?.chain?.any { it.contains(text, ignoreCase = true) } == true
+                }
+            }
+        }
+    }
 }

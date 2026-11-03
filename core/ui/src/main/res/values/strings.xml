@@ -687,6 +687,9 @@
     <string name="settings_diagnostics_show_details">Show details</string>
     <string name="settings_diagnostics_hide_details">Hide details</string>
     <string name="settings_diagnostics_copy">Copy</string>
+    <string name="settings_diagnostics_share_subject">Fijerena logs</string>
+    <string name="settings_diagnostics_share_no_app">No app on this device can share the log</string>
+    <string name="settings_diagnostics_share_failed">Could not prepare the log to share</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Device Info</string>
     <string name="device_info_desc">This app and device: versions, memory, storage, screen, media decoders, network and background state</string>

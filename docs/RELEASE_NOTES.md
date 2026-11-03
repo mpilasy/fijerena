@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Sharing the logs no longer closes the app:** on the phone, Settings → About → Logs → Share closed the app when the log was large. Share now sends the whole log as a text file, with its logins masked as before. When no app can take it, or the file cannot be written, a message says so. Phone.
+- **Search the logs:** Settings → About → Logs has a search field. It shows only the entries whose title, message or causes contain what you type, in capitals or not; when nothing matches, it says so. Share still sends the whole log. On TV the field is above the first entry: Up from the first entry reaches it, OK opens the keyboard. TV and phone.
+
 ## Version: 0.9.20261103153139
 
 - **The reminder banner takes the remote's keys:** when a game or programme reminder rings while the app is on screen, the remote's keys now go to its banner at once, on every screen and over full-screen video: Watch is chosen (Dismiss when there is no channel), Left and Right choose between the two, OK acts, Back closes it. No key but volume reaches the screen under it, and focus stays where it was, so when the banner closes you are on the same item as before. Before, the remote's keys went to the screen under it until you pressed Menu or held OK, and that hint is gone. It still closes by itself after 30 seconds. When a dialog is open, the banner waits and shows when the dialog closes. TV.

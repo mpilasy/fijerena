@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -46,6 +47,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -57,15 +59,20 @@ import org.njarasoa.fijerena.ui.theme.scaled
 private const val DETAIL_MAX_LINES = 14
 
 /**
- * Settings → Diagnostics on TV (Admin). Each entry is focusable so the D-pad scrolls
- * through them. See the rock solid stability resilience plan → F-30.
+ * Settings → About → Logs on TV. Each entry is focusable so the D-pad scrolls through them. A
+ * search field above the entries filters them as the user types: Down from it reaches the first
+ * entry, Up from the first entry returns to it. See the rock solid stability resilience plan → F-30.
  */
 @Composable
 fun DiagnosticsScreen() {
     val context = LocalContext.current
     val viewModel: DiagnosticsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val query = viewModel.query
+    val visible = remember(entries, query) { entries?.let { DiagnosticsViewModel.filter(it, query) } }
     val scale = LocalUiScale.current
+    val searchFocus = remember { FocusRequester() }
+    var editing by remember { mutableStateOf(false) }
 
     // Entry focus on the first entry, or Refresh when there is none (never Clear), or the screen
     // opened with nothing focused and the remote did nothing. Once, when the entries first load.
@@ -119,7 +126,32 @@ fun DiagnosticsScreen() {
                 TvEmptyState(message = stringResource(R.string.settings_diagnostics_empty))
             }
         }
-        itemsIndexed(loaded.orEmpty()) { index, entry ->
+        if (!loaded.isNullOrEmpty()) {
+            item {
+                TvSearchField(
+                    query = query,
+                    onQueryChange = viewModel::updateQuery,
+                    onSearchSubmit = {},
+                    onClear = { viewModel.updateQuery("") },
+                    placeholder = stringResource(R.string.common_search),
+                    focusRequester = searchFocus,
+                    editing = editing,
+                    onEditingChange = { editing = it },
+                    modifier = if (visible.isNullOrEmpty()) Modifier else Modifier.focusProperties { down = firstEntryFocus },
+                    restingFieldModifier = Modifier.leftToRail(),
+                )
+            }
+            if (visible != null && visible.isEmpty()) {
+                item {
+                    TvEmptyState(
+                        message = stringResource(R.string.search_no_results_query_format, query.trim()),
+                        icon = CinemaIcons.Search,
+                        takeFocus = false,
+                    )
+                }
+            }
+        }
+        itemsIndexed(visible.orEmpty()) { index, entry ->
             val causes = entry.causes
             // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
             var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
@@ -130,8 +162,13 @@ fun DiagnosticsScreen() {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .then(if (index == 0) Modifier.focusRequester(firstEntryFocus) else Modifier)
-                        .leftToRail(),
+                        .then(
+                            if (index == 0) {
+                                Modifier.focusRequester(firstEntryFocus).focusProperties { up = searchFocus }
+                            } else {
+                                Modifier
+                            },
+                        ).leftToRail(),
                 look = TvCardLooks.infoBlock(),
             ) {
                 Row(Modifier.padding(Spacing.md.scaled(scale)), horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
