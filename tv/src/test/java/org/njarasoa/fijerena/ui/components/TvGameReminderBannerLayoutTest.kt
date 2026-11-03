@@ -26,7 +26,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The TV game reminder banner is a bar at the top centre over the screen, not a layer over the
  * whole screen, also in the TV Surface that hosts it in TvNavHost (its Box passes its minimum size
- * on). The hint shows only when there is something to choose (the sports teams plan → Reminders).
+ * on). Watch shows only with a channel (the sports teams plan → Reminders).
  */
 @RunWith(RobolectricTestRunner::class)
 class TvGameReminderBannerLayoutTest {
@@ -58,7 +58,7 @@ class TvGameReminderBannerLayoutTest {
         rule.setContent {
             val banner = rememberReminderBannerState()
             Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
-                Box(Modifier.fillMaxSize().reminderBannerKeys(banner).reminderBannerContent(banner))
+                Box(Modifier.fillMaxSize().reminderBannerContent(banner))
                 TvGameReminderBanner(banner, onWatch = {}, modifier = Modifier.align(Alignment.TopCenter))
             }
         }
@@ -78,15 +78,9 @@ class TvGameReminderBannerLayoutTest {
     }
 
     @Test
-    fun `the hint shows only when there is a channel to choose`() {
-        show(withChannel)
-        rule.onNodeWithText("Hold OK or press Menu to choose").assertExists()
-    }
-
-    @Test
-    fun `with Dismiss alone there is no hint`() {
+    fun `without a channel there is only Dismiss`() {
         show(noChannel)
         rule.onNodeWithText("Dismiss").assertExists()
-        rule.onNodeWithText("Hold OK or press Menu to choose").assertDoesNotExist()
+        rule.onNodeWithText("Watch now").assertDoesNotExist()
     }
 }

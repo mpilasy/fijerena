@@ -114,7 +114,6 @@ import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 import org.njarasoa.fijerena.ui.components.rememberReminderBannerState
 import org.njarasoa.fijerena.ui.components.reminderBannerContent
-import org.njarasoa.fijerena.ui.components.reminderBannerKeys
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -526,7 +525,6 @@ fun TvNavHost(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .reminderBannerKeys(reminderBanner)
                             .reminderBannerContent(reminderBanner),
                 ) {
                     NavHost(
@@ -1313,8 +1311,8 @@ fun TvNavHost(
                 }
                 // The app's plain messages (AppNotices), over the screens; never focused.
                 TvNoticeHost()
-                // A game reminder while the app is on screen, over everything; it takes focus only on
-                // Menu or a held OK. Watch tunes as a tapped reminder notification does (below).
+                // A game reminder while the app is on screen, over everything; it takes focus until it
+                // closes. Watch tunes as a tapped reminder notification does (below).
                 TvGameReminderBanner(
                     state = reminderBanner,
                     onWatch = { alert -> alert.channel?.let { GameReminderAlerts.requestTune(ReminderTune(alert.profileId, it)) } },
