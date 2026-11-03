@@ -41,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -54,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -122,8 +122,6 @@ fun MobileEpgGuideScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val appSettings = remember { AppSettings(context.applicationContext) }
     // Hoisted here so a day change (the grid leaves composition while it loads) keeps the time of
     // day and the row the user was on; both are saveable, so returning from the dock keeps them too.
     val scrollState = rememberScrollState()
@@ -193,7 +191,7 @@ fun MobileEpgGuideScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            if (state is EpgViewModel.UiState.Ready && appSettings.isDevMode) {
+            if (state is EpgViewModel.UiState.Ready && LocalNerd.current) {
                 CinemaText(
                     text = state.devStats,
                     role = TextRole.Caption,

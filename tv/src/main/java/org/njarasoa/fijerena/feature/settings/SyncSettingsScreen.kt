@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -139,7 +140,6 @@ fun SyncSettingsScreen() {
             // T-14 order: status + Sync now → share switch → devices → danger zone; Add a device in the header.
             LinkedPanel(
                 status = status,
-                devMode = viewModel.devMode,
                 onSyncNow = viewModel::syncNow,
                 onResyncAll = viewModel::resyncAll,
                 syncNowFocus = syncNowFocus,
@@ -312,7 +312,6 @@ private fun PairingPanel(
 @Composable
 private fun LinkedPanel(
     status: SyncManager.Status,
-    devMode: Boolean,
     onSyncNow: () -> Unit,
     onResyncAll: () -> Unit,
     syncNowFocus: FocusRequester,
@@ -325,7 +324,7 @@ private fun LinkedPanel(
                 role = TextRole.Heading,
                 tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Primary,
             )
-            if (devMode && status.lastError != null) {
+            if (LocalNerd.current && status.lastError != null) {
                 CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall, tone = TextTone.Secondary)
             }
             CinemaText(

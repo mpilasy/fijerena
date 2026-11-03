@@ -225,7 +225,7 @@ class ProviderViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -238,7 +238,7 @@ class ProviderViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -255,7 +255,7 @@ class ProviderViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -273,7 +273,7 @@ class ProviderViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -296,7 +296,7 @@ class ProviderViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -395,7 +395,7 @@ class ProviderViewModel(
                 throw e
             } catch (e: Exception) {
                 _saveState.value = SaveState.Idle
-                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
     }
@@ -475,7 +475,7 @@ class ProviderViewModel(
             throw e
         } catch (e: Exception) {
             _saveState.value = SaveState.Idle
-            _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
         }
     }
 
@@ -504,7 +504,7 @@ class ProviderViewModel(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isNerdMode), e))
                     } finally {
                         service.close()
                     }
@@ -521,7 +521,7 @@ class ProviderViewModel(
                             val statusCode = connection.responseCode
                             if (statusCode !in 200..299) {
                                 Result.failure(
-                                    Exception(friendlyErrorMessage(HttpStatusException(statusCode), context, appSettings.isDevMode)),
+                                    Exception(friendlyErrorMessage(HttpStatusException(statusCode), context, appSettings.isNerdMode)),
                                 )
                             } else {
                                 val header =
@@ -533,7 +533,7 @@ class ProviderViewModel(
                                 if (header.trimStart().startsWith("#EXTM3U")) {
                                     Result.success(Unit)
                                 } else {
-                                    val message = friendlyErrorMessage(InvalidPlaylistException(), context, appSettings.isDevMode)
+                                    val message = friendlyErrorMessage(InvalidPlaylistException(), context, appSettings.isNerdMode)
                                     Result.failure(Exception(message))
                                 }
                             }
@@ -543,7 +543,7 @@ class ProviderViewModel(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isNerdMode), e))
                     }
                 }
 
@@ -576,13 +576,13 @@ class ProviderViewModel(
                         if (error == null) {
                             result
                         } else {
-                            Result.failure(Exception(friendlyErrorMessage(error, context, appSettings.isDevMode), error))
+                            Result.failure(Exception(friendlyErrorMessage(error, context, appSettings.isNerdMode), error))
                         }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         MediaProviderFactory.clearCache(tempEntity.id)
-                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isNerdMode), e))
                     }
                 }
 

@@ -207,7 +207,7 @@ fun MobileSettingsScreen(
                             showImportOptionsDialog = true
                         }.onFailure { e ->
                             viewModel.setExportImportMessage(
-                                resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                                resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isNerdMode)),
                             )
                         }
                 }
@@ -577,7 +577,7 @@ fun MobileSettingsScreen(
                                                             viewModel.setExportImportMessage(
                                                                 resources.getString(
                                                                     R.string.settings_import_failed,
-                                                                    friendlyErrorMessage(e, context, uiState.isDevMode),
+                                                                    friendlyErrorMessage(e, context, uiState.isNerdMode),
                                                                 ),
                                                             )
                                                         }

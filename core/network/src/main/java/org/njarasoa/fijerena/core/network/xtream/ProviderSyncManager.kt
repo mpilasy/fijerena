@@ -279,7 +279,7 @@ class ProviderSyncManager private constructor(
                     SyncResult.Failed(
                         outcome.errorOrNull()?.message(
                             context,
-                            AppSettings(context).isDevMode,
+                            AppSettings(context).isNerdMode,
                         ) ?: context.getString(R.string.error_generic),
                     )
                 }
@@ -287,7 +287,7 @@ class ProviderSyncManager private constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Manual sync threw for provider: $providerId", e)
-                SyncResult.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+                SyncResult.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }
 }

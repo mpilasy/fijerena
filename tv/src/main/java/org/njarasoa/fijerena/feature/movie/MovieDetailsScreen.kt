@@ -956,15 +956,13 @@ private fun DetailsTabContent(
                 )
             }
         }
-        val context = LocalContext.current
-        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-        if (isDevMode) {
+        if (LocalNerd.current) {
             TvDetailRow(
                 label = stringResource(R.string.details_label_tmdb),
                 value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
             )
         }
-        // Expert mode only, like the source badges.
+        // For a Nerd only, like the source badges.
         if (LocalNerd.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {

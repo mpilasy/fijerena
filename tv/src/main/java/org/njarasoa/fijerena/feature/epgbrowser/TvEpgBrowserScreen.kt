@@ -102,6 +102,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
@@ -305,7 +306,7 @@ internal fun TvGuideSearchPane(
     val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val isDevMode = viewModel.isDevMode
+    val nerd = LocalNerd.current
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
     val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
@@ -361,7 +362,7 @@ internal fun TvGuideSearchPane(
                     uiState = state,
                     nowEpoch = nowEpoch,
                     indexState = indexState,
-                    isDevMode = isDevMode,
+                    nerd = nerd,
                     epgDbStats = epgDbStats,
                     epgSearchHistory = epgSearchHistory,
                     onSearch = { viewModel.performSearch(it) },
@@ -388,7 +389,7 @@ private fun EpgBrowserContent(
     uiState: EpgBrowserViewModel.UiState,
     nowEpoch: Long,
     indexState: EpgIndexState,
-    isDevMode: Boolean,
+    nerd: Boolean,
     epgDbStats: String?,
     epgSearchHistory: List<String> = emptyList(),
     onSearch: (String) -> Unit,
@@ -500,7 +501,7 @@ private fun EpgBrowserContent(
             )
         }
 
-        if (isDevMode && epgDbStats != null) {
+        if (nerd && epgDbStats != null) {
             CinemaText(
                 text = stringResource(R.string.epg_browser_dev_stats_format, epgDbStats),
                 role = TextRole.Caption,
@@ -596,7 +597,7 @@ private fun EpgBrowserContent(
                 ResultsContent(
                     results = uiState,
                     nowEpoch = nowEpoch,
-                    isDevMode = isDevMode,
+                    nerd = nerd,
                     matchedOnly = matchedOnly,
                     onNavigateToPlayer = onNavigateToPlayer,
                     firstItemFocusRequester = firstItemFocusRequester,
@@ -697,7 +698,7 @@ private fun EpgSearchHistorySection(
 private fun ResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
-    isDevMode: Boolean = false,
+    nerd: Boolean = false,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     returnFocus: NavReturnFocus,
@@ -719,8 +720,8 @@ private fun ResultsContent(
         }
 
     Column {
-        // Counts, timing and search path: developer information (TV UI audit #15).
-        if (isDevMode) {
+        // Counts, timing and search path: information for a Nerd (TV UI audit #15).
+        if (nerd) {
             CinemaText(text = results.statsLine(), tone = TextTone.Secondary, modifier = Modifier.padding(bottom = Spacing.sm))
         }
         if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
@@ -785,7 +786,7 @@ private fun ResultsContent(
                             ProgramCard(
                                 program = program,
                                 nowEpoch = nowEpoch,
-                                isDevMode = isDevMode,
+                                nerd = nerd,
                                 onNavigateToPlayer = onNavigateToPlayer,
                                 onAiringLeave = { airingIndex -> returnFocus.leaveFrom(returnKeyPrefix + airingIndex, listState) },
                                 // Every airing row spans the list, so each hands Left to the navigation rail.
@@ -820,7 +821,7 @@ private const val RETURN_AIRING_SEPARATOR = "#"
 private fun ProgramCard(
     program: EpgBrowserProgram,
     nowEpoch: Long,
-    isDevMode: Boolean = false,
+    nerd: Boolean = false,
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     modifier: Modifier = Modifier,
     // Called with the airing's index just before one of its rows opens a channel; airingModifier
@@ -897,7 +898,7 @@ private fun ProgramCard(
                 AiringRow(
                     airing = airing,
                     nowEpoch = nowEpoch,
-                    isDevMode = isDevMode,
+                    nerd = nerd,
                     onNavigateToPlayer = { matched ->
                         onAiringLeave(airingIndex)
                         onNavigateToPlayer(matched)
@@ -961,7 +962,7 @@ private fun AiringRow(
     airing: EpgBrowserAiring,
     nowEpoch: Long,
     modifier: Modifier = Modifier,
-    isDevMode: Boolean = false,
+    nerd: Boolean = false,
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {},
 ) {

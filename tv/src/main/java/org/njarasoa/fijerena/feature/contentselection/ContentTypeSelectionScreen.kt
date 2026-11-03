@@ -1063,7 +1063,7 @@ fun ContentTypeSelectionScreen(
                                     .setEpisodesWatched(seriesId, null, !isShowWatched)
                                     .onSuccess { reloadContinueWatching(merged, null) }
                                     .onFailure { e ->
-                                        val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isDevMode)
+                                        val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isNerdMode)
                                         AppNotices.show(message)
                                     }
                             }

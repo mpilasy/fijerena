@@ -23,13 +23,14 @@ import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
  * "Shrink Database" — manually sweeps `xtream_v2.db` for rows left behind by a deleted provider
  * and reclaims the freed disk space. See [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData].
  * It asks first (a confirm dialog). [moreRows] follow in the same section (the guide's maintenance row).
+ * The last run's figures show only to a Nerd ([nerd]).
  */
 @Composable
 fun DatabaseMaintenanceCard(
     isPruning: Boolean,
     resultMessage: String?,
     onShrinkClick: () -> Unit,
-    isDevMode: Boolean = false,
+    nerd: Boolean = false,
     lastShrinkAtMs: Long = 0L,
     lastShrinkDurationMs: Long = 0L,
     lastShrinkRowsRemoved: Long = 0L,
@@ -67,7 +68,7 @@ fun DatabaseMaintenanceCard(
         )
         if (resultMessage != null) SettingsNote(resultMessage)
         // Only when the last run found something: "0 records deleted" says nothing.
-        if (isDevMode && lastShrinkAtMs > 0L && (lastShrinkRowsRemoved > 0 || lastShrinkBytesReclaimed > 0)) {
+        if (nerd && lastShrinkAtMs > 0L && (lastShrinkRowsRemoved > 0 || lastShrinkBytesReclaimed > 0)) {
             val context = LocalContext.current
             val time = NumberUtils.formatTimestamp(context, lastShrinkAtMs)
             val duration = NumberUtils.formatDuration(LocalResources.current, lastShrinkDurationMs)

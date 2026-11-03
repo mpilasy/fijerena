@@ -420,7 +420,7 @@ private fun EpisodeListContent(
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
-    // The source's name, a Source row in Expert mode.
+    // The source's name, a Source row for a Nerd.
     sourceName: String?,
     seriesName: String,
     mediaRepository: MediaRepository,
@@ -597,7 +597,7 @@ private fun EpisodeListContent(
             mediaRepository
                 .setEpisodesWatched(seriesDetail.id, season, watched)
                 .onFailure {
-                    markManyError = friendlyErrorMessage(it, context, AppSettings(context.applicationContext).isDevMode)
+                    markManyError = friendlyErrorMessage(it, context, AppSettings(context.applicationContext).isNerdMode)
                 }
             val allWatched = refreshEpisodeWatchState()
             // Play and the "Continue watching" badge move on to the first unwatched episode at once
@@ -1122,16 +1122,14 @@ private fun SeriesDetailsTabContent(
                     )
                 }
             }
-            // The TMDB id is for developers only.
-            val context = LocalContext.current
-            val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-            if (isDevMode) {
+            // The TMDB id is for a Nerd only.
+            if (LocalNerd.current) {
                 MobileDetailRow(
                     label = stringResource(R.string.details_label_tmdb),
                     value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                 )
             }
-            // Expert mode only, like the source badges.
+            // For a Nerd only, like the source badges.
             if (LocalNerd.current) {
                 sourceName?.let {
                     MobileDetailRow(
@@ -1467,10 +1465,8 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // TMDB id, developers only: the episode's own when it has one, else the show's
-        val context = LocalContext.current
-        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-        if (isDevMode) {
+        // TMDB id, for a Nerd only: the episode's own when it has one, else the show's
+        if (LocalNerd.current) {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             CinemaText(
                 text =

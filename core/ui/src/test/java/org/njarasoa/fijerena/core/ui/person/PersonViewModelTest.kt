@@ -53,7 +53,7 @@ class PersonViewModelTest {
     private class FakeData(
         override val hasKey: Boolean = true,
         override val child: Boolean = false,
-        override val devMode: Boolean = false,
+        override val nerd: Boolean = false,
         val failure: Exception? = null,
     ) : PersonViewModel.Data {
         val updates = MutableStateFlow(0L)
@@ -235,8 +235,8 @@ class PersonViewModelTest {
     }
 
     @Test
-    fun `in Expert mode the error has its raw text`() {
-        val vm = page(FakeData(devMode = true, failure = IllegalStateException("HTTP 500")))
+    fun `for a Nerd the error has its raw text`() {
+        val vm = page(FakeData(nerd = true, failure = IllegalStateException("HTTP 500")))
 
         assertEquals("HTTP 500", vm.error().raw)
     }

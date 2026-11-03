@@ -57,8 +57,8 @@ class TeamsSearchViewModel(
 ) : ViewModel() {
     /** What the search reads: the sports sources, the profile's follows and channels. A fake in the tests. */
     interface Data {
-        /** Whether a failure shows its raw message too (Admin's dev mode). */
-        val devMode: Boolean
+        /** Whether a failure shows its raw message too (a Nerd). */
+        val nerd: Boolean
 
         /** The teams and leagues for [query]. A failure of every source throws. */
         suspend fun search(query: String): SportsSearchResult
@@ -85,7 +85,7 @@ class TeamsSearchViewModel(
             val query: String,
         ) : State
 
-        /** No source answered. [raw]: the failure's own text, in dev mode only. */
+        /** No source answered. [raw]: the failure's own text, for a Nerd only. */
         data class Failed(
             val query: String,
             val raw: String?,
@@ -222,7 +222,7 @@ class TeamsSearchViewModel(
         _bestGames.value = GamesState.Failed(rawOf(e))
     }
 
-    private fun rawOf(e: Throwable): String? = if (data.devMode) Redact.text(e.message ?: e.javaClass.simpleName) else null
+    private fun rawOf(e: Throwable): String? = if (data.nerd) Redact.text(e.message ?: e.javaClass.simpleName) else null
 
     class Factory(
         context: Context,
@@ -243,7 +243,7 @@ class TeamsSearchViewModel(
         private val settings = AppSettings(context)
         private val pages = AppSportsPageData(context)
 
-        override val devMode: Boolean get() = settings.isDevMode
+        override val nerd: Boolean get() = settings.isNerdMode
 
         override suspend fun search(query: String): SportsSearchResult = SportsData.getInstance(context).search(query)
 

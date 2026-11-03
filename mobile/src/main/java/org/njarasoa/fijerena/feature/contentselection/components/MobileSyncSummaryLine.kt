@@ -20,16 +20,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
@@ -38,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -111,15 +109,14 @@ private fun StatusText(
 
 /**
  * The summary line's sheet: each of the profile's sources with its status and, after a failed
- * update, its reason — already with the raw detail in developer mode (ProviderSyncRunner).
+ * update, its reason — already with the raw detail for a Nerd (ProviderSyncRunner).
  */
 @Composable
 fun MobileSourcesStatusSheet(
     states: List<SourceSyncState>,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+    val nerd = LocalNerd.current
     val now = rememberMinuteTick()
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -132,7 +129,7 @@ fun MobileSourcesStatusSheet(
                 states.forEach { state ->
                     Column {
                         CinemaText(
-                            text = if (isDevMode) "${state.name} (${sourceTypeName(state.type)})" else state.name,
+                            text = if (nerd) "${state.name} (${sourceTypeName(state.type)})" else state.name,
                             role = TextRole.Heading,
                             tone = TextTone.Inherit,
                             emphasis = true,

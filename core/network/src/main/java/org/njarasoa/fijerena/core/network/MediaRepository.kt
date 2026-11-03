@@ -2547,13 +2547,13 @@ class MediaRepository(
     fun getAppSettings(): AppSettings = appSettings
 
     fun getPayloadSize(key: String): String? {
-        if (!appSettings.isDevMode) return null
+        if (!appSettings.isNerdMode) return null
         val sizeInBytes = payloadSizes[key] ?: return null
         return formatBytes(sizeInBytes)
     }
 
     fun getFetchTimeFormatted(key: String): String? {
-        if (!appSettings.isDevMode) return null
+        if (!appSettings.isNerdMode) return null
         val timeMs = fetchTimes[key] ?: return null
         return "$timeMs ms"
     }

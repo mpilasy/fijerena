@@ -169,7 +169,7 @@ class ExtraLoginsViewModel(
                     }
 
                     is XtreamLoginCheck.SamePanel.Failed -> {
-                        friendlyErrorMessage(check.error, context, AppSettings(context).isDevMode)
+                        friendlyErrorMessage(check.error, context, AppSettings(context).isNerdMode)
                     }
                 }
             load()
@@ -202,7 +202,7 @@ class ExtraLoginsViewModel(
 
     private fun failed(e: Throwable) {
         _busy.value = false
-        _message.value = friendlyErrorMessage(e, context, AppSettings(context).isDevMode)
+        _message.value = friendlyErrorMessage(e, context, AppSettings(context).isNerdMode)
     }
 
     private fun messageFor(change: SourceLogins.Change): String? =

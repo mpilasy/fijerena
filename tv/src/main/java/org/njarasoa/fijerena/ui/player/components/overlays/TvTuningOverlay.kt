@@ -5,13 +5,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
@@ -23,6 +20,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -46,8 +44,7 @@ fun TvTuningOverlay(
     compact: Boolean = false,
     unavailable: Boolean = false,
 ) {
-    val context = LocalContext.current
-    val showDetails = remember { !compact && AppSettings(context.applicationContext).isDevMode }
+    val showDetails = !compact && LocalNerd.current
     // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
     val name = parseDisplayTitle(channelName).title.ifBlank { channelName }
     Box(

@@ -29,7 +29,7 @@ enum class ErrorKind(
 /**
  * An error to keep in a database column or a preference: the [kind], whether it is a catalogue
  * failure ([catalogue]: "Catalogue update failed: …" around the message), and the masked raw
- * exception text ([raw]) for Developer Mode.
+ * exception text ([raw]) for a Nerd.
  *
  * Store [encode], and show [message] with the screen's context: the message is then in the app
  * language in use, not in the language of the time the error occurred. A value from before this

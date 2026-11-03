@@ -16,7 +16,7 @@ import javax.net.ssl.SSLException
  * on its own — this keeps "silly alerts" like Room's "Cannot access database on the
  * main thread…" from being shown to users as if the operation had really failed.
  *
- * Developer Mode callers append the raw text via the [includeRaw] overload.
+ * Nerd callers append the raw text via the [includeRaw] overload.
  */
 fun friendlyErrorMessage(
     e: Throwable,
@@ -133,8 +133,8 @@ private fun authFailureKind(context: Context): ErrorKind =
 
 /**
  * Friendly message, with the raw exception text appended when [includeRaw] is true.
- * Gate [includeRaw] on `AppSettings.isDevMode` at the call site so developers can still
- * diagnose while normal users only ever see the friendly message.
+ * Gate [includeRaw] on `AppSettings.isNerdMode` (or `LocalNerd` in a composable) at the call site
+ * so a Nerd can still diagnose while other users only ever see the friendly message.
  */
 fun friendlyErrorMessage(
     e: Throwable,

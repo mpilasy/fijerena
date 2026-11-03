@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **The reminder banner takes focus:** when a game or programme reminder rings while the app is on screen, its banner now takes focus at once, on every screen and over full-screen video: Watch (Dismiss when there is no channel), Left and Right between the two, OK acts, Back closes it, and focus goes back where it was. Before, the remote's keys went to the screen under it until you pressed Menu or held OK, and that hint is gone. It still closes by itself after 30 seconds. When a dialog is open, the banner waits and shows when the dialog closes. TV.
+- **Stats and extra information are for a Nerd:** source badges, Source and TMDB id rows, stats lines (catalogue, guide, Search the Guide, Search), Search's "N hidden" count, the source type in Home's sources sheet, the TV player's codec line and Stats, the wait details, the last Shrink Database figures and the raw error text under a message now show to a Nerd profile, not to the admin. An admin who wants them turns Nerd on. The admin keeps Home's "Updated …" time; the phone player's Stats stays for everyone. TV and phone.
 
 ## Version: 0.9.20261103084257
 

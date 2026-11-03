@@ -41,7 +41,7 @@ import java.util.Collections
 @OptIn(ExperimentalCoroutinesApi::class)
 class TeamsSearchViewModelTest {
     private class FakeData(
-        override val devMode: Boolean = false,
+        override val nerd: Boolean = false,
         var failure: Exception? = null,
     ) : TeamsSearchViewModel.Data {
         val queries: MutableList<String> = Collections.synchronizedList(mutableListOf())
@@ -176,7 +176,7 @@ class TeamsSearchViewModelTest {
     }
 
     @Test
-    fun `a failure shows Retry, raw text only in dev mode`() {
+    fun `a failure shows Retry, raw text only for a Nerd`() {
         val data = FakeData(failure = IllegalStateException("HTTP 500"))
         val vm = search(data)
         vm.search("arsenal")
@@ -187,7 +187,7 @@ class TeamsSearchViewModelTest {
         vm.await<TeamsSearchViewModel.State.Loaded>()
         assertEquals(listOf("arsenal", "arsenal"), data.queries)
 
-        val dev = search(FakeData(devMode = true, failure = IllegalStateException("HTTP 500")))
+        val dev = search(FakeData(nerd = true, failure = IllegalStateException("HTTP 500")))
         dev.search("arsenal")
         assertEquals("HTTP 500", dev.await<TeamsSearchViewModel.State.Failed>().raw)
     }

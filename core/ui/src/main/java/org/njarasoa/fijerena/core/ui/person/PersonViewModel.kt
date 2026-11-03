@@ -55,8 +55,8 @@ class PersonViewModel(
         /** Whether the profile in use is a child's. */
         val child: Boolean
 
-        /** Whether a failure shows its raw message too (Expert mode). */
-        val devMode: Boolean
+        /** Whether a failure shows its raw message too (a Nerd). */
+        val nerd: Boolean
 
         /** Goes up after each catalogue sync: the rows are made again. */
         val catalogueUpdates: Flow<Long>
@@ -256,7 +256,7 @@ class PersonViewModel(
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.w(TAG, "Person $personId: ${e.message}")
-                        _state.value = State.Error(e.message?.takeIf { data.devMode }?.let(Redact::text))
+                        _state.value = State.Error(e.message?.takeIf { data.nerd }?.let(Redact::text))
                         null
                     }
                 if (person != null) {
@@ -311,7 +311,7 @@ class PersonViewModel(
 
         override val hasKey: Boolean get() = TmdbApiService.getInstance(context).hasApiKey()
         override val child: Boolean get() = settings.isChildProfile(settings.activeProfileId)
-        override val devMode: Boolean get() = settings.isDevMode
+        override val nerd: Boolean get() = settings.isNerdMode
         override val catalogueUpdates: Flow<Long> get() = ProviderSyncRunner.catalogueUpdates
 
         override suspend fun person(personId: Int): TmdbPerson = TmdbPeople.getInstance(context).person(personId)

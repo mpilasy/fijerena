@@ -49,7 +49,7 @@ fun LoadingScreen(kind: WaitKind) {
 @Composable
 fun ErrorOverlay(
     error: PlaybackState.Error,
-    isDevMode: Boolean,
+    nerd: Boolean,
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -73,10 +73,10 @@ fun ErrorOverlay(
                 role = TextRole.Body,
                 tone = TextTone.Primary,
             )
-            // Developer mode: the raw error beneath the friendly one.
+            // A Nerd sees the raw error beneath the friendly one.
             // Masked: a raw message can hold the stream URL with the login and password.
             val rawMessage = error.exception?.message?.let(Redact::text)
-            if (isDevMode && rawMessage != null) {
+            if (nerd && rawMessage != null) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 CinemaText(
                     text = rawMessage,

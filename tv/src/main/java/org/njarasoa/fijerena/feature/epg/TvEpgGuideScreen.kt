@@ -7,17 +7,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
@@ -61,8 +60,6 @@ fun TvEpgGuideScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val appSettings = remember { AppSettings(context.applicationContext) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -108,7 +105,7 @@ fun TvEpgGuideScreen(
                 TvGuideGrid(
                     categoryName = categoryName,
                     state = state,
-                    showDevStats = appSettings.isDevMode,
+                    showDevStats = LocalNerd.current,
                     onProgramSelected = onProgramSelected,
                     onWatchFromStart = onWatchFromStart,
                     onChannelSelected = onChannelSelected,

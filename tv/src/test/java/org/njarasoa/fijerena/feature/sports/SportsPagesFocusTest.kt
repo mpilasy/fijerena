@@ -79,7 +79,7 @@ class SportsPagesFocusTest {
     ) : SportsPageData {
         val follows = MutableStateFlow(FollowedSports.Followed())
 
-        override val devMode = false
+        override val nerd = false
 
         override suspend fun teamGames(team: SportsTeam) = games
 

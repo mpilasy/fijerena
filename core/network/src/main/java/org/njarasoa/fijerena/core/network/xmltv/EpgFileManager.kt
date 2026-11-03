@@ -559,7 +559,7 @@ class EpgFileManager private constructor(
                                                 attempt = currentAttempt,
                                                 maxAttempts = maxAttempts,
                                                 nextRetryAtMs = nextRetryAt,
-                                                reason = friendlyErrorMessage(e, context, appSettings.isDevMode),
+                                                reason = friendlyErrorMessage(e, context, appSettings.isNerdMode),
                                             )
                                         Log.w(
                                             TAG,
@@ -573,7 +573,7 @@ class EpgFileManager private constructor(
                             Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
                             _state.value =
                                 MultiSourceState.Error(
-                                    lastException?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                                    lastException?.let { friendlyErrorMessage(it, context, appSettings.isNerdMode) }
                                         ?: context.resources.getQuantityString(
                                             R.plurals.epg_error_task_failed_retries_format,
                                             maxAttempts,
@@ -993,7 +993,7 @@ class EpgFileManager private constructor(
                 }
                 Log.e(TAG, "processAllSources failed: ${e.message}", e)
                 CrashLog.record("guide refresh failed", e)
-                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
 
@@ -1242,7 +1242,7 @@ class EpgFileManager private constructor(
                 }
                 Log.e(TAG, "processSingleSource failed: ${e.message}", e)
                 CrashLog.record("guide refresh failed", e)
-                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
 

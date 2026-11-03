@@ -433,8 +433,8 @@ fun MobileSearchScreen(
                 return@Column
             }
 
-            // The results' sources (the search source filter plan): Expert mode
-            // only, as the source badges — without it results don't name their source.
+            // The results' sources (the search source filter plan): for a Nerd
+            // only, as the source badges — otherwise results don't name their source.
             val successState = uiState as? SearchViewModel.UiState.Success
             val showSources = LocalNerd.current
             val sources =
@@ -546,7 +546,7 @@ fun MobileSearchScreen(
                         val failedSuffix = if (state.failedCalls > 0) " (${state.failedCalls} failed)" else ""
                         val errorSuffix = if (state.firstError != null) "\n${state.firstError}" else ""
                         val devStats =
-                            if (appSettings.isDevMode && state.searchDataSize != null) {
+                            if (LocalNerd.current && state.searchDataSize != null) {
                                 "${state.searchDataSize} fetched | ${state.totalDuration} total | network: ${state.networkWallDuration} wall / ${state.networkAccumDuration} accum | ${state.networkCalls} calls$failedSuffix$errorSuffix"
                             } else {
                                 null
@@ -563,7 +563,7 @@ fun MobileSearchScreen(
                             },
                             // Categories have no year or genre: a decade or genre choice leaves them out.
                             categoryResults = if (facetChoice.isActive) emptyList() else state.categoryResults.fromSource(source),
-                            sourceErrors = state.sourceErrors.takeIf { appSettings.isDevMode }.orEmpty(),
+                            sourceErrors = state.sourceErrors.takeIf { LocalNerd.current }.orEmpty(),
                             results = sourceResults.filter { it.matches(facetChoice) },
                             excludedCountByType = state.excludedCountByType,
                             query = state.query,

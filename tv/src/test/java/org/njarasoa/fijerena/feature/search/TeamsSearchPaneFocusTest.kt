@@ -65,7 +65,7 @@ class TeamsSearchPaneFocusTest {
     private class FakeData : TeamsSearchViewModel.Data {
         val follows = MutableStateFlow(FollowedSports.Followed())
 
-        override val devMode = false
+        override val nerd = false
 
         override suspend fun search(query: String) = SportsSearchResult(listOf(ARSENAL_WOMEN, ARSENAL, SARANDI), listOf(LEAGUE))
 

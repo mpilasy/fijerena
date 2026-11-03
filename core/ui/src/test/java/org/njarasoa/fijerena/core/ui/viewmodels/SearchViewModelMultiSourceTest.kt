@@ -64,9 +64,10 @@ class SearchViewModelMultiSourceTest {
     }
 
     @Test
-    fun `without Expert mode nothing says how many results the filters hide`() {
+    fun `an Admin who is not a Nerd is not told how many results the filters hide`() {
         givenSources(xtream(A, "Alpha"))
         source(A, items = listOf(movie("1", "Matrix")), category = "Sci-fi", excluded = 2)
+        every { prefs.getBoolean(match { it.startsWith("dev_mode") }, any()) } returns true
 
         assertTrue(search("matrix").excludedCountByType.isEmpty())
     }
@@ -76,8 +77,8 @@ class SearchViewModelMultiSourceTest {
         givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
         source(A, items = listOf(movie("1", "Matrix Reloaded")), category = "Action Matrix", excluded = 2)
         source(B, items = listOf(movie("1", "Matrix")), category = "Sci-fi", excluded = 1)
-        // "N hidden" is counted for an Expert only.
-        every { prefs.getBoolean(match { it.startsWith("dev_mode") }, any()) } returns true
+        // "N hidden" is counted for a Nerd only.
+        every { prefs.getBoolean(match { it.startsWith("nerd_mode") }, any()) } returns true
 
         val state = search("matrix")
 

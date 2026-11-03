@@ -112,7 +112,6 @@ fun MobileControlsOverlay(
     metadata: PlayerMetadata,
     viewModel: PlaybackViewModel,
     isLive: Boolean,
-    isDeveloperMode: Boolean,
     isFavorite: Boolean,
     livePosition: Long,
     liveDuration: Long,

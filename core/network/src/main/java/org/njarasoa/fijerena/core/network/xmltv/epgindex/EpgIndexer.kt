@@ -482,12 +482,12 @@ class EpgIndexer private constructor(
             } catch (e: CancellationException) {
                 // Stopped mid-rebuild: show Failed rather than leaving the state on
                 // Optimizing. The FTS stays marked stale, so the next start rebuilds it.
-                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 CrashLog.record("guide search index rebuild failed", e)
-                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }
 

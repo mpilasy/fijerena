@@ -44,7 +44,7 @@ class FollowedGamesTest {
         val failing = mutableSetOf<String>()
         var reads = 0
 
-        override val devMode = true
+        override val nerd = true
 
         override suspend fun teamGames(team: SportsTeam): List<SportsGame> {
             reads++
@@ -171,7 +171,7 @@ class FollowedGamesTest {
     }
 
     @Test
-    fun `the Sports section says the games failed, with the raw error in dev mode, and nothing followed reads nothing`() {
+    fun `the Sports section says the games failed, with the raw error for a Nerd, and nothing followed reads nothing`() {
         val data = FakeData(follows = FollowedSports.Followed(teams = listOf(ARSENAL)))
         data.failing += ARSENAL.id
         val vm = SportsSectionViewModel(data, now = { NOW_SEC * 1000 }).also { created += it }

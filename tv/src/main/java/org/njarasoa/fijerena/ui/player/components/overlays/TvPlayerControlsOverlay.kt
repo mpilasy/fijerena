@@ -133,8 +133,8 @@ fun TvPlayerControlsOverlay(
     // left when there is no logo.
     waiting: Boolean = false,
     hideTopBars: Boolean = false,
-    // The resolution/codec line is for developers only (AppSettings.isDevMode, via PlayerScreenState).
-    isDeveloperMode: Boolean = false,
+    // The resolution/codec line and Stats are for a Nerd only (AppSettings.isNerdMode, via PlayerScreenState).
+    isNerd: Boolean = false,
     // Live TV in full screen: opens the channel panel (LT4). Null (VOD, the standalone route)
     // leaves the Channels button out.
     onShowChannels: (() -> Unit)? = null,
@@ -178,9 +178,9 @@ fun TvPlayerControlsOverlay(
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
-    // Extract resolution and codec periodically — developer mode only, the only time it is shown.
-    LaunchedEffect(playbackState, metadata.streamUrl, isDeveloperMode) {
-        if (isDeveloperMode && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+    // Extract resolution and codec periodically — for a Nerd only, the only time it is shown.
+    LaunchedEffect(playbackState, metadata.streamUrl, isNerd) {
+        if (isNerd && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
             // Keep checking every second as tracks might take time to load
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
@@ -236,7 +236,7 @@ fun TvPlayerControlsOverlay(
     val safeIconFocusRequester =
         when {
             onShowChannels != null -> channelsFocusRequester
-            isDeveloperMode -> statsFocusRequester
+            isNerd -> statsFocusRequester
             onShowGuide != null -> guideFocusRequester
             else -> null
         }
@@ -351,7 +351,7 @@ fun TvPlayerControlsOverlay(
                     }
 
                     // Resolution and codec — developer mode only (the polling above is gated too).
-                    if (isDeveloperMode && (videoResolution != null || videoCodec != null)) {
+                    if (isNerd && (videoResolution != null || videoCodec != null)) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                             verticalAlignment = Alignment.CenterVertically,
@@ -798,8 +798,8 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // Stats: a diagnostic, so Expert mode only.
-                        if (isDeveloperMode) {
+                        // Stats: a diagnostic, so for a Nerd only.
+                        if (isNerd) {
                             OsdButton(
                                 icon = CinemaIcons.BarChart,
                                 label = stringResource(R.string.player_stats),

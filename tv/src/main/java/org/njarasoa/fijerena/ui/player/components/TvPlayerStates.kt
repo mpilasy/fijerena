@@ -28,11 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.MaterialTheme
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -47,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -71,13 +70,11 @@ fun BufferingContent(
     showBadge: Boolean,
     sceneColor: Color? = null,
 ) {
-    val context = LocalContext.current
-    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
     PlayerWait(
         metadata = metadata,
         sceneColor = sceneColor,
         showBadge = showBadge,
-        showDetails = isDevMode,
+        showDetails = LocalNerd.current,
         // Where the banner's top bar puts its logo, so one replaces the other in place.
         badgeModifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
     )
@@ -104,9 +101,7 @@ fun ErrorContent(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val isDevMode = appSettings.isDevMode
+    val nerd = LocalNerd.current
     val retryFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { retryFocus.requestFocusWithRetry() }
 
@@ -130,7 +125,7 @@ fun ErrorContent(
 
             CinemaText(text = error.message, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
-            if (isDevMode && error.exception != null) {
+            if (nerd && error.exception != null) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
                 CinemaPanel(

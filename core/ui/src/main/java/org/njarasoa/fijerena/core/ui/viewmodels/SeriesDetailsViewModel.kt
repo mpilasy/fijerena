@@ -436,12 +436,12 @@ class SeriesDetailsViewModel(
 
     private fun reportFailure(e: Throwable) {
         if (_uiState.value is UiState.Success) return
-        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
         findCopiesAfterFailure()
     }
 
     private fun reportSwitchFailure(e: Throwable) {
-        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
         findCopiesAfterFailure()
     }
 

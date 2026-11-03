@@ -87,7 +87,7 @@ class PlayerScreenState(
 
     val focusRequester = FocusRequester()
     val appSettings = AppSettings(context.applicationContext)
-    val isDeveloperMode = appSettings.isDevMode
+    val isNerd = appSettings.isNerdMode
 }
 
 @Composable

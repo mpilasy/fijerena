@@ -209,7 +209,7 @@ class StreamLoaderViewModel(
             viewModelScope.launchGuarded(
                 "StreamLoaderViewModel.init",
                 Dispatchers.IO,
-                onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isDevMode)) },
+                onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isNerdMode)) },
             ) {
                 val container =
                     org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -257,7 +257,7 @@ class StreamLoaderViewModel(
             Log.w("StreamLoader", "Load of $streamId did not finish in $loadTimeoutMs ms")
             val error =
                 StreamState.Error(
-                    friendlyErrorMessage(SocketTimeoutException("No stream after $loadTimeoutMs ms"), context, appSettings.isDevMode),
+                    friendlyErrorMessage(SocketTimeoutException("No stream after $loadTimeoutMs ms"), context, appSettings.isNerdMode),
                     streamId,
                 )
             _state.update { if (it is StreamState.Success && it.streamId == streamId) it else error }
@@ -405,14 +405,14 @@ class StreamLoaderViewModel(
                 onFailure = { error ->
                     // A superseded load must not publish over the load that replaced it.
                     currentCoroutineContext().ensureActive()
-                    _state.value = StreamState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode), streamId)
+                    _state.value = StreamState.Error(friendlyErrorMessage(error, context, appSettings.isNerdMode), streamId)
                 },
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e("StreamLoader", "Failed to load stream $streamId", e)
-            _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode), streamId)
+            _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode), streamId)
         }
     }
 

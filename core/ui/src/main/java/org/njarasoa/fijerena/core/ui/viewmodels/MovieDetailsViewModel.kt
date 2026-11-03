@@ -227,14 +227,14 @@ class MovieDetailsViewModel(
                     loadAlternateStreams(detail)
                 },
                 onFailure = { e ->
-                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
                     findCopiesAfterFailure()
                 },
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             findCopiesAfterFailure()
         }
     }
