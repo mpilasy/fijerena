@@ -1,6 +1,6 @@
 # Nerd role, sync failures, TV reminder focus, Admin pages
 
-**Status:** In progress since 2026-11-03: Phase 0 and Lanes R, S, A started. Decisions RQ-1 to RQ-6 and NR-Q1 taken
+**Status:** In progress since 2026-11-03: Phase 0 and Lane R done; Lanes S, A, N, G in progress. Decisions RQ-1 to RQ-6 and NR-Q1 taken
 (user, 2026-11-03).
 
 ## Goal
@@ -253,11 +253,11 @@ t3  Phase X (one name for Admin) on main → full suite → emulator walks
 
 | Phase | Status | Commit |
 |-------|--------|--------|
-| 0 | Done | (this commit) |
-| R | In progress | |
+| 0 | Done | b2cda0b83 |
+| R | Done | 6c912a4a6, merged c06027900; emulator walk left |
 | S | In progress | |
 | A | In progress | |
-| N | Not started | |
-| G | Not started | |
+| N | In progress | |
+| G | In progress | |
 | X | Not started | |
 | Walk | Not started | |
