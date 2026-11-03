@@ -1603,7 +1603,6 @@
 
     <!-- Game reminder banner (TV, TvGameReminderBanner) -->
     <string name="game_reminder_dismiss">Ignorer</string>
-    <string name="game_reminder_banner_hint">Maintenez OK ou appuyez sur Menu pour choisir</string>
     <!-- The question before a channel that has not started: its title and the channel's source -->
     <string name="watch_question_starts">Début : %1$s</string>
     <string name="watch_question_source">Source : %1$s</string>

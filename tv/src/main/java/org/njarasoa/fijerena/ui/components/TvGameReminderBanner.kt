@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,6 +30,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,12 +55,11 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * The TV game reminder banner's focus (the sports teams plan → Reminders). The banner never takes
- * focus by itself, as [TvUndoBar]: a reminder rings over whatever is on screen, full-screen
- * playback included, and must not move focus from it. Menu, or holding OK, moves focus onto the
- * banner's buttons ([reminderBannerKeys]); Back or Dismiss gives it back to the control that had
- * it ([reminderBannerContent], a `focusRestorer` on the screen's content). Untouched, the banner
- * goes after [CinemaAnimation.reminderBannerDismissMs].
+ * The TV game reminder banner's focus (the sports teams plan → Reminders; the Nerd role plan → R).
+ * The banner takes focus when it shows (Watch, or Dismiss without a channel), over whatever is on
+ * screen, full-screen playback included, and keeps it on its buttons until it closes. Back or
+ * Dismiss gives focus back to the control that had it ([reminderBannerContent], a `focusRestorer`
+ * on the screen's content). The banner goes by itself after [CinemaAnimation.reminderBannerDismissMs].
  */
 @Stable
 class ReminderBannerState {
@@ -69,30 +67,12 @@ class ReminderBannerState {
     internal val watchFocus = FocusRequester()
     internal val dismissFocus = FocusRequester()
 
-    /** A reminder shows. */
-    internal var showing by mutableStateOf(false)
-
-    /** The buttons may take focus: set by Menu or a held OK, cleared when the banner closes. */
-    internal var armed by mutableStateOf(false)
-
     /** Focus is on one of the banner's buttons. */
     internal var holdsFocus by mutableStateOf(false)
-
-    /** Each Menu or held OK asks the banner to take focus once more. */
-    internal var focusRequests by mutableIntStateOf(0)
-
-    /** OK is held from the press that armed the banner: the rest of that press is swallowed. */
-    internal var swallowingOk = false
-
-    internal fun arm() {
-        armed = true
-        focusRequests++
-    }
 
     /** Gives focus back to the screen's content (the control that had it), then closes [alert]. */
     internal fun close(alert: GameReminderAlert?) {
         if (holdsFocus) contentFocus.requestFocus(FocusDirection.Enter)
-        armed = false
         alert?.let(GameReminderAlerts::dismissBanner)
     }
 }
@@ -105,42 +85,6 @@ fun rememberReminderBannerState(): ReminderBannerState = remember { ReminderBann
  * entering it from the banner goes back to the control that had it.
  */
 fun Modifier.reminderBannerContent(state: ReminderBannerState): Modifier = focusRequester(state.contentFocus).focusRestorer().focusGroup()
-
-/**
- * On the screen's content, before [reminderBannerContent]: while a reminder shows and focus is on
- * the content, Menu or a held OK moves focus onto the banner. Previewed before the focused control
- * sees the key, as [undoOnRemoteKeys]; a short OK still does the focused control's job.
- */
-fun Modifier.reminderBannerKeys(state: ReminderBannerState): Modifier =
-    onPreviewKeyEvent { event ->
-        val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
-        if (isOk && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) state.swallowingOk = false
-        when {
-            isOk && state.swallowingOk -> {
-                if (event.type == KeyEventType.KeyUp) state.swallowingOk = false
-                true
-            }
-
-            !state.showing || state.holdsFocus -> {
-                false
-            }
-
-            event.key == Key.Menu -> {
-                if (event.type == KeyEventType.KeyDown) state.arm()
-                true
-            }
-
-            isOk && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 0 -> {
-                state.swallowingOk = true
-                state.arm()
-                true
-            }
-
-            else -> {
-                false
-            }
-        }
-    }
 
 /**
  * The reminder that rang while the TV app is on screen ([GameReminderAlerts.banner]): "Arsenal v
@@ -160,21 +104,19 @@ fun TvGameReminderBanner(
         onStopOrDispose { GameReminderAlerts.bannerHostStopped() }
     }
     val alert by GameReminderAlerts.banner.collectAsStateWithLifecycle()
-    SideEffect { state.showing = alert != null }
     val current = alert ?: return
     val context = LocalContext.current
     val hasChannel = current.channel != null
 
-    LaunchedEffect(current, state.holdsFocus) {
-        if (!state.holdsFocus) {
-            delay(CinemaAnimation.reminderBannerDismissMs)
-            state.close(current)
-        }
+    LaunchedEffect(current) {
+        delay(CinemaAnimation.reminderBannerDismissMs)
+        state.close(current)
     }
-    LaunchedEffect(state.focusRequests) {
-        if (state.focusRequests > 0 && state.armed) {
-            (if (hasChannel) state.watchFocus else state.dismissFocus).requestFocusWithRetry(fallback = state.dismissFocus)
-        }
+    // A Dialog window (a CinemaAlertDialog, the trailer player) has the keys, and the banner under
+    // it could not get them: it waits until the dialog closes, inside its time.
+    if (!LocalWindowInfo.current.isWindowFocused) return
+    LaunchedEffect(current) {
+        (if (hasChannel) state.watchFocus else state.dismissFocus).requestFocusWithRetry(fallback = state.dismissFocus)
     }
 
     val shape = cornerShape(CornerRadius.medium)
@@ -191,6 +133,10 @@ fun TvGameReminderBanner(
                 .border(TvDimensions.borderDefault, CinemaTheme.colors.glassBorder, shape)
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                 .onFocusChanged { state.holdsFocus = it.hasFocus }
+                // Keep focus on the banner until it closes: it is in the screen's own tree, not a
+                // Dialog window. focusProperties must sit right before focusGroup.
+                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusGroup()
                 // On the banner: Back closes it, and the D-pad stays on its buttons.
                 .onPreviewKeyEvent { event ->
                     when (event.key) {
@@ -234,10 +180,6 @@ fun TvGameReminderBanner(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Only with Watch: with Dismiss alone there is nothing to choose, and the banner goes by itself.
-            if (hasChannel && !state.holdsFocus) {
-                CinemaText(text = stringResource(R.string.game_reminder_banner_hint), role = TextRole.Caption, tone = TextTone.Tertiary)
-            }
         }
         if (hasChannel) {
             CinemaPrimaryButton(
@@ -246,13 +188,13 @@ fun TvGameReminderBanner(
                     onWatch(current)
                 },
                 text = stringResource(R.string.epg_browser_watch_now_btn),
-                modifier = Modifier.focusRequester(state.watchFocus).focusProperties { canFocus = state.armed },
+                modifier = Modifier.focusRequester(state.watchFocus),
             )
         }
         CinemaSecondaryButton(
             onClick = { state.close(current) },
             text = stringResource(R.string.game_reminder_dismiss),
-            modifier = Modifier.focusRequester(state.dismissFocus).focusProperties { canFocus = state.armed },
+            modifier = Modifier.focusRequester(state.dismissFocus),
         )
     }
 }
