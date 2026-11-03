@@ -45,7 +45,7 @@ WAIT 2
 RIGHT	Edit Name / Name / Admin
 DOWN	Colour
 DOWN	PIN / Asked in Settings before sources, backups and profiles / Off
-DOWN	Nerd / Shows this profile the stats
+DOWN	Nerd / Shows technical details
 DOWN	UI Theme
 DOWN	Theme
 DOWN	Look and Feel
@@ -78,7 +78,7 @@ DOWN	Admin / Using on this device
 CENTER	Edit Name / Name / Admin
 DOWN	Colour
 DOWN	PIN / Asked in Settings before sources, backups and profiles / Off
-DOWN	Nerd / Shows this profile the stats
+DOWN	Nerd / Shows technical details
 DOWN	UI Theme
 DOWN	Theme
 DOWN	Look and Feel
