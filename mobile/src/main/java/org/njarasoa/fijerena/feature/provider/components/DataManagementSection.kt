@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.storedErrorText
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
@@ -122,7 +123,9 @@ fun ColumnScope.DataManagementSection(
                         }
 
                         if (syncState is SyncState.Error || (syncState is SyncState.Idle && currentProvider?.lastSyncError != null)) {
-                            val errorMsg = ((syncState as? SyncState.Error)?.message ?: currentProvider?.lastSyncError)?.let(Redact::text)
+                            val errorMsg =
+                                ((syncState as? SyncState.Error)?.message ?: currentProvider?.lastSyncError?.let { storedErrorText(it) })
+                                    ?.let(Redact::text)
                             if (errorMsg != null) {
                                 CinemaText(errorMsg, role = TextRole.BodySmall, tone = TextTone.Danger)
                             }

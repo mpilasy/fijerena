@@ -15,12 +15,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
-import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
-import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.networkCause
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
@@ -78,21 +77,21 @@ object ProviderSyncRunner {
             val delta: SyncDelta? = null,
         ) : Outcome
 
-        /** Retrying won't help (bad credentials, unsupported provider). Error is user-facing. */
+        /** Retrying won't help (bad credentials, unsupported provider). [error] is kept and shown as a message. */
         data class Permanent(
-            val error: String,
+            val error: StoredError,
         ) : Outcome
 
-        /** Network blip — worth another WorkManager-backed retry later. Error is user-facing. */
+        /** Network blip — worth another WorkManager-backed retry later. [error] is kept and shown as a message. */
         data class Transient(
-            val error: String,
+            val error: StoredError,
         ) : Outcome
     }
 
     /**
      * Sync one provider, retrying transient network failures in-run before giving up.
-     * The returned error strings are already mapped to friendly text (plus raw detail when
-     * Developer Mode is on), ready to persist via `updateSyncStats` / show in the UI.
+     * The returned errors are codes ([StoredError]): persist their encoded form via
+     * `updateSyncStats`, and show their message in the app language in use.
      */
     suspend fun syncProvider(
         context: Context,
@@ -134,10 +133,8 @@ object ProviderSyncRunner {
                 }
                 if (!mediaProvider.isConnected()) {
                     // connect() succeeded yet no session: nothing better to say than the login.
-                    val devSuffix =
-                        if (AppSettings(context).isDevMode) "\n\n[dev] connect() returned not-connected" else ""
                     CrashLog.note("catalogue sync failed: ${provider.name}", "connect() returned not-connected")
-                    return Outcome.Permanent(context.getString(R.string.error_unauthorized) + devSuffix)
+                    return Outcome.Permanent(StoredError(ErrorKind.UNAUTHORIZED, raw = "connect() returned not-connected"))
                 }
 
                 val delta = mediaProvider.syncAll()
@@ -168,26 +165,24 @@ object ProviderSyncRunner {
                 }
                 Log.e(TAG, "Sync failed for ${provider.name} (attempt $attempt, transient=$transient)", e)
                 CrashLog.record("catalogue sync failed: ${provider.name} (attempt $attempt)", e)
-                val message = failureMessage(context, e)
-                return if (transient) Outcome.Transient(message) else Outcome.Permanent(message)
+                val error = failureError(context, e)
+                return if (transient) Outcome.Transient(error) else Outcome.Permanent(error)
             }
         }
     }
 
     /** A catalogue failure says so up front: the reason alone ("Network error") could read as a connect problem. */
-    private fun failureMessage(
+    private fun failureError(
         context: Context,
         e: Exception,
-    ): String {
-        val devMode = AppSettings(context).isDevMode
-        return if (e is CatalogSyncException) {
+    ): StoredError =
+        if (e is CatalogSyncException) {
             // Describe the failure that decided the classification, so the text and the retry agree.
             val cause = e.failures.firstOrNull { isTransient(it) } ?: e.failures.first()
-            context.getString(R.string.error_catalog_sync_failed, friendlyErrorMessage(cause, context, devMode))
+            StoredError.of(cause, context).copy(catalogue = true)
         } else {
-            friendlyErrorMessage(e, context, devMode)
+            StoredError.of(e, context)
         }
-    }
 
     /**
      * A catalogue run with any transient task failure is transient: a retry can fix that task. A
@@ -228,8 +223,8 @@ object ProviderSyncRunner {
     }
 }
 
-/** The user-facing error to persist, or null on success. */
-fun ProviderSyncRunner.Outcome.errorOrNull(): String? =
+/** The error to persist (its [StoredError.encode] form) and show, or null on success. */
+fun ProviderSyncRunner.Outcome.errorOrNull(): StoredError? =
     when (this) {
         is ProviderSyncRunner.Outcome.Success -> null
         is ProviderSyncRunner.Outcome.Permanent -> error

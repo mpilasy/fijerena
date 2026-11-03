@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.dp
 
 /**
  * A colour theme's own ground in place of the accent wash or glow ([CinemaThemePalette.scenery]):
@@ -54,8 +55,9 @@ private fun DrawScope.drawNightSky(scenery: Scenery.Meadow) {
     STARS.forEach { (x, y, r) ->
         drawCircle(scenery.starColor.copy(alpha = STAR_ALPHA), radius = unit * r, center = Offset(size.width * x, size.height * y))
     }
-    // From the shorter side: on a tall phone the moon stays up behind the header, clear of tabs and rows.
-    val moon = Offset(size.width * MOON_X, unit * MOON_Y)
+    // From the shorter side: on a tall phone the moon stays up near the header, clear of tabs and rows.
+    // It also stays below the app's clock, which both apps draw at the top right of every screen.
+    val moon = Offset(size.width * MOON_X, maxOf(unit * MOON_Y, MOON_BELOW_CLOCK.toPx()))
     drawCircle(
         Brush.radialGradient(
             listOf(scenery.moonColor.copy(alpha = MOON_HALO_ALPHA), Color.Transparent),
@@ -108,6 +110,9 @@ private val STARS =
 private const val STAR_ALPHA = 0.85f
 private const val MOON_X = 0.88f
 private const val MOON_Y = 0.16f
+
+/** The moon's centre is never higher than this: its disc and most of its halo stay below the clock. */
+private val MOON_BELOW_CLOCK = 136.dp
 private const val MOON_RADIUS = 0.024f
 private const val MOON_HALO = 0.08f
 private const val MOON_HALO_ALPHA = 0.25f
