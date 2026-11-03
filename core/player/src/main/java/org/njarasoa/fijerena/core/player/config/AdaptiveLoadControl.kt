@@ -57,7 +57,7 @@ class AdaptiveLoadControl(
 
     /**
      * Video, ms, the player holds before it plays: at a start or after a seek, or after a stall
-     * ([rebuffering]). For the Expert-mode buffering line; the size cap can start playback sooner.
+     * ([rebuffering]). For the Nerd's buffering line; the size cap can start playback sooner.
      * Uses the newest delegate, also when the playback thread has not installed it yet.
      */
     fun startThresholdMs(rebuffering: Boolean): Int {

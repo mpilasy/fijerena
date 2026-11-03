@@ -13,11 +13,11 @@ fun uiThemeNameRes(id: String): Int =
         AllPalettes.firstOrNull { it.id == theme.id }?.nameRes ?: styleById(theme.uiStyleId).nameRes
     } ?: R.string.ui_theme_custom
 
-/** The packaged UI themes [admin] may pick (an Expert-only one stays listed while [current]). */
+/** The packaged UI themes [admin] may pick (an Admin-only one stays listed while [current]). */
 fun packagedUiThemesFor(
     admin: Boolean,
     current: String,
-): List<PackagedUiTheme> = UiThemes.packaged.filter { admin || !it.expertOnly || it.id == current }
+): List<PackagedUiTheme> = UiThemes.packaged.filter { admin || !it.adminOnly || it.id == current }
 
 /**
  * The UI theme picker's order (user, 2026-11-01): Custom, then Standard, then the rest by [label]

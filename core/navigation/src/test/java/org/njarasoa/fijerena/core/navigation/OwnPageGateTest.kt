@@ -14,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * A profile without Expert mode sees only its own page, which opens with no PIN; an Expert opens
+ * A profile that is not an Admin sees only its own page, which opens with no PIN; an Admin opens
  * any profile's page, guarded.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -32,30 +32,30 @@ class OwnPageGateTest {
     }
 
     @Test
-    fun `a profile without Expert mode opens its own page freely`() {
+    fun `a profile that is not an Admin opens its own page freely`() {
         val nav = navController()
         nav.navigate(Screen.ProfileEdit("kid"))
 
-        assertTrue(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = false))
+        assertTrue(nav.currentBackStackEntry.isOwnPageOfNonAdmin("kid", admin = false))
     }
 
     @Test
-    fun `a route to another profile shows a non-Expert its own page, freely`() {
+    fun `a route to another profile shows a non-Admin its own page, freely`() {
         val nav = navController()
         nav.navigate(Screen.ProfileEdit("atr"))
 
-        assertEquals("kid", Screen.ProfileEdit("atr").shownProfileId("kid", expert = false))
-        assertTrue(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = false))
+        assertEquals("kid", Screen.ProfileEdit("atr").shownProfileId("kid", admin = false))
+        assertTrue(nav.currentBackStackEntry.isOwnPageOfNonAdmin("kid", admin = false))
     }
 
     @Test
-    fun `an Expert opens the page the route names, guarded`() {
+    fun `an Admin opens the page the route names, guarded`() {
         val nav = navController()
         nav.navigate(Screen.ProfileEdit("kid"))
 
-        assertEquals("kid", Screen.ProfileEdit("kid").shownProfileId("atr", expert = true))
-        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("atr", expert = true))
-        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = true))
-        assertFalse(null.isOwnPageOfNonExpert("kid", expert = false))
+        assertEquals("kid", Screen.ProfileEdit("kid").shownProfileId("atr", admin = true))
+        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonAdmin("atr", admin = true))
+        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonAdmin("kid", admin = true))
+        assertFalse(null.isOwnPageOfNonAdmin("kid", admin = false))
     }
 }

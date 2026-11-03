@@ -161,7 +161,7 @@ private fun TvContinueWatchingCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    // The source (Expert mode) ends the title line, as on the list rows.
+                    // The source (Nerd) ends the title line, as on the list rows.
                     sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()

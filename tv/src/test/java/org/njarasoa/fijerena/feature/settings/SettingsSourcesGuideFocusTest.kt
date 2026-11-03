@@ -26,7 +26,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
     private fun toSourcesGuide(): Array<FocusStep> = toAdminSection("Sources & Guide")
 
     @Test
-    fun `an Expert walks Sources and Guide`() {
+    fun `an Admin walks Sources and Guide`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toSourcesGuide(),

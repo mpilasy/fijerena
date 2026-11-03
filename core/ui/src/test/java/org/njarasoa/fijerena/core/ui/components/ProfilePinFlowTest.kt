@@ -47,7 +47,7 @@ class ProfilePinFlowTest {
     }
 
     @Test
-    fun `an Expert on another profile's page goes straight to Change or Remove`() {
+    fun `an Admin on another profile's page goes straight to Change or Remove`() {
         val flow = flow(hasPin = true, own = false)
         flow.start()
 

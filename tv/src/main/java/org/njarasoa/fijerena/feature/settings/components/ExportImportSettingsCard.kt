@@ -14,7 +14,7 @@ fun ExportImportSettingsCard(
     onQuickImport: () -> Unit,
     exportImportMessage: String?,
     /** Quick Import from Downloads is a developer convenience; hidden otherwise (plan Part I, A, group 6). */
-    isDevMode: Boolean = false,
+    isAdmin: Boolean = false,
     /** A backup waits in Downloads for Quick Import. */
     quickImportReady: Boolean = false,
     /** Goes on the Export row, the group's first focusable — the pane's entry row. */
@@ -40,7 +40,7 @@ fun ExportImportSettingsCard(
             kind = SettingsRowKind.Action,
         )
         // Only when there is a backup in Downloads to restore (a developer's shortcut).
-        if (isDevMode && quickImportReady) {
+        if (isAdmin && quickImportReady) {
             SettingsRow(
                 title = stringResource(R.string.settings_quick_import_button),
                 description = null,

@@ -845,7 +845,7 @@ private fun SearchResults(
     wishlistKeys: Set<WantedTitles.Key>,
     onTmdbTitleLongPress: (TmdbTitle) -> Unit,
     categoryResults: List<SearchViewModel.CategorySearchResult>,
-    // Developer mode: a raw line per source left out because its search failed.
+    // Nerd: a raw line per source left out because its search failed.
     sourceErrors: List<String>,
     results: List<SearchViewModel.SearchResult>,
     excludedCountByType: Map<String, Int>,

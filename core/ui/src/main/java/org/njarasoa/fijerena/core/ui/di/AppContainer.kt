@@ -203,7 +203,7 @@ class AppContainer(
     /**
      * The child profile in use was deleted on another device and no other child is left: the
      * profile does not change, but the nav hosts ask who is watching ([externalSwitches]), where
-     * leaving the child asks an Expert's PIN (the child lock).
+     * leaving the child asks an Admin's PIN (the child lock).
      */
     suspend fun askWhoIsWatching() {
         _externalSwitches.emit(Unit)

@@ -41,10 +41,10 @@ class AppSettingsNerdModeTest {
     fun `Nerd and Admin are separate flags`() {
         settings.setNerdMode(OTHER, true)
 
-        assertFalse(settings.devMode(OTHER))
+        assertFalse(settings.admin(OTHER))
 
         settings.setNerdMode(OTHER, false)
-        settings.setDevMode(OTHER, true)
+        settings.setAdmin(OTHER, true)
 
         assertFalse(settings.nerdMode(OTHER))
     }

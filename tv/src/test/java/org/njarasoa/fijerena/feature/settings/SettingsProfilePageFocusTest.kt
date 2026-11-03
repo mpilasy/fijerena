@@ -17,8 +17,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * TV Settings → a profile's page (`scripts/focus-walks/settings.txt`, the Profiles part), the
  * cases `SettingsProfilesFocusTest` leaves: a grown-up's own page (Add Profile at its end), an
- * Expert's own page under Your Profile (no Admin rows), a grown-up's page in Admin → Profiles, and
- * a child's page when an Expert has a PIN, with its "Parental Controls ›" link.
+ * Admin's own page under Your Profile (no Admin rows), a grown-up's page in Admin → Profiles, and
+ * a child's page when an Admin has a PIN, with its "Parental Controls ›" link.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilePageFocusTest : SettingsFocusTest() {
@@ -86,7 +86,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     }
 
     @Test
-    fun `an Expert's own page under Your Profile has no Admin rows`() {
+    fun `an Admin's own page under Your Profile has no Admin rows`() {
         open(SettingsFixture.ADMIN)
         walk.assertFocused("Your Profile")
         walk.run(
@@ -100,14 +100,14 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
             // No Child profile, Admin switch, Sources or Content filters: those are in Admin →
-            // Profiles. No Add Profile either: an Expert adds one there.
+            // Profiles. No Add Profile either: an Admin adds one there.
             down("Play Next Episode Automatically"),
             left("Your Profile"),
         )
     }
 
     @Test
-    fun `an Expert walks a grown-up's page`() {
+    fun `an Admin walks a grown-up's page`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Admin"),
@@ -124,7 +124,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
-            // Admin: Child profile and Expert mode, both free to change on a grown-up's page.
+            // Admin: Child profile and the Admin switch, both free to change on a grown-up's page.
             down("Child Profile / On TV, Home shows only the favourites"),
             down("Admin / Lets this profile change sources, profiles, parental controls and backups"),
             down("Sources / 2 of 2"),
@@ -139,12 +139,12 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     }
 
     @Test
-    fun `with an Expert PIN, a child's page has no Set a PIN row and links to Parental Controls`() {
+    fun `with an Admin PIN, a child's page has no Set a PIN row and links to Parental Controls`() {
         open(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN, SettingsFixture.KID))
         walk.run(
             down("Admin"),
             right("Profiles"),
-            // An Expert has a PIN: no reminder, the section opens on the profiles.
+            // An Admin has a PIN: no reminder, the section opens on the profiles.
             center("A / Admin / Using on this device"),
             down("G / Guest"),
             down("K / Kid"),

@@ -120,38 +120,38 @@ class ProfilePinsTest {
     }
 
     @Test
-    fun `any Expert's PIN will do, and wrong tries count against the first one's`() {
+    fun `any Admin's PIN will do, and wrong tries count against the first one's`() {
         pins.set("atr", "1111")
         pins.set(KID, "2222")
-        val experts = listOf("atr", KID)
+        val admins = listOf("atr", KID)
 
-        assertEquals(Check.Right, pins.checkAny(experts, "2222"))
-        repeat(4) { pins.checkAny(experts, "0000") }
-        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkAny(experts, "0000"))
-        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(experts, "1111"))
+        assertEquals(Check.Right, pins.checkAny(admins, "2222"))
+        repeat(4) { pins.checkAny(admins, "0000") }
+        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkAny(admins, "0000"))
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(admins, "1111"))
         assertEquals(0, settings.pinFailures(KID))
         assertEquals(Check.Right, pins.checkAny(emptyList(), "0000"))
     }
 
     @Test
-    fun `leaving a child counts wrong PINs on its own, never on the Expert's`() {
+    fun `leaving a child counts wrong PINs on its own, never on the Admin's`() {
         pins.set("atr", "1111")
-        val experts = listOf("atr")
+        val admins = listOf("atr")
 
-        repeat(4) { pins.checkToLeaveChild(experts, "0000") }
-        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkToLeaveChild(experts, "0000").check)
-        assertEquals(Check.Waiting(clock + 30_000L), pins.checkToLeaveChild(experts, "1111").check)
+        repeat(4) { pins.checkToLeaveChild(admins, "0000") }
+        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkToLeaveChild(admins, "0000").check)
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkToLeaveChild(admins, "1111").check)
 
-        // The Expert's own Settings PIN has no wait.
+        // The Admin's own Settings PIN has no wait.
         assertEquals(0, settings.pinFailures("atr"))
         assertNull(pins.waitingUntil("atr"))
-        assertEquals(Check.Right, pins.checkAny(experts, "1111"))
+        assertEquals(Check.Right, pins.checkAny(admins, "1111"))
 
-        // Nor does a wait on the Expert's PIN stop the child lock.
+        // Nor does a wait on the Admin's PIN stop the child lock.
         clock += 30_000L
-        repeat(5) { pins.checkAny(experts, "0000") }
-        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(experts, "1111"))
-        assertEquals(ProfilePins.LeaveCheck(Check.Right, "atr"), pins.checkToLeaveChild(experts, "1111"))
+        repeat(5) { pins.checkAny(admins, "0000") }
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(admins, "1111"))
+        assertEquals(ProfilePins.LeaveCheck(Check.Right, "atr"), pins.checkToLeaveChild(admins, "1111"))
         assertEquals(0, settings.childLockFailures)
     }
 
@@ -159,11 +159,11 @@ class ProfilePinsTest {
     fun `leaving a child says whose PIN was typed`() {
         pins.set("atr", "1111")
         pins.set("mum", "2222")
-        val experts = listOf("atr", "mum")
+        val admins = listOf("atr", "mum")
 
-        assertEquals("mum", pins.checkToLeaveChild(experts, "2222").pinOf)
-        assertEquals("atr", pins.checkToLeaveChild(experts, "1111").pinOf)
-        assertNull(pins.checkToLeaveChild(experts, "0000").pinOf)
+        assertEquals("mum", pins.checkToLeaveChild(admins, "2222").pinOf)
+        assertEquals("atr", pins.checkToLeaveChild(admins, "1111").pinOf)
+        assertNull(pins.checkToLeaveChild(admins, "0000").pinOf)
     }
 
     @Test

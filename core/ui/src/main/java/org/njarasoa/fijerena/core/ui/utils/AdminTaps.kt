@@ -1,13 +1,13 @@
 package org.njarasoa.fijerena.core.ui.utils
 
 /**
- * Tapping the version row in About 7 times makes the profile in use Expert, as on Android itself
- * (the public release plan, P1), but only while no profile is Expert (the profile rules plan,
- * PR-3). The app always keeps an Expert ([org.njarasoa.fijerena.core.network.profile.ProfileRepository.ensureAnExpert]),
- * so in practice the taps do nothing and say nothing. Only an Expert makes another profile Expert,
+ * Tapping the version row in About 7 times makes the profile in use Admin, as on Android itself
+ * (the public release plan, P1), but only while no profile is Admin (the profile rules plan,
+ * PR-3). The app always keeps an Admin ([org.njarasoa.fijerena.core.network.profile.ProfileRepository.ensureAnAdmin]),
+ * so in practice the taps do nothing and say nothing. Only an Admin makes another profile Admin,
  * on that profile's page.
  */
-object DeveloperModeTaps {
+object AdminTaps {
     const val TAPS_TO_ENABLE = 7
 
     /** From this tap on, each tap says how many are left. */
@@ -26,11 +26,11 @@ object DeveloperModeTaps {
     /** What the tap after [tapsSoFar] taps does. */
     fun onTap(
         tapsSoFar: Int,
-        expertExists: Boolean,
+        adminExists: Boolean,
     ): Outcome {
         val taps = tapsSoFar + 1
         return when {
-            expertExists -> Outcome.Nothing
+            adminExists -> Outcome.Nothing
             taps >= TAPS_TO_ENABLE -> Outcome.Enable
             taps >= HINT_FROM_TAP -> Outcome.TapsLeft(TAPS_TO_ENABLE - taps)
             else -> Outcome.Nothing
@@ -38,11 +38,11 @@ object DeveloperModeTaps {
     }
 
     /**
-     * Whether a profile is Expert. [profileIds] is null until the list has loaded, which counts as
+     * Whether a profile is Admin. [profileIds] is null until the list has loaded, which counts as
      * yes: the taps stay quiet until the list says otherwise.
      */
-    fun expertExists(
+    fun adminExists(
         profileIds: List<String>?,
-        isExpert: (String) -> Boolean,
-    ): Boolean = profileIds == null || profileIds.any(isExpert)
+        isAdmin: (String) -> Boolean,
+    ): Boolean = profileIds == null || profileIds.any(isAdmin)
 }

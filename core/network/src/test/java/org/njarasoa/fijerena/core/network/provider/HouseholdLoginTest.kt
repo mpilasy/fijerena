@@ -16,39 +16,39 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository.Companion.
 class HouseholdLoginTest {
     private fun owner(
         id: String,
-        expert: Boolean = false,
+        admin: Boolean = false,
         createdAt: Long = 0,
         lastUsedAt: Long = 0,
-    ) = LoginOwner(id, expert, createdAt, lastUsedAt)
+    ) = LoginOwner(id, admin, createdAt, lastUsedAt)
 
     @Test
-    fun `the Expert profile in use keeps its login`() {
-        val owners = listOf(owner("old-admin", expert = true, createdAt = 1), owner("me", expert = true, createdAt = 5))
+    fun `the Admin profile in use keeps its login`() {
+        val owners = listOf(owner("old-admin", admin = true, createdAt = 1), owner("me", admin = true, createdAt = 5))
 
         assertEquals("me", chooseHouseholdLogin(owners, activeProfileId = "me"))
     }
 
     @Test
-    fun `else the oldest Expert's, even when the profile in use has one`() {
+    fun `else the oldest Admin's, even when the profile in use has one`() {
         val owners =
             listOf(
                 owner("kid", lastUsedAt = 100),
-                owner("young-admin", expert = true, createdAt = 9),
-                owner("old-admin", expert = true, createdAt = 2),
+                owner("young-admin", admin = true, createdAt = 9),
+                owner("old-admin", admin = true, createdAt = 2),
             )
 
         assertEquals("old-admin", chooseHouseholdLogin(owners, activeProfileId = "kid"))
     }
 
     @Test
-    fun `with no Expert, the profile in use counts as the most recently used`() {
+    fun `with no Admin, the profile in use counts as the most recently used`() {
         val owners = listOf(owner("a", lastUsedAt = 500), owner("me", lastUsedAt = 1))
 
         assertEquals("me", chooseHouseholdLogin(owners, activeProfileId = "me"))
     }
 
     @Test
-    fun `with no Expert and the profile in use without one, the latest watch change wins`() {
+    fun `with no Admin and the profile in use without one, the latest watch change wins`() {
         val owners = listOf(owner("a", lastUsedAt = 100), owner("b", lastUsedAt = 300), owner("c"))
 
         assertEquals("b", chooseHouseholdLogin(owners, activeProfileId = "nobody"))
@@ -56,10 +56,10 @@ class HouseholdLoginTest {
 
     @Test
     fun `ties pick the same profile on every device`() {
-        val experts = listOf(owner("b", expert = true, createdAt = 1), owner("a", expert = true, createdAt = 1))
+        val admins = listOf(owner("b", admin = true, createdAt = 1), owner("a", admin = true, createdAt = 1))
         val others = listOf(owner("b"), owner("a"))
 
-        assertEquals("a", chooseHouseholdLogin(experts, activeProfileId = "x"))
+        assertEquals("a", chooseHouseholdLogin(admins, activeProfileId = "x"))
         assertEquals("b", chooseHouseholdLogin(others, activeProfileId = "x"))
     }
 

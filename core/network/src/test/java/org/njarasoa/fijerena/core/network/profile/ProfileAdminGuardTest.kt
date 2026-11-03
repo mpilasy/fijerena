@@ -25,8 +25,8 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
-/** There is always a profile with Expert mode (the admin, for now): the oldest gets it back when none has. */
-class ProfileExpertGuardTest {
+/** There is always an Admin profile: the oldest gets it back when none has. */
+class ProfileAdminGuardTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()
     private val context = mockk<Context>(relaxed = true)
     private val profileDao = mockk<ProfileDao>(relaxed = true)
@@ -54,59 +54,59 @@ class ProfileExpertGuardTest {
     }
 
     @Test
-    fun `with no Expert the oldest profile becomes one`() =
+    fun `with no Admin the oldest profile becomes one`() =
         runBlocking {
-            assertEquals(ProfileEntity.DEFAULT_ID, ProfileRepository(context).ensureAnExpert())
+            assertEquals(ProfileEntity.DEFAULT_ID, ProfileRepository(context).ensureAnAdmin())
 
             val settings = AppSettings(context)
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
-            assertFalse(settings.devMode(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
         }
 
     @Test
-    fun `an existing Expert is left alone`() =
+    fun `an existing Admin is left alone`() =
         runBlocking {
             val settings = AppSettings(context)
-            settings.setDevMode(KID, true)
+            settings.setAdmin(KID, true)
 
-            assertNull(ProfileRepository(context).ensureAnExpert())
+            assertNull(ProfileRepository(context).ensureAnAdmin())
 
-            assertTrue(settings.devMode(KID))
-            assertFalse(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertTrue(settings.admin(KID))
+            assertFalse(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
-    fun `startup leaves an Expert when no profile has one`() =
+    fun `startup leaves an Admin when no profile has one`() =
         runBlocking {
             ProfileRepository(context).migrateLegacyProfileSettings()
 
-            assertTrue(AppSettings(context).devMode(ProfileEntity.DEFAULT_ID))
+            assertTrue(AppSettings(context).admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
-    fun `a child profile with Expert mode loses it`() =
+    fun `a child profile that is an Admin loses it`() =
         runBlocking {
             val settings = AppSettings(context)
-            settings.setDevMode(KID, true)
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(KID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
             settings.setChildProfile(KID, true)
 
-            assertEquals(listOf(KID), ProfileRepository(context).clearChildExperts())
+            assertEquals(listOf(KID), ProfileRepository(context).clearChildAdmins())
 
-            assertFalse(settings.devMode(KID))
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
     fun `a child profile loses Nerd, a grown-up keeps it`() =
         runBlocking {
             val settings = AppSettings(context)
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
             settings.setNerdMode(ProfileEntity.DEFAULT_ID, true)
             settings.setNerdMode(KID, true)
             settings.setChildProfile(KID, true)
 
-            ProfileRepository(context).clearChildExperts()
+            ProfileRepository(context).clearChildAdmins()
 
             assertFalse(settings.storedNerdMode(KID))
             assertTrue(settings.nerdMode(ProfileEntity.DEFAULT_ID))
@@ -131,27 +131,27 @@ class ProfileExpertGuardTest {
         }
 
     @Test
-    fun `a grown-up keeps Expert mode`() =
+    fun `a grown-up stays an Admin`() =
         runBlocking {
             val settings = AppSettings(context)
-            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setAdmin(ProfileEntity.DEFAULT_ID, true)
 
-            assertEquals(emptyList<String>(), ProfileRepository(context).clearChildExperts())
+            assertEquals(emptyList<String>(), ProfileRepository(context).clearChildAdmins())
 
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     @Test
-    fun `startup turns Expert off on a child and keeps an Expert`() =
+    fun `startup turns Admin off on a child and keeps an Admin`() =
         runBlocking {
             val settings = AppSettings(context)
-            settings.setDevMode(KID, true)
+            settings.setAdmin(KID, true)
             settings.setChildProfile(KID, true)
 
             ProfileRepository(context).migrateLegacyProfileSettings()
 
-            assertFalse(settings.devMode(KID))
-            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+            assertFalse(settings.admin(KID))
+            assertTrue(settings.admin(ProfileEntity.DEFAULT_ID))
         }
 
     private companion object {

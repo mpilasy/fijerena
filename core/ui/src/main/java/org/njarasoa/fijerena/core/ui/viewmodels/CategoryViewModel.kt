@@ -696,7 +696,7 @@ class CategoryViewModel(
             },
             onFailure = { error ->
                 // Never raw exception text (a Room/HTTP internal, "executor rejected"):
-                // friendlyErrorMessage maps it, with the raw text appended only in dev mode.
+                // friendlyErrorMessage maps it, with the raw text appended only for a Nerd.
                 _uiState.value = UiState.Error(sectionErrorMessage(error))
             },
         )

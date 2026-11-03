@@ -28,7 +28,16 @@ class AppSettings(
     }
 
     companion object {
-        private const val KEY_DEV_MODE = "dev_mode"
+        /** An Admin profile ([admin]): it manages sources, profiles, Parental Controls and backups. */
+        private const val KEY_ADMIN = "admin"
+
+        /**
+         * Retired: the Admin flag's old name, install-wide (`dev_mode`) and then per profile
+         * (`dev_mode_<profileId>`). No longer written nor synced. Read as the fallback until the
+         * one-time upgrade ([upgradeAdminKeys]) has run, and applied when an older build still
+         * sends it.
+         */
+        private const val KEY_LEGACY_DEV_MODE = "dev_mode"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
 
         /**
@@ -117,7 +126,7 @@ class AppSettings(
                 KEY_UI_STYLE_ID,
                 KEY_UI_THEME_ID,
                 KEY_POSTER_BACKDROP,
-                KEY_DEV_MODE,
+                KEY_ADMIN,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
                 KEY_PIN_HASH,
@@ -131,7 +140,7 @@ class AppSettings(
                 KEY_UI_STYLE_ID,
                 KEY_UI_THEME_ID,
                 KEY_POSTER_BACKDROP,
-                KEY_DEV_MODE,
+                KEY_ADMIN,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
@@ -189,29 +198,36 @@ class AppSettings(
         set(value) = prefs.edit { putBoolean(KEY_SHARE_NOW_PLAYING, value) }
 
     /**
-     * Developer mode of the active profile — each profile has its own, off until turned on. See
-     * the profile scoped settings plan. Falls back to the install-wide flag
-     * this replaced until [copyLegacyDevModeToProfiles] has run.
+     * The active profile is an Admin — each profile has its own flag, off until turned on. See
+     * the profile scoped settings plan. Falls back to the old keys until [upgradeAdminKeys] has run.
      */
-    var isDevMode: Boolean
-        get() = devMode(activeProfileId)
-        set(value) = setDevMode(activeProfileId, value)
+    var isAdmin: Boolean
+        get() = admin(activeProfileId)
+        set(value) = setAdmin(activeProfileId, value)
 
-    /** [profileId]'s developer mode, whichever profile this device uses (its profile page edits it). */
-    fun devMode(profileId: String): Boolean = prefs.getBoolean(devModeKey(profileId), prefs.getBoolean(KEY_DEV_MODE, false))
+    /**
+     * [profileId] is an Admin, whichever profile this device uses (its profile page edits it).
+     * Before [upgradeAdminKeys] has run, the old `dev_mode_<profileId>`, then the install-wide
+     * `dev_mode`, is the fallback.
+     */
+    fun admin(profileId: String): Boolean =
+        prefs.getBoolean(
+            adminKey(profileId),
+            prefs.getBoolean(legacyDevModeKey(profileId), prefs.getBoolean(KEY_LEGACY_DEV_MODE, false)),
+        )
 
-    fun setDevMode(
+    fun setAdmin(
         profileId: String,
         enabled: Boolean,
     ) {
-        prefs.edit { putBoolean(devModeKey(profileId), enabled) }
-        SettingsSyncQueue.setting(context, KEY_DEV_MODE, profileId)
+        prefs.edit { putBoolean(adminKey(profileId), enabled) }
+        SettingsSyncQueue.setting(context, KEY_ADMIN, profileId)
     }
 
     /**
      * [profileId] is a child's: every Xtream source shows it only what Parental controls let through
      * ([org.njarasoa.fijerena.core.network.provider.CategoryFilters.child]) and it is never
-     * Expert. Per profile and synced; off until turned on. See
+     * Admin. Per profile and synced; off until turned on. See
      * docs/plans/20261019_tv-household-ux-plan.md, Phase 1.
      */
     fun isChildProfile(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHILD_PROFILE, profileId), false)
@@ -260,21 +276,35 @@ class AppSettings(
     fun removeChildProfile(profileId: String) = prefs.edit { remove(profileKey(KEY_CHILD_PROFILE, profileId)) }
 
     /**
-     * One-time upgrade: gives every profile in [profileIds] the install-wide developer-mode flag
-     * (unless it already has its own), then drops that flag so profiles added later start off.
+     * One-time upgrade of the Admin flag's old keys: copies each `dev_mode_<profileId>` to
+     * `admin_<profileId>` (unless that profile already has it), gives every other profile in
+     * [profileIds] the install-wide `dev_mode` flag when there is one, then removes all the old
+     * keys, so profiles added later start off.
      */
-    fun copyLegacyDevModeToProfiles(profileIds: List<String>) {
-        if (!prefs.contains(KEY_DEV_MODE)) return
-        val legacy = prefs.getBoolean(KEY_DEV_MODE, false)
+    fun upgradeAdminKeys(profileIds: List<String>) {
+        val all = prefs.all
+        val perProfile = all.keys.filter { it.startsWith(legacyDevModeKey("")) }
+        if (perProfile.isEmpty() && KEY_LEGACY_DEV_MODE !in all) return
+        val installWide = all[KEY_LEGACY_DEV_MODE] as? Boolean
         prefs.edit {
-            profileIds.filterNot { prefs.contains(devModeKey(it)) }.forEach { putBoolean(devModeKey(it), legacy) }
-            remove(KEY_DEV_MODE)
+            perProfile.forEach { old ->
+                val id = old.removePrefix(legacyDevModeKey(""))
+                val value = all[old] as? Boolean
+                if (value != null && adminKey(id) !in all) putBoolean(adminKey(id), value)
+                remove(old)
+            }
+            if (installWide != null) {
+                profileIds
+                    .filterNot { adminKey(it) in all || legacyDevModeKey(it) in all }
+                    .forEach { putBoolean(adminKey(it), installWide) }
+            }
+            remove(KEY_LEGACY_DEV_MODE)
         }
     }
 
     /**
      * Whether the active profile's TV-show episodes roll on to the next one, after a short
-     * countdown, when they end. Per profile and synced, like [isDevMode]; off until turned on.
+     * countdown, when they end. Per profile and synced, like [isAdmin]; off until turned on.
      */
     var autoplayNextEpisode: Boolean
         get() = autoplayNextEpisode(activeProfileId)
@@ -346,14 +376,14 @@ class AppSettings(
     ) = setProfileSourceKeys(profileId, profileSourceKeys(profileId).orEmpty() + providerKey)
 
     /**
-     * The active profile and its developer mode ([isDevMode]), now and whenever either changes (a
+     * The active profile and its Admin flag ([isAdmin]), now and whenever either changes (a
      * profile switch, the switch on its page, or a value received from another device).
      */
-    fun observeDevMode(): Flow<Pair<String, Boolean>> =
+    fun observeAdmin(): Flow<Pair<String, Boolean>> =
         callbackFlow {
-            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(activeProfileId to isDevMode) }
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(activeProfileId to isAdmin) }
             prefs.registerOnSharedPreferenceChangeListener(listener)
-            send(activeProfileId to isDevMode)
+            send(activeProfileId to isAdmin)
             awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
 
@@ -462,7 +492,8 @@ class AppSettings(
      * A setting received from another device (live sync): written straight to prefs, not through
      * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
      * ignored — a newer app version may sync more, and an older one still sends the retired guide
-     * auto-refresh keys. A value this version can't use (a blank theme, a non-boolean switch) is
+     * auto-refresh keys. The one exception is `dev_mode`, the Admin flag's old name, which an older
+     * build still sends: it goes to the Admin flag. A value this version can't use (a blank theme, a non-boolean switch) is
      * dropped, so the local value stays: one bad record must not break every linked device (R-09).
      * An unknown theme id is kept, since `paletteById` already falls back to the default palette.
      */
@@ -491,8 +522,9 @@ class AppSettings(
         }
         prefs.edit {
             when (key) {
-                KEY_DEV_MODE -> {
-                    value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
+                // KEY_LEGACY_DEV_MODE: the same flag as an older build still sends it.
+                KEY_ADMIN, KEY_LEGACY_DEV_MODE -> {
+                    value.booleanOrNull?.let { putBoolean(adminKey(profileId), it) }
                 }
 
                 KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING, KEY_NERD_MODE -> {
@@ -546,7 +578,7 @@ class AppSettings(
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
-            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_NERD_MODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
+            KEY_ADMIN, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_NERD_MODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
                 kotlinx.serialization.json.JsonPrimitive(
                     prefs.getBoolean(stored, false),
                 )
@@ -562,8 +594,12 @@ class AppSettings(
         }
     }
 
-    /** Drops a deleted profile's developer-mode flag. */
-    fun removeDevMode(profileId: String) = prefs.edit { remove(devModeKey(profileId)) }
+    /** Drops a deleted profile's Admin flag. */
+    fun removeAdmin(profileId: String) =
+        prefs.edit {
+            remove(adminKey(profileId))
+            remove(legacyDevModeKey(profileId))
+        }
 
     /**
      * [profileId]'s PIN as stored by `ProfilePins` (`salt:hash`), or null without one. Per profile
@@ -598,7 +634,7 @@ class AppSettings(
     /**
      * Wrong PINs in a row typed to leave a child profile on this device (not synced). The child lock
      * counts them apart from each profile's own count, so a child's guesses never start a wait on
-     * the Expert's Settings PIN.
+     * the Admin's Settings PIN.
      */
     val childLockFailures: Int get() = prefs.getInt(KEY_CHILD_LOCK_FAILURES, 0)
 
@@ -626,7 +662,9 @@ class AppSettings(
 
     fun removeChartsShowMissing(profileId: String) = prefs.edit { remove(profileKey(KEY_CHARTS_SHOW_MISSING, profileId)) }
 
-    private fun devModeKey(profileId: String) = profileKey(KEY_DEV_MODE, profileId)
+    private fun adminKey(profileId: String) = profileKey(KEY_ADMIN, profileId)
+
+    private fun legacyDevModeKey(profileId: String) = profileKey(KEY_LEGACY_DEV_MODE, profileId)
 
     private fun profileKey(
         key: String,
@@ -669,7 +707,7 @@ class AppSettings(
         }
 
     /**
-     * The active profile's colour theme. Per profile and synced, like [isDevMode]; falls back to the
+     * The active profile's colour theme. Per profile and synced, like [isAdmin]; falls back to the
      * device-wide theme this replaced until [copyLegacyLookToProfiles] has run.
      */
     var themeId: String
@@ -1069,7 +1107,7 @@ class AppSettings(
         get() = prefs.getBoolean(KEY_EPG_REFRESH_INTERVAL_COPIED, false)
         set(value) = prefs.edit(commit = true) { putBoolean(KEY_EPG_REFRESH_INTERVAL_COPIED, value) }
 
-    // Search and EPG search history belong to the active profile, like developer mode: stored
+    // Search and EPG search history belong to the active profile, like Admin: stored
     // under `<key>_<profileId>`. Per device and never synced.
 
     /**

@@ -11,38 +11,38 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * The version row's click on TV and phone: while no profile is Expert, counts taps toward Expert
- * mode ([DeveloperModeTaps]) and says where they stand in a short toast. While one is, it does and
- * says nothing. [onEnable] returns whether Expert mode is on now.
+ * The version row's click on TV and phone: while no profile is Admin, counts taps toward
+ * Admin ([AdminTaps]) and says where they stand in a short toast. While one is, it does and
+ * says nothing. [onEnable] returns whether Admin is on now.
  */
 @Composable
-fun rememberDeveloperModeTapHandler(
-    expertExists: Boolean,
+fun rememberAdminTapHandler(
+    adminExists: Boolean,
     onEnable: () -> Boolean,
 ): () -> Unit {
     val context = LocalContext.current
     val resources = LocalResources.current
     var taps by remember { mutableIntStateOf(0) }
     return taps@{
-        // A child profile is never Expert (docs/plans/20261019_tv-household-ux-plan.md): its taps count nothing.
+        // A child profile is never Admin (docs/plans/20261019_tv-household-ux-plan.md): its taps count nothing.
         val settings = AppSettings(context.applicationContext)
         if (settings.isChildProfile(settings.activeProfileId)) return@taps
-        val outcome = DeveloperModeTaps.onTap(taps, expertExists)
+        val outcome = AdminTaps.onTap(taps, adminExists)
         val message =
             when (outcome) {
-                DeveloperModeTaps.Outcome.Nothing -> {
+                AdminTaps.Outcome.Nothing -> {
                     null
                 }
 
-                is DeveloperModeTaps.Outcome.TapsLeft -> {
-                    resources.getString(R.string.settings_developer_mode_taps_left, outcome.count)
+                is AdminTaps.Outcome.TapsLeft -> {
+                    resources.getString(R.string.settings_admin_taps_left, outcome.count)
                 }
 
-                DeveloperModeTaps.Outcome.Enable -> {
-                    if (onEnable()) resources.getString(R.string.settings_developer_mode_enabled) else null
+                AdminTaps.Outcome.Enable -> {
+                    if (onEnable()) resources.getString(R.string.settings_admin_enabled) else null
                 }
             }
-        taps = if (expertExists || outcome == DeveloperModeTaps.Outcome.Enable) 0 else taps + 1
+        taps = if (adminExists || outcome == AdminTaps.Outcome.Enable) 0 else taps + 1
         message?.let(AppNotices::show)
     }
 }

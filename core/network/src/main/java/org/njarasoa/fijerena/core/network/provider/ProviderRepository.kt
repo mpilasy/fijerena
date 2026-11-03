@@ -157,7 +157,7 @@ class ProviderRepository(
             }
 
         /**
-         * Whether a source of [type] can connect without an Expert signing it in first: always,
+         * Whether a source of [type] can connect without an Admin signing it in first: always,
          * except a Jellyfin server with neither a username nor a saved session.
          */
         internal fun hasSourceLogin(
@@ -169,15 +169,15 @@ class ProviderRepository(
         /** A profile that had its own Jellyfin login on a source before the upgrade. */
         internal data class LoginOwner(
             val profileId: String,
-            val expert: Boolean,
+            val admin: Boolean,
             val createdAt: Long,
             /** Its last watch change on this device, 0 for none. */
             val lastUsedAt: Long,
         )
 
         /**
-         * Which of [owners]' logins a Jellyfin source keeps on upgrade (JF-D1): the Expert profile
-         * in use, else the oldest Expert, else the most recently used profile — the one in use
+         * Which of [owners]' logins a Jellyfin source keeps on upgrade (JF-D1): the Admin profile
+         * in use, else the oldest Admin, else the most recently used profile — the one in use
          * first, then the latest watch change. Null when nobody had one.
          */
         internal fun chooseHouseholdLogin(
@@ -185,11 +185,11 @@ class ProviderRepository(
             activeProfileId: String,
         ): String? {
             val active = owners.firstOrNull { it.profileId == activeProfileId }
-            val experts = owners.filter { it.expert }
+            val admins = owners.filter { it.admin }
             val chosen =
                 when {
-                    active != null && active.expert -> active
-                    experts.isNotEmpty() -> experts.minWith(compareBy<LoginOwner>({ it.createdAt }, { it.profileId }))
+                    active != null && active.admin -> active
+                    admins.isNotEmpty() -> admins.minWith(compareBy<LoginOwner>({ it.createdAt }, { it.profileId }))
                     active != null -> active
                     else -> owners.maxWithOrNull(compareBy<LoginOwner>({ it.lastUsedAt }, { it.profileId }))
                 }
@@ -663,7 +663,7 @@ class ProviderRepository(
 
     private fun extraPasswordKey(username: String) = KEY_EXTRA_PASSWORD_PREFIX + username
 
-    /** Whether [entity] can connect without an Expert signing it in first ([hasSourceLogin]). */
+    /** Whether [entity] can connect without an Admin signing it in first ([hasSourceLogin]). */
     fun hasLogin(entity: ProviderEntity): Boolean =
         hasSourceLogin(
             entity.type,
@@ -736,7 +736,7 @@ class ProviderRepository(
                                 profile.id in own &&
                                     getProviderPrefs(entity.id, profile.id).getString(KEY_USERNAME, null).orEmpty().isNotBlank()
                             }
-                        }.map { LoginOwner(it.id, settings.devMode(it.id), it.createdAt, lastUsed[it.id] ?: 0L) }
+                        }.map { LoginOwner(it.id, settings.admin(it.id), it.createdAt, lastUsed[it.id] ?: 0L) }
                 val chosen = chooseHouseholdLogin(owners, settings.activeProfileId)
                 if (chosen != null && chosen != ProfileEntity.DEFAULT_ID) moveLoginToSource(entity, chosen)
                 own.forEach { profileId ->

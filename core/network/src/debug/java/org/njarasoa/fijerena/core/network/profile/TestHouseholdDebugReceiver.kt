@@ -82,7 +82,7 @@ internal object TestHousehold {
 
     /**
      * Adds one Xtream source at [url] for the profile in use, renames that profile [ADMIN] and makes
-     * it Expert, then adds [GUEST] (a grown-up, not Expert) and [KID] (a child profile), which get
+     * it Admin, then adds [GUEST] (a grown-up, not Admin) and [KID] (a child profile), which get
      * the source as a profile added in Settings does. Returns the source's id, or null (and changes
      * nothing) when the app has a source already: this is for a fresh install, never a device with data.
      */
@@ -101,7 +101,7 @@ internal object TestHousehold {
                 val profiles = ProfileRepository(context)
                 val admin = settings.activeProfileId
                 profiles.updateProfile(admin, ADMIN, colorIndex = 0)
-                settings.setDevMode(admin, true)
+                settings.setAdmin(admin, true)
                 val providerId = providers.addProvider(SOURCE_NAME, url, username, password)
                 profiles.addProfile(GUEST, colorIndex = 1)
                 delay(CREATED_AT_GAP_MS)

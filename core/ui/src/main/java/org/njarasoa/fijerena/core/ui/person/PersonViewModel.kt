@@ -137,7 +137,7 @@ class PersonViewModel(
     sealed interface State {
         data object Loading : State
 
-        /** TMDB failed or has no key. [raw]: the failure's own text, in Expert mode only. */
+        /** TMDB failed or has no key. [raw]: the failure's own text, for a Nerd only. */
         data class Error(
             val raw: String?,
         ) : State

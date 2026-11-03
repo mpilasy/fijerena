@@ -227,8 +227,8 @@ fun TvPlayerControlsOverlay(
     // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
     // implicit first child — whichever button happens to be first for this stream. Live opens on
     // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
-    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats (Expert
-    // mode), else Guide — never on Favourite or a track picker. With none of them it leaves focus
+    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats (Nerd),
+    // else Guide — never on Favourite or a track picker. With none of them it leaves focus
     // where it is (the player), where OK does no harm.
     val channelsFocusRequester = remember { FocusRequester() }
     val guideFocusRequester = remember { FocusRequester() }
@@ -290,7 +290,7 @@ fun TvPlayerControlsOverlay(
                 .panel(PanelFill.Osd),
     ) {
         // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's
-        // logo (Live TV) with the developer-mode resolution/codec line under it, on a scrim that
+        // logo (Live TV) with the Nerd's resolution/codec line under it, on a scrim that
         // fades out below the text ([PanelFill.OsdTop]), so the text reads over a bright frame.
         // Hidden while a side panel is open since they would collide with the panel's own tab row.
         if (!hideTopBars) {
@@ -350,7 +350,7 @@ fun TvPlayerControlsOverlay(
                         )
                     }
 
-                    // Resolution and codec — developer mode only (the polling above is gated too).
+                    // Resolution and codec — Nerd only (the polling above is gated too).
                     if (isNerd && (videoResolution != null || videoCodec != null)) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -658,7 +658,7 @@ fun TvPlayerControlsOverlay(
                 }
 
                 // Button row (only when full controls are visible). Icon buttons, each naming itself
-                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats (Expert mode);
+                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats (Nerd);
                 // VOD the same without Channels, with Play/Pause then Chapters first and Next episode
                 // before Stats. Left/Right move along it and stop at its ends; Up/Down zap on live
                 // (PlayerKeyHandler); on VOD Up goes to the seek bar.

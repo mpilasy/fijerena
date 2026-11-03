@@ -19,7 +19,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 /**
  * About: version and build as one focusable row — the group's entry row, so Right from the rail
  * always lands somewhere and Up/Down never skip it (focus contract rule 3); OK counts toward
- * developer mode ([onVersionClick], 7 taps). Then
+ * Admin ([onVersionClick], 7 taps). Then
  * Device info, Logs (Diagnostics, open to every profile that has Settings), Terms of use and
  * Open-source licences, each opening its own screen. Last, the copyright and licence notice.
  */

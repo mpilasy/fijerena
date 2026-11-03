@@ -61,7 +61,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * The player's wait: the iris, reel or ring for [metadata] in the centre, its logo or name at the
- * top left when [showBadge] (in the banner's logo place), and Expert mode's details under it.
+ * top left when [showBadge] (in the banner's logo place), and the Nerd's details under it.
  * [sceneColor] is the colour taken from the frozen frame, null for the accent.
  */
 @Composable
@@ -164,7 +164,7 @@ fun ErrorContent(
                                 },
                             )
 
-                        // Developer-mode stack trace.
+                        // The Nerd's stack trace.
                         CinemaCodeText(
                             text = errorDetails,
                             role = TextRole.Caption,

@@ -78,7 +78,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import java.text.Collator
 
 /**
- * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Developer mode and Play next
+ * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Admin flag and Play next
  * episode automatically, Sources › (with two or more sources), Content filters › (this profile's,
  * on one of its Xtream sources — picked first when it has several, O4 of
  * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, and Delete
@@ -96,7 +96,7 @@ fun MobileProfileEditScreen(
     viewModel: ProfilesViewModel,
     onBack: () -> Unit,
     onProfileSwitched: () -> Unit,
-    /** Admin → Profiles: the Admin rows too (Child, Expert mode, sources, content filters, Delete). */
+    /** Admin → Profiles: the Admin rows too (Child, Admin, sources, content filters, Delete). */
     adminRows: Boolean = false,
     /** A child's page, admin view: "Parental controls ›" (the page is saved first). */
     onParentalControls: () -> Unit = {},
@@ -126,7 +126,7 @@ fun MobileProfileEditScreen(
             val stored = remember(profileId) { viewModel.settingsOf(profileId) }
             var name by rememberSaveable(profileId) { mutableStateOf(profile.name) }
             var colorIndex by rememberSaveable(profileId) { mutableIntStateOf(profile.colorIndex) }
-            var devMode by rememberSaveable(profileId) { mutableStateOf(stored.devMode) }
+            var admin by rememberSaveable(profileId) { mutableStateOf(stored.admin) }
             var autoplayNextEpisode by rememberSaveable(profileId) { mutableStateOf(stored.autoplayNextEpisode) }
             var child by rememberSaveable(profileId) { mutableStateOf(stored.child) }
             var nerd by rememberSaveable(profileId) { mutableStateOf(stored.nerd) }
@@ -136,18 +136,18 @@ fun MobileProfileEditScreen(
                 viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
             }
             var confirmDelete by remember { mutableStateOf(false) }
-            // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
+            // "Set a PIN ›" under the Child switch: the PIN of the Admin profile in use.
             var choosingAdminPin by remember { mutableStateOf(false) }
             if (choosingAdminPin) {
-                profiles.firstOrNull { it.isActive }?.let { admin ->
-                    val warning = if (viewModel.isLastExpert(admin.id)) stringResource(R.string.pin_last_expert_warning) else null
+                profiles.firstOrNull { it.isActive }?.let { inUse ->
+                    val warning = if (viewModel.isLastAdmin(inUse.id)) stringResource(R.string.pin_last_admin_warning) else null
                     PinDialog(
-                        state = rememberPinPromptState(viewModel.pins, PinRequest.Choose(admin.id, warning)) { choosingAdminPin = false },
+                        state = rememberPinPromptState(viewModel.pins, PinRequest.Choose(inUse.id, warning)) { choosingAdminPin = false },
                         onCancel = { choosingAdminPin = false },
                     )
                 }
             }
-            // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
+            // "Switch to this profile" away from a child profile asks an Admin's PIN (the child lock).
             LeaveChildPinDialog(viewModel, onProfileSwitched)
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
@@ -160,7 +160,7 @@ fun MobileProfileEditScreen(
                     profileId,
                     nameNow.trim().ifEmpty { profile.name },
                     colorIndex,
-                    stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode, child = child, nerd = nerd),
+                    stored.copy(admin = admin, autoplayNextEpisode = autoplayNextEpisode, child = child, nerd = nerd),
                 )
             }
             val leave = {
@@ -206,32 +206,32 @@ fun MobileProfileEditScreen(
                     },
                 )
 
-                // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
+                // The admin's: Admin for this profile, its sources and its
                 // content filters (the parental control).
                 if (adminRows) {
                     SettingsGroupHeader(stringResource(R.string.profile_section_admin))
-                    // There is always an Expert: the only one can't turn it off, nor be a child's.
+                    // There is always an Admin: the only one can't turn it off, nor be a child's.
                     val listed by viewModel.profiles.collectAsStateWithLifecycle()
-                    val lastExpert = remember(profileId, listed) { viewModel.isLastExpert(profileId) }
+                    val lastAdmin = remember(profileId, listed) { viewModel.isLastAdmin(profileId) }
                     CinemaSwitchRow(
                         label = stringResource(R.string.profile_child_title),
                         checked = child,
                         onCheckedChange = {
                             child = it
                             if (it) {
-                                devMode = false
+                                admin = false
                                 nerd = false
                             }
                             apply(name)
                         },
                         supportingText =
                             stringResource(
-                                if (devMode && lastExpert) R.string.profile_child_last_expert else R.string.profile_child_desc_phone,
+                                if (admin && lastAdmin) R.string.profile_child_last_admin else R.string.profile_child_desc_phone,
                             ),
-                        enabled = !(devMode && lastExpert),
+                        enabled = !(admin && lastAdmin),
                         modifier = inset,
                     )
-                    // No Expert has a PIN, so the child lock does nothing: the admin in use sets one here.
+                    // No Admin has a PIN, so the child lock does nothing: the admin in use sets one here.
                     if (SwitchLock.ON && child && viewModel.adminPinHolders().isEmpty()) {
                         SettingsListRow(
                             title = stringResource(R.string.profile_child_set_pin),
@@ -239,17 +239,17 @@ fun MobileProfileEditScreen(
                             onClick = { choosingAdminPin = true },
                         )
                     }
-                    // A child profile (adult categories hidden) is never Expert.
+                    // A child profile (adult categories hidden) is never Admin.
                     if (!child) {
                         CinemaSwitchRow(
-                            label = stringResource(R.string.settings_developer_mode_title),
-                            checked = devMode,
+                            label = stringResource(R.string.settings_admin_title),
+                            checked = admin,
                             onCheckedChange = {
-                                devMode = it
+                                admin = it
                                 apply(name)
                             },
-                            supportingText = if (lastExpert) stringResource(R.string.settings_developer_mode_last) else null,
-                            enabled = !lastExpert,
+                            supportingText = if (lastAdmin) stringResource(R.string.settings_admin_last) else null,
+                            enabled = !lastAdmin,
                             modifier = inset,
                         )
                     }
@@ -404,7 +404,7 @@ internal fun ProfileOwnRows(
     val profileId = profile.id
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val inset = Modifier.padding(horizontal = Spacing.md)
-    // The expert-only themes are the admin's.
+    // The admin-only themes are the admin's.
     val adminView = remember { viewModel.viewerIsAdmin }
     // A child's own page has no Name and no PIN.
     val showsNameAndPin = stored.showsNameAndPin(adminView)
@@ -485,13 +485,13 @@ internal fun ProfileOwnRows(
         )
     }
     // The PIN row (the profile pin plan): saved as it is set, like the theme.
-    val onlyExpert = remember(profileId, profiles) { viewModel.isLastExpert(profileId) }
+    val onlyAdmin = remember(profileId, profiles) { viewModel.isLastAdmin(profileId) }
     val pinFlow =
         rememberProfilePinFlow(
             pins = viewModel.pins,
             profileId = profileId,
             own = profile.isActive,
-            lastExpert = stored.devMode && onlyExpert,
+            lastAdmin = stored.admin && onlyAdmin,
         )
     pinFlow.request?.let { request ->
         PinDialog(
@@ -510,7 +510,7 @@ internal fun ProfileOwnRows(
         )
     }
     if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
-        // The last Expert PIN with a child profile: the child lock stops too, on every linked device.
+        // The last Admin PIN with a child profile: the child lock stops too, on every linked device.
         val lastAdminPin = remember(profileId, profiles) { viewModel.isLastAdminPin(profileId) }
         CinemaAlertDialog(
             onDismissRequest = pinFlow::cancel,
@@ -519,7 +519,7 @@ internal fun ProfileOwnRows(
                 CinemaText(
                     listOfNotNull(
                         stringResource(R.string.profile_pin_remove_confirm_text),
-                        if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                        if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_admin) else null,
                     ).joinToString(" "),
                     tone = TextTone.Secondary,
                 )

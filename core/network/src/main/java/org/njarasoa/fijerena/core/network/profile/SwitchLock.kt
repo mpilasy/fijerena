@@ -2,15 +2,15 @@ package org.njarasoa.fijerena.core.network.profile
 
 /**
  * The child lock (the settings flow review plan, SF-D6 to SF-D9): a device that uses a child
- * profile leaves it only after an Expert's PIN, while at least one Expert has a PIN. A switch to
- * another child asks it too; picking the same child asks nothing. With no Expert PIN, there is no
+ * profile leaves it only after an Admin's PIN, while at least one Admin has a PIN. A switch to
+ * another child asks it too; picking the same child asks nothing. With no Admin PIN, there is no
  * lock. Off while [ON] is false.
  */
 sealed interface SwitchLock {
     /** The switch needs no PIN. */
     data object Free : SwitchLock
 
-    /** One of [pinHolders]' PINs (the Expert profiles with a PIN, oldest first) must be typed first. */
+    /** One of [pinHolders]' PINs (the Admin profiles with a PIN, oldest first) must be typed first. */
     data class AskPin(
         val pinHolders: List<String>,
     ) : SwitchLock
@@ -28,7 +28,7 @@ sealed interface SwitchLock {
 
         /**
          * The lock on a switch from [activeId] to [targetId]. [profileIds] are every profile, oldest
-         * first, or null when they could not be read; [isChild] and [isAdminPinHolder] (Expert with
+         * first, or null when they could not be read; [isChild] and [isAdminPinHolder] (Admin with
          * a PIN) read each profile's stored flags.
          */
         fun of(

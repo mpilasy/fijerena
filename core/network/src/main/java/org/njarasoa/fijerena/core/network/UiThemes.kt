@@ -13,13 +13,13 @@ data class ProfileLook(
 /**
  * A packaged UI theme: it sets the colour theme and the Look and Feel together, and while a
  * profile uses it these cannot be changed one by one. The poster background stays the profile's own
- * (docs/plans/20261021_ui-themes-plan.md). [expertOnly]: only an Expert can pick it (a light theme).
+ * (docs/plans/20261021_ui-themes-plan.md). [adminOnly]: only an Admin can pick it (a light theme).
  */
 data class PackagedUiTheme(
     val id: String,
     val themeId: String,
     val uiStyleId: String,
-    val expertOnly: Boolean = false,
+    val adminOnly: Boolean = false,
 )
 
 object UiThemes {
@@ -52,7 +52,7 @@ object UiThemes {
             PackagedUiTheme("console", themeId = "console", uiStyleId = "console"),
             PackagedUiTheme("meadow_dusk", themeId = "meadow_dusk", uiStyleId = "meadow"),
             // Light, so kept for admins as the Meadow and Daylight colour themes are.
-            PackagedUiTheme("meadow", themeId = "meadow", uiStyleId = "meadow", expertOnly = true),
+            PackagedUiTheme("meadow", themeId = "meadow", uiStyleId = "meadow", adminOnly = true),
         )
 
     /** The packaged UI theme [id] names; null for Custom and for an id this build does not know. */

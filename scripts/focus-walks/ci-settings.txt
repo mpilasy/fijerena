@@ -1,7 +1,7 @@
 # CI — the profile picker, the rail to Settings, then Settings' rail and every row for Admin.
 # Run by the nightly TV walk (scripts/ci-tv-walk.sh) on a fresh install with the test household
 # (scripts/seed-test-household.sh): the fake Xtream source "Fake Xtream" (tools/fake-xtream) and
-# the profiles Admin (Expert, in use, no PIN), Guest (a grown-up) and Kid (a child profile, no PIN).
+# the profiles Admin (an Admin, in use, no PIN), Guest (a grown-up) and Kid (a child profile, no PIN).
 # Start: the app just opened on the profile picker, focus on Admin (the profile in use). Ends on
 # Settings' rail row Admin.
 # Written from the code and settings.txt on 2026-10-24, NOT YET RUN: unverified until the first
@@ -12,7 +12,7 @@
 # last; Playback and Display keep only the rows that open the profile's page. Edited by hand from
 # the focus tests, not yet run.
 # Admin settings (2026-10-28): the rail is Your Profile, Admin, About; Admin is one page with the
-# rows of the old Expert groups. Edited by hand from the focus tests, not yet run.
+# rows of the old Admin groups. Edited by hand from the focus tests, not yet run.
 # Logs (2026-10-28): Diagnostics, renamed Logs, moved to About under Device Info; Advanced removed,
 # Shrink Database is the last row of Admin's page, under no header. Edited by hand, not yet run.
 # Admin sections (2026-11-03): Admin lists its five sections; OK opens a section in place of the

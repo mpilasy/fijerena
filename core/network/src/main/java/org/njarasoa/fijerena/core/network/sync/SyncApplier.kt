@@ -164,11 +164,11 @@ class SyncApplier(
             }
         }
         if (applied > 0) {
-            // A child is never Expert: one device may make a profile a child while another makes
-            // it Expert, and the two flags come in separately, in any order.
-            ProfileRepository(context).clearChildExperts()
-            // Two devices may each turn off a different Expert at once, or delete one: keep one.
-            ProfileRepository(context).ensureAnExpert()
+            // A child is never Admin: one device may make a profile a child while another makes
+            // it Admin, and the two flags come in separately, in any order.
+            ProfileRepository(context).clearChildAdmins()
+            // Two devices may each turn off a different Admin at once, or delete one: keep one.
+            ProfileRepository(context).ensureAnAdmin()
         }
         // Volatile records are no step of the clocks: they write nothing to either database.
         records.filterNot { it.key.kind in SyncKind.VOLATILE }.maxOfOrNull { it.hlc }?.let { newest ->

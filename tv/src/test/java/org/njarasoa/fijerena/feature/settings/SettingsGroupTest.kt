@@ -4,13 +4,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The rail's groups (the admin settings plan): Your Profile, Admin (only with Expert mode) and
+ * The rail's groups (the admin settings plan): Your Profile, Admin (only for an Admin) and
  * About (a child profile has no Settings on TV). Only Admin asks the PIN on the way in,
- * and its page holds the parts the Expert groups had, in their rail order.
+ * and its page holds the parts the Admin groups had, in their rail order.
  */
 class SettingsGroupTest {
     @Test
-    fun `an Expert sees Your Profile, Admin and About`() {
+    fun `an Admin sees Your Profile, Admin and About`() {
         assertEquals(
             listOf(SettingsGroup.PROFILES, SettingsGroup.ADMIN, SettingsGroup.ABOUT),
             SettingsGroup.visibleFor(admin = true),
@@ -18,7 +18,7 @@ class SettingsGroupTest {
     }
 
     @Test
-    fun `a grown-up without Expert mode sees Your Profile and About`() {
+    fun `a grown-up who is not an Admin sees Your Profile and About`() {
         assertEquals(
             listOf(SettingsGroup.PROFILES, SettingsGroup.ABOUT),
             SettingsGroup.visibleFor(admin = false),

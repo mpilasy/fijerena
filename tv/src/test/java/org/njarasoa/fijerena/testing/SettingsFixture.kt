@@ -34,7 +34,7 @@ object SettingsFixture {
     private const val WEEK_HOURS = 7 * 24
 
     /**
-     * Admin (Expert, no PIN), Guest (a grown-up, not Expert) and Kid (a child profile), in that
+     * Admin (an Admin, no PIN), Guest (a grown-up, not Admin) and Kid (a child profile), in that
      * order; Admin and Guest have both sources, Kid has the first, which has one guide source.
      * [active] is the profile in use. The profiles in [pins] get the PIN [PIN]; the one in use is
      * unlocked, as after the picker.
@@ -67,7 +67,7 @@ object SettingsFixture {
 
         val settings = AppSettings(context)
         settings.activeProfileId = active
-        settings.setDevMode(ADMIN, true)
+        settings.setAdmin(ADMIN, true)
         settings.setChildProfile(KID, true)
         settings.setProfileSourceKeys(ADMIN, setOf(SOURCE_ONE, SOURCE_TWO))
         settings.setProfileSourceKeys(GUEST, setOf(SOURCE_ONE, SOURCE_TWO))

@@ -70,8 +70,8 @@ class ProfilePins(
     }
 
     /**
-     * Whether [pin] is the PIN of any of [profileIds] — the Expert profiles', where any admin's PIN
-     * will do. Wrong tries count against the first one's (the oldest Expert's), so the wait can't
+     * Whether [pin] is the PIN of any of [profileIds] — the Admin profiles', where any admin's PIN
+     * will do. Wrong tries count against the first one's (the oldest Admin's), so the wait can't
      * be dodged by spreading guesses. Right for an empty list.
      */
     fun checkAny(
@@ -91,10 +91,10 @@ class ProfilePins(
     )
 
     /**
-     * [checkAny] for the child lock: whether [pin] is the PIN of any of [profileIds] (the Expert
+     * [checkAny] for the child lock: whether [pin] is the PIN of any of [profileIds] (the Admin
      * profiles with a PIN), to leave a child profile. Wrong tries count on the child lock's own
      * device count ([AppSettings.childLockFailures]), never on a profile's, so a child's guesses
-     * don't make the Expert wait in Settings. [LeaveCheck.pinOf] says which profile's PIN it was.
+     * don't make the Admin wait in Settings. [LeaveCheck.pinOf] says which profile's PIN it was.
      */
     fun checkToLeaveChild(
         profileIds: List<String>,

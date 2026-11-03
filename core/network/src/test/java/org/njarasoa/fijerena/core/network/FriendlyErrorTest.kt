@@ -122,7 +122,7 @@ class FriendlyErrorTest {
     }
 
     @Test
-    fun rawText_followsOnlyInDeveloperMode() {
+    fun rawText_followsOnlyForANerd() {
         val e = HttpStatusException(404)
 
         assertEquals("not found", friendlyErrorMessage(e, context, includeRaw = false))

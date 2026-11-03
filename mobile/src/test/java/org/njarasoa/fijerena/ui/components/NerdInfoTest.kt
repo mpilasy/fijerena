@@ -36,7 +36,7 @@ class NerdInfoTest {
 
     @After
     fun tearDown() {
-        settings.setDevMode(profile, false)
+        settings.setAdmin(profile, false)
         settings.setNerdMode(profile, false)
     }
 
@@ -45,7 +45,7 @@ class NerdInfoTest {
         nerd: Boolean,
     ) {
         settings.activeProfileId = profile
-        settings.setDevMode(profile, admin)
+        settings.setAdmin(profile, admin)
         settings.setNerdMode(profile, nerd)
     }
 

@@ -29,7 +29,7 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
         )
 
     @Test
-    fun `an Expert walks the part and the Exceptions list`() {
+    fun `an Admin walks the part and the Exceptions list`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toParental(),

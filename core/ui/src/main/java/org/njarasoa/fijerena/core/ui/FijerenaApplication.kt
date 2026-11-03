@@ -82,7 +82,7 @@ class FijerenaApplication :
     override fun onCreate() {
         super.onCreate()
         // First, so anything that goes wrong from here on — startup included — is recorded.
-        // Settings → Diagnostics (developer mode) shows it.
+        // Settings → Diagnostics (Admin) shows it.
         CrashLog.install(this)
         ConnectionLog.install(this)
         // Locks PIN-protected profiles again after a while in the background.
@@ -151,7 +151,7 @@ class FijerenaApplication :
             startupStep("migrateLegacyProfileSettings") {
                 ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
             }
-            // After the step above, which keeps an Expert: one Jellyfin login per source, from
+            // After the step above, which keeps an Admin: one Jellyfin login per source, from
             // the per-profile ones older builds kept — see ProviderRepository.moveJellyfinLoginsToSources().
             startupStep("moveJellyfinLoginsToSources") {
                 ProviderRepository(this@FijerenaApplication).moveJellyfinLoginsToSources()

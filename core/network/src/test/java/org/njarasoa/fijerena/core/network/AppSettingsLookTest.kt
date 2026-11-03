@@ -16,7 +16,7 @@ import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 
-/** The colour theme and the Look and Feel are per profile and synced, like developer mode. */
+/** The colour theme and the Look and Feel are per profile and synced, like Admin. */
 class AppSettingsLookTest {
     private lateinit var prefs: FakeSharedPreferences
     private lateinit var settings: AppSettings

@@ -102,7 +102,7 @@ class SearchViewModel(
             val networkCalls: Int = 0,
             val failedCalls: Int = 0,
             val firstError: String? = null,
-            /** One raw "[dev] <source>: <error>" line per source left out because its search failed (developer mode shows them). */
+            /** One raw "[dev] <source>: <error>" line per source left out because its search failed (a Nerd sees them). */
             val sourceErrors: List<String> = emptyList(),
         ) : UiState()
 

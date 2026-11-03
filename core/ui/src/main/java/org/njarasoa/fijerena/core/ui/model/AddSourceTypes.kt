@@ -11,7 +11,7 @@ private val DEV_ONLY_SOURCE_TYPES = setOf(ProviderType.SMB, ProviderType.LOCAL)
 
 /**
  * The types Add Source offers: all of them in a debug build, otherwise all but SMB and Local.
- * Expert mode does not change this: it is the admin's switch now, and an admin must not see types
+ * Admin does not change this: it is the admin's switch now, and an admin must not see types
  * that do not work. The type of a source being edited ([editedType]) is always kept, so an
  * existing SMB or Local source can still be edited.
  */

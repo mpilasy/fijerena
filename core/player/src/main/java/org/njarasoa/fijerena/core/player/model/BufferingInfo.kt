@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.player.model
 
 /**
- * What a wait for video is made of, for the Expert-mode lines under "Buffering…". Speeds are bits
+ * What a wait for video is made of, for the Nerd's lines under "Buffering…". Speeds are bits
  * per second; a [streamBps] of null is unknown (most live MPEG-TS). [errors] and [lastError] count
  * this wait only, as does [bytesReceived].
  */

@@ -56,7 +56,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings → Profiles: the profile rows (a tap opens the profile's page, [onEdit]) and "Add
- * profile". Without Expert mode ([expertMode] false) no profile row shows (Settings shows the
+ * profile". Without Admin ([adminMode] false) no profile row shows (Settings shows the
  * personal rows of the profile in use in place); Add profile shows for a grown-up ([canAddProfile]),
  * not for a kid. See the live sync plan → User profiles.
  */
@@ -68,23 +68,23 @@ fun ProfilesSettingsRows(
     onAdd: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onEdit: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
-    expertMode: Boolean = true,
+    adminMode: Boolean = true,
     /** The profile in use may add a profile: any grown-up (the profile rules plan, PR-5). */
-    canAddProfile: Boolean = expertMode,
+    canAddProfile: Boolean = adminMode,
     /**
-     * Set when a child profile exists and no Expert has a PIN ([ProfilesViewModel.needsAdminPin]):
+     * Set when a child profile exists and no Admin has a PIN ([ProfilesViewModel.needsAdminPin]):
      * a first row offers the profile in use a PIN, chosen here with these [pins].
      */
     pinNudge: ProfilePins? = null,
-    /** The profile in use is the only Expert: choosing its PIN warns how hard a forgotten one is. */
-    pinNudgeLastExpert: Boolean = false,
-    /** No Expert has a PIN: see [ProfileAddDialog]. */
+    /** The profile in use is the only Admin: choosing its PIN warns how hard a forgotten one is. */
+    pinNudgeLastAdmin: Boolean = false,
+    /** No Admin has a PIN: see [ProfileAddDialog]. */
     noAdminPin: Boolean = false,
 ) {
     var adding by remember { mutableStateOf(false) }
     var choosingPin by remember { mutableStateOf(false) }
     var pinChosen by remember { mutableStateOf(false) }
-    val nudgeFor = profiles.firstOrNull { it.isActive }?.takeIf { expertMode && pinNudge != null && !pinChosen }
+    val nudgeFor = profiles.firstOrNull { it.isActive }?.takeIf { adminMode && pinNudge != null && !pinChosen }
 
     if (nudgeFor != null) {
         SettingsListRow(
@@ -98,7 +98,7 @@ fun ProfilesSettingsRows(
         val prompt =
             rememberPinPromptState(
                 pinNudge,
-                PinRequest.Choose(nudgeFor.id, if (pinNudgeLastExpert) stringResource(R.string.pin_last_expert_warning) else null),
+                PinRequest.Choose(nudgeFor.id, if (pinNudgeLastAdmin) stringResource(R.string.pin_last_admin_warning) else null),
             ) {
                 choosingPin = false
                 pinChosen = true
@@ -106,7 +106,7 @@ fun ProfilesSettingsRows(
         PinDialog(state = prompt, onCancel = { choosingPin = false })
     }
 
-    if (expertMode) {
+    if (adminMode) {
         profiles.forEach { profile ->
             SettingsListRow(
                 title = profile.name,
@@ -153,7 +153,7 @@ fun ProfilesSettingsRows(
             onDismiss = { adding = false },
             noAdminPin = noAdminPin,
             // Only an Admin adds a Nerd (ProfileRules).
-            nerdSwitch = expertMode,
+            nerdSwitch = adminMode,
         )
     }
 }
@@ -167,7 +167,7 @@ internal fun ProfileAddDialog(
     initialColorIndex: Int,
     onSave: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onDismiss: () -> Unit,
-    /** No Expert has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
+    /** No Admin has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
     noAdminPin: Boolean = false,
     /** The profile in use is an Admin: the Nerd switch shows (only an Admin adds a Nerd). */
     nerdSwitch: Boolean = false,

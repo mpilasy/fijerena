@@ -57,7 +57,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 private const val DETAIL_MAX_LINES = 14
 
 /**
- * Settings → Diagnostics on TV (developer mode). Each entry is focusable so the D-pad scrolls
+ * Settings → Diagnostics on TV (Admin). Each entry is focusable so the D-pad scrolls
  * through them. See the rock solid stability resilience plan → F-30.
  */
 @Composable

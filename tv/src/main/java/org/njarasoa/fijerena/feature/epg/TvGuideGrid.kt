@@ -577,7 +577,7 @@ private fun GuideHeader(
         }
 
         // Status: "N of M channels have listings · source · updated …" (GD1), and the dev stats
-        // dimmed beneath it in dev mode only — never in the title (G-10). The date is in the header.
+        // dimmed beneath it for a Nerd only — never in the title (G-10). The date is in the header.
         val statusLine =
             when (state) {
                 is EpgViewModel.UiState.Ready -> {

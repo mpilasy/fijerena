@@ -5,7 +5,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
-/** A failed load in a few characters, for the Expert-mode buffering line: "HTTP 503", "timeout", "DNS". */
+/** A failed load in a few characters, for the Nerd's buffering line: "HTTP 503", "timeout", "DNS". */
 fun loadErrorLabel(error: IOException): String {
     if (error is HttpDataSource.InvalidResponseCodeException) return "HTTP ${error.responseCode}"
     val causes = generateSequence<Throwable>(error) { it.cause }

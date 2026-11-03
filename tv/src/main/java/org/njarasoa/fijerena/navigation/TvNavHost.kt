@@ -36,7 +36,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
-import org.njarasoa.fijerena.core.navigation.isExpertOnly
+import org.njarasoa.fijerena.core.navigation.isAdminOnly
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
@@ -185,9 +185,9 @@ fun TvNavHost(
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
-    // The profile in use has Expert mode: only then does it add sources (Home's Add Source, the gate below).
-    val expert by remember { appSettings.observeDevMode().map { it.second } }
-        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
+    // The profile in use is an Admin: only then does it add sources (Home's Add Source, the gate below).
+    val admin by remember { appSettings.observeAdmin().map { it.second } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isAdmin)
     // The clock over every screen, for every profile, when this device's Show Clock is on.
     val clock = remember { TvClockState() }
     val showClock by remember { appSettings.observeShowClock() }.collectAsStateWithLifecycle(initialValue = appSettings.showClock)
@@ -199,7 +199,7 @@ fun TvNavHost(
     // "Who's watching?" on every launch once a second profile exists — the TV is shared, so the
     // last person's profile is a poor guess (the live sync plan → User profiles).
     var pickProfileAtLaunch by remember { mutableStateOf(false) }
-    // No source at all and an Expert in use: Add Source over Settings at start (E1).
+    // No source at all and an Admin in use: Add Source over Settings at start (E1).
     var addSourceAtStart by remember { mutableStateOf(false) }
     var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
@@ -248,9 +248,9 @@ fun TvNavHost(
         coroutineScope.launch {
             when (val opening = ProfileSections.opening(context, source.providerId)) {
                 // As Home's sign-in prompt: plain navigate, the rail is leaving focus.
-                // The sign-in is the source's form, an Expert's only (PR-12): anyone else asks an admin.
+                // The sign-in is the source's form, an Admin's only (PR-12): anyone else asks an admin.
                 ProfileSections.Opening.SignIn -> {
-                    if (expert) {
+                    if (admin) {
                         navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
                     } else {
                         AppNotices.show(resources.getString(R.string.browse_sign_in_ask_admin))
@@ -296,10 +296,10 @@ fun TvNavHost(
             appSettings.hasProviderCache = providerCount > 0
         }
         if (hasProvider != true) {
-            // A new install's first profile becomes Expert in the background startup work, maybe
+            // A new install's first profile becomes Admin in the background startup work, maybe
             // after this point: the start needs it now (the call does nothing when there is one).
-            ProfileRepository(context.applicationContext).ensureAnExpert()
-            addSourceAtStart = startsOnAddSource(hasSource = false, expert = appSettings.isDevMode)
+            ProfileRepository(context.applicationContext).ensureAnAdmin()
+            addSourceAtStart = startsOnAddSource(hasSource = false, admin = appSettings.isAdmin)
         }
         pickProfileAtLaunch = ProfileRepository(context.applicationContext).count() > 1
         initializationComplete = true
@@ -333,7 +333,7 @@ fun TvNavHost(
                 // Add Source opens over it (the effect after the NavHost).
                 Screen.Settings
             } else {
-                // Not Expert: Home says to ask a grown-up for a source.
+                // Not Admin: Home says to ask a grown-up for a source.
                 Screen.ContentTypeSelection
             }
         }
@@ -569,7 +569,7 @@ fun TvNavHost(
                                     }
                                 },
                                 onBrowse = ::browseSource,
-                                onAddSource = if (expert) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
+                                onAddSource = if (admin) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
                                 onEpgBrowser = {
                                     navController.navigateOnce(Screen.EpgBrowser())
                                 },
@@ -1353,8 +1353,8 @@ fun TvNavHost(
         val entry = navController.currentBackStackEntryAsState().value
         val destination = entry?.destination
         // The household's shared setup (sources, guide sources, live sync, Parental controls) is
-        // the Expert's only, whatever opened it: closed at once.
-        val refused = !expert && entry.isExpertOnly()
+        // the Admin's only, whatever opened it: closed at once.
+        val refused = !admin && entry.isAdminOnly()
         LaunchedEffect(entry, refused) { if (refused) navController.popBackStack() }
         // A child profile has no Settings: a restored back stack, a switch to a child or a stale
         // route closes it and goes Home. Safe mode's Diagnostics stays.

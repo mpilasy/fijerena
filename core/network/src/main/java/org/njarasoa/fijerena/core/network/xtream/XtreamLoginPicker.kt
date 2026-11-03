@@ -165,7 +165,7 @@ object XtreamLoginPicker : AlternateLogin {
 
     override fun loginCount(uri: String): Int = picks[uri]?.count ?: 1
 
-    /** "Login 2 of 3" for developer mode: [uri]'s login's place among its source's, or null. */
+    /** "Login 2 of 3" for a Nerd: [uri]'s login's place among its source's, or null. */
     fun describe(uri: String): Pair<Int, Int>? = picks[uri]?.takeIf { it.count > 1 }?.let { it.index + 1 to it.count }
 
     /** The logins of source [providerId] refused on this device within [BUSY_MS]. */

@@ -158,7 +158,7 @@ Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just
 written (no shared transaction): provider passwords (`provider`; a Jellyfin source's login too),
 category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
-profile `shared`, is ignored), `dev_mode` (per profile), `child_profile` (per profile), `nerd_mode` (per profile), `autoplay_next_episode` (per
+profile `shared`, is ignored), `admin` (per profile; a `dev_mode` record from an older build is applied to it, but `dev_mode` is no longer sent), `child_profile` (per profile), `nerd_mode` (per profile), `autoplay_next_episode` (per
 profile), `pin_hash` (per profile; a removed PIN is sent as blank), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
@@ -673,10 +673,10 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `dev_mode_<profileId>` | BOOLEAN | That profile is an Admin (code: Expert or developer mode) (absent = off). Replaced the install-wide `dev_mode`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
+| `admin_<profileId>` | BOOLEAN | That profile is an Admin (code: `AppSettings.admin`) (absent = off). Synced per profile; removed with the profile. Replaced `dev_mode_<profileId>` and, before it, the install-wide `dev_mode`: a one-time upgrade at startup copies each `dev_mode_<profileId>` to `admin_<profileId>` (unless it is already there), gives the install-wide `dev_mode` to every other profile, and then removes the old keys (read as the fallback until then) |
 | `child_profile_<profileId>` | BOOLEAN | That profile is a child's (absent = off): kids' filters, never Admin or Nerd. Synced per profile; removed with the profile |
 | `nerd_mode_<profileId>` | BOOLEAN | That profile is a Nerd (absent = off): it sees the stats and extra information. Read as off for a child. Synced per profile; removed with the profile — see the Nerd role plan |
-| `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
+| `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `admin` |
 | `pin_hash_<profileId>` | TEXT | That profile's optional 4-digit PIN as `ProfilePins` stores it (`salt:hash`, salted PBKDF2); absent or blank = no PIN. Synced per profile (a removal as blank); removed with the profile — see the profile pin plan |
 | `pin_failures_<profileId>`, `pin_wait_until_<profileId>` | INT, LONG | Wrong PINs in a row for that profile on this device, and when it may be tried again (epoch ms; 0 = now). Per device, never synced; removed with the profile |
 | `child_lock_failures`, `child_lock_wait_until` | INT, LONG | Wrong PINs in a row typed to leave a child profile on this device, and when one may be tried again (epoch ms; 0 = now). The child lock's own count, apart from each profile's. Per device, never synced |

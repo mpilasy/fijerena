@@ -138,7 +138,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         }
     }
 
-    // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
+    // Leaving a child profile asks an Admin's PIN (the child lock); Cancel keeps the child.
     TvLeaveChildPinDialog(viewModel, onProfileChosen)
 }
 

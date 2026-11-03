@@ -10,12 +10,12 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → the rail of groups (`scripts/focus-walks/settings.txt`, its first lines): the
- * groups an Expert and a grown-up see, in order (a child has no Settings). Up and Down never leave the rail.
+ * groups an Admin and a grown-up see, in order (a child has no Settings). Up and Down never leave the rail.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsRailFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert sees Your Profile, Admin and About`() {
+    fun `an Admin sees Your Profile, Admin and About`() {
         open(SettingsFixture.ADMIN)
         walk.assertFocused("Your Profile")
         walk.run(

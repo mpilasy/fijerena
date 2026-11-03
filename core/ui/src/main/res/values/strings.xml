@@ -37,7 +37,7 @@
 
     <!-- Loading Indicators -->
     <string name="loading_buffering">Buffering</string>
-    <!-- Expert mode, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
+    <!-- Nerd, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
     <string name="buffering_detail_progress">%1$s / %2$s s · %3$s s</string>
     <string name="buffering_detail_receiving">↓ %1$s</string>
     <string name="buffering_detail_stream_needs">stream needs %1$s</string>
@@ -672,11 +672,11 @@
     <string name="terms_s8_title">Changes</string>
     <string name="terms_s8_body">These terms can change. The version in the app that you use is the one that applies. If a translation is different from the English text, the English text applies.</string>
     <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → Terms of Use.</string>
-    <string name="settings_developer_mode_title">Admin</string>
-    <string name="settings_developer_mode_desc">Lets this profile change sources, profiles, parental controls and backups</string>
+    <string name="settings_admin_title">Admin</string>
+    <string name="settings_admin_desc">Lets this profile change sources, profiles, parental controls and backups</string>
     <string name="profile_nerd_title">Nerd</string>
     <string name="profile_nerd_desc">Shows technical details</string>
-    <string name="settings_developer_mode_last">The only admin profile stays an admin: make another profile an admin first.</string>
+    <string name="settings_admin_last">The only admin profile stays an admin: make another profile an admin first.</string>
     <string name="settings_diagnostics_title">Logs</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
     <string name="settings_diagnostics_empty">Nothing recorded.</string>
@@ -945,7 +945,7 @@
     <string name="profile_favorites_search">Search films, shows and channels</string>
     <string name="profile_favorites_none">No favourites yet. Search to add some.</string>
     <string name="profile_favorites_no_results">Nothing found that %1$s may watch.</string>
-    <string name="profile_child_last_expert">The only admin profile can\'t be a child\'s: make another profile an admin first.</string>
+    <string name="profile_child_last_admin">The only admin profile can\'t be a child\'s: make another profile an admin first.</string>
     <string name="profile_source_no_filters">Content filters don\'t reach this source</string>
     <string name="settings_pin_nudge_title">Set a PIN for Settings</string>
     <string name="settings_pin_nudge_desc">There is a child profile but no admin has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles.</string>
@@ -1390,8 +1390,8 @@
     <string name="tmdb_attribution_title">Film and Show Data</string>
     <string name="epg_xmltv_url_hint">The address of an XMLTV guide file (.xml or .xml.gz), from your provider or a guide site.</string>
     <string name="epg_timezone_hint">Only if programmes show at the wrong time. Usually 0.</string>
-    <string name="settings_developer_mode_enabled">This profile is an admin</string>
-    <string name="settings_developer_mode_taps_left">Admin: %1$d to go</string>
+    <string name="settings_admin_enabled">This profile is an admin</string>
+    <string name="settings_admin_taps_left">Admin: %1$d to go</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Rounded</string>
     <string name="ui_style_sharp">Sharp</string>
@@ -1438,7 +1438,7 @@
     <string name="profile_pin_remove">Remove PIN</string>
     <string name="profile_pin_remove_confirm_title">Remove the PIN?</string>
     <string name="profile_pin_remove_confirm_text">Settings will not ask for a PIN on this profile any more.</string>
-    <string name="profile_pin_remove_last_expert">This is the last admin PIN: the child lock stops on every device linked by live sync.</string>
+    <string name="profile_pin_remove_last_admin">This is the last admin PIN: the child lock stops on every device linked by live sync.</string>
     <string name="pin_choose">Choose a 4-digit PIN</string>
     <string name="pin_repeat">Enter the same PIN again</string>
     <string name="pin_mismatch">The two PINs differ: choose one again.</string>
@@ -1453,7 +1453,7 @@
     <string name="pin_seconds">%1$d s</string>
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Erase</string>
-    <string name="pin_last_expert_warning">This is the only admin profile: if its PIN is forgotten, only clearing the app’s data opens Admin again.</string>
+    <string name="pin_last_admin_warning">This is the only admin profile: if its PIN is forgotten, only clearing the app’s data opens Admin again.</string>
     <string name="pin_enter_admin">Enter the PIN of an admin profile</string>
     <string name="pin_use_phone">Use my phone</string>
     <string name="pin_use_tv">Use the TV</string>
