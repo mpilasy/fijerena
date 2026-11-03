@@ -66,6 +66,9 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * focus scale and keeps the rest of the look, so the focused button stands out from the others
  * on the screen. Built on a clickable [Surface] rather than TV Material's `Button`, whose label
  * stays at the left of a wide button.
+ *
+ * [highlighted] draws the button as a focused one without focus: a choice made by keys that never
+ * moves focus (the reminder banner's Watch or Dismiss).
  */
 @Composable
 fun CinemaButton(
@@ -73,14 +76,15 @@ fun CinemaButton(
     modifier: Modifier = Modifier,
     kind: ButtonKind = ButtonKind.Other,
     enabled: Boolean = true,
+    highlighted: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val scale = LocalUiScale.current
     val shape = TvButtonStyle.shape
-    val container = TvButtonStyle.container(kind)
-    val contentColor = TvButtonStyle.content(kind)
     val focusedContainer = TvButtonStyle.focusedContainer
     val focusedContent = TvButtonStyle.focusedContent(kind)
+    val container = if (highlighted) focusedContainer else TvButtonStyle.container(kind)
+    val contentColor = if (highlighted) focusedContent else TvButtonStyle.content(kind)
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -102,14 +106,14 @@ fun CinemaButton(
             ),
         scale =
             ClickableSurfaceDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
+                scale = if (highlighted) TvFocusTokens.focusedScale else TvFocusTokens.defaultScale,
                 focusedScale = TvFocusTokens.focusedScale,
                 pressedScale = TvFocusTokens.pressedScale,
                 disabledScale = TvFocusTokens.defaultScale,
             ),
         border =
             ClickableSurfaceDefaults.border(
-                border = TvButtonStyle.outline(kind)?.let { Border(it, shape = shape) } ?: Border.None,
+                border = TvButtonStyle.outline(kind)?.takeUnless { highlighted }?.let { Border(it, shape = shape) } ?: Border.None,
                 focusedBorder = Border.None,
                 pressedBorder = Border.None,
                 disabledBorder = Border.None,
@@ -178,8 +182,9 @@ fun CinemaTextLabelButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    highlighted: Boolean = false,
 ) {
-    CinemaButton(onClick = onClick, modifier = modifier, kind = kind, enabled = enabled) {
+    CinemaButton(onClick = onClick, modifier = modifier, kind = kind, enabled = enabled, highlighted = highlighted) {
         // An icon before the label (Play's ▶ as the play icon, never a text glyph).
         if (icon != null) {
             TvIcon(imageVector = icon, contentDescription = null)
@@ -197,7 +202,8 @@ fun CinemaPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
-) = CinemaTextLabelButton(onClick, text, ButtonKind.Main, modifier, enabled, icon)
+    highlighted: Boolean = false,
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Main, modifier, enabled, icon, highlighted)
 
 /** Any other action ([ButtonKind.Other]): Cancel, Back, Retry. */
 @Composable
@@ -206,7 +212,8 @@ fun CinemaSecondaryButton(
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) = CinemaTextLabelButton(onClick, text, ButtonKind.Other, modifier, enabled)
+    highlighted: Boolean = false,
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Other, modifier, enabled, highlighted = highlighted)
 
 /** Deletes or wipes something ([ButtonKind.Danger]). */
 @Composable

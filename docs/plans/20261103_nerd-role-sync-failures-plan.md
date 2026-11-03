@@ -112,13 +112,16 @@ Four changes from the user (2026-11-03):
 
 ### R — Reminder banner takes focus (TV)
 
-- When an alert arrives, the banner arms and takes focus at once (Watch, else Dismiss). Remove the
-  Menu / held-OK arming and the "Hold OK or press Menu" hint.
-- Trap focus in the banner by the in-tree overlay rule:
-  `.focusProperties { onExit = { cancelFocusChange() } }.focusGroup()`.
-- Up and Down are swallowed; Left and Right move between the buttons; OK acts; Back dismisses.
-  On close, focus goes back to where it was (existing `contentFocus` and `focusRestorer`).
-- The 30 s auto-close runs whatever has focus.
+- When an alert arrives, the banner takes the remote's keys at once, but never Compose focus
+  ("keys, not focus"). Remove the Menu / held-OK arming and the "Hold OK or press Menu" hint.
+- `reminderBannerKeys` (`onPreviewKeyEvent` on the screen's content) sends every key to the banner
+  while it shows. Left and Right choose Watch or Dismiss (Watch first, else Dismiss); the chosen
+  button is drawn as focused (`CinemaButton(highlighted = true)`). OK acts on KeyUp; Back closes.
+  Up, Down and all other keys are swallowed; volume keys go through.
+- Focus never moves, so the control under the banner (also one nested in a list) keeps focus when
+  it closes. The first version took focus and lost a nested control on close (`focusRestorer`
+  keeps only its direct child).
+- The 30 s auto-close stays.
 - A Dialog window is open: the banner waits and shows when the dialog closes (still inside its
   30 s), so it never sits unreachable under the dialog.
 - During full-screen playback the player gets no keys while the banner is up; that is RQ-1.
