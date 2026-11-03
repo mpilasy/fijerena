@@ -229,8 +229,8 @@
     <string name="epg_source_stat_channels">Channels</string>
     <string name="epg_source_stat_programmes">Programmes</string>
     <string name="epg_source_stat_unchanged">Unchanged</string>
-    <string name="epg_source_stat_last_failure">Last Failure</string>
-    <string name="epg_source_stat_failures">Failures Since Last Success</string>
+    <string name="epg_source_stat_last_failure">Last failure</string>
+    <string name="epg_source_stat_failures">Failures since last success</string>
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
     <string name="epg_add_source_title">Add Guide Source</string>
