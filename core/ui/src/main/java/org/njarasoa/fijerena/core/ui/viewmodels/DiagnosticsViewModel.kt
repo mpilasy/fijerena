@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.ProcessExits
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.diagnostics.TraceCauses
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.io.File
 
 /**
  * Settings → Diagnostics (developer mode): exceptions this app recorded itself ([CrashLog]), the
@@ -64,6 +65,20 @@ class DiagnosticsViewModel(
     fun asText(entries: List<Entry>): String =
         Redact.text(entries.joinToString("\n\n") { listOfNotNull(it.title, it.detail, it.trace).joinToString("\n") })
 
+    /**
+     * Writes [entries] as [asText] to a new file in the cache, for Share. The whole log can be near
+     * 1 MB, and a text extra that big passes Binder's 1 MB transaction limit: the share crashed
+     * with TransactionTooLargeException. A file goes by its content URI instead. Older share files
+     * are deleted first, so the folder holds one at most.
+     */
+    suspend fun writeShareFile(entries: List<Entry>): File =
+        withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, SHARE_DIR).apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date())
+            File(dir, "fijerena-logs-$stamp.txt").apply { writeText(asText(entries)) }
+        }
+
     private fun load(): List<Entry> {
         val recorded =
             CrashLog.read().map(Redact::text).map { raw ->
@@ -96,6 +111,25 @@ class DiagnosticsViewModel(
                 )
             }
         return (recorded + connections + exits).sortedByDescending { it.timestampMs }
+    }
+
+    companion object {
+        /** The cache subfolder that Share files go in; the FileProvider paths name it too. */
+        const val SHARE_DIR = "shared_logs"
+
+        /**
+         * Whether [entry] matches a search [query]: each word of the query, in any order and case,
+         * is in the entry's title, detail or stack trace. A blank query matches every entry.
+         */
+        fun matches(
+            entry: Entry,
+            query: String,
+        ): Boolean =
+            query.split(' ', '\t').filter { it.isNotEmpty() }.all { word ->
+                entry.title.contains(word, ignoreCase = true) ||
+                    entry.detail.contains(word, ignoreCase = true) ||
+                    entry.trace?.contains(word, ignoreCase = true) == true
+            }
     }
 
     private fun formatTime(epochMs: Long): String =
