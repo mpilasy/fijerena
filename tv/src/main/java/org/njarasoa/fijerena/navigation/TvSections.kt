@@ -193,16 +193,23 @@ internal fun TvSectionRail(
         val destination = entry?.destination ?: return@LaunchedEffect
         val section = navController.currentSection()
         homeOnStack = navController.isOnBackStack(Screen.ContentTypeSelection)
-        source = loadRailSource(context)
+
         // A Browse entry's list on top: that entry is lit, not Home, and not the section it was
         // pushed over (Browse opens over where you are, so a section's root can be under it).
-        val browsed =
-            litBrowse(
-                entry?.takeIf { destination.hasRoute<Screen.CategoryList>() }?.toRoute<Screen.CategoryList>()?.providerId,
-                source?.browse.orEmpty().map { it.providerId },
-            )
-        rail.currentBrowse = browsed
-        rail.current = if (browsed != null) null else railCurrent(destination.topScreen(), section)
+        fun lightCurrent() {
+            val browsed =
+                litBrowse(
+                    entry?.takeIf { destination.hasRoute<Screen.CategoryList>() }?.toRoute<Screen.CategoryList>()?.providerId,
+                    source?.browse.orEmpty().map { it.providerId },
+                )
+            rail.currentBrowse = browsed
+            rail.current = if (browsed != null) null else railCurrent(destination.topScreen(), section)
+        }
+        // At once, from the sources last read: a pick made while they load again must not see the
+        // item of the screen that left (the rail's picks read it).
+        lightCurrent()
+        source = loadRailSource(context)
+        lightCurrent()
         withContext(Dispatchers.IO) {
             val settings = AppSettings(context.applicationContext)
             activeProfileId = settings.activeProfileId
