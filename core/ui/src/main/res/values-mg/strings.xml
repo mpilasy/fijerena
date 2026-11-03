@@ -28,7 +28,7 @@
     <!-- EPG Management UI -->
     <string name="epg_add_source">Hampiditra loharanon\'ny fitarihana</string>
     <string name="epg_refresh_stale_btn">Havaozy ny lany andro (%1$d)</string>
-    <string name="epg_retry_failed_btn">Haverina ny tsy nahomby (%1$d)</string>
+    <string name="epg_retry_failed_btn">Haverina ny tsy nety (%1$d)</string>
     <string name="epg_clear_all_data_btn">Fafao daholo ny angona</string>
     <string name="epg_auto_refresh_title">Fanavaozana ho azy</string>
     <string name="epg_sources_header">Ireo loharanon\'ny fitarihana</string>
@@ -88,7 +88,7 @@
     <string name="settings_language_fr">Français</string>
     <string name="settings_export_success">Voaalefa soa aman-tsara ny fandrindrana</string>
     <string name="settings_export_failed">Tsy voaalefa ny fandrindrana</string>
-    <string name="settings_import_failed">Tsy nahomby ny fampidirana: %1$s</string>
+    <string name="settings_import_failed">Tsy nety ny fampidirana: %1$s</string>
 
     <!-- Common -->
     <string name="common_close">Akatony</string>
@@ -176,7 +176,7 @@
 
     <!-- EPG Guide UI -->
     <string name="epg_loading_guide">Ao ary jerena ny fandaharana…</string>
-    <string name="epg_error_loading">Tsy nahomby ny fakana ny fandaharana</string>
+    <string name="epg_error_loading">Tsy nety ny fakana ny fandaharana</string>
     <string name="epg_prev_day">Iray andro mialoha</string>
     <string name="epg_next_day">Iray andro manaraka</string>
     <string name="epg_jump_to_now">Izao</string>
@@ -261,7 +261,7 @@
     <string name="watched_unmark_season">Mariho ho mbola tsy nojerena ny vanim-potoana</string>
     <string name="watched_mark_show">Mariho ho efa nojerena ny andian-tantara</string>
     <string name="watched_unmark_show">Mariho ho mbola tsy nojerena ny andian-tantara</string>
-    <string name="watched_mark_many_failed">Tsy nahomby ny fanovana ny marika efa nojerena</string>
+    <string name="watched_mark_many_failed">Tsy nety ny fanovana ny marika efa nojerena</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
@@ -306,7 +306,7 @@
     <string name="provider_error_m3u_url_required">Ilaina ny URL-n\'ny lisitra M3U</string>
     <string name="provider_connecting">Mifandray…</string>
     <string name="provider_saving">Mitahiry…</string>
-    <string name="provider_connection_failed">Tsy nahomby ny fifandraisana</string>
+    <string name="provider_connection_failed">Tsy nety ny fifandraisana</string>
     <string name="provider_save_anyway">Tehirizo ihany</string>
     <string name="provider_go_back">Hiverina</string>
     <string name="provider_clear_cache_all_title">Hofafana daholo ve ny cache?</string>
@@ -398,9 +398,9 @@
     <string name="provider_tv_shows_label">Andian-tantara</string>
     <string name="provider_tv_shows_stats">Sokajy %1$s · Andian-tantara %2$s · Fizarana %3$s</string>
     <string name="provider_epg_stats">Fandaharana: fantsona %1$s</string>
-    <string name="provider_qc_init_failed">Tsy nahomby ny fanombohana ny Quick Connect</string>
-    <string name="provider_qc_poll_failed">Tsy nahomby ny fanamarinana: %1$s</string>
-    <string name="provider_qc_auth_failed">Tsy nahomby ny fidirana: %1$s</string>
+    <string name="provider_qc_init_failed">Tsy nety ny fanombohana ny Quick Connect</string>
+    <string name="provider_qc_poll_failed">Tsy nety ny fanamarinana: %1$s</string>
+    <string name="provider_qc_auth_failed">Tsy nety ny fidirana: %1$s</string>
     <string name="provider_qc_timeout">Ela loatra ny fiandrasana fankatoavana. Andramo indray.</string>
     <string name="provider_connecting_server">Mifandray amin\'ny mpizara…</string>
     <string name="provider_qc_enter_code">Ampidiro ao amin\'ny Jellyfin ity kaody ity:</string>
@@ -441,7 +441,7 @@
     <string name="movie_play_action">Alefaso ny sarimihetsika</string>
     <string name="movie_director_format">Mpanatontosa: %1$s</string>
     <string name="movie_loading_details">Maka ny antsipirian\'ny sarimihetsika…</string>
-    <string name="movie_error_loading">Tsy nahomby ny fakana ny sarimihetsika</string>
+    <string name="movie_error_loading">Tsy nety ny fakana ny sarimihetsika</string>
     <string name="movie_back_to_movies">Hiverina amin\'ny Sarimihetsika</string>
 
     <!-- Episode Selection -->
@@ -460,7 +460,7 @@
     <string name="series_aired_format">Nalefa: %1$s</string>
     <string name="series_bitrate_format">Tahan\'ny bit: %1$s kbps</string>
     <string name="series_loading_episodes">Maka ny fizarana…</string>
-    <string name="series_error_loading">Tsy nahomby ny fakana ny fizarana</string>
+    <string name="series_error_loading">Tsy nety ny fakana ny fizarana</string>
     <string name="series_back_to_list">Hiverina amin\'ny Andian-tantara</string>
     <string name="series_season_label">Vanim-potoana %1$d</string>
     <string name="series_episode_label">Fizarana %1$d</string>
@@ -627,8 +627,8 @@
     <!-- Content Type Selection -->
     <string name="home_source_updating">Manavao…</string>
     <string name="home_source_updated">Nohavaozina %1$s</string>
-    <string name="home_source_update_failed">Tsy nahomby ny fanavaozana</string>
-    <string name="home_source_update_failed_detail">Tsy nahomby ny fanavaozana farany: %1$s</string>
+    <string name="home_source_update_failed">Tsy nety ny fanavaozana</string>
+    <string name="home_source_update_failed_detail">Tsy nety ny fanavaozana farany: %1$s</string>
     <string name="home_sync_loading_channels">Maka ny fantsona… %1$s</string>
     <string name="home_sync_loading_films">Maka ny sarimihetsika… %1$s</string>
     <string name="home_sync_loading_shows">Maka ny andian-tantara… %1$s</string>
@@ -727,16 +727,16 @@
     <!-- Connection test error messages -->
     <string name="provider_error_invalid_credentials">Diso ny fangatahana fidirana</string>
     <string name="provider_error_account_inactive_format">Tsy mavitrika ny kaonty: %1$s</string>
-    <string name="provider_error_connection_failed">Tsy nahomby ny fifandraisana</string>
+    <string name="provider_error_connection_failed">Tsy nety ny fifandraisana</string>
     <string name="category_select_to_view_channels">Misafidiana sokajy hijerena ny fantsona</string>
     <string name="category_no_channels">Tsy misy fantsona amin\'ity sokajy ity.</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fantsona: %1$s</string>
+    <string name="epg_error_load_channels_format">Tsy nety ny fakana ny fantsona: %1$s</string>
     <string name="epg_error_load_data_format">Tsy azo ny fandaharana: %1$s</string>
 
     <!-- ViewModel error-fallback audit fixes -->
-    <string name="category_error_connection_failed_format">Tsy nahomby ny fifandraisana: %1$s</string>
+    <string name="category_error_connection_failed_format">Tsy nety ny fifandraisana: %1$s</string>
     <string name="category_favorite_categories_label">Sokajy ankafizina</string>
     <string name="category_recent_categories_label">Sokajy vao haingana</string>
     <string name="category_recent_label">Vao haingana</string>
@@ -1121,7 +1121,7 @@
     <string name="time_ago_hours">%1$d ora lasa izay</string>
     <string name="time_ago_days" tools:ignore="PluralsCandidate">%1$d andro lasa izay</string>
     <string name="live_sync_status_never">Mbola tsy nampifanarahana</string>
-    <string name="live_sync_status_failed">Tsy nahomby ny fampifanarahana farany. Haverina ho azy izy.</string>
+    <string name="live_sync_status_failed">Tsy nety ny fampifanarahana farany. Haverina ho azy izy.</string>
     <string name="live_sync_server_line">Mpizara: %1$s</string>
     <string name="live_sync_now">Ampifanaraho izao</string>
     <string name="live_sync_full_resync">Ampifanaraho daholo</string>
@@ -1253,7 +1253,7 @@
     <string name="device_info_job_running">Mandeha</string>
     <string name="device_info_job_blocked">Voasakana</string>
     <string name="device_info_job_succeeded">Nahomby</string>
-    <string name="device_info_job_failed">Tsy nahomby</string>
+    <string name="device_info_job_failed">Tsy nety</string>
     <string name="device_info_job_cancelled">Nofoanana</string>
     <!-- TV polish: browse and Live TV -->
     <plurals name="catchup_badge_description">
@@ -1408,8 +1408,8 @@
     <string name="home_sync_updating_count">Fanavaozana %1$d amin\'ny %2$d…</string>
     <string name="home_sync_updating_count_phase">Fanavaozana %1$d amin\'ny %2$d · %3$s</string>
     <plurals name="home_sync_failed_count">
-        <item quantity="one">%1$d tsy nahomby</item>
-        <item quantity="other">%1$d tsy nahomby</item>
+        <item quantity="one">%1$d tsy nety</item>
+        <item quantity="other">%1$d tsy nety</item>
     </plurals>
     <string name="home_sources_status_title">Ny loharanonao</string>
     <string name="home_no_sources">Mbola tsy manana loharano ity mombamomba ity.</string>

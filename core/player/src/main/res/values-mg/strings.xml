@@ -13,7 +13,7 @@
     <string name="player_error_codec_unsupported_format">Tsy raisin\'ity fitaovana ity ny codec: %1$s</string>
     <string name="player_format_dolby_vision_profile">Dolby Vision profil %1$d</string>
     <string name="player_error_format_unsupported">Tsy raisin\'ity fitaovana ity ny endriky ny sarimihetsika</string>
-    <string name="player_error_network_failed">Tsy nahomby ny tambajotra. Jereo ny fifandraisanao amin\'ny internet.</string>
+    <string name="player_error_network_failed">Tsy nety ny tambajotra. Jereo ny fifandraisanao amin\'ny internet.</string>
     <string name="player_error_connection_lost">Tapaka ny fifandraisana: tsy nisy angona nandritra ny iray minitra. Hamarino ny fifandraisanao dia andramo indray.</string>
     <string name="player_error_http_401">Nolavin\'ny loharano ny fidirana. Hamarino ny anaram-pikambanana sy ny tenimiafina.</string>
     <string name="player_error_http_403">Voarara ny fidirana. Angamba tapitra ny fandraisanao anjara.</string>

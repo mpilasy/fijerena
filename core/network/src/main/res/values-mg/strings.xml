@@ -12,20 +12,20 @@
     <!-- Friendly error messages -->
     <string name="error_no_internet">Tsy tratra ny mpizara. Jereo ny fifandraisanao amin\'ny internet.</string>
     <string name="error_timeout">Ela loatra ny valin\'ny mpizara. Andramo indray.</string>
-    <string name="error_ssl">Tsy nahomby ny fifandraisana voaaro. Jereo ny adiresin\'ny mpizara.</string>
+    <string name="error_ssl">Tsy nety ny fifandraisana voaaro. Jereo ny adiresin\'ny mpizara.</string>
     <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
-    <string name="error_unauthorized">Tsy nahomby ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
+    <string name="error_unauthorized">Tsy nety ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
     <string name="error_generic">Nisy olana. Andramo indray.</string>
     <string name="error_not_found">Tsy nisy hita tamin\'io adiresy io. Jereo ny URL.</string>
     <string name="error_server">Nisy olana tamin\'ny mpizara. Andramo indray rehefa afaka kelikely.</string>
     <string name="error_invalid_playlist">Tsy lisitra M3U no hita amin\'io adiresy io. Jereo ny URL.</string>
-    <string name="error_catalog_sync_failed">Tsy nahomby ny fanavaozana ny lisitra. %1$s</string>
-    <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
+    <string name="error_catalog_sync_failed">Tsy nety ny fanavaozana ny lisitra. %1$s</string>
+    <string name="sync_error_download_failed">Tsy nety ny fakana</string>
 
     <!-- Settings export/import -->
     <string name="settings_export_error_read_file">Tsy afaka namaky ny rakitra</string>
     <string name="settings_export_error_invalid_format">Tsy rakitra fandrindrana Fijerena ity rakitra ity.</string>
-    <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
+    <string name="settings_export_summary_import_failed_format">Tsy nety ny fampidirana: %1$s</string>
     <string name="settings_export_summary_providers_format">Loharano: %1$s</string>
     <plurals name="settings_export_item_added_format">
         <item quantity="one">%1$d nampidirina</item>
@@ -84,8 +84,8 @@
 
     <!-- EpgFileManager error fallbacks -->
     <plurals name="epg_error_task_failed_retries_format">
-        <item quantity="one">Tsy nahomby aorian\'ny fanandramana %1$d</item>
-        <item quantity="other">Tsy nahomby aorian\'ny fanandramana %1$d</item>
+        <item quantity="one">Tsy nety aorian\'ny fanandramana %1$d</item>
+        <item quantity="other">Tsy nety aorian\'ny fanandramana %1$d</item>
     </plurals>
     <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
     <string name="epg_error_came_back_empty">Foana ny fitarihana azo (tsy misy fantsona). Hamerina indray ny fanavaozana manaraka.</string>

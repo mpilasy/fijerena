@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Guide refresh works on mobile data:** on Guide Sources, Refresh stale, Retry failed and a source's Refresh did nothing on mobile data: they waited for a question that never showed (only after a video had played, before it the app took the network for Wi-Fi). The page now asks "Use Mobile Data?"; Refresh starts it, Cancel drops it. TV and phone.
+- **Malagasy: "tsy nety" for a failure:** the Malagasy messages that said "tsy nahomby" now say "tsy nety", as the sync status does ("Haverina ny tsy nety", "Tsy nety ny fifandraisana"). TV and phone.
 
 ## Version: 0.9.20261103162615
 
