@@ -179,7 +179,7 @@ import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -2527,7 +2527,7 @@ internal fun StreamCard(
         val categoryTag = remember(categoryName) { categoryNameAsTag(categoryName) }
         val categoryText = categoryName.takeIf { categoryTag == null }
         // Badges show in Expert mode only (SourceBadge).
-        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLine = sourceName?.takeIf { LocalNerd.current }
         val sourceLineText =
             when {
                 sourceLine == null -> null

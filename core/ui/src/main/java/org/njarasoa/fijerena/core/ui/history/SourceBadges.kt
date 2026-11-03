@@ -14,8 +14,12 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
-/** Whether source badges show: only while the profile in use has Expert mode (developer mode) on. */
-val LocalShowSourceBadges = compositionLocalOf { false }
+/**
+ * The profile in use is a Nerd: it sees the stats and extra information, source badges first. Read
+ * by every composable that shows them; view models read [AppSettings.isNerdMode]. See
+ * docs/plans/20261103_nerd-role-sync-failures-plan.md.
+ */
+val LocalNerd = compositionLocalOf { false }
 
 /**
  * The sources' badge short names ("X4P", [SourceShortNames]): by source id, and by name for the
@@ -29,7 +33,7 @@ data class SourceShortNameMap(
 val LocalSourceShortNames = compositionLocalOf { SourceShortNameMap() }
 
 /**
- * Provides [LocalShowSourceBadges] and [LocalSourceShortNames] to [content], following profile
+ * Provides [LocalNerd] and [LocalSourceShortNames] to [content], following profile
  * switches, the profile's Expert mode and every source's name and short name.
  */
 @Composable
@@ -51,7 +55,7 @@ fun ProvideSourceBadges(content: @Composable () -> Unit) {
         }
     }.collectAsState(initial = SourceShortNameMap())
     CompositionLocalProvider(
-        LocalShowSourceBadges provides show,
+        LocalNerd provides show,
         LocalSourceShortNames provides shortNames,
         content = content,
     )

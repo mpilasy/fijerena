@@ -101,7 +101,7 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -852,7 +852,7 @@ internal fun StreamItem(
         val categoryTag = remember(categoryName) { categoryNameAsTag(categoryName) }
         val categoryText = categoryName.takeIf { categoryTag == null }
         // Badges show in Expert mode only (SourceBadge).
-        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLine = sourceName?.takeIf { LocalNerd.current }
         val sourceLineText =
             when {
                 sourceLine == null -> {

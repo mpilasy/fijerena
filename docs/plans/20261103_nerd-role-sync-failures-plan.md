@@ -233,7 +233,7 @@ t2  lead merges in order of finishing → full suite → emulator walks
 
 | Phase | Status | Commit |
 |-------|--------|--------|
-| 0 | In progress | |
+| 0 | Done | (this commit) |
 | R | In progress | |
 | S | In progress | |
 | A | In progress | |

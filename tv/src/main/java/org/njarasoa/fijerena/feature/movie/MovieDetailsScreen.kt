@@ -89,7 +89,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -965,7 +965,7 @@ private fun DetailsTabContent(
             )
         }
         // Expert mode only, like the source badges.
-        if (LocalShowSourceBadges.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
+        if (LocalNerd.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.sm))

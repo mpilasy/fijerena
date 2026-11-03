@@ -18,7 +18,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.robolectric.RobolectricTestRunner
 
 /**
@@ -41,7 +41,7 @@ class CardLinesTest {
         admin: Boolean = true,
     ) {
         composeTestRule.setContent {
-            CompositionLocalProvider(LocalShowSourceBadges provides admin) {
+            CompositionLocalProvider(LocalNerd provides admin) {
                 Box {
                     cards.forEachIndexed { i, card ->
                         Box(Modifier.testTag("card$i")) {

@@ -242,6 +242,7 @@ class ProfileRepository(
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
                     AppSettings(context).removeChildProfile(id)
+                    AppSettings(context).removeNerdMode(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
                     AppSettings(context).removeChartsShowMissing(id)
                     AppSettings(context).removePin(id)

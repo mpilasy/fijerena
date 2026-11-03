@@ -146,7 +146,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -1705,7 +1705,7 @@ private fun SeriesDetailsTabContent(
             )
         }
         // Expert mode only, like the source badges.
-        if (LocalShowSourceBadges.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
+        if (LocalNerd.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -2190,7 +2190,7 @@ private fun EpisodeDetailPanel(
 
                 // The source last and labelled: alone at the top it read as a heading (TV UI audit, #12).
                 // Expert mode only, like the source badges.
-                if (LocalShowSourceBadges.current) {
+                if (LocalNerd.current) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(
                         text = "${stringResource(R.string.details_label_source)} $providerName",

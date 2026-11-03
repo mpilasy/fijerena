@@ -44,6 +44,9 @@ class AppSettings(
 
         /** A child profile ([isChildProfile]); public for the sync applier, which re-applies the filters. */
         const val KEY_CHILD_PROFILE = "child_profile"
+
+        /** A Nerd profile ([nerdMode]): it sees the stats and extra information. */
+        private const val KEY_NERD_MODE = "nerd_mode"
         private const val KEY_RECENT_ROW_SIZE = "recent_row_size"
         private const val KEY_PER_SOURCE_PLAYBACK_MOVED = "per_source_playback_moved_v1"
         private const val KEY_PIN_HASH = "pin_hash"
@@ -119,6 +122,7 @@ class AppSettings(
                 KEY_TMDB_API_KEY,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
+                KEY_NERD_MODE,
                 KEY_CHARTS_SHOW_MISSING,
             ) + ParentalList.entries.map { it.key }
         val PER_PROFILE_SETTING_KEYS =
@@ -131,6 +135,7 @@ class AppSettings(
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
+                KEY_NERD_MODE,
                 KEY_CHARTS_SHOW_MISSING,
             )
 
@@ -226,6 +231,27 @@ class AppSettings(
         }
         SettingsSyncQueue.setting(context, KEY_CHILD_PROFILE, profileId)
     }
+
+    /**
+     * The active profile is a Nerd: it sees the stats and extra information (source badges, stream
+     * statistics, raw error text). Per profile and synced; off until turned on. A child is never a
+     * Nerd. See docs/plans/20261103_nerd-role-sync-failures-plan.md.
+     */
+    val isNerdMode: Boolean get() = nerdMode(activeProfileId)
+
+    /** [profileId] is a Nerd, whichever profile this device uses; never for a child. */
+    fun nerdMode(profileId: String): Boolean = !isChildProfile(profileId) && prefs.getBoolean(profileKey(KEY_NERD_MODE, profileId), false)
+
+    fun setNerdMode(
+        profileId: String,
+        enabled: Boolean,
+    ) {
+        prefs.edit { putBoolean(profileKey(KEY_NERD_MODE, profileId), enabled) }
+        SettingsSyncQueue.setting(context, KEY_NERD_MODE, profileId)
+    }
+
+    /** Drops a deleted profile's Nerd flag. */
+    fun removeNerdMode(profileId: String) = prefs.edit { remove(profileKey(KEY_NERD_MODE, profileId)) }
 
     /** Drops a deleted profile's child flag. */
     fun removeChildProfile(profileId: String) = prefs.edit { remove(profileKey(KEY_CHILD_PROFILE, profileId)) }
@@ -325,6 +351,15 @@ class AppSettings(
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(activeProfileId to isDevMode) }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             send(activeProfileId to isDevMode)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    /** [isNerdMode], now and whenever it changes (a profile switch, a switch, a value from another device). */
+    fun observeNerdMode(): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(isNerdMode) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(isNerdMode)
             awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
 
@@ -457,7 +492,7 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
                 }
 
-                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
+                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING, KEY_NERD_MODE -> {
                     if (profileId != SyncKind.SHARED) value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
@@ -508,7 +543,7 @@ class AppSettings(
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
-            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
+            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_NERD_MODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
                 kotlinx.serialization.json.JsonPrimitive(
                     prefs.getBoolean(stored, false),
                 )

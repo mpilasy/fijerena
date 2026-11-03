@@ -112,7 +112,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.search.rememberSearchFacetLabels
@@ -516,7 +516,7 @@ fun SearchScreen(
                                     .takeIf { appSettings.isDevMode && it.isNotEmpty() }
                                     ?.joinToString("\n")
                             // Expert mode only, as the source badges: without it results don't name their source.
-                            val showSources = LocalShowSourceBadges.current
+                            val showSources = LocalNerd.current
                             val categoryResults = if (child) emptyList() else successState.categoryResults
                             val streamResults =
                                 if (child) {
