@@ -1,7 +1,8 @@
 # Nerd role, sync failures, TV reminder focus, Admin pages
 
-**Status:** In progress since 2026-11-03: Phase 0 and every lane done (full suite, lint and gates pass at 5cdc39121); Phase X done (merged 57ad9e833, full suite passes); the emulator walks are left. Decisions RQ-1 to RQ-6 and NR-Q1 taken
-(user, 2026-11-03).
+**Status:** Done 2026-11-03, walked on both emulators. Walk fixes: the phone Add Profile dialog scrolls, the
+Your Profile Mahay switch follows the stored flag, and the TV reminder banner takes the remote's keys
+without moving focus (focus stays on the control underneath).
 
 ## Goal
 
@@ -262,10 +263,10 @@ t3  Phase X (one name for Admin) on main → full suite → emulator walks
 | Phase | Status | Commit |
 |-------|--------|--------|
 | 0 | Done | b2cda0b83 |
-| R | Done | 6c912a4a6, merged c06027900; emulator walk left |
-| S | Done | 723da11b8, merged 4df60ee77; emulator walk left |
-| A | Done | dbe1dfa8e, merged 61f3efdef; emulator walk left |
-| N | Done | 84e0fb74d, merged 20c600cc3; emulator walk left |
-| G | Done | ed81096d0, merged 624336555; emulator walk left |
+| R | Done | 6c912a4a6, merged c06027900 |
+| S | Done | 723da11b8, merged 4df60ee77 |
+| A | Done | dbe1dfa8e, merged 61f3efdef |
+| N | Done | 84e0fb74d, merged 20c600cc3 |
+| G | Done | ed81096d0, merged 624336555 |
 | X | Done | 2108d76f6, merged 57ad9e833 |
-| Walk | Not started | |
+| Walk | Done | Both emulators 2026-11-03; fixes 5b924d219, fe12625b1, 7a3972e08 |
