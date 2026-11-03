@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261103153139
 
 - **The reminder banner takes the remote's keys:** when a game or programme reminder rings while the app is on screen, the remote's keys now go to its banner at once, on every screen and over full-screen video: Watch is chosen (Dismiss when there is no channel), Left and Right choose between the two, OK acts, Back closes it. No key but volume reaches the screen under it, and focus stays where it was, so when the banner closes you are on the same item as before. Before, the remote's keys went to the screen under it until you pressed Menu or held OK, and that hint is gone. It still closes by itself after 30 seconds. When a dialog is open, the banner waits and shows when the dialog closes. TV.
 - **Sync failures kept apart from the last success:** on the Guide Sources page and in a source's Library Data, "Last sync" now shows the last successful sync, or "Never". A failed sync no longer moves it. When the last sync failed, the page also shows the time of that failure, its reason and the number of failures since the last success; the next success clears them. Device Info shows the failure time for a failed source. A source or guide source that had an error before this version counts one failure. TV and phone.
