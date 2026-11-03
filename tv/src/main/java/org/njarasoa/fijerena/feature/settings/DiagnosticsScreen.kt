@@ -30,6 +30,7 @@ import androidx.tv.material3.MaterialTheme
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaCodeText
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -40,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -73,6 +75,21 @@ fun DiagnosticsScreen() {
     val scale = LocalUiScale.current
     val searchFocus = remember { FocusRequester() }
     var editing by remember { mutableStateOf(false) }
+    // Clearing the log asks first, as on the phone (CONTRIBUTING, rule 7).
+    var showClearConfirm by remember { mutableStateOf(false) }
+
+    if (showClearConfirm) {
+        CinemaAlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = stringResource(R.string.settings_diagnostics_clear_confirm_title),
+            danger =
+                DialogAction(stringResource(R.string.settings_diagnostics_clear)) {
+                    viewModel.clear()
+                    showClearConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
+        )
+    }
 
     // Entry focus on the first entry, or Refresh when there is none (never Clear), or the screen
     // opened with nothing focused and the remote did nothing. Once, when the entries first load.
@@ -106,7 +123,7 @@ fun DiagnosticsScreen() {
                     modifier = Modifier.focusRequester(refreshFocus),
                 )
                 TvIconAction(
-                    onClick = viewModel::clear,
+                    onClick = { showClearConfirm = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.settings_diagnostics_clear),
                     danger = true,
