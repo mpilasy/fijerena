@@ -56,8 +56,8 @@ internal suspend fun matchOrEmpty(
 
 /** What the team and league pages read: the sports sources, the profile's follows and channels. A fake in the tests. */
 interface SportsPageData {
-    /** Whether a failure shows its raw message too (Admin's dev mode). */
-    val devMode: Boolean
+    /** Whether a failure shows its raw message too (a Nerd). */
+    val nerd: Boolean
 
     suspend fun teamGames(team: SportsTeam): List<SportsGame>
 
@@ -84,7 +84,7 @@ interface SportsPageData {
 sealed interface GamesState {
     data object Loading : GamesState
 
-    /** Every source failed. [raw]: the failure's own text, in dev mode only. */
+    /** Every source failed. [raw]: the failure's own text, for a Nerd only. */
     data class Failed(
         val raw: String?,
     ) : GamesState
@@ -107,7 +107,7 @@ sealed interface GamesState {
  * whose match takes longer than [matchTimeoutMs] finds no channel: its row says "Not found" and
  * never stays on "Looking for channels…" (phone walk A, item 11: with ten games of a team page
  * matched all at once, each one's guide reads waited behind all the others'). A failed read sets [GamesState.Failed]
- * ([rawOf]: its raw text in dev mode); a matcher that cannot be made finds nothing. [onGames] gets
+ * ([rawOf]: its raw text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets
  * the games before their channels. Shared by the team and league pages and the Teams search's best
  * team.
  */
@@ -240,7 +240,7 @@ abstract class SportsGamesViewModel(
         viewModelScope.launchGuarded("${javaClass.simpleName}.follow", Dispatchers.IO) { block() }
     }
 
-    private fun rawOf(e: Throwable): String? = if (data.devMode) Redact.text(e.message ?: e.javaClass.simpleName) else null
+    private fun rawOf(e: Throwable): String? = if (data.nerd) Redact.text(e.message ?: e.javaClass.simpleName) else null
 }
 
 /**
@@ -402,7 +402,7 @@ class AppSportsPageData(
     private val follows get() = FollowedSports.getInstance(context)
     private val profileId get() = settings.activeProfileId
 
-    override val devMode: Boolean get() = settings.isDevMode
+    override val nerd: Boolean get() = settings.isNerdMode
 
     override suspend fun teamGames(team: SportsTeam): List<SportsGame> = sports.teamGames(team)
 

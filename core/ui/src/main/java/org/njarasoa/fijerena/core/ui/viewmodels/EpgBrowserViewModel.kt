@@ -182,7 +182,6 @@ class EpgBrowserViewModel(
 
     // Cache AppSettings instance to avoid constructing a new object on every property read
     private val appSettings = AppSettings(context)
-    val isDevMode: Boolean get() = appSettings.isDevMode
 
     private val _epgSearchHistory = MutableStateFlow<List<String>>(emptyList())
     val epgSearchHistory: StateFlow<List<String>> = _epgSearchHistory.asStateFlow()
@@ -563,7 +562,7 @@ class EpgBrowserViewModel(
                     _uiState.value = UiState.IndexBusy(query, isRefreshInProgress())
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode), query)
+                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode), query)
                 }
             }
     }

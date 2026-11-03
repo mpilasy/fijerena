@@ -268,7 +268,7 @@ fun BadgedTitle(
  * The source an item comes from, where a list mixes several (search, Recent, favourites), on the
  * same pill as [LanguageBadge]: its short name ("X4P", [LocalSourceShortNames]), by [providerId]
  * when the caller has it, else by [name]. Read as "Source: <name>", the whole name. Nothing while
- * the profile's Expert mode is off ([LocalNerd]).
+ * the profile is not a Nerd ([LocalNerd]).
  */
 @Composable
 fun SourceBadge(

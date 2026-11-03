@@ -156,7 +156,6 @@ internal fun StreamList(
     nowPlaying: ImmutableNowPlaying,
     contentType: String,
     categoryViewModel: CategoryViewModel,
-    isDevMode: Boolean,
     /**
      * The list's identity across sources (the category's key): per-list state (the row last opened,
      * the empty state's focus) is keyed on it, so the same category id on another source is
@@ -463,7 +462,6 @@ internal fun StreamList(
                 selectedCategoryName = selectedCategoryName,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
-                isDevMode = isDevMode,
             )
         }
         tabRow?.invoke()
@@ -689,7 +687,6 @@ private fun StreamListHeader(
     selectedCategoryName: String?,
     contentType: String,
     categoryViewModel: CategoryViewModel,
-    isDevMode: Boolean,
 ) {
     // One line, title then count, so this pane starts level with the categories pane beside it.
     Row(
@@ -718,7 +715,7 @@ private fun StreamListHeader(
             val countText =
                 buildString {
                     append(countLabel)
-                    if (isDevMode && selectedCategoryId != null) {
+                    if (LocalNerd.current && selectedCategoryId != null) {
                         categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
                             append(" | $it")
                         }

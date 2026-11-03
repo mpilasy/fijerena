@@ -577,7 +577,7 @@ fun PlayerScreen(
                     showFullControls = state.showControls,
                     waiting = isStreamWaiting(currentPs, tuningChannelName),
                     hideTopBars = state.showChannelPanel,
-                    isDeveloperMode = state.isDeveloperMode,
+                    isNerd = state.isNerd,
                     // Channels (LT4): the same panel Left/Right open; the OSD makes way for it.
                     onShowChannels =
                         channelPanel?.let {

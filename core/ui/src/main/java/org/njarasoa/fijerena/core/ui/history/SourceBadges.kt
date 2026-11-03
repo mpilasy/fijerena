@@ -9,7 +9,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -34,12 +33,13 @@ val LocalSourceShortNames = compositionLocalOf { SourceShortNameMap() }
 
 /**
  * Provides [LocalNerd] and [LocalSourceShortNames] to [content], following profile
- * switches, the profile's Expert mode and every source's name and short name.
+ * switches, the profile's Nerd flag ([AppSettings.observeNerdMode]) and every source's name and
+ * short name.
  */
 @Composable
 fun ProvideSourceBadges(content: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
-    val show by remember(context) { AppSettings(context).observeDevMode().map { (_, on) -> on } }.collectAsState(initial = false)
+    val nerd by remember(context) { AppSettings(context).observeNerdMode() }.collectAsState(initial = false)
     val shortNames by remember(context) {
         val repository = AppContainer.getInstance(context).providerRepository
         combine(repository.getAllProviders(), repository.sourceShortNames()) { sources, byId ->
@@ -55,7 +55,7 @@ fun ProvideSourceBadges(content: @Composable () -> Unit) {
         }
     }.collectAsState(initial = SourceShortNameMap())
     CompositionLocalProvider(
-        LocalNerd provides show,
+        LocalNerd provides nerd,
         LocalSourceShortNames provides shortNames,
         content = content,
     )

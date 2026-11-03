@@ -70,9 +70,6 @@ class SyncSettingsViewModel(
     private var handoffJob: Job? = null
     private var inviteJob: Job? = null
 
-    /** Dev mode adds the raw sync error under the friendly status. */
-    val devMode: Boolean get() = AppSettings(app).isDevMode
-
     /** The names the group gave its devices (a synced setting each), by device id; the server's name otherwise. */
     private val deviceNames: StateFlow<Map<String, String>> =
         AppSettings(app)
@@ -425,6 +422,6 @@ class SyncSettingsViewModel(
             }
         // Masked: a raw message can hold the server URL with a secret.
         val raw = e.message?.let(Redact::text)
-        return if (AppSettings(app).isDevMode && !raw.isNullOrBlank() && raw != message) "$message\n\n[dev] $raw" else message
+        return if (AppSettings(app).isNerdMode && !raw.isNullOrBlank() && raw != message) "$message\n\n[dev] $raw" else message
     }
 }

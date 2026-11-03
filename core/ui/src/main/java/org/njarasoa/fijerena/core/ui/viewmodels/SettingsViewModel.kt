@@ -33,6 +33,8 @@ data class SettingsUiState(
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
     val isDevMode: Boolean = false,
+    /** The profile in use is a Nerd: messages show their raw error text, Shrink Database its figures. */
+    val isNerdMode: Boolean = false,
     /** A profile is Expert, so the 7 taps on the version do nothing (PR-3). Yes until the list has loaded. */
     val expertExists: Boolean = true,
     /**
@@ -73,6 +75,7 @@ class SettingsViewModel(
                 themeId = appSettings.themeId,
                 uiStyleId = appSettings.uiStyleId,
                 isDevMode = appSettings.isDevMode,
+                isNerdMode = appSettings.isNerdMode,
                 isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
@@ -99,6 +102,9 @@ class SettingsViewModel(
         // in the background at start (ProfileRepository.ensureAnExpert), maybe after Settings opened.
         viewModelScope.launchGuarded("SettingsViewModel.followDevMode") {
             appSettings.observeDevMode().collect { refreshDevMode() }
+        }
+        viewModelScope.launchGuarded("SettingsViewModel.followNerdMode") {
+            appSettings.observeNerdMode().collect { nerd -> _uiState.value = _uiState.value.copy(isNerdMode = nerd) }
         }
         viewModelScope.launchGuarded("SettingsViewModel.followProfiles") {
             profileRepo.observeProfiles().collect { rows ->
@@ -263,7 +269,7 @@ class SettingsViewModel(
                 _uiState.value =
                     _uiState.value.copy(
                         isPruningDatabase = false,
-                        databaseMaintenanceMessage = friendlyErrorMessage(e, context, appSettings.isDevMode),
+                        databaseMaintenanceMessage = friendlyErrorMessage(e, context, appSettings.isNerdMode),
                     )
             },
         ) {

@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.components.waitKindOf
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -924,12 +925,12 @@ fun MobilePlayerContent(
                                 if (!hasStartedPlaying || showRecoverySpinner) {
                                     // The controls' top bar names the stream while it is up; else the badge
                                     // does. Always centred; while the controls are up, smaller and without the
-                                    // details, and their Play/Pause row moves down under it. Expert mode: what
+                                    // details, and their Play/Pause row moves down under it. A Nerd sees what
                                     // the wait is made of (as on TV).
                                     PlayerWait(
                                         metadata = currentMeta,
                                         showBadge = !isInPipMode && !controlsVisible,
-                                        showDetails = appSettings.isDevMode && !isInPipMode && !controlsVisible,
+                                        showDetails = LocalNerd.current && !isInPipMode && !controlsVisible,
                                         badgeLogoHeight = WaitStyle.compactBadgeLogoHeight,
                                         badgeModifier = Modifier.padding(CinemaSpacing.lg),
                                         size =
@@ -946,7 +947,7 @@ fun MobilePlayerContent(
                             is PlaybackState.Error -> {
                                 ErrorOverlay(
                                     error = currentPs,
-                                    isDevMode = appSettings.isDevMode,
+                                    nerd = LocalNerd.current,
                                     onRetry = { viewModel.playStream(currentMeta) },
                                     onBack = onBack,
                                 )
@@ -971,7 +972,6 @@ fun MobilePlayerContent(
                             metadata = currentMeta,
                             viewModel = viewModel,
                             isLive = isLiveContent,
-                            isDeveloperMode = appSettings.isDevMode,
                             isFavorite = state.isFavorite,
                             livePosition = shownPosition,
                             liveDuration = liveDuration,

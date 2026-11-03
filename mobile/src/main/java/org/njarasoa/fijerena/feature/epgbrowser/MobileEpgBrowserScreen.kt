@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sports.WatchQuestionBody
 import org.njarasoa.fijerena.core.ui.sports.programmeReminderOf
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
@@ -249,7 +250,7 @@ internal fun MobileGuideSearchPane(
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
 
     val keyboardController = LocalSoftwareKeyboardController.current
-    val isDevMode = viewModel.isDevMode
+    val nerd = LocalNerd.current
     val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
     val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
     val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
@@ -276,7 +277,7 @@ internal fun MobileGuideSearchPane(
     val nowEpoch = rememberNowEpochSeconds()
 
     Column(modifier = modifier) {
-        // The guide's status, one line; the index counters only in developer mode.
+        // The guide's status, one line; the index counters only for a Nerd.
         val freshnessText =
             freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
         val freshnessColor =
@@ -295,7 +296,7 @@ internal fun MobileGuideSearchPane(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = Spacing.md),
         )
-        if (isDevMode && epgDbStats != null) {
+        if (nerd && epgDbStats != null) {
             CinemaText(
                 text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
                 maxLines = 1,
@@ -451,7 +452,7 @@ internal fun MobileGuideSearchPane(
 
             is EpgBrowserViewModel.UiState.Results -> {
                 MobileResultsContent(
-                    isDevMode = isDevMode,
+                    nerd = nerd,
                     results = state,
                     nowEpoch = nowEpoch,
                     matchedOnly = matchedOnly,
@@ -475,7 +476,7 @@ internal fun MobileGuideSearchPane(
 private fun MobileResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
-    isDevMode: Boolean,
+    nerd: Boolean,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
@@ -494,8 +495,8 @@ private fun MobileResultsContent(
         }
 
     Column {
-        // Counts, timing and search path: developer information, as on TV.
-        if (isDevMode) {
+        // Counts, timing and search path: information for a Nerd, as on TV.
+        if (nerd) {
             CinemaText(
                 text = results.statsLine(),
                 modifier =

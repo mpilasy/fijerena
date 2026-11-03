@@ -585,7 +585,7 @@ class SettingsExportManager(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }
 
@@ -927,7 +927,7 @@ class SettingsExportManager(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+                ImportResult(error = friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }
 

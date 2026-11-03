@@ -647,7 +647,7 @@ class CategoryViewModel(
         if (complete(value)) this else CompletableDeferred(value)
 
     private fun showError(e: Throwable) {
-        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
     }
 
     fun loadCategories() {
@@ -745,22 +745,22 @@ class CategoryViewModel(
 
     /**
      * The message when no source of the list loads: the first failure's, friendly (a connection
-     * failure says so). In developer mode with several sources, each source's own, raw detail
-     * included (the dev-mode raw error pattern), one per line.
+     * failure says so). For a Nerd with several sources, each source's own, raw detail included
+     * (the raw error pattern), one per line.
      */
     private fun sectionErrorMessage(error: Throwable): String {
-        val devMode = appSettings.isDevMode
+        val nerd = appSettings.isNerdMode
 
         fun messageOf(e: Throwable): String =
             if (e is SourceConnectException) {
-                context.getString(R.string.category_error_connection_failed_format, friendlyErrorMessage(e.cause ?: e, context, devMode))
+                context.getString(R.string.category_error_connection_failed_format, friendlyErrorMessage(e.cause ?: e, context, nerd))
             } else {
-                friendlyErrorMessage(e, context, devMode)
+                friendlyErrorMessage(e, context, nerd)
             }
         val failures = (error as? SectionLoadException)?.failures.orEmpty()
         return when {
             failures.isEmpty() -> messageOf(error)
-            devMode && failures.size > 1 -> failures.joinToString("\n") { (name, e) -> "$name: ${messageOf(e)}" }
+            nerd && failures.size > 1 -> failures.joinToString("\n") { (name, e) -> "$name: ${messageOf(e)}" }
             else -> messageOf(failures.first().second)
         }
     }
@@ -1297,7 +1297,7 @@ class CategoryViewModel(
                 .onFailure { e ->
                     onError(
                         context.getString(R.string.watched_mark_many_failed) + "\n" +
-                            friendlyErrorMessage(e, context, appSettings.isDevMode),
+                            friendlyErrorMessage(e, context, appSettings.isNerdMode),
                     )
                 }
         }

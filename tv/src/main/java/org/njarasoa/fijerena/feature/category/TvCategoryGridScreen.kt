@@ -368,12 +368,6 @@ private fun CategoryGridContent(
                         // The preview and its full screen take the screen, and Left has a job there.
                         HideTvNavRail()
                         val ctx = LocalContext.current
-                        val devMode =
-                            remember {
-                                org.njarasoa.fijerena.core.network
-                                    .AppSettings(ctx.applicationContext)
-                                    .isDevMode
-                            }
                         // A child profile zaps through its favourites only, with no guide (kids' Home plan, Phase 2).
                         val child =
                             remember {
@@ -396,7 +390,6 @@ private fun CategoryGridContent(
                                     lastPlayedItemId = state.lastPlayedItemId,
                                     nowPlaying = nowPlaying,
                                     contentType = contentType,
-                                    isDevMode = devMode,
                                     favoriteIds = favoriteIds,
                                     favoriteCategoryIds = favoriteCategoryIds,
                                     watchProgress = watchProgress,

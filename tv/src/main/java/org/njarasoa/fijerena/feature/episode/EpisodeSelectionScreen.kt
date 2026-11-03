@@ -753,7 +753,7 @@ internal fun EpisodeListContent(
         watchedToggleScope.launch {
             mediaRepository
                 .setEpisodesWatched(seriesDetail.id, season, watched)
-                .onFailure { markManyError = friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                .onFailure { markManyError = friendlyErrorMessage(it, context, appSettings.isNerdMode) }
             val allWatched = refreshEpisodeWatchState()
             // Play and the "Continue watching" badge move on to the first unwatched episode at once
             // (the watched followups plan → Phase 1); the selected season stays.
@@ -1696,15 +1696,13 @@ private fun SeriesDetailsTabContent(
                 )
             }
         }
-        val context = LocalContext.current
-        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-        if (isDevMode) {
+        if (LocalNerd.current) {
             TvDetailRow(
                 label = stringResource(R.string.details_label_tmdb),
                 value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
             )
         }
-        // Expert mode only, like the source badges.
+        // For a Nerd only, like the source badges.
         if (LocalNerd.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
@@ -2189,7 +2187,7 @@ private fun EpisodeDetailPanel(
                 }
 
                 // The source last and labelled: alone at the top it read as a heading (TV UI audit, #12).
-                // Expert mode only, like the source badges.
+                // For a Nerd only, like the source badges.
                 if (LocalNerd.current) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(

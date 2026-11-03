@@ -186,7 +186,7 @@ fun SettingsScreen(
                 showImportOptionsDialog = true
             }.onFailure { e ->
                 viewModel.setExportImportMessage(
-                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isNerdMode)),
                 )
             }
         pendingImportUri = null
@@ -203,7 +203,7 @@ fun SettingsScreen(
                 showImportOptionsDialog = true
             }.onFailure { e ->
                 viewModel.setExportImportMessage(
-                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isDevMode)),
+                    resources.getString(R.string.settings_import_failed, friendlyErrorMessage(e, context, uiState.isNerdMode)),
                 )
             }
         pendingImportPath = null
@@ -834,7 +834,7 @@ fun SettingsScreen(
                                                                         isPruning = uiState.isPruningDatabase,
                                                                         resultMessage = uiState.databaseMaintenanceMessage,
                                                                         onShrinkClick = viewModel::pruneDatabase,
-                                                                        isDevMode = uiState.isDevMode,
+                                                                        nerd = uiState.isNerdMode,
                                                                         lastShrinkAtMs = uiState.lastShrinkAtMs,
                                                                         lastShrinkDurationMs = uiState.lastShrinkDurationMs,
                                                                         lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,

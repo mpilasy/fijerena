@@ -346,7 +346,7 @@ fun MobileHomeScreen(
                                                             friendlyErrorMessage(
                                                                 e,
                                                                 context,
-                                                                AppSettings(context.applicationContext).isDevMode,
+                                                                AppSettings(context.applicationContext).isNerdMode,
                                                             ),
                                                     )
                                                 }

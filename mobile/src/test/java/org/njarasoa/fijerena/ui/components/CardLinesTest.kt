@@ -38,10 +38,10 @@ class CardLinesTest {
 
     private fun setCards(
         vararg cards: Card,
-        admin: Boolean = true,
+        nerd: Boolean = true,
     ) {
         composeTestRule.setContent {
-            CompositionLocalProvider(LocalNerd provides admin) {
+            CompositionLocalProvider(LocalNerd provides nerd) {
                 Box {
                     cards.forEachIndexed { i, card ->
                         Box(Modifier.testTag("card$i")) {
@@ -129,7 +129,7 @@ class CardLinesTest {
 
     @Test
     fun `without source badge and rating the line keeps its height`() {
-        setCards(Card("Plain", titleBadges = false), Card("Rated", rating = "7.8", titleBadges = false), admin = false)
+        setCards(Card("Plain", titleBadges = false), Card("Rated", rating = "7.8", titleBadges = false), nerd = false)
         assertEquals(heightOf("card1"), heightOf("card0"), 0.5f)
     }
 

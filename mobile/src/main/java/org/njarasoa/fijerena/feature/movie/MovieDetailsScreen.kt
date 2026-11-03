@@ -28,7 +28,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -261,7 +260,7 @@ private fun MovieDetailsContent(
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
-    // The source's name, a Source row in Expert mode.
+    // The source's name, a Source row for a Nerd.
     sourceName: String?,
     movieId: String,
     movieName: String,
@@ -650,16 +649,14 @@ private fun MovieDetailsTabContent(
             movieDetail.extension?.takeUnless { child }?.let { ext ->
                 MobileDetailRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
-            // The TMDB id is for developers only (phone UI audit, #2).
-            val context = LocalContext.current
-            val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-            if (isDevMode) {
+            // The TMDB id is for a Nerd only (phone UI audit, #2).
+            if (LocalNerd.current) {
                 MobileDetailRow(
                     label = stringResource(R.string.details_label_tmdb),
                     value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                 )
             }
-            // Expert mode only, like the source badges.
+            // For a Nerd only, like the source badges.
             if (LocalNerd.current) {
                 sourceName?.let {
                     MobileDetailRow(

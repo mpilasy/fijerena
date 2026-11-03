@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.core.network.sports.SportsTeam
 @OptIn(ExperimentalCoroutinesApi::class)
 class SportsPageViewModelTest {
     private class FakeData(
-        override val devMode: Boolean = false,
+        override val nerd: Boolean = false,
         var failure: Exception? = null,
         var matchFailure: Exception? = null,
         var teamsFailure: Exception? = null,
@@ -168,7 +168,7 @@ class SportsPageViewModelTest {
     }
 
     @Test
-    fun `a failure shows Retry, raw text only in dev mode, and Retry reads again`() {
+    fun `a failure shows Retry, raw text only for a Nerd, and Retry reads again`() {
         val data = FakeData(failure = IllegalStateException("HTTP 503"))
         val vm = teamPage(data)
 
@@ -180,7 +180,7 @@ class SportsPageViewModelTest {
         vm.awaitMatched()
         assertEquals(2, data.reads)
 
-        val dev = teamPage(FakeData(devMode = true, failure = IllegalStateException("HTTP 503")))
+        val dev = teamPage(FakeData(nerd = true, failure = IllegalStateException("HTTP 503")))
         assertEquals("HTTP 503", (dev.games.await { it is GamesState.Failed } as GamesState.Failed).raw)
     }
 

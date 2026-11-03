@@ -62,7 +62,7 @@ fun QuickConnectDialog(
             if (initResult.isFailure) {
                 val e = initResult.exceptionOrNull()
                 onQcErrorChange(
-                    e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                    e?.let { friendlyErrorMessage(it, context, appSettings.isNerdMode) }
                         ?: context.getString(R.string.provider_qc_init_failed),
                 )
                 return@LaunchedEffect
@@ -75,14 +75,14 @@ fun QuickConnectDialog(
                 delay(3_000)
                 val poll = api.pollQuickConnect(init.secret)
                 if (poll.isFailure) {
-                    val pollError = poll.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                    val pollError = poll.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isNerdMode) }
                     onQcErrorChange(context.getString(R.string.provider_qc_poll_failed, pollError))
                     return@LaunchedEffect
                 }
                 if (poll.getOrThrow().authenticated) {
                     val authResult = api.authenticateWithQuickConnect(init.secret)
                     if (authResult.isFailure) {
-                        val authError = authResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        val authError = authResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isNerdMode) }
                         onQcErrorChange(context.getString(R.string.provider_qc_auth_failed, authError))
                         return@LaunchedEffect
                     }

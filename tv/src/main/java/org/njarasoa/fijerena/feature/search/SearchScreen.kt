@@ -343,7 +343,6 @@ fun SearchScreen(
     }
 
     val configuration = LocalConfiguration.current
-    val appSettings = remember { AppSettings(context.applicationContext) }
 
     // Back from a result's details (or a category) lands on that result — see SearchResultsList.
     val returnFocus = rememberNavReturnFocus()
@@ -505,17 +504,17 @@ fun SearchScreen(
                             val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
                             val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
                             val devStats =
-                                if (appSettings.isDevMode && successState.searchDataSize != null) {
+                                if (LocalNerd.current && successState.searchDataSize != null) {
                                     "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
                                 } else {
                                     null
                                 }
-                            // Sources left out because their search failed: raw, developer mode only.
+                            // Sources left out because their search failed: raw, for a Nerd only.
                             val sourceErrors =
                                 successState.sourceErrors
-                                    .takeIf { appSettings.isDevMode && it.isNotEmpty() }
+                                    .takeIf { LocalNerd.current && it.isNotEmpty() }
                                     ?.joinToString("\n")
-                            // Expert mode only, as the source badges: without it results don't name their source.
+                            // For a Nerd only, as the source badges: otherwise results don't name their source.
                             val showSources = LocalNerd.current
                             val categoryResults = if (child) emptyList() else successState.categoryResults
                             val streamResults =
@@ -1671,8 +1670,8 @@ private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
 /**
  * Search's "Not in your sources" section (wanted titles plan → Search): TMDB's films and shows that
  * no source of the profile has, under the catalogue's results, each opening its TMDB page. The
- * heading is not a focus stop, as the other section headings. [devError] is TMDB's raw error, in
- * developer mode. [firstFocus] goes on the first row when the catalogue found nothing.
+ * heading is not a focus stop, as the other section headings. [devError] is TMDB's raw error, for
+ * a Nerd. [firstFocus] goes on the first row when the catalogue found nothing.
  */
 private fun LazyListScope.notInSourcesSection(
     titles: List<TmdbTitle>,

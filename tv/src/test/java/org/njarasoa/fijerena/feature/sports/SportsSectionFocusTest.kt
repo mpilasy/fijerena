@@ -71,7 +71,7 @@ class SportsSectionFocusTest {
     ) : SportsPageData {
         val follows = MutableStateFlow(follows)
 
-        override val devMode = false
+        override val nerd = false
 
         override suspend fun teamGames(team: SportsTeam) = listOf(GAMES[0])
 

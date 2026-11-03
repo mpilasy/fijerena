@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -153,7 +154,6 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                 status.linked -> {
                     LinkedPanel(
                         status = status,
-                        devMode = viewModel.devMode,
                         busy = ui.busy,
                         onSyncNow = viewModel::syncNow,
                         onResyncAll = viewModel::resyncAll,
@@ -303,7 +303,6 @@ private fun PairingPanel(
 @Composable
 private fun LinkedPanel(
     status: SyncManager.Status,
-    devMode: Boolean,
     busy: Boolean,
     onSyncNow: () -> Unit,
     onResyncAll: () -> Unit,
@@ -317,7 +316,7 @@ private fun LinkedPanel(
                 role = TextRole.Heading,
                 tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Accent,
             )
-            if (devMode && status.lastError != null) {
+            if (LocalNerd.current && status.lastError != null) {
                 CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall)
             }
             CinemaText(

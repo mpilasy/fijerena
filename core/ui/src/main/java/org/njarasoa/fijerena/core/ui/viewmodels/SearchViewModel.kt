@@ -192,7 +192,7 @@ class SearchViewModel(
 
     /**
      * Search's "Not in your sources" section: films and shows TMDB finds that no source of the
-     * profile has. [devError] is the raw error, in developer mode, when TMDB failed.
+     * profile has. [devError] is the raw error, for a Nerd, when TMDB failed.
      */
     data class NotInSources(
         val query: String,
@@ -409,8 +409,8 @@ class SearchViewModel(
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.w("SearchViewModel", "TMDB search failed", e)
-                        // Silent for users; developer mode shows the raw error under the heading.
-                        if (appSettings.isDevMode) {
+                        // Silent for users; a Nerd sees the raw error under the heading.
+                        if (appSettings.isNerdMode) {
                             NotInSources(
                                 query,
                                 emptyList(),
@@ -514,7 +514,7 @@ class SearchViewModel(
                         if (e is SessionExpiredException) {
                             context.getString(R.string.search_error_session_expired)
                         } else {
-                            friendlyErrorMessage(e, context, appSettings.isDevMode)
+                            friendlyErrorMessage(e, context, appSettings.isNerdMode)
                         },
                     )
                 } else {
@@ -541,7 +541,7 @@ class SearchViewModel(
                 }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
         }
     }
 
@@ -592,10 +592,11 @@ class SearchViewModel(
                 }
             }
 
-        // "N hidden" is for the admin (Expert mode): told what the filters hide, a child or a
-        // teenager only goes looking for it (docs/plans/20261019_tv-household-ux-plan.md, Phase 2).
+        // "N hidden" is for a Nerd: told what the filters hide, a child or a teenager only goes
+        // looking for it (docs/plans/20261019_tv-household-ux-plan.md, Phase 2; Nerd since
+        // docs/plans/20261103_nerd-role-sync-failures-plan.md, RQ-4).
         val excludedCountByType =
-            if (appSettings.isDevMode) {
+            if (appSettings.isNerdMode) {
                 targetContentTypes
                     .associateWith { repo.countExcludedSearchMatches(query, it) }
                     .filterValues { it > 0 }
@@ -849,7 +850,7 @@ class SearchViewModel(
                 .onFailure { e ->
                     onError(
                         context.getString(R.string.watched_mark_many_failed) + "\n" +
-                            friendlyErrorMessage(e, context, appSettings.isDevMode),
+                            friendlyErrorMessage(e, context, appSettings.isNerdMode),
                     )
                 }
         }

@@ -30,7 +30,7 @@ import java.util.Collections
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeopleSearchViewModelTest {
     private class FakeData(
-        override val devMode: Boolean = false,
+        override val nerd: Boolean = false,
         var failure: Exception? = null,
     ) : PeopleSearchViewModel.Data {
         val queries: MutableList<String> = Collections.synchronizedList(mutableListOf())
@@ -112,7 +112,7 @@ class PeopleSearchViewModelTest {
 
         val failed = vm.await<PeopleSearchViewModel.State.Failed>()
         assertEquals("hanks", failed.query)
-        // Not in Expert mode: no raw text.
+        // Not a Nerd: no raw text.
         assertNull(failed.raw)
 
         data.failure = null
@@ -122,8 +122,8 @@ class PeopleSearchViewModelTest {
     }
 
     @Test
-    fun `in Expert mode a failure shows its raw text`() {
-        val vm = search(FakeData(devMode = true, failure = IllegalStateException("HTTP 500")))
+    fun `for a Nerd a failure shows its raw text`() {
+        val vm = search(FakeData(nerd = true, failure = IllegalStateException("HTTP 500")))
         vm.search("hanks")
 
         assertEquals("HTTP 500", vm.await<PeopleSearchViewModel.State.Failed>().raw)

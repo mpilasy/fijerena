@@ -32,8 +32,8 @@ class PeopleSearchViewModel(
 ) : ViewModel() {
     /** What the search reads: TMDB and the profile's catalogue. A fake in the tests. */
     interface Data {
-        /** Whether a failure shows its raw message too (Expert mode). */
-        val devMode: Boolean
+        /** Whether a failure shows its raw message too (a Nerd). */
+        val nerd: Boolean
 
         /** TMDB's `search/multi` results for [query]. A failure throws. */
         suspend fun search(query: String): List<TmdbRecommendation>
@@ -117,7 +117,7 @@ class PeopleSearchViewModel(
             }
     }
 
-    private fun rawOf(e: Throwable): String? = if (data.devMode) Redact.text(e.message ?: e.javaClass.simpleName) else null
+    private fun rawOf(e: Throwable): String? = if (data.nerd) Redact.text(e.message ?: e.javaClass.simpleName) else null
 
     class Factory(
         context: Context,
@@ -137,7 +137,7 @@ class PeopleSearchViewModel(
     ) : Data {
         private val settings = AppSettings(context)
 
-        override val devMode: Boolean get() = settings.isDevMode
+        override val nerd: Boolean get() = settings.isNerdMode
 
         override suspend fun search(query: String): List<TmdbRecommendation> =
             TmdbApiService.getInstance(context).searchMulti(query).results

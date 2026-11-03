@@ -30,14 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
@@ -47,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -113,7 +112,7 @@ private fun StatusLine(
 
 /**
  * The summary line's sheet: each of the profile's sources with its status and, after a failed
- * update, its reason — already with the raw detail in developer mode (ProviderSyncRunner). One
+ * update, its reason — already with the raw detail for a Nerd (ProviderSyncRunner). One
  * focus stop per source (the information is reachable by D-pad), focus on the first; OK and Back
  * close it.
  */
@@ -122,8 +121,7 @@ internal fun SourcesStatusSheet(
     states: List<SourceSyncState>,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+    val nerd = LocalNerd.current
     val now = rememberMinuteTick()
     val firstRow = remember { FocusRequester() }
     CinemaAlertDialog(
@@ -144,7 +142,7 @@ internal fun SourcesStatusSheet(
                     // A focusable line of status (focus rule 3): OK closes the dialog.
                     val detail = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null }
                     SettingsRow(
-                        title = if (isDevMode) "${state.name} (${sourceTypeName(state.type)})" else state.name,
+                        title = if (nerd) "${state.name} (${sourceTypeName(state.type)})" else state.name,
                         description = null,
                         onClick = onDismiss,
                         kind = SettingsRowKind.Action,

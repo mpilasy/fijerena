@@ -109,8 +109,6 @@ internal fun TwoColumnLayout(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf("") }
-    // Read once — avoids SharedPreferences disk I/O on every recomposition
-    val isDevMode = remember { appSettings.isDevMode }
 
     // The list's own source's name, from the database (shown while the list has only that source).
     LaunchedEffect(categoryViewModel.sourceId) {
@@ -355,7 +353,6 @@ internal fun TwoColumnLayout(
                     nowPlaying = nowPlaying,
                     contentType = contentType,
                     categoryViewModel = categoryViewModel,
-                    isDevMode = isDevMode,
                     favoriteIds = favoriteIds,
                     watchProgress = watchProgress,
                     watchedIds = watchedIds,
