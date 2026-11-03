@@ -4,6 +4,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.testing.SettingsFixture
 import org.njarasoa.fijerena.testing.SettingsFocusTest
+import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
 import org.njarasoa.fijerena.testing.left
 import org.njarasoa.fijerena.testing.right
@@ -20,19 +21,19 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
     fun `an Expert walks Sync and Backup`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            down("Admin"),
-            right("Set a PIN for Settings"),
-            down("A / Admin"),
-            *adminDown("A / Admin", "Sports"),
+            *toAdminSection("Sync & Backup"),
+            // The last row of Admin's list: Down stays put.
+            down("Sync & Backup / Live sync with your other devices, and backups to a file"),
             // No backup waits in Downloads, so no Restore from Downloads row.
-            down("Live Sync"),
+            center("Live Sync"),
             down("Back Up to a File"),
             down("Restore from a File / From a backup file: you choose what to restore"),
-            // Shrink Database follows on the same page.
-            down("Shrink Database"),
-            up("Restore from a File"),
+            // The end of the section: Shrink Database is in Sources & Guide.
+            down("Restore from a File"),
             up("Back Up to a File"),
             up("Live Sync"),
+            // Left closes the section on its row, then goes to the rail.
+            left("Sync & Backup"),
             left("Admin"),
         )
     }

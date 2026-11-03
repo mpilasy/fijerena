@@ -13,26 +13,28 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → the end of Admin, and About (`scripts/focus-walks/settings.txt`): Shrink Database,
- * the last row of Admin's page, for an Expert; About for everyone, with Logs under Device Info. The rows
- * open other screens or shrink the database, so nothing here presses OK.
+ * TV Settings → Admin's list of sections, and About (`scripts/focus-walks/settings.txt`): the five
+ * section rows, for an Expert; About for everyone, with Logs under Device Info. The About rows open
+ * other screens, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAboutFocusTest : SettingsFocusTest() {
     private val logs get() = context.getString(R.string.settings_diagnostics_title)
 
     @Test
-    fun `an Expert walks the end of Admin and About`() {
+    fun `an Expert walks Admin's list and About`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Admin"),
-            right("Set a PIN for Settings"),
-            down("A / Admin"),
-            *adminDown("A / Admin", "Restore from a File"),
-            down("Shrink Database"),
-            // The end of Admin's page: Down stays put.
-            down("Shrink Database"),
-            up("Restore from a File"),
+            // Each section's row says what is inside it.
+            right("Profiles / Admin, Guest, Kid"),
+            down("Parental Controls / The household's word lists, for every child profile"),
+            down("This Device / Language, Recent and the clock, on this device only"),
+            down("Sources & Guide / Sources, the guide, film details, charts and sports"),
+            down("Sync & Backup / Live sync with your other devices, and backups to a file"),
+            // The end of Admin's list: Down stays put.
+            down("Sync & Backup"),
+            up("Sources & Guide"),
             back("Admin"),
             down("About"),
             right("Fijerena v"),

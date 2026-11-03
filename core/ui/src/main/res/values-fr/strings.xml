@@ -1010,6 +1010,9 @@
     <string name="settings_group_this_device">Cet appareil</string>
     <string name="settings_group_admin">Administration</string>
     <string name="settings_group_admin_desc">Profils, contrôle parental, cet appareil, sources, synchronisation et sauvegardes</string>
+    <string name="settings_group_this_device_desc">Langue, Récents et heure, sur cet appareil seulement</string>
+    <string name="settings_group_source_guide_desc">Sources, guide, détails des films, classements et sports</string>
+    <string name="settings_group_sync_backup_desc">Synchronisation avec vos autres appareils et sauvegardes dans un fichier</string>
     <string name="settings_open_admin">Ouvrir l’administration</string>
     <string name="settings_applies_immediately">Les changements ici s’appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>

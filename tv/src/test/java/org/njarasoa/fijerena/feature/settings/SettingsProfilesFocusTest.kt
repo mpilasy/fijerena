@@ -25,8 +25,13 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
         walk.assertFocused("Your Profile")
         walk.run(
             down("Admin"),
-            // A child profile and no Expert PIN: the reminder comes first, then the profiles.
-            right("Set a PIN for Settings"),
+            // Admin's list of sections, on Profiles: the names of the profiles under it.
+            right("Profiles / Admin, Guest, Kid"),
+            // OK opens the section in place of the list. A child profile and no Expert PIN: the
+            // reminder comes first, then the profiles.
+            center("Set a PIN for Settings"),
+            // Up at the top of the section stays put.
+            up("Set a PIN for Settings"),
             down("A / Admin / Using on this device"),
             // OK opens the profile's page in place of the rows, focus on the name's Edit button.
             // Its own page in Admin has the Admin rows too (the admin settings plan, AS-D1).
@@ -68,11 +73,17 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             // Back leaves the page too, focus back on the row.
             back("K / Kid"),
             down("Add Profile"),
-            // Parental Controls follows on the same page.
-            down("Kids' Categories"),
-            up("Add Profile"),
-            // Back in the pane returns to the rail row, not out of Settings.
+            // The end of the section: Parental Controls is a section of its own.
+            down("Add Profile"),
+            // Back closes the section, focus back on its row in Admin's list.
+            back("Profiles"),
+            // Back in the list returns to the rail row, not out of Settings.
             back("Admin"),
+            // Left closes the section too.
+            right("Profiles"),
+            center("Set a PIN for Settings"),
+            left("Profiles"),
+            left("Admin"),
         )
     }
 }

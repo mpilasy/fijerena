@@ -16,27 +16,21 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → Admin → Sources & Guide (`scripts/focus-walks/settings.txt` and
- * `settings-guide.txt`): its rows, the guide's maintenance sub-pane (never pressed) and the TMDB
- * key's, each closing on its row. Manage Sources and Guide Sources open other screens (Guide
+ * `settings-guide.txt`): its rows (Shrink Database last), the guide's maintenance sub-pane (never pressed) and
+ * the TMDB key's, each closing on its row in the section. Manage Sources and Guide Sources open other screens (Guide
  * Sources with no source chooser), tested on their own (`SourcesFocusTest`, `GuideSourcesFocusTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
-    /** From the rail to Admin's last This Device row, Show Clock: the part's rows come next. */
-    private fun toShowClock(): Array<FocusStep> =
-        arrayOf(
-            down("Admin"),
-            right("Set a PIN for Settings"),
-            down("A / Admin"),
-            *adminDown("A / Admin", "Show Clock"),
-        )
+    /** From the rail to Admin's row Sources & Guide; OK opens the section on Manage Sources. */
+    private fun toSourcesGuide(): Array<FocusStep> = toAdminSection("Sources & Guide")
 
     @Test
     fun `an Expert walks Sources and Guide`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toShowClock(),
-            down("Manage Sources / Source One, Source Two"),
+            *toSourcesGuide(),
+            center("Manage Sources / Source One, Source Two"),
             // The fixture's sources are Xtream ones, with live channels: Guide Sources shows.
             down("Guide Sources / The guides for each source’s channels"),
             down("Guide Data Maintenance / The guide's downloads and programmes kept on this device"),
@@ -44,8 +38,9 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("TMDB Charts"),
             down("Refresh Charts"),
             down("Sports"),
-            // Sync & Backup follows on the same page.
-            down("Live Sync"),
+            // Shrink Database ends the section; Sync & Backup is a section of its own.
+            down("Shrink Database"),
+            down("Shrink Database"),
             up("Sports"),
             up("Refresh Charts"),
             up("TMDB Charts"),
@@ -63,8 +58,10 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             up("Database:"),
             right("Database:"),
             down("Delete leftover downloads"),
-            // Back leaves the sub-pane onto its row, Back again returns to the rail.
+            // Back leaves the sub-pane onto its row in the section, Back again closes the section on
+            // its row in Admin's list, and once more returns to the rail.
             back("Guide Data Maintenance"),
+            back("Sources & Guide / Sources, the guide, film details, charts and sports"),
             back("Admin"),
         )
     }
@@ -75,8 +72,8 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
         var opened = 0
         showSettings { SettingsScreen(onBack = {}, onProviderChanged = {}, onGuideSources = { opened++ }) }
         walk.run(
-            *toShowClock(),
-            down("Manage Sources"),
+            *toSourcesGuide(),
+            center("Manage Sources"),
             down("Guide Sources"),
             // Two sources with live channels, and no chooser: the page opens at once.
             center("Guide Sources"),
@@ -88,11 +85,14 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
     fun `the TMDB key's pane closes on its row`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toShowClock(),
-            *adminDown("Show Clock", "Film and Show Details (TMDB)"),
+            *toSourcesGuide(),
+            center("Manage Sources"),
+            *sectionDown(SOURCE_GUIDE_ROWS, "Manage Sources", "Film and Show Details (TMDB)"),
             // Focus opens on the key's Edit button.
             center("Edit TMDB key / TMDB key"),
             left("Film and Show Details (TMDB)"),
+            // Left closes the section on its row, then goes to the rail.
+            left("Sources & Guide"),
             left("Admin"),
         )
     }

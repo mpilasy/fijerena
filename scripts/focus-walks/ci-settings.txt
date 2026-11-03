@@ -15,6 +15,9 @@
 # rows of the old Expert groups. Edited by hand from the focus tests, not yet run.
 # Logs (2026-10-28): Diagnostics, renamed Logs, moved to About under Device Info; Advanced removed,
 # Shrink Database is the last row of Admin's page, under no header. Edited by hand, not yet run.
+# Admin sections (2026-11-03): Admin lists its five sections; OK opens a section in place of the
+# list, Back closes it on its row; Shrink Database ends Sources & Guide. Edited by hand from the
+# focus tests, not yet run.
 @start Admin
 # The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
@@ -61,11 +64,13 @@ DOWN	Terms of Use
 DOWN	Open-Source Licences
 LEFT	About
 UP	Admin
-# Admin: one page, a header over each part: Profiles, Parental Controls, This Device, Sources &
-# Guide, Sync & Backup; then Shrink Database, under no header.
+# Admin: the list of its sections, Profiles, Parental Controls, This Device, Sources & Guide and
+# Sync & Backup. OK opens a section in place of the list; Back and Left close it, focus back on its
+# row.
+RIGHT	Profiles
 # Profiles: a child profile and no admin PIN, so "Set a PIN for Settings" first (never pressed),
 # then Admin, Guest, Kid and Add Profile.
-RIGHT	Set a PIN for Settings
+CENTER	Set a PIN for Settings
 DOWN	Admin / Using on this device
 # Admin's page (the only admin, in use, one source so no Sources row): focus on the name's Edit
 # button; Down to the end, Content Filters. Admin can't be deleted or switched to.
@@ -103,39 +108,49 @@ DOWN	Switch to this profile
 DOWN	Delete profile
 LEFT	Kid
 DOWN	Add Profile
+# The end of the section; Back closes it on its row.
+DOWN	Add Profile
+BACK	Profiles
 # Parental Controls: one row per list, Check a Source, the link to Profiles.
-DOWN	Kids' Categories
+DOWN	Parental Controls
+CENTER	Kids' Categories
 DOWN	Kids' Film Categories
 DOWN	Adult Categories
 DOWN	Hidden Titles
 DOWN	Exceptions
 DOWN	Check a Source
 DOWN	Content Filters of Each Profile
+LEFT	Parental Controls
 # This Device: Language (English on a fresh install), Text & Grid Size, Items in Recent, the watch
 # delay (OK opens its picker on 10 s, the default; Left closes it), Show Clock.
-DOWN	Language / Language for menus and messages / English
+DOWN	This Device
+CENTER	Language / Language for menus and messages / English
 DOWN	Text & Grid Size
 DOWN	Items in Recent
 DOWN	Add a Channel to Recent After
 CENTER	10 s
 LEFT	Add a Channel to Recent After
 DOWN	Show Clock
+BACK	This Device
 # Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
 # Maintenance, the TMDB key (On or Off by build: not checked), the TMDB Charts switch, Refresh Charts,
-# the Sports switch.
-DOWN	Manage Sources
+# the Sports switch, then Shrink Database (never pressed), the end of the section.
+DOWN	Sources & Guide
+CENTER	Manage Sources
 DOWN	Guide Sources
 DOWN	Guide Data Maintenance
 DOWN	Film and Show Details (TMDB)
 DOWN	TMDB Charts
 DOWN	Refresh Charts
 DOWN	Sports
+DOWN	Shrink Database
+DOWN	Shrink Database
+BACK	Sources & Guide
 # Sync & Backup: Live Sync, then the backups.
-DOWN	Live Sync
+DOWN	Sync & Backup
+CENTER	Live Sync
 DOWN	Back Up to a File
 DOWN	Restore from a File
-# Shrink Database (never pressed), the end of the page.
-DOWN	Shrink Database
-DOWN	Shrink Database
-# Back in the pane returns to the rail row, not out of Settings.
+BACK	Sync & Backup
+# Back in Admin's list returns to the rail row, not out of Settings.
 BACK	Admin

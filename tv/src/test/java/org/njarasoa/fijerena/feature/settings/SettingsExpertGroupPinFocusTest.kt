@@ -17,7 +17,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * TV Settings with an Expert whose PIN was not typed yet in this session: entering Admin's pane
  * (Right or OK on its rail row) asks the PIN first, Cancel keeps focus on the rail row, and once
- * typed the PIN holds for the session. Your Profile and About never ask it.
+ * typed the PIN holds for the session. Your Profile and About never ask it. A lock while a section
+ * is open closes the section too.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
@@ -27,6 +28,15 @@ class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
         PinSession.onActiveProfile("")
         showSettings()
     }
+
+    /** On the PIN pad, open on 1: types [SettingsFixture.PIN]; the fourth digit lands on [landing]. */
+    private fun typePin(landing: String): Array<FocusStep> =
+        arrayOf(
+            FocusStep(Key.One, "1"),
+            FocusStep(Key.Two, "1"),
+            FocusStep(Key.Three, "1"),
+            FocusStep(Key.Four, landing),
+        )
 
     @Test
     fun `entering Admin asks the PIN, and Cancel stays on the rail`() {
@@ -64,19 +74,36 @@ class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
         walk.run(
             down("Admin"),
             right("1"),
-            FocusStep(Key.One, "1"),
-            FocusStep(Key.Two, "1"),
-            FocusStep(Key.Three, "1"),
-            // The fourth digit checks it: the pane, on its first row (an Expert has a PIN: no
-            // reminder).
-            FocusStep(Key.Four, "A / Admin"),
+            // The fourth digit checks it: Admin's list of sections, on its first row.
+            *typePin("Profiles"),
             left("Admin"),
             // The session holds the PIN: no pad again.
-            right("A / Admin"),
+            right("Profiles"),
             left("Admin"),
             up("Your Profile"),
             down("Admin"),
-            right("A / Admin"),
+            right("Profiles"),
+        )
+    }
+
+    @Test
+    fun `a lock closes the open section, and the PIN opens Admin's list again`() {
+        open(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN))
+        walk.run(
+            *toAdminSection("This Device"),
+            center("Language"),
+        )
+        // The session locks again (a long time in the background): the section closes, and focus
+        // goes to the rail row.
+        rule.runOnIdle { PinSession.onActiveProfile("") }
+        walk.awaitFocused("Admin")
+        walk.run(
+            right("1"),
+            // Back in, on the list, not in the section.
+            *typePin("Profiles"),
+            down("Parental Controls"),
+            down("This Device"),
+            center("Language"),
         )
     }
 }

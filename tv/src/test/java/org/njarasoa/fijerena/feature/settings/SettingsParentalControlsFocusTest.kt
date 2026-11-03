@@ -21,30 +21,26 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsParentalControlsFocusTest : SettingsFocusTest() {
-    /** From the rail to Admin's last profile row, Add Profile: the part's rows come next. */
-    private fun toAddProfile(): Array<FocusStep> =
+    /** From the rail into Admin → Parental Controls, on its first row. */
+    private fun toParental(): Array<FocusStep> =
         arrayOf(
-            down("Admin"),
-            right("Set a PIN for Settings"),
-            down("A / Admin"),
-            *adminDown("A / Admin", "Add Profile"),
+            *toAdminSection("Parental Controls"),
+            center("Kids' Categories / A category shows to a child when its name has one of these words."),
         )
 
     @Test
     fun `an Expert walks the part and the Exceptions list`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toAddProfile(),
-            down("Kids' Categories / A category shows to a child when its name has one of these words."),
+            *toParental(),
             down("Kids' Film Categories / These also show, for film categories only."),
             down("Adult Categories / A category with one of these words never shows to a child."),
             down("Hidden Titles / A title with one of these words never shows to a child"),
             down("Exceptions / A film or show with one of these words shows to a child"),
             down("Check a Source"),
             down("Content Filters of Each Profile / Set on each profile's page, in Profiles"),
-            // This Device follows on the same page.
-            down("Language"),
-            up("Content Filters of Each Profile"),
+            // The end of the section: This Device is a section of its own.
+            down("Content Filters of Each Profile"),
             up("Check a Source"),
             up("Exceptions"),
             // OK opens the list in place of the rows, focus on Add a word.
@@ -56,8 +52,10 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             // Left leaves the list, focus back on its row.
             left("Exceptions / A film or show with one of these words shows to a child"),
             center("Add a word"),
-            // Back leaves it too.
+            // Back leaves it too, onto the section, not Admin's list.
             back("Exceptions"),
+            // Back again closes the section, focus on its row; once more, the rail.
+            back("Parental Controls"),
             back("Admin"),
         )
     }
@@ -66,8 +64,8 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
     fun `the Exceptions list ends on Reset`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toAddProfile(),
-            *adminDown("Add Profile", "Exceptions"),
+            *toParental(),
+            *sectionDown(PARENTAL_ROWS, "Kids' Categories", "Exceptions"),
             center("Add a word"),
             down("pokemon"),
             down("doraemon"),
@@ -89,8 +87,8 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
     fun `a word removed in Settings comes back on Menu`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toAddProfile(),
-            *adminDown("Add Profile", "Exceptions"),
+            *toParental(),
+            *sectionDown(PARENTAL_ROWS, "Kids' Categories", "Exceptions"),
             center("Add a word"),
             down("pokemon"),
             // OK removes the word: focus on the word that takes its place.
@@ -105,14 +103,15 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
     fun `Check a Source and the link to Profiles`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            *toAddProfile(),
-            *adminDown("Add Profile", "Check a Source"),
+            *toParental(),
+            *sectionDown(PARENTAL_ROWS, "Kids' Categories", "Check a Source"),
             // The child's only source: its row first, focus on it.
             center("Source One"),
             left("Check a Source"),
             down("Content Filters of Each Profile"),
-            // OK goes up to Admin's Profiles part, focus on its first row; Back goes to the rail.
+            // OK opens Admin's Profiles section, focus on its first row; Back closes it on its row.
             center("Set a PIN for Settings"),
+            back("Profiles"),
             back("Admin"),
         )
     }
