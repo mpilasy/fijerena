@@ -1,6 +1,6 @@
 # Nerd role, sync failures, TV reminder focus, Admin pages
 
-**Status:** In progress since 2026-11-03: Phase 0 and Lane R done; Lanes S, A, N, G in progress. Decisions RQ-1 to RQ-6 and NR-Q1 taken
+**Status:** In progress since 2026-11-03: Phase 0, Lanes R and S done; Lanes A, N, G in progress. Decisions RQ-1 to RQ-6 and NR-Q1 taken
 (user, 2026-11-03).
 
 ## Goal
@@ -170,6 +170,11 @@ Four changes from the user (2026-11-03):
     sources, no time stored), count = 1. A provider row's `lastSyncedAtMs` then holds a failure
     time, not a success: the lane sets it to 0 ("Never") only if every `== 0` / `> 0` reader is
     safe with it, and otherwise leaves it; the plan records which.
+  **Done note (Lane S):** left as it is, not 0. Two readers are not safe with 0:
+  `ProviderSyncRunner` would count the next sync as a first sync ("library still loading" on Home
+  and empty phone lists), and `ProfileSections` would show a Live TV section again for a source
+  without channels. Cost: on a row that had an error before the upgrade, "Last sync" shows the old
+  attempt time until the next success.
 - **Writers:**
   - `EpgSourceDao.markError`: set the error, failure time = now, count + 1.
     `markIngested`, `markUnchanged`, `resetAllIngestionState`, `withIngestionStateReset`: failure
@@ -255,7 +260,7 @@ t3  Phase X (one name for Admin) on main → full suite → emulator walks
 |-------|--------|--------|
 | 0 | Done | b2cda0b83 |
 | R | Done | 6c912a4a6, merged c06027900; emulator walk left |
-| S | In progress | |
+| S | Done | 723da11b8, merged 4df60ee77; emulator walk left |
 | A | In progress | |
 | N | In progress | |
 | G | In progress | |
