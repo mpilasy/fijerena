@@ -211,60 +211,6 @@ fun TvNavHost(
     // by the section's first composition. Lost with the process, which only means browse instead.
     var liveTvOpenOn by remember { mutableStateOf<MediaItem?>(null) }
 
-    // Settings and its screens on top aren't a section's place: dropped before a pick, not saved.
-    fun popSettingsTree() {
-        while (navController.currentDestination?.isSettingsTree() == true &&
-            navController.previousBackStackEntry != null &&
-            navController.popBackStack()
-        ) {
-            Unit
-        }
-    }
-
-    // Leaving Live TV from under the TV Guide its full screen opened: its preview layer, saved open,
-    // stays closed when the section comes back (TvCategoryGridScreen's closeSavedLivePreview).
-    // Nothing to do with Live TV's browse on top: the layer is closed while the rail shows.
-    fun closeSavedLivePreview() {
-        if (navController.currentDestination?.hasRoute<Screen.LiveTvTab>() == true) return
-        try {
-            navController.getBackStackEntry(Screen.LiveTvTab).savedStateHandle[CLOSE_SAVED_LIVE_PREVIEW] = true
-        } catch (_: IllegalArgumentException) {
-            // Live TV isn't on the back stack.
-        }
-    }
-
-    // A section entered again comes back on Recent (the tv browse tabs plan), when it comes back on
-    // its browse: one that comes back on a title keeps the list under it, so Back lands on the row.
-    fun openBrowseOnRecent(section: TvSection) {
-        val entry = navController.currentBackStackEntry ?: return
-        if (entry.destination.hasRoute(section.route::class)) entry.savedStateHandle[OPEN_ON_RECENT] = true
-    }
-
-    // Home opened from the rail opens on its first card, not on the card the user last opened from
-    // it (Back from that card's screen still returns to the card).
-    fun openHomeOnFirstCard() {
-        if (navController.currentDestination?.hasRoute<Screen.ContentTypeSelection>() == true) return
-        runCatching { navController.getBackStackEntry(Screen.ContentTypeSelection) }
-            .getOrNull()
-            ?.savedStateHandle
-            ?.set(OPEN_HOME_ON_FIRST_CARD, true)
-    }
-
-    // Each section keeps its place: the section's stack above Home is saved under its root, and the
-    // section picked comes back where it was left, or opens fresh. Home stays the start and is never
-    // popped. What Home opened outside the sections (Search, a title) isn't a place: not saved.
-    fun showSection(section: TvSection) {
-        popSettingsTree()
-        closeSavedLivePreview()
-        val saveSection = navController.currentSection() != null
-        navController.navigate(section.route) {
-            popUpTo(Screen.ContentTypeSelection) { saveState = saveSection }
-            launchSingleTop = true
-            restoreState = true
-        }
-        openBrowseOnRecent(section)
-    }
-
     // Live TV opened fresh is the browse screen with the preview as a layer over it, open on the
     // last channel (LT7) — so Back from the preview lands on a real browse screen, same as Movies
     // and TV Shows. A restored Live TV ignores it: coming back never starts video on its own.
@@ -275,64 +221,15 @@ fun TvNavHost(
             coroutineScope.launch {
                 // The newest of the profile's sources' last channels (multi-source plan, Phase 5).
                 liveTvOpenOn = MergedLists.forSections(context)?.lastWatchedChannel()
-                showSection(section)
+                navController.showSection(section)
             }
         } else {
-            showSection(section)
+            navController.showSection(section)
         }
     }
 
-    // The rail's picks (the tv nav rail plan → Phase 0 findings → Navigation rules).
-    fun selectRailItem(item: RailItem) {
-        val section = TvSection.of(item)
-        when {
-            item == RailItem.PROFILE -> {
-                navController.navigateOnce(Screen.ProfilePicker)
-            }
-
-            item == RailItem.HOME -> {
-                popSettingsTree()
-                closeSavedLivePreview()
-                openHomeOnFirstCard()
-                navController.popBackStack(
-                    Screen.ContentTypeSelection,
-                    inclusive = false,
-                    saveState = navController.currentSection() != null,
-                )
-            }
-
-            // Search over everything, the current section's type chosen (railSearch).
-            item == RailItem.SEARCH -> {
-                if (rail.current != RailItem.SEARCH) {
-                    // The only Search: an older one, and what it opened, goes first.
-                    navController.navigateToSearch(railSearch(rail.current))
-                }
-            }
-
-            // On top of where you are, or back to its start from one of its screens.
-            item == RailItem.SETTINGS -> {
-                if (!navController.popBackStack(Screen.Settings, inclusive = false)) {
-                    navController.navigate(Screen.Settings) { launchSingleTop = true }
-                }
-            }
-
-            // From Settings (or Search) opened over a section, that section's item goes back to
-            // where you were in it — the film, not the section's start.
-            section != null && section == navController.currentSection() && rail.current != item -> {
-                if (navController.currentDestination?.isSettingsTree() == true) popSettingsTree() else navController.popBackStack()
-            }
-
-            // The section you are in: back to its start, on Recent. Already there, nothing changes.
-            section != null && section == navController.currentSection() -> {
-                closeSavedLivePreview()
-                if (navController.popBackStack(section.route, inclusive = false)) openBrowseOnRecent(section)
-            }
-
-            section != null -> {
-                openSection(section)
-            }
-        }
-    }
+    // The rail's picks (TvRailNavigation.kt).
+    fun selectRailItem(item: RailItem) = navController.selectRailItem(item, rail.current, ::openSection)
 
     // A Browse entry (O1): a Jellyfin or M3U source's own sections, on it alone — pushed over where
     // you are, as Search is, so Back returns there. With several sections, picked in a dialog.
@@ -342,7 +239,7 @@ fun TvNavHost(
         source: BrowseSource,
         contentType: String,
     ) {
-        popSettingsTree()
+        navController.popSettingsTree()
         navController.navigateOnce(
             Screen.CategoryList(contentType = contentType, showPreviewPane = false, providerId = source.providerId),
         )
@@ -603,7 +500,7 @@ fun TvNavHost(
         val openOnRecent = remember { entry.savedStateHandle.remove<Boolean>(OPEN_ON_RECENT) == true }
         BackHandler(enabled = rail.visible) {
             if (rail.expanded || !rail.focusRail()) {
-                openHomeOnFirstCard()
+                navController.openHomeOnFirstCard()
                 navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
             }
         }
@@ -864,7 +761,7 @@ fun TvNavHost(
                         composable<Screen.SportsTab> {
                             BackHandler(enabled = rail.visible) {
                                 if (rail.expanded || !rail.focusRail()) {
-                                    openHomeOnFirstCard()
+                                    navController.openHomeOnFirstCard()
                                     navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
                                 }
                             }
@@ -1495,12 +1392,3 @@ fun TvNavHost(
 /** A reminder's channel is not tuned over the profile picker, safe mode or the newer-data screen. */
 private fun canTuneFrom(destination: androidx.navigation.NavDestination): Boolean =
     !destination.hasRoute<Screen.ProfilePicker>() && !destination.hasRoute<Screen.SafeMode>() && !destination.hasRoute<Screen.NewerData>()
-
-/** Set on Live TV's root entry when a rail pick leaves it: see closeSavedLivePreview in [TvNavHost]. */
-private const val CLOSE_SAVED_LIVE_PREVIEW = "closeSavedLivePreview"
-
-/** Set on a section's root entry when it is entered again on its browse: see openBrowseOnRecent in [TvNavHost]. */
-private const val OPEN_ON_RECENT = "openOnRecent"
-
-/** Set on Home's entry when the rail opens it: see openHomeOnFirstCard in [TvNavHost]. */
-private const val OPEN_HOME_ON_FIRST_CARD = "openHomeOnFirstCard"

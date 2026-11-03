@@ -782,7 +782,7 @@ internal fun StreamItem(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
-    /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
+    /** Days the channel's archive keeps (catch-up), 0 for none: a badge at the start of the second line. */
     catchupDays: Int = 0,
     /** The channel playing / the last played item: the P5 "current" bar and title colour. */
     isCurrent: Boolean = false,
@@ -965,8 +965,6 @@ internal fun StreamItem(
                         )
                     }
 
-                    if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
-
                     TvRowTitle(
                         // See mobile's StreamCard — provider data occasionally sends a blank
                         // name (e.g. "EN -  (US)" with nothing between the dashes).
@@ -980,14 +978,17 @@ internal fun StreamItem(
                     // The source (Expert mode) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
-                // The second line: the title's badges, then the category,
-                // year · length · rating or the Now line.
+                // The second line: the catch-up badge and the title's badges, then the category,
+                // year · length · rating or the Now line. The catch-up badge is not on the first
+                // line: in the preview pane's narrow list it left the focused channel's name a
+                // few letters, which the marquee then scrolled to their end (TV walk C2).
                 val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
-                if (sourceLine != null || lineText != null || parsedTitle.hasBadges || categoryTag != null) {
+                if (sourceLine != null || lineText != null || parsedTitle.hasBadges || categoryTag != null || catchupDays > 0) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
                         TitleBadges(parsedTitle)
                         categoryTag?.let { LanguageBadge(it) }
                         lineText?.let { text ->
