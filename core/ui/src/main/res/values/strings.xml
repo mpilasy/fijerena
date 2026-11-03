@@ -243,6 +243,8 @@
     <string name="epg_clear_db_confirm_message">This will delete all indexed programmes and channels. Your guide source URLs will be preserved.</string>
     <string name="epg_clear_everything_btn">Clear everything</string>
     <string name="epg_delete_source_confirm_title">Delete Guide Source?</string>
+    <string name="epg_cellular_confirm_title">Use Mobile Data?</string>
+    <string name="epg_cellular_confirm_message">You are on mobile data. A guide refresh can download a lot of data.</string>
     <string name="epg_delete_source_confirm_message">Delete \"%1$s\"? Its guide data will be deleted.</string>
 
     <!-- Category -->

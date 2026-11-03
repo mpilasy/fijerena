@@ -243,6 +243,8 @@
     <string name="epg_clear_db_confirm_message">Ceci supprimera tous les programmes et chaînes indexés. Les URLs de vos sources de guide seront conservées.</string>
     <string name="epg_clear_everything_btn">Tout effacer</string>
     <string name="epg_delete_source_confirm_title">Supprimer la source de guide ?</string>
+    <string name="epg_cellular_confirm_title">Utiliser les données mobiles ?</string>
+    <string name="epg_cellular_confirm_message">Vous êtes sur les données mobiles. Actualiser le guide peut télécharger beaucoup de données.</string>
     <string name="epg_delete_source_confirm_message">Supprimer « %1$s » ? Ses données de guide seront effacées.</string>
 
     <!-- Category -->

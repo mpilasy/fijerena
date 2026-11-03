@@ -198,23 +198,17 @@ class EpgManagementViewModel(
     private val _dbStats = MutableStateFlow(DbStats())
     val dbStats: StateFlow<DbStats> = _dbStats.asStateFlow()
 
-    sealed interface CellularConfirmDialog {
-        data object Hidden : CellularConfirmDialog
+    /**
+     * On mobile data a guide refresh asks first: the page shows this dialog while it is set, and
+     * the refresh waits for [onConfirm] or [onDismiss].
+     */
+    data class CellularConfirmDialog(
+        val onConfirm: () -> Unit,
+        val onDismiss: () -> Unit,
+    )
 
-        data class RefreshStale(
-            val onConfirm: suspend () -> Unit,
-            val onDismiss: () -> Unit,
-        ) : CellularConfirmDialog
-
-        data class RefreshSource(
-            val sourceId: Long,
-            val onConfirm: suspend () -> Unit,
-            val onDismiss: () -> Unit,
-        ) : CellularConfirmDialog
-    }
-
-    private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
-    val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
+    private val _cellularDialog = MutableStateFlow<CellularConfirmDialog?>(null)
+    val cellularDialog: StateFlow<CellularConfirmDialog?> = _cellularDialog.asStateFlow()
 
     private val _userMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val userMessage: SharedFlow<UiText> = _userMessage.asSharedFlow()
@@ -372,22 +366,7 @@ class EpgManagementViewModel(
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
                 },
-                onCellularConfirm = {
-                    suspendCancellableCoroutine { cont ->
-                        _cellularDialog.value =
-                            CellularConfirmDialog.RefreshStale(
-                                onConfirm = {
-                                    _cellularDialog.value = CellularConfirmDialog.Hidden
-                                    if (cont.isActive) cont.resume(true)
-                                },
-                                onDismiss = {
-                                    _cellularDialog.value = CellularConfirmDialog.Hidden
-                                    _taskSourceIds.value -= taskId
-                                    if (cont.isActive) cont.resume(false)
-                                },
-                            )
-                    }
-                },
+                onCellularConfirm = { confirmCellular(taskId) },
             )
         }
     }
@@ -415,22 +394,7 @@ class EpgManagementViewModel(
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
                 },
-                onCellularConfirm = {
-                    suspendCancellableCoroutine { cont ->
-                        _cellularDialog.value =
-                            CellularConfirmDialog.RefreshStale(
-                                onConfirm = {
-                                    _cellularDialog.value = CellularConfirmDialog.Hidden
-                                    if (cont.isActive) cont.resume(true)
-                                },
-                                onDismiss = {
-                                    _cellularDialog.value = CellularConfirmDialog.Hidden
-                                    _taskSourceIds.value -= taskId
-                                    if (cont.isActive) cont.resume(false)
-                                },
-                            )
-                    }
-                },
+                onCellularConfirm = { confirmCellular(taskId) },
             )
         }
     }
@@ -453,24 +417,30 @@ class EpgManagementViewModel(
                 refreshDbStats()
                 _taskSourceIds.value -= taskId
             },
-            onCellularConfirm = {
-                suspendCancellableCoroutine { cont ->
-                    _cellularDialog.value =
-                        CellularConfirmDialog.RefreshSource(
-                            sourceId = sourceId,
-                            onConfirm = {
-                                _cellularDialog.value = CellularConfirmDialog.Hidden
-                                if (cont.isActive) cont.resume(true)
-                            },
-                            onDismiss = {
-                                _cellularDialog.value = CellularConfirmDialog.Hidden
-                                _taskSourceIds.value -= taskId
-                                if (cont.isActive) cont.resume(false)
-                            },
-                        )
-                }
-            },
+            onCellularConfirm = { confirmCellular(taskId) },
         )
+    }
+
+    /** Shows [cellularDialog] and waits for the answer; a no drops [taskId]'s rows from the progress. */
+    private suspend fun confirmCellular(taskId: String): Boolean =
+        suspendCancellableCoroutine { cont ->
+            _cellularDialog.value =
+                CellularConfirmDialog(
+                    onConfirm = {
+                        _cellularDialog.value = null
+                        if (cont.isActive) cont.resume(true)
+                    },
+                    onDismiss = {
+                        _cellularDialog.value = null
+                        _taskSourceIds.value -= taskId
+                        if (cont.isActive) cont.resume(false)
+                    },
+                )
+        }
+
+    // A refresh still waiting for the mobile data answer when the page closes is dropped.
+    override fun onCleared() {
+        _cellularDialog.value?.onDismiss?.invoke()
     }
 
     fun cleanupFiles() {

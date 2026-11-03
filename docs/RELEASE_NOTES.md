@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Guide refresh works on mobile data:** on Guide Sources, Refresh stale, Retry failed and a source's Refresh did nothing on mobile data: they waited for a question that never showed (only after a video had played, before it the app took the network for Wi-Fi). The page now asks "Use Mobile Data?"; Refresh starts it, Cancel drops it. TV and phone.
+
 ## Version: 0.9.20261103162615
 
 - **Sharing the logs no longer closes the app:** on the phone, Settings → About → Logs → Share closed the app when the log was large. Share now sends the whole log as a text file, with its logins masked as before. When no app can take it, or the file cannot be written, a message says so. Phone.

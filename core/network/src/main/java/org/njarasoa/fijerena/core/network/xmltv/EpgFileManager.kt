@@ -500,6 +500,8 @@ class EpgFileManager private constructor(
 
         processJob =
             scope.launch {
+                // The monitor starts with the player; a refresh before any playback starts it here.
+                NetworkMonitor.init(context)
                 val networkType = NetworkMonitor.currentNetworkType
                 val shouldProceed =
                     if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {

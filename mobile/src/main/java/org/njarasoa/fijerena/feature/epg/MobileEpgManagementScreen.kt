@@ -88,6 +88,7 @@ fun MobileEpgManagementScreen(
     val sources = groups?.flatMap { it.sources }
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val groupList = groups.orEmpty()
@@ -217,6 +218,17 @@ fun MobileEpgManagementScreen(
                 item { GuideMaintenanceRow(viewModel = viewModel) }
             }
         }
+    }
+
+    // On mobile data a refresh waits for this answer (EpgManagementViewModel.cellularDialog).
+    cellularDialog?.let { dialog ->
+        CinemaAlertDialog(
+            onDismissRequest = dialog.onDismiss,
+            main = DialogAction(stringResource(R.string.common_refresh), onClick = dialog.onConfirm),
+            cancel = DialogAction(stringResource(R.string.common_cancel), onClick = dialog.onDismiss),
+            title = stringResource(R.string.epg_cellular_confirm_title),
+            text = { CinemaText(stringResource(R.string.epg_cellular_confirm_message), tone = TextTone.Inherit) },
+        )
     }
 
     if (showAddDialog) {

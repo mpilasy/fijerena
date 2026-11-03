@@ -243,6 +243,8 @@
     <string name="epg_clear_db_confirm_message">Hofafana daholo ny fandaharana sy ny fantsona voatahiry. Hotehirizina ny URL-n\'ny loharanon\'ny fitarihana.</string>
     <string name="epg_clear_everything_btn">Fafao daholo</string>
     <string name="epg_delete_source_confirm_title">Hofafana ve ity loharanon\'ny fitarihana ity?</string>
+    <string name="epg_cellular_confirm_title">Hampiasa angona finday ve?</string>
+    <string name="epg_cellular_confirm_message">Angona finday no ampiasainao izao. Mety haka angona be ny fanavaozana ny fandaharana.</string>
     <string name="epg_delete_source_confirm_message">Hofafana ve i \"%1$s\"? Hofafana ny angon\'ny fandaharana avy aminy.</string>
 
     <!-- Category -->
