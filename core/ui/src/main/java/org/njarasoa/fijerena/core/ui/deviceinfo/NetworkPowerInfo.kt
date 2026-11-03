@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.annotation.StringRes
 import kotlinx.coroutines.flow.first
+import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
@@ -170,7 +171,9 @@ private suspend fun readSync(context: Context): SyncFacts {
     val sources =
         suspendRunCatching {
             AppContainer.getInstance(context).providerRepository.getAllProvidersList().map {
-                SourceSync(it.name, it.type == "XTREAM", it.lastSyncedAtMs, it.lastSyncDurationMs, it.lastSyncError)
+                // The kept error is a code: shown as its message in the app language, without the raw text.
+                val error = it.lastSyncError?.let { stored -> StoredError.message(stored, context, includeRaw = false) }
+                SourceSync(it.name, it.type == "XTREAM", it.lastSyncedAtMs, it.lastSyncDurationMs, error)
             }
         }
     val guide =

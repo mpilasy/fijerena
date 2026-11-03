@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.sourceTypeName
+import org.njarasoa.fijerena.core.ui.utils.storedErrorText
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -139,7 +140,7 @@ internal fun SourcesStatusSheet(
                     val reason =
                         state.lastSyncError
                             ?.takeIf { state.status == SourceSyncStatus.FAILED }
-                            ?.let { stringResource(R.string.home_source_update_failed_detail, it) }
+                            ?.let { stringResource(R.string.home_source_update_failed_detail, storedErrorText(it)) }
                     // A focusable line of status (focus rule 3): OK closes the dialog.
                     val detail = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null }
                     SettingsRow(

@@ -73,13 +73,11 @@ fun rememberSourceName(providerId: Long): String? {
 }
 
 /**
- * The label of a filter's row for one source: its count in the dialog's one count style, "(64)",
- * as "All sources (835)" and the decade rows; the source shows as the badge at the end of the
- * label, as on every row. Without badges (Expert mode off) the name stays in the words:
- * "bears (64)".
+ * The label of a filter's row for one source: the source's name with its count in the dialog's one
+ * count style, "bears (64)", as "All sources (835)" and the decade rows. The name is the row's own
+ * label, so it stays in the words in every mode; the source badge follows it only while badges show.
  */
-@Composable
 fun sourceFilterLabel(
     name: String,
     count: Int,
-): String = if (LocalShowSourceBadges.current) "($count)" else "$name ($count)"
+): String = "$name ($count)"

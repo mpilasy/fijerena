@@ -720,7 +720,7 @@ private fun SearchFilterAction(
                                 onSelectSource(null)
                             }
                             for (source in sources) {
-                                // The source as the badge at the end of the row's label, as on every row.
+                                // The source's name and count as the label; its badge follows only while badges show.
                                 CinemaRadioRow(
                                     selected = selectedSource == source.providerId,
                                     onClick = { onSelectSource(source.providerId) },

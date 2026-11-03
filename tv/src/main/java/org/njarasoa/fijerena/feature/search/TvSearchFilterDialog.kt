@@ -113,7 +113,7 @@ internal fun TvSearchFilterDialog(
                         TvRadioRow(
                             selected = selectedSource == source.providerId,
                             onClick = { onSelectSource(source.providerId) },
-                            // The source as the badge at the end of the label, as on every row.
+                            // The source's name and count as the label; its badge follows only while badges show.
                             label = sourceFilterLabel(source.name, source.count),
                             sourceName = source.name,
                             modifier = Modifier.entryIf("source_${source.providerId}"),

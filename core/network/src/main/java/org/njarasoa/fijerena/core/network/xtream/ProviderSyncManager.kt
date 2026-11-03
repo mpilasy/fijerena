@@ -142,7 +142,7 @@ class ProviderSyncManager private constructor(
                     provider.id,
                     endTime,
                     endTime - startTime,
-                    outcome.errorOrNull(),
+                    outcome.errorOrNull()?.encode(),
                     inserted = delta?.inserted,
                     updated = delta?.updated,
                     deleted = delta?.deleted,
@@ -268,7 +268,7 @@ class ProviderSyncManager private constructor(
                     providerId,
                     endTime,
                     endTime - startTime,
-                    outcome.errorOrNull(),
+                    outcome.errorOrNull()?.encode(),
                     inserted = delta?.inserted,
                     updated = delta?.updated,
                     deleted = delta?.deleted,
@@ -276,7 +276,12 @@ class ProviderSyncManager private constructor(
                 if (outcome is ProviderSyncRunner.Outcome.Success) {
                     SyncResult.Success
                 } else {
-                    SyncResult.Failed(outcome.errorOrNull() ?: context.getString(R.string.error_generic))
+                    SyncResult.Failed(
+                        outcome.errorOrNull()?.message(
+                            context,
+                            AppSettings(context).isDevMode,
+                        ) ?: context.getString(R.string.error_generic),
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e

@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.sourceTypeName
+import org.njarasoa.fijerena.core.ui.utils.storedErrorText
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -139,7 +140,7 @@ fun MobileSourcesStatusSheet(
                         sourceStatusText(state, now)?.let { StatusText(state.status, it) }
                         state.lastSyncError?.takeIf { state.status == SourceSyncStatus.FAILED }?.let { error ->
                             CinemaText(
-                                text = stringResource(R.string.home_source_update_failed_detail, error),
+                                text = stringResource(R.string.home_source_update_failed_detail, storedErrorText(error)),
                                 role = TextRole.Body,
                                 tone = TextTone.Danger,
                             )

@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.storedErrorText
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
@@ -466,7 +467,7 @@ private fun EpgSourceCard(
             val lastError = source.lastError
             if (lastError != null) {
                 CinemaText(
-                    text = stringResource(R.string.epg_database_error, lastError),
+                    text = stringResource(R.string.epg_database_error, storedErrorText(lastError)),
                     modifier = Modifier.padding(top = CinemaSpacing.xs),
                     role = TextRole.Caption,
                     tone = TextTone.Danger,

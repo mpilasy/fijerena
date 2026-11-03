@@ -36,8 +36,10 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
@@ -1302,7 +1304,7 @@ class EpgFileManager private constructor(
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
-        // Raw throwable retained so we can persist a friendly message while keeping the raw
+        // Raw throwable retained so we can persist its error kind while keeping the raw
         // `lastError` string for the HTTP-4xx retry-classification check below.
         var lastException: Throwable? = null
         var notModified = false
@@ -1316,7 +1318,7 @@ class EpgFileManager private constructor(
             // The automatic Xtream guide source is stored without its login: added here, only for the request.
             val fetchUrl = AutoXmltvSources.fetchUrl(context, source)
             if (fetchUrl == null) {
-                sourceDao.markError(source.id, context.getString(R.string.error_guide_login_missing))
+                sourceDao.markError(source.id, StoredError(ErrorKind.GUIDE_LOGIN_MISSING).encode())
                 return null
             }
             val indexHasRows = EpgIndexer.getInstance(context).hasProgrammesForSource(source.id)
@@ -1437,7 +1439,15 @@ class EpgFileManager private constructor(
             }
 
             if (lastError != null) {
-                val display = lastException?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) } ?: lastError
+                val display =
+                    (
+                        lastException?.let {
+                            StoredError.of(
+                                it,
+                                context,
+                            )
+                        } ?: StoredError(ErrorKind.GENERIC, raw = lastError)
+                    ).encode()
                 sourceDao.markError(source.id, display)
                 tmpFile.delete()
                 return null
@@ -1491,7 +1501,7 @@ class EpgFileManager private constructor(
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading source: $label", e)
-            sourceDao.markError(source.id, friendlyErrorMessage(e, context, appSettings.isDevMode))
+            sourceDao.markError(source.id, StoredError.of(e, context).encode())
             tmpFile.delete()
             return null
         }
@@ -1616,7 +1626,7 @@ class EpgFileManager private constructor(
 
             if (isFailedEmptyIngest(ingestionStats.channelsIngested, source.lastChannels)) {
                 Log.w(TAG, "EPG source $label came back empty after ${source.lastChannels} channels — keeping its old guide")
-                val display = context.getString(R.string.epg_error_came_back_empty)
+                val display = StoredError(ErrorKind.GUIDE_CAME_BACK_EMPTY).encode()
                 sourceDao.markError(source.id, display)
                 return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
             }
@@ -1670,7 +1680,7 @@ class EpgFileManager private constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error ingesting source: $label", e)
-            val display = friendlyErrorMessage(e, context, appSettings.isDevMode)
+            val display = StoredError.of(e, context).encode()
             sourceDao.markError(source.id, display)
             return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
         } finally {

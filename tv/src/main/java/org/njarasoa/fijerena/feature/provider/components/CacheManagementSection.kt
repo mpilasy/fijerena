@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.storedErrorText
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -128,7 +129,7 @@ fun CacheManagementSection(
             }
 
             if (syncState is SyncState.Error || (syncState is SyncState.Idle && lastSyncError != null)) {
-                val errorMsg = ((syncState as? SyncState.Error)?.message ?: lastSyncError)?.let(Redact::text)
+                val errorMsg = ((syncState as? SyncState.Error)?.message ?: lastSyncError?.let { storedErrorText(it) })?.let(Redact::text)
                 if (errorMsg != null) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(

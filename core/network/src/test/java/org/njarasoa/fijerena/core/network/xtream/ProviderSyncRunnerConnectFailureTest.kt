@@ -57,7 +57,10 @@ class ProviderSyncRunnerConnectFailureTest {
             failingConnect(ConnectException("Failed to connect to /10.0.2.2:8080"))
             val outcome = ProviderSyncRunner.syncProvider(context, provider, "pw")
             assertTrue("$outcome", outcome is ProviderSyncRunner.Outcome.Transient)
-            assertTrue("$outcome", (outcome as ProviderSyncRunner.Outcome.Transient).error.startsWith("NETWORK ERROR"))
+            assertTrue(
+                "$outcome",
+                (outcome as ProviderSyncRunner.Outcome.Transient).error.message(context, false).startsWith("NETWORK ERROR"),
+            )
         }
 
     @Test
@@ -66,6 +69,9 @@ class ProviderSyncRunnerConnectFailureTest {
             failingConnect(Exception("Stored credentials are invalid"))
             val outcome = ProviderSyncRunner.syncProvider(context, provider, "pw")
             assertTrue("$outcome", outcome is ProviderSyncRunner.Outcome.Permanent)
-            assertTrue("$outcome", (outcome as ProviderSyncRunner.Outcome.Permanent).error.startsWith("LOGIN FAILED"))
+            assertTrue(
+                "$outcome",
+                (outcome as ProviderSyncRunner.Outcome.Permanent).error.message(context, false).startsWith("LOGIN FAILED"),
+            )
         }
 }

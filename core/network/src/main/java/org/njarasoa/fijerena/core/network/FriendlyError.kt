@@ -21,11 +21,17 @@ import javax.net.ssl.SSLException
 fun friendlyErrorMessage(
     e: Throwable,
     context: Context,
-): String {
+): String = context.getString(errorKind(e, context).messageRes)
+
+/** The [ErrorKind] of [e]: what [friendlyErrorMessage] says, as a code to keep ([StoredError]). */
+fun errorKind(
+    e: Throwable,
+    context: Context,
+): ErrorKind {
     // A network failure inside another exception says what it is: a list read cut short by a
     // timeout comes up as a JSON error, with the timeout among its causes.
     val cause = e.networkCause()
-    if (cause != null && cause !== e) return friendlyErrorMessage(cause, context)
+    if (cause != null && cause !== e) return errorKind(cause, context)
     return when {
         // OkHttp's own message when a client's Dispatcher.executorService has already been
         // shut down (e.g. closed while still in use) and something tries to submit one more
@@ -34,41 +40,41 @@ fun friendlyErrorMessage(
         // connection, and telling them to "check your connection" for an internal lifecycle bug
         // sends them chasing the wrong thing. No connectivity check would ever fix this.
         e.message?.contains("executor rejected", ignoreCase = true) == true -> {
-            context.getString(R.string.error_generic)
+            ErrorKind.GENERIC
         }
 
         e is InvalidPlaylistException -> {
-            context.getString(R.string.error_invalid_playlist)
+            ErrorKind.INVALID_PLAYLIST
         }
 
         e is InvalidSettingsFileException -> {
-            context.getString(R.string.settings_export_error_invalid_format)
+            ErrorKind.INVALID_SETTINGS_FILE
         }
 
         e is HttpStatusException -> {
-            httpStatusMessage(e.code, context)
+            httpStatusKind(e.code, context)
         }
 
         e is ResponseException -> {
-            httpStatusMessage(e.response.status.value, context)
+            httpStatusKind(e.response.status.value, context)
         }
 
         e is UnknownHostException -> {
-            context.getString(R.string.error_no_internet)
+            ErrorKind.NO_INTERNET
         }
 
         // HttpRequestTimeoutException: a call that outran its overall deadline (R-14), e.g. a
         // server trickling bytes. It's an IOException, so it would otherwise read as "network error".
         e is SocketTimeoutException || e is HttpRequestTimeoutException -> {
-            context.getString(R.string.error_timeout)
+            ErrorKind.TIMEOUT
         }
 
         e is SSLException -> {
-            context.getString(R.string.error_ssl)
+            ErrorKind.SSL
         }
 
         e is IOException -> {
-            context.getString(R.string.error_network)
+            ErrorKind.NETWORK
         }
 
         else -> {
@@ -82,7 +88,7 @@ fun friendlyErrorMessage(
                     msg.contains("Invalid credentials", ignoreCase = true) ||
                     msg.contains("credentials are invalid", ignoreCase = true) ||
                     msg.contains("Password not stored", ignoreCase = true)
-            if (isAuthFailure) authFailureMessage(context) else context.getString(R.string.error_generic)
+            if (isAuthFailure) authFailureKind(context) else ErrorKind.GENERIC
         }
     }
 }
@@ -109,25 +115,21 @@ class InvalidPlaylistException : Exception("Not an M3U playlist: missing #EXTM3U
 /** A file to import is not a settings file that this app exported. */
 class InvalidSettingsFileException : Exception("Invalid settings file format")
 
-private fun httpStatusMessage(
+private fun httpStatusKind(
     code: Int,
     context: Context,
-): String =
+): ErrorKind =
     when (code) {
-        401, 403 -> authFailureMessage(context)
-        404, 410 -> context.getString(R.string.error_not_found)
-        in 500..599 -> context.getString(R.string.error_server)
-        else -> context.getString(R.string.error_generic)
+        401, 403 -> authFailureKind(context)
+        404, 410 -> ErrorKind.NOT_FOUND
+        in 500..599 -> ErrorKind.SERVER
+        else -> ErrorKind.GENERIC
     }
 
 // A saved login this device had to reset (lost Keystore key) explains a failed login better than
 // "check your username and password". See CredentialStoreHealth.
-private fun authFailureMessage(context: Context): String =
-    if (CredentialStoreHealth.anyLost(context)) {
-        context.getString(R.string.error_saved_login_lost)
-    } else {
-        context.getString(R.string.error_unauthorized)
-    }
+private fun authFailureKind(context: Context): ErrorKind =
+    if (CredentialStoreHealth.anyLost(context)) ErrorKind.SAVED_LOGIN_LOST else ErrorKind.UNAUTHORIZED
 
 /**
  * Friendly message, with the raw exception text appended when [includeRaw] is true.

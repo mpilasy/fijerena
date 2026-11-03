@@ -75,7 +75,7 @@ class XtreamSyncWorker(
                     provider.id,
                     endTime,
                     endTime - startTime,
-                    outcome.errorOrNull(),
+                    outcome.errorOrNull()?.encode(),
                     inserted = delta?.inserted,
                     updated = delta?.updated,
                     deleted = delta?.deleted,
