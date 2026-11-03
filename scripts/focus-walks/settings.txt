@@ -32,6 +32,8 @@
 # (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup, Advanced). The start
 # focus is now Your Profile. Edited by hand, not re-run. Later the same day Advanced went: Shrink
 # Database is Admin's last row, under no header, and Diagnostics (renamed Logs) is in About.
+# Admin sections (2026-11-03): Admin lists its five sections, each opened in place of the list
+# (the focus tests check it); Shrink Database ends Sources & Guide. The start focus is unchanged.
 @start Your Profile
 # Back on the rail leaves Settings: Home again, focus on its content (recorded 2026-10-24).
 BACK	Breaking Bad

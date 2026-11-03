@@ -10,9 +10,11 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -46,8 +48,9 @@ import org.robolectric.RobolectricTestRunner
  * The phone's Settings by role (the admin settings plan): a grown-up sees its own rows under Your
  * Profile on Settings itself, never the Admin rows; then an Expert Admin, any other grown-up Add
  * Profile, and About. A child has no Settings: its profile menu does not offer it. Admin asks the PIN once on the way in (Cancel stays on
- * the list), then shows every Expert group under its header; Admin → Profiles → a profile has the
- * Admin rows too.
+ * the list), then lists the Expert groups; each opens its own page (Parental Controls its own
+ * screen), Back returns to the list, and a recreate keeps the page. Admin → Profiles → a profile has
+ * the Admin rows too.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAdminTest {
@@ -162,25 +165,108 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `the Admin page shows each Expert group, and a profile opens with its Admin rows`() {
+    fun `the Admin page lists the sections, and a profile opens with its Admin rows`() {
         var opened: String? = null
         showSettings(active = ADMIN) {
             MobileSettingsScreen(onBack = null, onAdminProfile = { opened = it }, onProviderChanged = {})
         }
 
+        openAdmin()
+        SECTIONS.forEach { scrollTo(text(it)) }
+        // Only the list: the rows of the sections are on their own pages.
+        rule.onNodeWithText("Guest").assertDoesNotExist()
+        rule.onNodeWithText(text(R.string.settings_shrink_database_button)).assertDoesNotExist()
+        // Each row says what is inside it: Profiles names the profiles.
+        rule.onNodeWithText("Ada, Guest, Kid").assertExists()
+
+        rule.onNodeWithText(text(R.string.settings_profiles_title)).performClick()
+        rule.waitForIdle()
+        scrollTo("Guest").performClick()
+        assertEquals(GUEST, opened)
+    }
+
+    @Test
+    fun `each section opens its own page, and Back returns to the Admin list`() {
+        showSettings(active = ADMIN)
+        openAdmin()
+
+        // Each section with a row of its own, which only its page shows.
+        listOf(
+            R.string.settings_profiles_title to "Guest",
+            R.string.settings_group_this_device to text(R.string.settings_language),
+            // Shrink Database ends Sources & Guide.
+            R.string.settings_group_source_guide to text(R.string.settings_shrink_database_button),
+            R.string.settings_group_sync_backup to text(R.string.live_sync_title),
+        ).forEach { (section, row) ->
+            scrollTo(text(section)).performClick()
+            rule.waitForIdle()
+            // The top bar has the section's name; the list of sections is gone.
+            rule.onAllNodesWithText(text(section)).onFirst().assertExists()
+            val otherSection =
+                if (section ==
+                    R.string.settings_group_this_device
+                ) {
+                    R.string.settings_group_sync_backup
+                } else {
+                    R.string.settings_group_this_device
+                }
+            rule.onNodeWithText(text(otherSection)).assertDoesNotExist()
+            scrollTo(row)
+
+            back()
+            // The Admin list again, its top bar and its rows.
+            rule.onAllNodesWithText(text(R.string.settings_group_admin)).onFirst().assertExists()
+            SECTIONS.forEach { scrollTo(text(it)) }
+            rule.onNodeWithText(row).assertDoesNotExist()
+        }
+
+        // Back on the list returns to Settings.
+        back()
+        scrollTo(text(R.string.settings_open_admin))
+    }
+
+    @Test
+    fun `Parental Controls opens its own screen from the Admin list`() {
+        var opened = 0
+        showSettings(active = ADMIN) {
+            MobileSettingsScreen(onBack = null, onParentalControls = { opened++ }, onProviderChanged = {})
+        }
+        openAdmin()
+
+        scrollTo(text(R.string.parental_controls_title)).performClick()
+        rule.waitForIdle()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `an open section comes back after the Activity is recreated`() {
+        val restoration = StateRestorationTester(rule)
+        showSettings(active = ADMIN, setContent = restoration::setContent)
+        openAdmin()
+        scrollTo(text(R.string.settings_group_this_device)).performClick()
+        rule.waitForIdle()
+
+        restoration.emulateSavedInstanceStateRestore()
+        rule.waitForIdle()
+
+        scrollTo(text(R.string.settings_language))
+        rule.onNodeWithText(text(R.string.settings_group_this_device)).assertExists()
+        back()
+        rule.onAllNodesWithText(text(R.string.settings_group_admin)).onFirst().assertExists()
+        scrollTo(text(R.string.settings_group_sync_backup))
+    }
+
+    /** Opens Admin (no PIN in these cases) from Settings' list. */
+    private fun openAdmin() {
         scrollTo(text(R.string.settings_open_admin))
         rule.onNodeWithText(text(R.string.settings_open_admin)).performClick()
         rule.waitForIdle()
-        listOf(
-            R.string.settings_profiles_title,
-            R.string.parental_controls_title,
-            R.string.settings_group_this_device,
-            R.string.settings_group_source_guide,
-            R.string.settings_group_sync_backup,
-            R.string.settings_shrink_database_button,
-        ).forEach { scrollTo(text(it)) }
-        scrollTo("Guest").performClick()
-        assertEquals(GUEST, opened)
+    }
+
+    /** The top bar's Back. */
+    private fun back() {
+        rule.onNodeWithContentDescription(text(R.string.common_back)).performClick()
+        rule.waitForIdle()
     }
 
     /** Settings' Your Profile: the personal rows of the profile in use, no Admin rows. */
@@ -260,12 +346,13 @@ class SettingsAdminTest {
         active: String,
         pins: Set<String> = emptySet(),
         locked: Boolean = false,
+        setContent: (@Composable () -> Unit) -> Unit = rule::setContent,
         screen: @Composable () -> Unit = { MobileSettingsScreen(onBack = null, onProviderChanged = {}) },
     ): ProfilesViewModel {
         seed(active, pins)
         if (locked) PinSession.onActiveProfile("")
         lateinit var owner: ViewModelStoreOwner
-        rule.setContent {
+        setContent {
             owner = checkNotNull(LocalViewModelStoreOwner.current)
             screen()
         }
@@ -334,5 +421,15 @@ class SettingsAdminTest {
         const val KID = "kid"
         const val PIN = "1234"
         const val TIMEOUT_MS = 5_000L
+
+        /** The Admin page's sections, in order. */
+        val SECTIONS =
+            listOf(
+                R.string.settings_profiles_title,
+                R.string.parental_controls_title,
+                R.string.settings_group_this_device,
+                R.string.settings_group_source_guide,
+                R.string.settings_group_sync_backup,
+            )
     }
 }

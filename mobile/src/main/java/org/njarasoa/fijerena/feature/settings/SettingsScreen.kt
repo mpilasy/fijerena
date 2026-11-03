@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -87,8 +88,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings as one grouped preference list: Your Profile (the personal rows of the profile in use,
- * in place) and About, which everyone opens. With Expert mode an Admin row between them opens one
- * page with every Expert group after the PIN (the admin settings plan).
+ * in place) and About, which everyone opens. With Expert mode an Admin row between them opens, after
+ * the PIN, the list of the Expert groups (the admin settings plan); each group opens its own page.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -318,21 +319,38 @@ fun MobileSettingsScreen(
     // after the PIN of the profile in use, once per session (PinSession); the rows inside ask nothing
     // more.
     var adminOpen by rememberSaveable { mutableStateOf(false) }
+    // The Admin section open as its own page, in place of Admin's list of sections (null: the list).
+    // Back returns to the list. It is saveable, as adminOpen, for the same round trips.
+    var adminSection by rememberSaveable { mutableStateOf<ExpertGroup?>(null) }
     // Expert mode turned off, or the session locked again (a long time in the background): back to
     // the list, so the Admin rows are not open without the PIN.
     val adminLocked = adminOpen && (!uiState.isDevMode || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
-    LaunchedEffect(adminLocked) { if (adminLocked) adminOpen = false }
-    BackHandler(enabled = adminOpen) { adminOpen = false }
+    LaunchedEffect(adminLocked) {
+        if (adminLocked) {
+            adminSection = null
+            adminOpen = false
+        }
+    }
+    val adminBack: () -> Unit = { if (adminSection != null) adminSection = null else adminOpen = false }
+    BackHandler(enabled = adminOpen) { adminBack() }
+    // One list state for each page: a section opens at its top, and Back finds the page it left at
+    // the same scroll position.
+    val page = if (adminOpen) adminSection?.name ?: ADMIN_LIST_PAGE else SETTINGS_PAGE
+    val listState = key(page) { rememberLazyListState() }
 
     Scaffold(
         topBar = {
             MobileScreenHeader(
-                title = stringResource(if (adminOpen) R.string.settings_group_admin else R.string.settings_title),
-                onBack = if (adminOpen) ({ adminOpen = false }) else onBack,
+                title =
+                    stringResource(
+                        if (adminOpen) adminSection?.titleRes ?: R.string.settings_group_admin else R.string.settings_title,
+                    ),
+                onBack = if (adminOpen) adminBack else onBack,
             )
         },
     ) { paddingValues ->
         LazyColumn(
+            state = listState,
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -351,7 +369,7 @@ fun MobileSettingsScreen(
                     }
                 }
 
-                // With Expert mode: Admin, every Expert group on one page.
+                // With Expert mode: Admin, the list of the Expert groups.
                 if (uiState.isDevMode) {
                     item {
                         // Under a heading of its own, as every group: without one it read as a row
@@ -421,237 +439,177 @@ fun MobileSettingsScreen(
                     )
                     TmdbAttribution()
                 }
-            } else {
-                // Admin: each Expert group under its own header, in TV's rail order.
-                ExpertGroup.visibleFor(admin = true).forEach { group ->
-                    // Every group under its heading, the first one too, so the groups read apart;
-                    // not a group of one row with the same name, which the heading only repeats.
-                    item { if (group.headed) SettingsGroupHeader(stringResource(group.titleRes)) else Spacer(Modifier.height(Spacing.lg)) }
-                    when (group) {
-                        // The list of every profile; a profile's row opens its page, with its Admin rows.
-                        ExpertGroup.PROFILES -> {
-                            item {
-                                ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, admin = true, onAdminProfile) {
-                                    openWhenListed = it
-                                }
-                            }
-                        }
-
-                        // Its own screen.
-                        ExpertGroup.PARENTAL_CONTROLS -> {
-                            item {
-                                SettingsListRow(
-                                    title = stringResource(R.string.parental_controls_title),
-                                    summary = stringResource(R.string.profile_parental_controls_desc),
-                                    onClick = onParentalControls,
-                                )
-                            }
-                        }
-
-                        // This device's settings.
-                        ExpertGroup.THIS_DEVICE -> {
-                            item {
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_language),
-                                    summary =
-                                        when (uiState.language) {
-                                            "en" -> stringResource(R.string.settings_language_en)
-                                            "mg" -> stringResource(R.string.settings_language_mg)
-                                            "fr" -> stringResource(R.string.settings_language_fr)
-                                            else -> uiState.language
-                                        },
-                                    onClick = { showLanguagePicker = true },
-                                )
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_recent_row_size_title),
-                                    summary = uiState.recentRowSize.toString(),
-                                    onClick = { showRecentSizePicker = true },
-                                )
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_watch_delay_row_title),
-                                    summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
-                                    onClick = { showWatchDelayPicker = true },
-                                )
-                                CinemaSwitchRow(
-                                    checked = uiState.showClock,
-                                    onCheckedChange = viewModel::updateShowClock,
-                                    label = stringResource(R.string.settings_show_clock_title),
-                                    modifier = Modifier.padding(horizontal = Spacing.md),
-                                    supportingText = stringResource(R.string.settings_show_clock_desc),
-                                )
-                            }
-                        }
-
-                        ExpertGroup.SOURCE_GUIDE -> {
-                            item {
-                                // Switching, editing and adding sources live on the Sources list (D6).
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_provider_manage_button),
-                                    summary = manageSourcesSummary(uiState),
-                                    onClick = onManageProviders,
-                                )
-                                // Only sources with live channels have guide sources: one page for all of
-                                // them (the one guide sources page plan), shown when the device has one.
-                                if (uiState.hasGuideSources) {
-                                    SettingsListRow(
-                                        title = stringResource(R.string.epg_management_screen_title),
-                                        summary = stringResource(R.string.settings_guide_sources_desc),
-                                        onClick = onGuideSources,
-                                    )
-                                }
-                                GuideMaintenanceRow(viewModel = epgViewModel)
-                                TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
-                                CinemaSwitchRow(
-                                    checked = uiState.showTmdbCharts,
-                                    onCheckedChange = viewModel::updateShowTmdbCharts,
-                                    label = stringResource(R.string.tmdb_charts_title),
-                                    modifier = Modifier.padding(horizontal = Spacing.md),
-                                    supportingText = stringResource(R.string.tmdb_charts_desc),
-                                )
-                                if (uiState.showTmdbCharts) {
-                                    var chartsRefreshed by remember { mutableStateOf(false) }
-                                    val chartsContext = LocalContext.current
-                                    SettingsListRow(
-                                        title = stringResource(R.string.tmdb_charts_refresh_title),
-                                        summary =
-                                            stringResource(
-                                                if (chartsRefreshed) {
-                                                    R.string.tmdb_charts_refresh_done
-                                                } else {
-                                                    R.string.tmdb_charts_refresh_desc
-                                                },
-                                            ),
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                ChartRows.refresh(chartsContext.applicationContext)
-                                                chartsRefreshed = true
-                                            }
-                                        },
-                                        kind = SettingsRowKind.Action,
-                                    )
-                                }
-                                CinemaSwitchRow(
-                                    checked = uiState.showSports,
-                                    onCheckedChange = viewModel::updateShowSports,
-                                    label = stringResource(R.string.sports_switch_title),
-                                    modifier = Modifier.padding(horizontal = Spacing.md),
-                                    supportingText = stringResource(R.string.sports_switch_desc),
-                                )
-                            }
-                        }
-
-                        // Shared setup and backups (with source logins).
-                        ExpertGroup.SYNC_BACKUP -> {
-                            item {
-                                LiveSyncRow(onOpen = onLiveSync)
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_export_button),
-                                    summary = stringResource(R.string.settings_export_import_desc),
-                                    kind = SettingsRowKind.Action,
-                                    onClick = { exportLauncher.launch("fijerena_settings.json") },
-                                )
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_import_button),
-                                    summary = stringResource(R.string.settings_import_desc),
-                                    kind = SettingsRowKind.Action,
-                                    onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
-                                )
-                                // Only when there is a backup in Downloads to restore (a developer's shortcut).
-                                val quickImportReady = remember { exportManager.getQuickImportPath() != null }
-                                if (quickImportReady) {
-                                    val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
-                                    SettingsListRow(
-                                        title = stringResource(R.string.settings_quick_import_button),
-                                        kind = SettingsRowKind.Action,
-                                        onClick = {
-                                            val path = exportManager.getQuickImportPath()
-                                            if (path != null) {
-                                                coroutineScope.launch {
-                                                    val parseResult = exportManager.parseImportPath(path)
-                                                    parseResult
-                                                        .onSuccess { parsed ->
-                                                            pendingParsedImport = parsed
-                                                            pendingImportOptions = SettingsExportManager.ImportOptions()
-                                                            showImportOptionsDialog = true
-                                                        }.onFailure { e ->
-                                                            viewModel.setExportImportMessage(
-                                                                resources.getString(
-                                                                    R.string.settings_import_failed,
-                                                                    friendlyErrorMessage(e, context, uiState.isDevMode),
-                                                                ),
-                                                            )
-                                                        }
-                                                }
-                                            } else {
-                                                viewModel.setExportImportMessage(fileNotFoundText)
-                                            }
-                                        },
-                                    )
-                                }
-                                uiState.exportImportMessage?.let { SettingsMessage(it) }
-                            }
-                        }
+            } else if (adminSection == null) {
+                // Admin: the list of its sections, in TV's order. Each row opens the page of its
+                // section; Parental Controls opens its own screen.
+                item {
+                    ExpertGroup.visibleFor(admin = true).forEach { group ->
+                        SettingsListRow(
+                            title = stringResource(group.titleRes),
+                            summary = group.summary(profiles),
+                            onClick = { if (group == ExpertGroup.PARENTAL_CONTROLS) onParentalControls() else adminSection = group },
+                        )
                     }
                 }
-                // The last row, under no header of its own.
-                item {
-                    // Housekeeping: the catalogue's leftovers. Shrink Database ends the Admin page.
-                    var confirmShrink by remember { mutableStateOf(false) }
-                    SettingsListRow(
-                        title =
-                            stringResource(
-                                if (uiState.isPruningDatabase) {
-                                    R.string.settings_shrink_database_button_running
-                                } else {
-                                    R.string.settings_shrink_database_button
-                                },
-                            ),
-                        summary = stringResource(R.string.settings_shrink_database_desc),
-                        trailing = {
-                            if (uiState.isPruningDatabase) {
-                                CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+            } else {
+                // One Admin section on its page, its rows in their order; the top bar has its name.
+                when (adminSection) {
+                    // Never a page: its row opens its own screen.
+                    ExpertGroup.PARENTAL_CONTROLS, null -> {}
+
+                    // The list of every profile; a profile's row opens its page, with its Admin rows.
+                    ExpertGroup.PROFILES -> {
+                        item {
+                            ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, admin = true, onAdminProfile) {
+                                openWhenListed = it
                             }
-                        },
-                        // Heavy maintenance asks first (rule 7), as on TV.
-                        onClick = { confirmShrink = true },
-                        enabled = !uiState.isPruningDatabase,
-                        kind = SettingsRowKind.Action,
-                    )
-                    if (confirmShrink) {
-                        CinemaAlertDialog(
-                            onDismissRequest = { confirmShrink = false },
-                            title = stringResource(R.string.settings_shrink_database_confirm_title),
-                            text = {
-                                CinemaText(
-                                    stringResource(R.string.settings_shrink_database_confirm_message),
-                                    tone = TextTone.Secondary,
-                                )
-                            },
-                            main =
-                                DialogAction(stringResource(R.string.settings_shrink_database_confirm_action)) {
-                                    confirmShrink = false
-                                    viewModel.pruneDatabase()
-                                },
-                            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmShrink = false },
-                        )
+                        }
                     }
-                    uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
-                    // Only when the last run found something: "0 records deleted" says nothing.
-                    if (uiState.lastShrinkAtMs > 0L &&
-                        (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
-                    ) {
-                        val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
-                        val duration = NumberUtils.formatDuration(LocalResources.current, uiState.lastShrinkDurationMs)
-                        SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
-                        val bytesStr = NumberUtils.formatBytes(LocalResources.current, uiState.lastShrinkBytesReclaimed)
-                        SettingsMessage(
-                            pluralStringResource(
-                                R.plurals.settings_shrink_database_dev_stats_delta,
-                                uiState.lastShrinkRowsRemoved.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                                uiState.lastShrinkRowsRemoved,
-                                bytesStr,
-                            ),
-                        )
+
+                    // This device's settings.
+                    ExpertGroup.THIS_DEVICE -> {
+                        item {
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_language),
+                                summary =
+                                    when (uiState.language) {
+                                        "en" -> stringResource(R.string.settings_language_en)
+                                        "mg" -> stringResource(R.string.settings_language_mg)
+                                        "fr" -> stringResource(R.string.settings_language_fr)
+                                        else -> uiState.language
+                                    },
+                                onClick = { showLanguagePicker = true },
+                            )
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_recent_row_size_title),
+                                summary = uiState.recentRowSize.toString(),
+                                onClick = { showRecentSizePicker = true },
+                            )
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_watch_delay_row_title),
+                                summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
+                                onClick = { showWatchDelayPicker = true },
+                            )
+                            CinemaSwitchRow(
+                                checked = uiState.showClock,
+                                onCheckedChange = viewModel::updateShowClock,
+                                label = stringResource(R.string.settings_show_clock_title),
+                                modifier = Modifier.padding(horizontal = Spacing.md),
+                                supportingText = stringResource(R.string.settings_show_clock_desc),
+                            )
+                        }
+                    }
+
+                    ExpertGroup.SOURCE_GUIDE -> {
+                        item {
+                            // Switching, editing and adding sources live on the Sources list (D6).
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_provider_manage_button),
+                                summary = manageSourcesSummary(uiState),
+                                onClick = onManageProviders,
+                            )
+                            // Only sources with live channels have guide sources: one page for all of
+                            // them (the one guide sources page plan), shown when the device has one.
+                            if (uiState.hasGuideSources) {
+                                SettingsListRow(
+                                    title = stringResource(R.string.epg_management_screen_title),
+                                    summary = stringResource(R.string.settings_guide_sources_desc),
+                                    onClick = onGuideSources,
+                                )
+                            }
+                            GuideMaintenanceRow(viewModel = epgViewModel)
+                            TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
+                            CinemaSwitchRow(
+                                checked = uiState.showTmdbCharts,
+                                onCheckedChange = viewModel::updateShowTmdbCharts,
+                                label = stringResource(R.string.tmdb_charts_title),
+                                modifier = Modifier.padding(horizontal = Spacing.md),
+                                supportingText = stringResource(R.string.tmdb_charts_desc),
+                            )
+                            if (uiState.showTmdbCharts) {
+                                var chartsRefreshed by remember { mutableStateOf(false) }
+                                val chartsContext = LocalContext.current
+                                SettingsListRow(
+                                    title = stringResource(R.string.tmdb_charts_refresh_title),
+                                    summary =
+                                        stringResource(
+                                            if (chartsRefreshed) {
+                                                R.string.tmdb_charts_refresh_done
+                                            } else {
+                                                R.string.tmdb_charts_refresh_desc
+                                            },
+                                        ),
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            ChartRows.refresh(chartsContext.applicationContext)
+                                            chartsRefreshed = true
+                                        }
+                                    },
+                                    kind = SettingsRowKind.Action,
+                                )
+                            }
+                            CinemaSwitchRow(
+                                checked = uiState.showSports,
+                                onCheckedChange = viewModel::updateShowSports,
+                                label = stringResource(R.string.sports_switch_title),
+                                modifier = Modifier.padding(horizontal = Spacing.md),
+                                supportingText = stringResource(R.string.sports_switch_desc),
+                            )
+                        }
+                        // Shrink Database ends the section.
+                        item { ShrinkDatabaseRows(uiState, viewModel) }
+                    }
+
+                    // Shared setup and backups (with source logins).
+                    ExpertGroup.SYNC_BACKUP -> {
+                        item {
+                            LiveSyncRow(onOpen = onLiveSync)
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_export_button),
+                                summary = stringResource(R.string.settings_export_import_desc),
+                                kind = SettingsRowKind.Action,
+                                onClick = { exportLauncher.launch("fijerena_settings.json") },
+                            )
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_import_button),
+                                summary = stringResource(R.string.settings_import_desc),
+                                kind = SettingsRowKind.Action,
+                                onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                            )
+                            // Only when there is a backup in Downloads to restore (a developer's shortcut).
+                            val quickImportReady = remember { exportManager.getQuickImportPath() != null }
+                            if (quickImportReady) {
+                                val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
+                                SettingsListRow(
+                                    title = stringResource(R.string.settings_quick_import_button),
+                                    kind = SettingsRowKind.Action,
+                                    onClick = {
+                                        val path = exportManager.getQuickImportPath()
+                                        if (path != null) {
+                                            coroutineScope.launch {
+                                                val parseResult = exportManager.parseImportPath(path)
+                                                parseResult
+                                                    .onSuccess { parsed ->
+                                                        pendingParsedImport = parsed
+                                                        pendingImportOptions = SettingsExportManager.ImportOptions()
+                                                        showImportOptionsDialog = true
+                                                    }.onFailure { e ->
+                                                        viewModel.setExportImportMessage(
+                                                            resources.getString(
+                                                                R.string.settings_import_failed,
+                                                                friendlyErrorMessage(e, context, uiState.isDevMode),
+                                                            ),
+                                                        )
+                                                    }
+                                            }
+                                        } else {
+                                            viewModel.setExportImportMessage(fileNotFoundText)
+                                        }
+                                    },
+                                )
+                            }
+                            uiState.exportImportMessage?.let { SettingsMessage(it) }
+                        }
                     }
                 }
             }
@@ -660,17 +618,84 @@ fun MobileSettingsScreen(
 }
 
 /**
- * The phone's Expert groups, in TV's rail order: each one a section of the Admin page, which opens
- * after the PIN (the admin settings plan). Only Expert mode lists them.
+ * Shrink Database, the end of Sources & Guide: housekeeping, the catalogue's leftovers. It asks
+ * first (rule 7), as on TV, and shows what the last run removed.
+ */
+@Composable
+private fun ShrinkDatabaseRows(
+    uiState: SettingsUiState,
+    viewModel: SettingsViewModel,
+) {
+    var confirmShrink by remember { mutableStateOf(false) }
+    SettingsListRow(
+        title =
+            stringResource(
+                if (uiState.isPruningDatabase) {
+                    R.string.settings_shrink_database_button_running
+                } else {
+                    R.string.settings_shrink_database_button
+                },
+            ),
+        summary = stringResource(R.string.settings_shrink_database_desc),
+        trailing = {
+            if (uiState.isPruningDatabase) {
+                CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+            }
+        },
+        // Heavy maintenance asks first (rule 7), as on TV.
+        onClick = { confirmShrink = true },
+        enabled = !uiState.isPruningDatabase,
+        kind = SettingsRowKind.Action,
+    )
+    if (confirmShrink) {
+        CinemaAlertDialog(
+            onDismissRequest = { confirmShrink = false },
+            title = stringResource(R.string.settings_shrink_database_confirm_title),
+            text = {
+                CinemaText(
+                    stringResource(R.string.settings_shrink_database_confirm_message),
+                    tone = TextTone.Secondary,
+                )
+            },
+            main =
+                DialogAction(stringResource(R.string.settings_shrink_database_confirm_action)) {
+                    confirmShrink = false
+                    viewModel.pruneDatabase()
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirmShrink = false },
+        )
+    }
+    uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
+    // Only when the last run found something: "0 records deleted" says nothing.
+    if (uiState.lastShrinkAtMs > 0L &&
+        (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
+    ) {
+        val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
+        val duration = NumberUtils.formatDuration(LocalResources.current, uiState.lastShrinkDurationMs)
+        SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
+        val bytesStr = NumberUtils.formatBytes(LocalResources.current, uiState.lastShrinkBytesReclaimed)
+        SettingsMessage(
+            pluralStringResource(
+                R.plurals.settings_shrink_database_dev_stats_delta,
+                uiState.lastShrinkRowsRemoved.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                uiState.lastShrinkRowsRemoved,
+                bytesStr,
+            ),
+        )
+    }
+}
+
+/**
+ * The phone's Expert groups, in TV's order: the sections that the Admin page lists, which opens
+ * after the PIN (the admin settings plan). Each one opens its own page; Parental Controls opens its
+ * own screen. Only Expert mode lists them.
  */
 enum class ExpertGroup(
     @StringRes val titleRes: Int,
-    /** False for a group of one row named as the group: a gap sets it apart, with no heading. */
-    val headed: Boolean = true,
 ) {
     // With Expert mode, the list of every profile (SG-D2).
     PROFILES(R.string.settings_profiles_title),
-    PARENTAL_CONTROLS(R.string.parental_controls_title, headed = false),
+    PARENTAL_CONTROLS(R.string.parental_controls_title),
     THIS_DEVICE(R.string.settings_group_this_device),
     SOURCE_GUIDE(R.string.settings_group_source_guide),
     SYNC_BACKUP(R.string.settings_group_sync_backup),
@@ -681,6 +706,21 @@ enum class ExpertGroup(
         fun visibleFor(admin: Boolean): List<ExpertGroup> = if (admin) entries else emptyList()
     }
 }
+
+/** What a section's row on the Admin page says is inside it: the profiles' names, else what it holds. */
+@Composable
+private fun ExpertGroup.summary(profiles: List<ProfileUi>): String =
+    when (this) {
+        ExpertGroup.PROFILES -> profiles.joinToString { it.name }
+        ExpertGroup.PARENTAL_CONTROLS -> stringResource(R.string.profile_parental_controls_desc)
+        ExpertGroup.THIS_DEVICE -> stringResource(R.string.settings_group_this_device_desc)
+        ExpertGroup.SOURCE_GUIDE -> stringResource(R.string.settings_group_source_guide_desc)
+        ExpertGroup.SYNC_BACKUP -> stringResource(R.string.settings_group_sync_backup_desc)
+    }
+
+// The pages of Settings that are not an Admin section, for their list states.
+private const val SETTINGS_PAGE = "settings"
+private const val ADMIN_LIST_PAGE = "admin"
 
 /**
  * Profiles' rows: on the Admin page ([admin]) every profile, else none (Settings shows the viewer's

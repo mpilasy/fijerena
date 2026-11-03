@@ -111,7 +111,8 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Admin"),
-            right("Set a PIN for Settings"),
+            right("Profiles"),
+            center("Set a PIN for Settings"),
             down("A / Admin"),
             down("G / Guest"),
             center("Edit Name / Name / Guest"),
@@ -131,7 +132,9 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Switch to this profile"),
             down("Delete profile"),
             down("Delete profile"),
+            // Back closes the page onto the profile's row, in the section, not Admin's list.
             back("G / Guest"),
+            back("Profiles"),
         )
     }
 
@@ -140,8 +143,9 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN, SettingsFixture.KID))
         walk.run(
             down("Admin"),
-            // An Expert has a PIN: no reminder, the pane opens on the profiles.
-            right("A / Admin / Using on this device"),
+            right("Profiles"),
+            // An Expert has a PIN: no reminder, the section opens on the profiles.
+            center("A / Admin / Using on this device"),
             down("G / Guest"),
             down("K / Kid"),
             center("Edit Name / Name / Kid"),
@@ -157,9 +161,10 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Sources / 1 of 2"),
             down("Content Filters"),
             down("Parental Controls / The household's word lists"),
-            // The link closes the page on Admin's Parental Controls part, focus on its first list;
-            // Back goes to the rail row.
+            // The link closes the page on Admin's Parental Controls section, focus on its first list;
+            // Back closes the section on its row in Admin's list, then goes to the rail row.
             center("Kids' Categories"),
+            back("Parental Controls"),
             back("Admin"),
         )
     }

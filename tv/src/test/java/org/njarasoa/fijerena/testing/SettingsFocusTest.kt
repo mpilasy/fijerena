@@ -70,26 +70,33 @@ abstract class SettingsFocusTest {
 
     protected val context: Context get() = ApplicationProvider.getApplicationContext()
 
-    /** Down from Admin's row [from] to its row [to], one step per row, on the fixture's data. */
-    protected fun adminDown(
+    /**
+     * From the rail into Admin's list of sections, down to the row of [section] (one of
+     * [ADMIN_SECTIONS]), one step per row. The list opens on its first row, Profiles.
+     */
+    protected fun toAdminSection(section: String): Array<FocusStep> =
+        arrayOf(
+            down("Admin"),
+            right(ADMIN_SECTIONS.first()),
+            *ADMIN_SECTIONS.subList(1, ADMIN_SECTIONS.indexOf(section) + 1).map(::down).toTypedArray(),
+        )
+
+    /** Down from row [from] to row [to] of an open Admin section's [rows], one step per row. */
+    protected fun sectionDown(
+        rows: List<String>,
         from: String,
         to: String,
-    ): Array<FocusStep> = ADMIN_ROWS.subList(ADMIN_ROWS.indexOf(from) + 1, ADMIN_ROWS.indexOf(to) + 1).map(::down).toTypedArray()
+    ): Array<FocusStep> = rows.subList(rows.indexOf(from) + 1, rows.indexOf(to) + 1).map(::down).toTypedArray()
 
-    private companion object {
-        const val PROFILES_TIMEOUT_MS = 5_000L
+    protected companion object {
+        private const val PROFILES_TIMEOUT_MS = 5_000L
 
-        /**
-         * Admin's one page, as an Expert sees it on the fixture's data (the admin settings plan): the
-         * profiles (after the PIN reminder, when it shows), Parental Controls, This Device, Sources &
-         * Guide, Sync & Backup, then Shrink Database. No backup waits in Downloads: no Restore from Downloads.
-         */
-        val ADMIN_ROWS =
+        /** Admin's list of sections, in order; each row opens its section in place of the list. */
+        val ADMIN_SECTIONS = listOf("Profiles", "Parental Controls", "This Device", "Sources & Guide", "Sync & Backup")
+
+        /** Admin → Parental Controls, as an Expert sees it on the fixture's data. */
+        val PARENTAL_ROWS =
             listOf(
-                "A / Admin",
-                "G / Guest",
-                "K / Kid",
-                "Add Profile",
                 "Kids' Categories",
                 "Kids' Film Categories",
                 "Adult Categories",
@@ -97,11 +104,11 @@ abstract class SettingsFocusTest {
                 "Exceptions",
                 "Check a Source",
                 "Content Filters of Each Profile",
-                "Language",
-                "Text & Grid Size",
-                "Items in Recent",
-                "Add a Channel to Recent After",
-                "Show Clock",
+            )
+
+        /** Admin → Sources & Guide on the fixture's data, Shrink Database last. */
+        val SOURCE_GUIDE_ROWS =
+            listOf(
                 "Manage Sources",
                 "Guide Sources",
                 "Guide Data Maintenance",
@@ -109,9 +116,6 @@ abstract class SettingsFocusTest {
                 "TMDB Charts",
                 "Refresh Charts",
                 "Sports",
-                "Live Sync",
-                "Back Up to a File",
-                "Restore from a File",
                 "Shrink Database",
             )
     }

@@ -1055,6 +1055,9 @@
     <string name="settings_group_this_device">This Device</string>
     <string name="settings_group_admin">Admin</string>
     <string name="settings_group_admin_desc">Profiles, parental controls, this device, sources, sync and backups</string>
+    <string name="settings_group_this_device_desc">Language, Recent and the clock, on this device only</string>
+    <string name="settings_group_source_guide_desc">Sources, the guide, film details, charts and sports</string>
+    <string name="settings_group_sync_backup_desc">Live sync with your other devices, and backups to a file</string>
     <string name="settings_open_admin">Open Admin</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
