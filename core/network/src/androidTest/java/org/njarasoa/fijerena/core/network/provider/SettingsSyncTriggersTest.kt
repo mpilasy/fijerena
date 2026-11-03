@@ -34,6 +34,9 @@ class SettingsSyncTriggersTest {
 
             db.providerDao().updateSyncStats(id, 1L, 1L, null, 1, 1, 1)
             assertEquals(added.hlc, queued(SyncKind.PROVIDER, key).single().hlc)
+            // A failure writes the failure time and count: local, not queued.
+            db.providerDao().updateSyncStats(id, 2L, 1L, "boom")
+            assertEquals(added.hlc, queued(SyncKind.PROVIDER, key).single().hlc)
 
             db.providerDao().updateProvider(db.providerDao().getProviderById(id)!!.copy(name = "renamed"))
             assertTrue(queued(SyncKind.PROVIDER, key).single().hlc > added.hlc)
@@ -64,6 +67,8 @@ class SettingsSyncTriggersTest {
             val added = queued(SyncKind.EPG_SOURCE, key).single()
 
             sources.markError(id, "boom")
+            assertEquals(added.hlc, queued(SyncKind.EPG_SOURCE, key).single().hlc)
+            sources.markUnchanged(id, 2L)
             assertEquals(added.hlc, queued(SyncKind.EPG_SOURCE, key).single().hlc)
 
             sources.deleteSource(id)

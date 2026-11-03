@@ -56,7 +56,8 @@ interface EpgSourceDao {
         UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels,
             last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod,
             last_ingestion_duration_ms = :ingestionDurationMs, last_download_duration_ms = :downloadDurationMs,
-            last_content_sha256 = :contentSha256, etag = :etag, last_modified_header = :lastModifiedHeader
+            last_content_sha256 = :contentSha256, etag = :etag, last_modified_header = :lastModifiedHeader,
+            last_failed_at_ms = NULL, failures_since_success = 0
         WHERE id = :id
         """,
     )
@@ -78,18 +79,30 @@ interface EpgSourceDao {
      * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the
      * timestamp and clear any prior error, but leave the channel/programme counts and validators
      * as they were. Reusing [markIngested] here would zero the counts, making a genuinely
-     * unchanged source look like one that suddenly lost its whole guide.
+     * unchanged source look like one that suddenly lost its whole guide. A success: the failure
+     * time and count are cleared.
      */
-    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL WHERE id = :id")
+    @Query(
+        "UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_failed_at_ms = NULL, " +
+            "failures_since_success = 0 WHERE id = :id",
+    )
     suspend fun markUnchanged(
         id: Long,
         timestamp: Long,
     )
 
-    @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
+    /**
+     * A refresh failed: keep [error], the time of the failure and one more failure since the last
+     * success. The last successful refresh ([EpgSourceEntity.lastIngestedAtMs]) stays as it was.
+     */
+    @Query(
+        "UPDATE epg_source SET last_error = :error, last_failed_at_ms = :failedAtMs, " +
+            "failures_since_success = failures_since_success + 1 WHERE id = :id",
+    )
     suspend fun markError(
         id: Long,
         error: String,
+        failedAtMs: Long = System.currentTimeMillis(),
     )
 
     @Query(
@@ -114,7 +127,8 @@ interface EpgSourceDao {
         """
         UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0,
             last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0,
-            last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL
+            last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL,
+            last_failed_at_ms = NULL, failures_since_success = 0
         """,
     )
     suspend fun resetAllIngestionState()

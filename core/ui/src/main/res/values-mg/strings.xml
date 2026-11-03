@@ -229,6 +229,8 @@
     <string name="epg_source_stat_channels">Fantsona</string>
     <string name="epg_source_stat_programmes">Fandaharana</string>
     <string name="epg_source_stat_unchanged">Tsy niova</string>
+    <string name="epg_source_stat_last_failure">Tsy fahombiazana farany</string>
+    <string name="epg_source_stat_failures">Tsy fahombiazana hatramin\'ny fahombiazana farany</string>
     <string name="epg_source_never">Mbola tsy nisy</string>
     <string name="epg_source_none">Tsy misy</string>
     <string name="epg_add_source_title">Hampiditra loharanon\'ny fitarihana</string>
@@ -368,6 +370,9 @@
     <string name="provider_syncing">Mampifanaraka…</string>
     <string name="provider_sync_now_button">Ampifanaraho izao</string>
     <string name="provider_last_sync_status">Fampifanarahana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
+    <string name="provider_last_sync_never">Fampifanarahana farany: mbola tsy nisy</string>
+    <string name="provider_last_failure_status">Tsy fahombiazana farany: %1$s</string>
+    <string name="provider_failures_since_success">Tsy fahombiazana hatramin\'ny fahombiazana farany: %1$d</string>
     <string name="provider_sync_success">Vita soa aman-tsara ny fampifanarahana</string>
     <string name="provider_sync_no_changes">Tsy nisy fiovana hatramin\'ny fampifanarahana farany</string>
     <plurals name="provider_sync_added">
@@ -1224,7 +1229,7 @@
     <string name="device_info_sync_never">Mbola tsy nampifanarahana</string>
     <string name="device_info_sync_not_applicable">Tsy misy fampifanarahana katalaogy ho an\'ity karazana loharano ity</string>
     <string name="device_info_sync_ok">%1$s · naharitra %2$d s · OK</string>
-    <string name="device_info_sync_failed">%1$s · naharitra %2$d s · %3$s</string>
+    <string name="device_info_sync_failed">%1$s · %2$s</string>
     <string name="device_info_guide_last_refresh">Fanavaozana farany ny fitarihana</string>
     <string name="device_info_guide_never">Mbola tsy nohavaozina</string>
     <string name="device_info_guide_ok">%1$s · naharitra %2$d s · loharanon\'ny fitarihana: %3$d · OK</string>

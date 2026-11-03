@@ -68,12 +68,17 @@ internal data class PowerFacts(
     val powerSave: Boolean?,
 )
 
-/** [catalogSync] is true for a source type the periodic catalog sync covers (Xtream). */
+/**
+ * [catalogSync] is true for a source type the periodic catalog sync covers (Xtream). [lastSyncMs]
+ * and [durationMs] are the last successful sync's, [failedAtMs] the last failure's (null after a
+ * success).
+ */
 internal data class SourceSync(
     val name: String,
     val catalogSync: Boolean,
     val lastSyncMs: Long,
     val durationMs: Long,
+    val failedAtMs: Long?,
     val error: String?,
 )
 
@@ -173,7 +178,7 @@ private suspend fun readSync(context: Context): SyncFacts {
             AppContainer.getInstance(context).providerRepository.getAllProvidersList().map {
                 // The kept error is a code: shown as its message in the app language, without the raw text.
                 val error = it.lastSyncError?.let { stored -> StoredError.message(stored, context, includeRaw = false) }
-                SourceSync(it.name, it.type == "XTREAM", it.lastSyncedAtMs, it.lastSyncDurationMs, error)
+                SourceSync(it.name, it.type == "XTREAM", it.lastSyncedAtMs, it.lastSyncDurationMs, it.lastFailedAtMs, error)
             }
         }
     val guide =
@@ -348,7 +353,7 @@ internal fun syncRows(facts: SyncFacts): List<DeviceInfoRow> {
         when {
             facts.sources == null -> listOf(infoRow(R.string.device_info_sources, missingValue()))
             facts.sources.isEmpty() -> listOf(infoRow(R.string.device_info_sources, UiText.StringResource(R.string.device_info_no_sources)))
-            else -> facts.sources.map { syncRow(it.name, it.catalogSync, it.lastSyncMs, it.durationMs, it.error) }
+            else -> facts.sources.map { syncRow(it.name, it.catalogSync, it.lastSyncMs, it.durationMs, it.failedAtMs, it.error) }
         }
     return sourceRows +
         listOf(
@@ -361,7 +366,8 @@ internal fun syncRows(facts: SyncFacts): List<DeviceInfoRow> {
 }
 
 /**
- * One source's last catalog sync, labelled with the source's own name. Only the first line of
+ * One source's last catalog sync, labelled with the source's own name: a failure with its time
+ * ([failedAtMs]) and reason, else the last success with its duration. Only the first line of
  * [error] is kept: a developer-mode error carries the raw exception below it, which can name the
  * server.
  */
@@ -370,10 +376,19 @@ internal fun syncRow(
     catalogSync: Boolean,
     lastSyncMs: Long,
     durationMs: Long,
+    failedAtMs: Long?,
     error: String?,
 ): DeviceInfoRow {
     val value =
         when {
+            !error.isNullOrBlank() -> {
+                UiText.StringResource(
+                    R.string.device_info_sync_failed,
+                    syncTime(failedAtMs ?: lastSyncMs),
+                    Redact.text(error.lineSequence().first().trim()),
+                )
+            }
+
             lastSyncMs <= 0 && catalogSync -> {
                 UiText.StringResource(R.string.device_info_sync_never)
             }
@@ -382,17 +397,8 @@ internal fun syncRow(
                 UiText.StringResource(R.string.device_info_sync_not_applicable)
             }
 
-            error.isNullOrBlank() -> {
-                UiText.StringResource(R.string.device_info_sync_ok, syncTime(lastSyncMs), roundedSeconds(durationMs))
-            }
-
             else -> {
-                UiText.StringResource(
-                    R.string.device_info_sync_failed,
-                    syncTime(lastSyncMs),
-                    roundedSeconds(durationMs),
-                    Redact.text(error.lineSequence().first().trim()),
-                )
+                UiText.StringResource(R.string.device_info_sync_ok, syncTime(lastSyncMs), roundedSeconds(durationMs))
             }
         }
     return DeviceInfoRow(UiText.DynamicString(name), value)

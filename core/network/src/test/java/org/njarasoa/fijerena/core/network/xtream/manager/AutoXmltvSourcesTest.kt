@@ -122,12 +122,15 @@ class AutoXmltvSourcesTest {
     fun `a server change resets the ingest state`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            dao.rows += stored(1).copy(lastIngestedAtMs = 99, etag = "e")
+            dao.rows += stored(1).copy(lastIngestedAtMs = 99, etag = "e", lastError = "x", lastFailedAtMs = 98, failuresSinceSuccess = 3)
             val newServer = "http://new.example:8080"
             AutoXmltvSources.reconcile(dao, {}, 1, newServer, hasLiveChannels = true, previousProviderUrl = server)
             val row = dao.rows.single()
             assertEquals(0L, row.lastIngestedAtMs)
             assertNull(row.etag)
+            assertNull(row.lastError)
+            assertNull(row.lastFailedAtMs)
+            assertEquals(0, row.failuresSinceSuccess)
         }
 
     @Test
@@ -482,6 +485,7 @@ class AutoXmltvSourcesTest {
         override suspend fun markError(
             id: Long,
             error: String,
+            failedAtMs: Long,
         ) = error("unused")
 
         override suspend fun getFailedSources(providerId: Long) = error("unused")

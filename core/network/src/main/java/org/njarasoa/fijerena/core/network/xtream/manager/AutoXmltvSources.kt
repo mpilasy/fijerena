@@ -258,6 +258,8 @@ object AutoXmltvSources {
             lastContentSha256 = null,
             etag = null,
             lastModifiedHeader = null,
+            lastFailedAtMs = null,
+            failuresSinceSuccess = 0,
         )
 
     /**

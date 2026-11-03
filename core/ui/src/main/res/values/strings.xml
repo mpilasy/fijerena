@@ -229,6 +229,8 @@
     <string name="epg_source_stat_channels">Channels</string>
     <string name="epg_source_stat_programmes">Programmes</string>
     <string name="epg_source_stat_unchanged">Unchanged</string>
+    <string name="epg_source_stat_last_failure">Last Failure</string>
+    <string name="epg_source_stat_failures">Failures Since Last Success</string>
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
     <string name="epg_add_source_title">Add Guide Source</string>
@@ -368,6 +370,9 @@
     <string name="provider_syncing">Syncing…</string>
     <string name="provider_sync_now_button">Sync data now</string>
     <string name="provider_last_sync_status">Last sync: finished at %1$s • took %2$s</string>
+    <string name="provider_last_sync_never">Last sync: never</string>
+    <string name="provider_last_failure_status">Last failure: %1$s</string>
+    <string name="provider_failures_since_success">Failures since last success: %1$d</string>
     <string name="provider_sync_success">Sync completed successfully</string>
     <string name="provider_sync_no_changes">No changes since last sync</string>
     <plurals name="provider_sync_added">
@@ -1230,7 +1235,7 @@
     <string name="device_info_sync_never">Never synced</string>
     <string name="device_info_sync_not_applicable">No catalogue sync for this source type</string>
     <string name="device_info_sync_ok">%1$s · took %2$d s · OK</string>
-    <string name="device_info_sync_failed">%1$s · took %2$d s · %3$s</string>
+    <string name="device_info_sync_failed">%1$s · %2$s</string>
     <string name="device_info_guide_last_refresh">Last guide refresh</string>
     <string name="device_info_guide_never">Never refreshed</string>
     <string name="device_info_guide_ok">%1$s · took %2$d s · guide sources: %3$d · OK</string>

@@ -70,7 +70,7 @@ class SettingsDatabaseMigration15To16Test {
         val db =
             Room
                 .databaseBuilder(context, SettingsDatabase::class.java, TEST_DB)
-                .addMigrations(SettingsDatabase.MIGRATION_15_16, SettingsDatabase.MIGRATION_16_17)
+                .addMigrations(SettingsDatabase.MIGRATION_15_16, SettingsDatabase.MIGRATION_16_17, SettingsDatabase.MIGRATION_17_18)
                 .allowMainThreadQueries()
                 .build()
         SettingsSyncTriggers.install(db.openHelper.writableDatabase)

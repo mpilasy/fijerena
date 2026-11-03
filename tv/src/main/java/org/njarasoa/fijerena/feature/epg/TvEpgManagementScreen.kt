@@ -506,9 +506,31 @@ fun TvEpgManagementScreen(
                                                 NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
                                                 scale,
                                             )
+                                        }
 
-                                            val lastError = source.lastError
-                                            if (lastError != null) {
+                                        // The last refresh failed: its time, the failures since the
+                                        // last success and the reason, on a line of their own.
+                                        val lastError = source.lastError
+                                        if (lastError != null) {
+                                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                            ) {
+                                                source.lastFailedAtMs?.let { failedAt ->
+                                                    SourceStat(
+                                                        stringResource(R.string.epg_source_stat_last_failure),
+                                                        DateText.dateTime(LocalContext.current, failedAt),
+                                                        scale,
+                                                    )
+                                                }
+                                                if (source.failuresSinceSuccess > 0) {
+                                                    SourceStat(
+                                                        stringResource(R.string.epg_source_stat_failures),
+                                                        NumberUtils.formatCount(LocalResources.current, source.failuresSinceSuccess),
+                                                        scale,
+                                                    )
+                                                }
                                                 CinemaText(
                                                     text = stringResource(R.string.epg_database_error, storedErrorText(lastError)),
                                                     role = TextRole.Caption,

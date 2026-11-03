@@ -19,6 +19,12 @@ class SourceSyncStatusTest {
     }
 
     @Test
+    fun aFailureWithNoSuccessYetIsFailed() {
+        // A failed sync leaves the last success at 0 ("never"): still failed, not "no status".
+        assertEquals(SourceSyncStatus.FAILED, sourceSyncStatus(syncing = false, lastSyncedAtMs = 0L, lastSyncError = "timeout"))
+    }
+
+    @Test
     fun updatedOnceSyncedWithoutError() {
         assertEquals(SourceSyncStatus.UPDATED, sourceSyncStatus(syncing = false, lastSyncedAtMs = 1_000L, lastSyncError = null))
     }

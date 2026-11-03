@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **The reminder banner takes focus:** when a game or programme reminder rings while the app is on screen, its banner now takes focus at once, on every screen and over full-screen video: Watch (Dismiss when there is no channel), Left and Right between the two, OK acts, Back closes it, and focus goes back where it was. Before, the remote's keys went to the screen under it until you pressed Menu or held OK, and that hint is gone. It still closes by itself after 30 seconds. When a dialog is open, the banner waits and shows when the dialog closes. TV.
+- **Sync failures kept apart from the last success:** on the Guide Sources page and in a source's Library Data, "Last sync" now shows the last successful sync, or "Never". A failed sync no longer moves it. When the last sync failed, the page also shows the time of that failure, its reason and the number of failures since the last success; the next success clears them. Device Info shows the failure time for a failed source. A source or guide source that had an error before this version counts one failure. TV and phone.
 
 ## Version: 0.9.20261103084257
 
