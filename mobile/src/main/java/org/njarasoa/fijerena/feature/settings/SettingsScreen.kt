@@ -702,8 +702,8 @@ private fun ProfilesRows(
         profiles = profiles,
         message = message,
         newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
-        onAdd = { name, colorIndex, child ->
-            profilesViewModel.addProfile(name, colorIndex, child) { if (uiState.isDevMode) onAdded(it) }
+        onAdd = { name, colorIndex, child, nerd ->
+            profilesViewModel.addProfile(name, colorIndex, child, nerd) { if (uiState.isDevMode) onAdded(it) }
         },
         onEdit = onEditProfile,
         onDismissMessage = profilesViewModel::clearMessage,

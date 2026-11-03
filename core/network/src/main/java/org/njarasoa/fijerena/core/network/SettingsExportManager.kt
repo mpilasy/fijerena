@@ -163,6 +163,8 @@ class SettingsExportManager(
         @EncodeDefault(EncodeDefault.Mode.NEVER)
         val uiScale: Float? = null,
         val isDevMode: Boolean = false,
+        // The exporting profile is a Nerd; false in a file from before Nerd existed.
+        val isNerdMode: Boolean = false,
         // The retired device-wide guide auto-refresh switch: read from an older file only (see
         // importedRefreshIntervalHours), never written — null, and then left out of the file, so
         // an older version reading a new file keeps its own default.
@@ -331,6 +333,7 @@ class SettingsExportManager(
                     themeId = appSettings.themeId,
                     uiStyleId = appSettings.uiStyleId,
                     isDevMode = appSettings.isDevMode,
+                    isNerdMode = appSettings.isNerdMode,
                     cellularLiveMultiplier = appSettings.cellularLiveMultiplier,
                     cellularVodMultiplier = appSettings.cellularVodMultiplier,
                 )
@@ -608,8 +611,10 @@ class SettingsExportManager(
                     val appSettings = AppSettings(context)
                     appSettings.themeId = exported.global.themeId
                     exported.global.uiStyleId?.let { appSettings.uiStyleId = it }
-                    // A child is never Expert, whatever the file says.
-                    appSettings.isDevMode = exported.global.isDevMode && !appSettings.isChildProfile(appSettings.activeProfileId)
+                    // A child is never Expert or Nerd, whatever the file says.
+                    val child = appSettings.isChildProfile(appSettings.activeProfileId)
+                    appSettings.isDevMode = exported.global.isDevMode && !child
+                    appSettings.setNerdMode(appSettings.activeProfileId, exported.global.isNerdMode && !child)
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }

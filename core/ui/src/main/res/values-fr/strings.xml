@@ -647,6 +647,8 @@
     <string name="provider_add_terms_notice">Vous seul êtes responsable des sources que vous ajoutez et de l’usage que vous en faites. Voir Paramètres → À propos → Conditions d’utilisation.</string>
     <string name="settings_developer_mode_title">Admin</string>
     <string name="settings_developer_mode_desc">Permet à ce profil de modifier les sources, les profils, le contrôle parental et les sauvegardes</string>
+    <string name="profile_nerd_title">Nerd</string>
+    <string name="profile_nerd_desc">Montre à ce profil les statistiques et les informations en plus : badges de source, statistiques du flux et texte brut des erreurs</string>
     <string name="settings_developer_mode_last">Seul profil admin, il le reste : rendez d’abord un autre profil admin.</string>
     <string name="settings_diagnostics_title">Journaux</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l’application</string>

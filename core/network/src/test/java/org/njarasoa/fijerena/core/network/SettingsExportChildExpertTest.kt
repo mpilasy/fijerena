@@ -25,7 +25,10 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
-/** A backup restore never makes a kid Expert: the file's Expert mode goes to a grown-up only. See the profile rules plan → PR-8. */
+/**
+ * A backup restore never makes a kid Expert or Nerd: the file's flags go to a grown-up only. See the
+ * profile rules plan → PR-8 and the Nerd role plan.
+ */
 class SettingsExportChildExpertTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()
     private val context = mockk<Context>(relaxed = true)
@@ -54,7 +57,7 @@ class SettingsExportChildExpertTest {
             val file =
                 SettingsExportManager.json.encodeToString(
                     ExportedSettings.serializer(),
-                    ExportedSettings(global = GlobalSettings(isDevMode = true)),
+                    ExportedSettings(global = GlobalSettings(isDevMode = true, isNerdMode = true)),
                 )
             val options = ImportOptions(importProviders = false, importEpgSources = false, importFavorites = false)
             SettingsExportManager(context).importFromJson(file, options = options)
@@ -77,6 +80,38 @@ class SettingsExportChildExpertTest {
         assertNull(restore().error)
 
         assertTrue(AppSettings(context).devMode(ProfileEntity.DEFAULT_ID))
+    }
+
+    @Test
+    fun `a Nerd file restored on a kid leaves it without Nerd`() {
+        val settings = AppSettings(context)
+        settings.setChildProfile(ProfileEntity.DEFAULT_ID, true)
+
+        assertNull(restore().error)
+
+        assertFalse(settings.storedNerdMode(ProfileEntity.DEFAULT_ID))
+    }
+
+    @Test
+    fun `a Nerd file restored on a grown-up makes it a Nerd`() {
+        assertNull(restore().error)
+
+        assertTrue(AppSettings(context).nerdMode(ProfileEntity.DEFAULT_ID))
+    }
+
+    @Test
+    fun `the export carries the Nerd flag next to the Admin flag`() {
+        val settings = AppSettings(context)
+        settings.setNerdMode(ProfileEntity.DEFAULT_ID, true)
+        coEvery { anyConstructed<ProviderRepository>().getAllProvidersList() } returns emptyList()
+
+        val file = runBlocking { SettingsExportManager(context).exportToJson() }
+
+        assertTrue(
+            SettingsExportManager.json
+                .decodeFromString(ExportedSettings.serializer(), file)
+                .global.isNerdMode,
+        )
     }
 
     private companion object {

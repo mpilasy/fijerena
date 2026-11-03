@@ -31,12 +31,14 @@ class ProfileRepository(
 
     /**
      * Returns the new profile's id. A [child] profile ([AppSettings.isChildProfile]) gets only the
-     * creator's sources that content filters work on (Xtream), unless that leaves none.
+     * creator's sources that content filters work on (Xtream), unless that leaves none. A [nerd]
+     * profile is a Nerd ([AppSettings.nerdMode]); never a child.
      */
     suspend fun addProfile(
         name: String,
         colorIndex: Int,
         child: Boolean = false,
+        nerd: Boolean = false,
     ): String {
         val id = UUID.randomUUID().toString()
         dao.insert(ProfileEntity(id = id, name = name.trim(), createdAt = System.currentTimeMillis(), colorIndex = colorIndex))
@@ -44,6 +46,7 @@ class ProfileRepository(
         // mode starts off (no flag stored).
         val settings = AppSettings(context)
         if (child) settings.setChildProfile(id, true)
+        if (nerd && !child) settings.setNerdMode(id, true)
         CategoryFiltersStore(context).copyProfile(settings.activeProfileId, id)
         settings.copyLook(settings.activeProfileId, id)
         settings.profileSourceKeys(settings.activeProfileId)?.let { keys ->
@@ -53,7 +56,7 @@ class ProfileRepository(
     }
 
     /**
-     * Makes [id] a child profile or not. A child is never Expert, and loses the sources content
+     * Makes [id] a child profile or not. A child is never Expert or Nerd, and loses the sources content
      * filters can't reach (Remote M3U, Jellyfin…) while it keeps at least one; turning it off
      * gives nothing back. The hidden categories follow at once if it is this device's profile.
      */
@@ -66,6 +69,7 @@ class ProfileRepository(
         settings.setChildProfile(id, child)
         if (child) {
             if (settings.devMode(id)) settings.setDevMode(id, false)
+            if (settings.storedNerdMode(id)) settings.setNerdMode(id, false)
             settings.profileSourceKeys(id)?.let { keys ->
                 val kept = filterableSourceKeys(keys)
                 if (kept != keys) settings.setProfileSourceKeys(id, kept)
@@ -140,19 +144,19 @@ class ProfileRepository(
     }
 
     /**
-     * A child profile is never Expert, as [setChildProfile] keeps it for a change made here: turns
-     * Expert mode off on every child profile that has it. For what comes in from elsewhere (live
-     * sync, an upgrade), whatever order the two flags came in. Synced like any change, so every
-     * device ends with Expert off, not only this one. Run [ensureAnExpert] after it. Returns the
-     * ids of the profiles it changed.
+     * A child profile is never Expert or Nerd, as [setChildProfile] keeps it for a change made
+     * here: turns Expert mode and Nerd off on every child profile that has them. For what comes in
+     * from elsewhere (live sync, an upgrade), whatever order the flags came in. Synced like any
+     * change, so every device ends with both off, not only this one. Run [ensureAnExpert] after
+     * it. Returns the ids of the profiles whose Expert mode it turned off.
      */
     suspend fun clearChildExperts(): List<String> =
         withContext(Dispatchers.IO) {
             val settings = AppSettings(context)
-            dao
-                .getAll()
-                .map { it.id }
-                .filter { settings.isChildProfile(it) && settings.devMode(it) }
+            val children = dao.getAll().map { it.id }.filter { settings.isChildProfile(it) }
+            children.filter { settings.storedNerdMode(it) }.forEach { settings.setNerdMode(it, false) }
+            children
+                .filter { settings.devMode(it) }
                 .onEach { settings.setDevMode(it, false) }
         }
 

@@ -46,6 +46,8 @@ data class ProfileSettings(
     val autoplayNextEpisode: Boolean,
     /** A child profile (docs/plans/20261019_tv-household-ux-plan.md): adult categories hidden, never Expert. */
     val child: Boolean = false,
+    /** A Nerd ([AppSettings.nerdMode]): sees the stats and extra information. Never a child. */
+    val nerd: Boolean = false,
 ) {
     /**
      * The page shows the Name and PIN rows. A child's own page (seen without Expert mode,
@@ -197,11 +199,15 @@ class ProfilesViewModel(
         name: String,
         colorIndex: Int,
         child: Boolean = false,
+        nerd: Boolean = false,
         onAdded: (String) -> Unit = {},
     ) {
-        // A kid adds nothing (ProfileRules).
-        val fields = ProfileRules.add(actor(), ProfileFields(name, colorIndex, ProfileSettings(false, true, child))) ?: return
-        viewModelScope.launch { onAdded(repository.addProfile(fields.name, fields.colorIndex, fields.settings.child)) }
+        // A kid adds nothing; only an Expert adds a Nerd (ProfileRules).
+        val requested = ProfileSettings(false, true, child, nerd)
+        val fields = ProfileRules.add(actor(), ProfileFields(name, colorIndex, requested)) ?: return
+        viewModelScope.launch {
+            onAdded(repository.addProfile(fields.name, fields.colorIndex, fields.settings.child, fields.settings.nerd))
+        }
     }
 
     /** The profile in use, for [ProfileRules]. */
@@ -238,6 +244,8 @@ class ProfilesViewModel(
         }
         val devMode = settings.devMode || (stored.devMode && lastExpert)
         if (!child && devMode != stored.devMode) appSettings.setDevMode(id, devMode)
+        // A child is never a Nerd: ProfileRepository.setChildProfile turns it off.
+        if (!child && settings.nerd != stored.nerd) appSettings.setNerdMode(id, settings.nerd)
         if (settings.autoplayNextEpisode != stored.autoplayNextEpisode) {
             appSettings.setAutoplayNextEpisode(id, settings.autoplayNextEpisode)
         }
@@ -358,7 +366,12 @@ class ProfilesViewModel(
     val viewerIsAdmin: Boolean get() = appSettings.isDevMode
 
     fun settingsOf(id: String): ProfileSettings =
-        ProfileSettings(appSettings.devMode(id), appSettings.autoplayNextEpisode(id), appSettings.isChildProfile(id))
+        ProfileSettings(
+            appSettings.devMode(id),
+            appSettings.autoplayNextEpisode(id),
+            appSettings.isChildProfile(id),
+            appSettings.nerdMode(id),
+        )
 
     /** [id]'s colour theme and Look and Feel; set at once, like its sources (the profile in use repaints). */
 

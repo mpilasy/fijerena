@@ -129,6 +129,7 @@ fun MobileProfileEditScreen(
             var devMode by rememberSaveable(profileId) { mutableStateOf(stored.devMode) }
             var autoplayNextEpisode by rememberSaveable(profileId) { mutableStateOf(stored.autoplayNextEpisode) }
             var child by rememberSaveable(profileId) { mutableStateOf(stored.child) }
+            var nerd by rememberSaveable(profileId) { mutableStateOf(stored.nerd) }
             var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
             var choosingFiltersSource by remember { mutableStateOf(false) }
             val editFilters = { source: FilterSource ->
@@ -159,7 +160,7 @@ fun MobileProfileEditScreen(
                     profileId,
                     nameNow.trim().ifEmpty { profile.name },
                     colorIndex,
-                    stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode, child = child),
+                    stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode, child = child, nerd = nerd),
                 )
             }
             val leave = {
@@ -197,6 +198,12 @@ fun MobileProfileEditScreen(
                         autoplayNextEpisode = it
                         apply(name)
                     },
+                    child = child,
+                    nerd = nerd,
+                    onNerdChange = {
+                        nerd = it
+                        apply(name)
+                    },
                 )
 
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
@@ -211,7 +218,10 @@ fun MobileProfileEditScreen(
                         checked = child,
                         onCheckedChange = {
                             child = it
-                            if (it) devMode = false
+                            if (it) {
+                                devMode = false
+                                nerd = false
+                            }
                             apply(name)
                         },
                         supportingText =
@@ -371,10 +381,10 @@ private class LeaveAction(
 )
 
 /**
- * A profile's personal rows: name, colour, PIN (a child's own: colour only), Look and Playback, with
- * their pickers and the PIN flow. Its page shows them, and Settings shows them for the profile in
- * use (the admin settings plan). Each change applies at once; the caller saves the name, colour and
- * Play next episode it holds.
+ * A profile's personal rows: name, colour, PIN (a child's own: colour only), Nerd (not on a
+ * [child]'s), Look and Playback, with their pickers and the PIN flow. Its page shows them, and
+ * Settings shows them for the profile in use (the admin settings plan). Each change applies at
+ * once; the caller saves the name, colour, Nerd and Play next episode it holds.
  */
 @Composable
 internal fun ProfileOwnRows(
@@ -387,6 +397,9 @@ internal fun ProfileOwnRows(
     onColorIndexChange: (Int) -> Unit,
     autoplayNextEpisode: Boolean,
     onAutoplayNextEpisodeChange: (Boolean) -> Unit,
+    child: Boolean,
+    nerd: Boolean,
+    onNerdChange: (Boolean) -> Unit,
 ) {
     val profileId = profile.id
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
@@ -531,6 +544,18 @@ internal fun ProfileOwnRows(
             onClick = pinFlow::start,
         )
     }
+    // Nerd (the Nerd role plan): never a child's; an Admin sets it on any grown-up, a grown-up on
+    // itself, without the PIN.
+    if (!child) {
+        CinemaSwitchRow(
+            label = stringResource(R.string.profile_nerd_title),
+            supportingText = stringResource(R.string.profile_nerd_desc),
+            checked = nerd,
+            onCheckedChange = onNerdChange,
+            enabled = adminView || profile.isActive,
+            modifier = inset,
+        )
+    }
 
     SettingsGroupHeader(stringResource(R.string.profile_section_look))
     SettingsListRow(
@@ -586,12 +611,13 @@ internal fun YourProfileRows(
     var name by remember(profile.name) { mutableStateOf(profile.name) }
     var colorIndex by remember(profile.colorIndex) { mutableIntStateOf(profile.colorIndex) }
     var autoplayNextEpisode by remember { mutableStateOf(stored.autoplayNextEpisode) }
+    var nerd by remember { mutableStateOf(stored.nerd) }
     val apply = {
         viewModel.updateProfile(
             profile.id,
             name.trim().ifEmpty { profile.name },
             colorIndex,
-            viewModel.settingsOf(profile.id).copy(autoplayNextEpisode = autoplayNextEpisode),
+            viewModel.settingsOf(profile.id).copy(autoplayNextEpisode = autoplayNextEpisode, nerd = nerd),
         )
     }
     // The last composition's: the name as typed, against the name as saved.
@@ -612,6 +638,12 @@ internal fun YourProfileRows(
             autoplayNextEpisode = autoplayNextEpisode,
             onAutoplayNextEpisodeChange = {
                 autoplayNextEpisode = it
+                apply()
+            },
+            child = stored.child,
+            nerd = nerd,
+            onNerdChange = {
+                nerd = it
                 apply()
             },
         )

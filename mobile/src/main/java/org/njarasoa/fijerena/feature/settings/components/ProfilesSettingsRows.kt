@@ -65,7 +65,7 @@ fun ProfilesSettingsRows(
     profiles: List<ProfileUi>,
     message: String?,
     newProfileColorIndex: () -> Int,
-    onAdd: (name: String, colorIndex: Int, child: Boolean) -> Unit,
+    onAdd: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onEdit: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
     expertMode: Boolean = true,
@@ -146,31 +146,37 @@ fun ProfilesSettingsRows(
     if (adding) {
         ProfileAddDialog(
             initialColorIndex = remember { newProfileColorIndex() },
-            onSave = { name, color, child ->
-                onAdd(name, color, child)
+            onSave = { name, color, child, nerd ->
+                onAdd(name, color, child, nerd)
                 adding = false
             },
             onDismiss = { adding = false },
             noAdminPin = noAdminPin,
+            // Only an Admin adds a Nerd (ProfileRules).
+            nerdSwitch = expertMode,
         )
     }
 }
 
 /**
- * New profile: a name, a colour and whether it is a child's. Its own settings start off; it's
- * edited on its page afterwards.
+ * New profile: a name, a colour, whether it is a child's and, for an Admin ([nerdSwitch]), whether
+ * it is a Nerd (never a child's). Its other settings start off; it's edited on its page afterwards.
  */
 @Composable
 internal fun ProfileAddDialog(
     initialColorIndex: Int,
-    onSave: (name: String, colorIndex: Int, child: Boolean) -> Unit,
+    onSave: (name: String, colorIndex: Int, child: Boolean, nerd: Boolean) -> Unit,
     onDismiss: () -> Unit,
     /** No Expert has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
     noAdminPin: Boolean = false,
+    /** The profile in use is an Admin: the Nerd switch shows (only an Admin adds a Nerd). */
+    nerdSwitch: Boolean = false,
 ) {
     var name by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
     var child by remember { mutableStateOf(false) }
+    var nerd by remember { mutableStateOf(false) }
+    val showsNerd = nerdSwitch && !child
     var showNameError by remember { mutableStateOf(false) }
 
     CinemaAlertDialog(
@@ -196,6 +202,14 @@ internal fun ProfileAddDialog(
                 if (SwitchLock.ON && child && noAdminPin) {
                     CinemaText(stringResource(R.string.profile_child_no_pin_warning), tone = TextTone.Danger)
                 }
+                if (showsNerd) {
+                    CinemaSwitchRow(
+                        label = stringResource(R.string.profile_nerd_title),
+                        checked = nerd,
+                        onCheckedChange = { nerd = it },
+                        supportingText = stringResource(R.string.profile_nerd_desc),
+                    )
+                }
             }
         },
         main =
@@ -203,7 +217,7 @@ internal fun ProfileAddDialog(
                 if (name.isBlank()) {
                     showNameError = true
                 } else {
-                    onSave(name, colorIndex, child)
+                    onSave(name, colorIndex, child, showsNerd && nerd)
                 }
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),

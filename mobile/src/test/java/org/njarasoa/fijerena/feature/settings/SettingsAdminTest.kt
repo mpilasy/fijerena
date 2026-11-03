@@ -214,6 +214,41 @@ class SettingsAdminTest {
         scrollTo(text(R.string.profile_delete_button))
     }
 
+    @Test
+    fun `a grown-up turns its own Nerd on from Settings, without the PIN`() {
+        showSettings(active = GUEST, pins = setOf(ADMIN))
+
+        scrollTo(text(R.string.profile_nerd_title))
+        rule.onNodeWithText(text(R.string.profile_nerd_title)).performClick()
+        rule.waitForIdle()
+
+        assertTrue(AppSettings(context).nerdMode(GUEST))
+    }
+
+    @Test
+    fun `Admin, Profiles, turning Child on hides Nerd and turns it off`() {
+        seed(active = ADMIN)
+        AppSettings(context).setNerdMode(GUEST, true)
+        showProfilePage(GUEST, adminRows = true)
+
+        scrollTo(text(R.string.profile_nerd_title))
+        scrollTo(text(R.string.profile_child_title))
+        rule.onNodeWithText(text(R.string.profile_child_title)).performClick()
+        rule.waitForIdle()
+
+        rule.onNodeWithText(text(R.string.profile_nerd_title)).assertDoesNotExist()
+        rule.waitUntil(TIMEOUT_MS) { !AppSettings(context).storedNerdMode(GUEST) }
+    }
+
+    @Test
+    fun `a child's page has no Nerd row`() {
+        seed(active = ADMIN)
+        showProfilePage(KID, adminRows = true)
+
+        scrollTo(text(R.string.profile_child_title))
+        rule.onNodeWithText(text(R.string.profile_nerd_title)).assertDoesNotExist()
+    }
+
     /** Scrolls the screen's list or page to the node with [label], which must exist. */
     private fun scrollTo(label: String) =
         rule.onNode(hasScrollAction()).performScrollToNode(hasText(label)).let {

@@ -31,7 +31,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 /**
  * A kid is never Expert, also when live sync brings the flags in: Expert mode is turned off on a
  * profile that is a child after the pass, whatever order the two flags came in, and the app still
- * keeps an Expert. See the profile rules plan → PR-8.
+ * keeps an Expert. Nerd likewise (the Nerd role plan). See the profile rules plan → PR-8.
  */
 class SyncApplierChildExpertTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)
@@ -141,8 +141,36 @@ class SyncApplierChildExpertTest {
             assertFalse(settings.devMode(KID))
         }
 
+    @Test
+    fun `child and Nerd in one pass leave the kid without Nerd, in either order`() =
+        runBlocking {
+            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+
+            applier().apply(listOf(setting(NERD_MODE, KID, true, 10), setting(AppSettings.KEY_CHILD_PROFILE, KID, true, 11)))
+
+            assertTrue(settings.isChildProfile(KID))
+            assertFalse(settings.storedNerdMode(KID))
+            // So every device ends with Nerd off, not only this one.
+            coVerify(timeout = 2_000) { sync.queue(SyncKind.SETTING, KID, NERD_MODE) }
+        }
+
+    @Test
+    fun `Nerd alone on a kid is turned off, and a grown-up keeps it`() =
+        runBlocking {
+            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setChildProfile(KID, true)
+
+            applier().apply(listOf(setting(NERD_MODE, KID, true, 10), setting(NERD_MODE, ProfileEntity.DEFAULT_ID, true, 11)))
+
+            assertFalse(settings.storedNerdMode(KID))
+            assertTrue(settings.nerdMode(ProfileEntity.DEFAULT_ID))
+        }
+
     private companion object {
         const val KID = "kid"
+
+        // AppSettings.KEY_NERD_MODE, which is private.
+        const val NERD_MODE = "nerd_mode"
 
         // AppSettings.KEY_DEV_MODE, which is private.
         const val DEV_MODE = "dev_mode"

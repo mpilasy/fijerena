@@ -7,6 +7,7 @@ import androidx.room.withTransaction
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
@@ -20,6 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
@@ -93,6 +95,39 @@ class ProfileExpertGuardTest {
 
             assertFalse(settings.devMode(KID))
             assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+        }
+
+    @Test
+    fun `a child profile loses Nerd, a grown-up keeps it`() =
+        runBlocking {
+            val settings = AppSettings(context)
+            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setNerdMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setNerdMode(KID, true)
+            settings.setChildProfile(KID, true)
+
+            ProfileRepository(context).clearChildExperts()
+
+            assertFalse(settings.storedNerdMode(KID))
+            assertTrue(settings.nerdMode(ProfileEntity.DEFAULT_ID))
+        }
+
+    @Test
+    fun `turning Child on turns Nerd off`() =
+        runBlocking {
+            mockkConstructor(ProviderRepository::class)
+            coEvery { anyConstructed<ProviderRepository>().childProfileChanged(any()) } returns Unit
+            val settings = AppSettings(context)
+            settings.setNerdMode(KID, true)
+
+            ProfileRepository(context).setChildProfile(KID, false)
+            assertTrue(settings.nerdMode(KID))
+            ProfileRepository(context).setChildProfile(KID, true)
+
+            assertFalse(settings.storedNerdMode(KID))
+            // Child off again gives nothing back.
+            ProfileRepository(context).setChildProfile(KID, false)
+            assertFalse(settings.nerdMode(KID))
         }
 
     @Test
