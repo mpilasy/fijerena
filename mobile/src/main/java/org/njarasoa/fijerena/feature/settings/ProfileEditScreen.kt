@@ -24,8 +24,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -611,7 +613,11 @@ internal fun YourProfileRows(
     var name by remember(profile.name) { mutableStateOf(profile.name) }
     var colorIndex by remember(profile.colorIndex) { mutableIntStateOf(profile.colorIndex) }
     var autoplayNextEpisode by remember { mutableStateOf(stored.autoplayNextEpisode) }
-    var nerd by remember { mutableStateOf(stored.nerd) }
+    // The stored flag, followed: a change from Admin → Profiles, or from another device, shows here,
+    // and a later change of colour or name does not write an old value back.
+    val context = LocalContext.current.applicationContext
+    val storedNerd by remember(context) { AppSettings(context).observeNerdMode() }.collectAsStateWithLifecycle(stored.nerd)
+    var nerd by remember(storedNerd) { mutableStateOf(storedNerd) }
     val apply = {
         viewModel.updateProfile(
             profile.id,

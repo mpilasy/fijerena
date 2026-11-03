@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -40,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panelOutline
 import org.njarasoa.fijerena.core.ui.components.profileColourName
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
+import org.njarasoa.fijerena.core.ui.components.scrollEdgeFade
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -178,12 +181,18 @@ internal fun ProfileAddDialog(
     var nerd by remember { mutableStateOf(false) }
     val showsNerd = nerdSwitch && !child
     var showNameError by remember { mutableStateOf(false) }
+    val bodyScroll = rememberScrollState()
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.profile_dialog_add_title),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+            Column(
+                // The body scrolls, its edge faded while more is below, so the last switch keeps
+                // its height above the keyboard.
+                modifier = Modifier.scrollEdgeFade(bodyScroll).verticalScroll(bodyScroll),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            ) {
                 ProfileNameField(
                     name = name,
                     onNameChange = {
