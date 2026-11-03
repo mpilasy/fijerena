@@ -1,12 +1,12 @@
 package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,6 +21,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.window.Dialog
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -34,19 +35,15 @@ import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
 import org.njarasoa.fijerena.core.network.sports.ReminderChannel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.testing.FocusWalk
-import org.njarasoa.fijerena.testing.back
-import org.njarasoa.fijerena.testing.down
-import org.njarasoa.fijerena.testing.left
-import org.njarasoa.fijerena.testing.right
-import org.njarasoa.fijerena.testing.up
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The TV game reminder banner takes focus when it shows (Watch, or Dismiss without a channel),
- * keeps the D-pad on its two buttons, and Back closes it and gives focus back to the control that
- * had it. No key reaches the screen under it, and it goes by itself after its time even with focus.
- * Under a Dialog window it waits for the dialog to close (the Nerd role plan → R).
+ * The TV game reminder banner takes the remote's keys, never focus (the Nerd role plan → R): it
+ * shows with Watch chosen (Dismiss without a channel), Left and Right choose, OK acts, Back closes
+ * it, and no key reaches the screen under it. The control under it, here nested in a list row,
+ * keeps focus through it all. Under a Dialog window it waits for the dialog to close.
  */
 @RunWith(RobolectricTestRunner::class)
 class TvGameReminderBannerFocusTest {
@@ -74,13 +71,6 @@ class TvGameReminderBannerFocusTest {
     private val screenKeys = mutableListOf<Key>()
     private var dialogOpen by mutableStateOf(false)
 
-    /** Second is on the screen; its key, as a list row that recomposes under a new key. */
-    private var secondShown by mutableStateOf(true)
-    private var secondKey by mutableStateOf(0)
-
-    /** The screen's buttons are on it (not while its list loads again). */
-    private var buttonsShown by mutableStateOf(true)
-
     @After
     fun tearDown() {
         GameReminderAlerts.dismissBanner(alert)
@@ -90,7 +80,7 @@ class TvGameReminderBannerFocusTest {
     private fun setScreen(shown: GameReminderAlert = alert) {
         rule.setContent {
             val banner = rememberReminderBannerState()
-            val second = remember { FocusRequester() }
+            val nested = remember { FocusRequester() }
             // On Android a Dialog window takes the window focus from the screen; Robolectric leaves
             // it on the screen, so the banner gets a window that loses focus while the dialog is open.
             val window = LocalWindowInfo.current
@@ -104,21 +94,24 @@ class TvGameReminderBannerFocusTest {
                 Box(
                     Modifier
                         .fillMaxSize()
+                        .reminderBannerKeys(banner)
                         .onPreviewKeyEvent {
                             screenKeys += it.key
                             false
                         }.onKeyEvent {
                             screenKeys += it.key
                             false
-                        }.reminderBannerContent(banner),
+                        },
                 ) {
-                    if (buttonsShown) {
-                        Column(Modifier.align(Alignment.Center)) {
-                            CinemaSecondaryButton(onClick = {}, text = "First")
-                            if (secondShown) {
-                                key(secondKey) {
-                                    CinemaSecondaryButton(onClick = {}, text = "Second", modifier = Modifier.focusRequester(second))
-                                }
+                    LazyColumn(Modifier.align(Alignment.Center)) {
+                        items(5) { row ->
+                            Row {
+                                CinemaSecondaryButton(onClick = {}, text = "Row $row A")
+                                CinemaSecondaryButton(
+                                    onClick = {},
+                                    text = "Row $row B",
+                                    modifier = if (row == 2) Modifier.focusRequester(nested) else Modifier,
+                                )
                             }
                         }
                     }
@@ -132,32 +125,45 @@ class TvGameReminderBannerFocusTest {
                     }
                 }
             }
-            LaunchedEffect(Unit) { second.requestFocus() }
+            LaunchedEffect(Unit) { nested.requestFocusWithRetry() }
         }
-        walk.assertFocused("Second")
+        walk.assertFocused(NESTED)
         screenKeys.clear()
         rule.runOnIdle { GameReminderAlerts.showBanner(shown) }
         rule.waitForIdle()
     }
 
+    private fun assertChosen(label: String) {
+        rule.onNode(hasText(label) and isSelected()).assertExists()
+    }
+
     @Test
-    fun `the banner takes focus on Watch when it shows`() {
+    fun `the banner shows with Watch chosen and focus stays on the screen`() {
         setScreen()
         rule.onNode(hasText("Sky Sports", substring = true)).assertExists()
-        walk.assertFocused("Watch now")
+        assertChosen("Watch now")
+        walk.assertFocused(NESTED)
     }
 
     @Test
-    fun `without a channel the banner takes focus on Dismiss`() {
+    fun `without a channel Dismiss is chosen`() {
         setScreen(noChannel)
-        walk.assertFocused("Dismiss")
+        assertChosen("Dismiss")
+        walk.press(Key.DirectionLeft)
+        assertChosen("Dismiss")
     }
 
     @Test
-    fun `the D-pad stays on the banner's buttons`() {
+    fun `Left and Right choose Watch or Dismiss`() {
         setScreen()
 
-        walk.run(right("Dismiss"), right("Dismiss"), down("Dismiss"), left("Watch now"), left("Watch now"), up("Watch now"))
+        walk.press(Key.DirectionRight)
+        assertChosen("Dismiss")
+        walk.press(Key.DirectionRight)
+        assertChosen("Dismiss")
+        walk.press(Key.DirectionLeft)
+        assertChosen("Watch now")
+        walk.assertFocused(NESTED)
     }
 
     @Test
@@ -167,37 +173,56 @@ class TvGameReminderBannerFocusTest {
         listOf(Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight, Key.Menu, Key.ChannelUp).forEach(walk::press)
         assertEquals(emptyList<Key>(), screenKeys)
         assertNotNull(GameReminderAlerts.banner.value)
+        walk.assertFocused(NESTED)
     }
 
     @Test
-    fun `Back closes the banner and gives focus back`() {
-        setScreen()
-
-        walk.run(right("Dismiss"), back("Second"))
-        assertNull(GameReminderAlerts.banner.value)
-        assertEquals(emptyList<Key>(), screenKeys)
-    }
-
-    @Test
-    fun `Watch hands over the reminder and gives focus back`() {
+    fun `OK on Watch hands over the reminder and focus stays`() {
         setScreen()
         walk.press(Key.DirectionCenter)
 
-        walk.assertFocused("Second")
         assertEquals(listOf(alert), watched)
         assertNull(GameReminderAlerts.banner.value)
+        assertEquals(emptyList<Key>(), screenKeys)
+        walk.assertFocused(NESTED)
     }
 
     @Test
-    fun `the banner goes by itself with focus and gives focus back`() {
+    fun `OK on Dismiss closes the banner without watching`() {
         setScreen()
-        walk.assertFocused("Watch now")
+        walk.press(Key.DirectionRight)
+        walk.press(Key.DirectionCenter)
+
+        assertEquals(emptyList<GameReminderAlert>(), watched)
+        assertNull(GameReminderAlerts.banner.value)
+        walk.assertFocused(NESTED)
+    }
+
+    @Test
+    fun `Back closes the banner and focus stays on the nested control`() {
+        setScreen()
+        walk.press(Key.Back)
+
+        assertNull(GameReminderAlerts.banner.value)
+        assertEquals(emptyList<Key>(), screenKeys)
+        walk.assertFocused(NESTED)
+
+        // The keys go to the screen again.
+        walk.press(Key.DirectionLeft)
+        walk.assertFocused("Row 2 A")
+    }
+
+    @Test
+    fun `the banner goes by itself and focus stays on the nested control`() {
+        setScreen()
 
         rule.mainClock.advanceTimeBy(CinemaAnimation.reminderBannerDismissMs)
         rule.waitForIdle()
 
         assertNull(GameReminderAlerts.banner.value)
-        walk.assertFocused("Second")
+        walk.assertFocused(NESTED)
+        walk.press(Key.DirectionUp)
+        walk.assertFocused("Row 1 B")
     }
 
     @Test
@@ -215,75 +240,14 @@ class TvGameReminderBannerFocusTest {
 
         rule.runOnIdle { dialogOpen = false }
         rule.onNode(hasText("Sky Sports", substring = true)).assertExists()
-        walk.assertFocused("Watch now")
+        assertChosen("Watch now")
+        walk.assertFocused(NESTED)
+        screenKeys.clear()
+        walk.press(Key.DirectionDown)
+        assertEquals(emptyList<Key>(), screenKeys)
     }
 
-    @Test
-    fun `Back gives focus to the screen when the control that had it is gone`() {
-        setScreen()
-        rule.runOnIdle { secondShown = false }
-        rule.waitForIdle()
-        walk.assertFocused("Watch now")
-
-        walk.run(back("First"))
-        assertNull(GameReminderAlerts.banner.value)
-    }
-
-    @Test
-    fun `Back gives focus to the screen when the control that had it is composed again`() {
-        setScreen()
-        rule.runOnIdle { secondKey++ }
-        rule.waitForIdle()
-        walk.assertFocused("Watch now")
-
-        // A new node under a new key is not the control that had focus: the screen's first one.
-        walk.run(back("First"))
-        assertNull(GameReminderAlerts.banner.value)
-    }
-
-    @Test
-    fun `Back gives focus back when the screen's controls come back after the banner`() {
-        setScreen()
-        rule.runOnIdle { buttonsShown = false }
-        rule.waitForIdle()
-        walk.assertFocused("Watch now")
-
-        rule.mainClock.autoAdvance = false
-        walk.press(Key.Back)
-        rule.runOnIdle { buttonsShown = true }
-        rule.mainClock.autoAdvance = true
-        rule.waitForIdle()
-
-        assertNull(GameReminderAlerts.banner.value)
-        walk.assertFocused("Second")
-    }
-
-    @Test
-    fun `the banner goes by itself and gives focus back when the screen's controls come back`() {
-        setScreen()
-        rule.runOnIdle { buttonsShown = false }
-        rule.waitForIdle()
-
-        rule.mainClock.autoAdvance = false
-        rule.mainClock.advanceTimeUntil(CinemaAnimation.reminderBannerDismissMs * 2) { GameReminderAlerts.banner.value == null }
-        rule.runOnIdle { buttonsShown = true }
-        rule.mainClock.autoAdvance = true
-        rule.waitForIdle()
-
-        assertNull(GameReminderAlerts.banner.value)
-        walk.assertFocused("Second")
-    }
-
-    @Test
-    fun `the banner goes by itself and gives focus to the screen when the control is gone`() {
-        setScreen()
-        rule.runOnIdle { secondShown = false }
-        rule.waitForIdle()
-
-        rule.mainClock.advanceTimeBy(CinemaAnimation.reminderBannerDismissMs)
-        rule.waitForIdle()
-
-        assertNull(GameReminderAlerts.banner.value)
-        walk.assertFocused("First")
+    private companion object {
+        const val NESTED = "Row 2 B"
     }
 }

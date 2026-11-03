@@ -58,7 +58,7 @@ class TvGameReminderBannerLayoutTest {
         rule.setContent {
             val banner = rememberReminderBannerState()
             Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
-                Box(Modifier.fillMaxSize().reminderBannerContent(banner))
+                Box(Modifier.fillMaxSize().reminderBannerKeys(banner))
                 TvGameReminderBanner(banner, onWatch = {}, modifier = Modifier.align(Alignment.TopCenter))
             }
         }
