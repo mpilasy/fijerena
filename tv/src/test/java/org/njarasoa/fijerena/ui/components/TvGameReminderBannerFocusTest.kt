@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,6 +74,13 @@ class TvGameReminderBannerFocusTest {
     private val screenKeys = mutableListOf<Key>()
     private var dialogOpen by mutableStateOf(false)
 
+    /** Second is on the screen; its key, as a list row that recomposes under a new key. */
+    private var secondShown by mutableStateOf(true)
+    private var secondKey by mutableStateOf(0)
+
+    /** The screen's buttons are on it (not while its list loads again). */
+    private var buttonsShown by mutableStateOf(true)
+
     @After
     fun tearDown() {
         GameReminderAlerts.dismissBanner(alert)
@@ -104,9 +112,15 @@ class TvGameReminderBannerFocusTest {
                             false
                         }.reminderBannerContent(banner),
                 ) {
-                    Column(Modifier.align(Alignment.Center)) {
-                        CinemaSecondaryButton(onClick = {}, text = "First")
-                        CinemaSecondaryButton(onClick = {}, text = "Second", modifier = Modifier.focusRequester(second))
+                    if (buttonsShown) {
+                        Column(Modifier.align(Alignment.Center)) {
+                            CinemaSecondaryButton(onClick = {}, text = "First")
+                            if (secondShown) {
+                                key(secondKey) {
+                                    CinemaSecondaryButton(onClick = {}, text = "Second", modifier = Modifier.focusRequester(second))
+                                }
+                            }
+                        }
                     }
                 }
                 CompositionLocalProvider(LocalWindowInfo provides screenWindow) {
@@ -202,5 +216,74 @@ class TvGameReminderBannerFocusTest {
         rule.runOnIdle { dialogOpen = false }
         rule.onNode(hasText("Sky Sports", substring = true)).assertExists()
         walk.assertFocused("Watch now")
+    }
+
+    @Test
+    fun `Back gives focus to the screen when the control that had it is gone`() {
+        setScreen()
+        rule.runOnIdle { secondShown = false }
+        rule.waitForIdle()
+        walk.assertFocused("Watch now")
+
+        walk.run(back("First"))
+        assertNull(GameReminderAlerts.banner.value)
+    }
+
+    @Test
+    fun `Back gives focus to the screen when the control that had it is composed again`() {
+        setScreen()
+        rule.runOnIdle { secondKey++ }
+        rule.waitForIdle()
+        walk.assertFocused("Watch now")
+
+        // A new node under a new key is not the control that had focus: the screen's first one.
+        walk.run(back("First"))
+        assertNull(GameReminderAlerts.banner.value)
+    }
+
+    @Test
+    fun `Back gives focus back when the screen's controls come back after the banner`() {
+        setScreen()
+        rule.runOnIdle { buttonsShown = false }
+        rule.waitForIdle()
+        walk.assertFocused("Watch now")
+
+        rule.mainClock.autoAdvance = false
+        walk.press(Key.Back)
+        rule.runOnIdle { buttonsShown = true }
+        rule.mainClock.autoAdvance = true
+        rule.waitForIdle()
+
+        assertNull(GameReminderAlerts.banner.value)
+        walk.assertFocused("Second")
+    }
+
+    @Test
+    fun `the banner goes by itself and gives focus back when the screen's controls come back`() {
+        setScreen()
+        rule.runOnIdle { buttonsShown = false }
+        rule.waitForIdle()
+
+        rule.mainClock.autoAdvance = false
+        rule.mainClock.advanceTimeUntil(CinemaAnimation.reminderBannerDismissMs * 2) { GameReminderAlerts.banner.value == null }
+        rule.runOnIdle { buttonsShown = true }
+        rule.mainClock.autoAdvance = true
+        rule.waitForIdle()
+
+        assertNull(GameReminderAlerts.banner.value)
+        walk.assertFocused("Second")
+    }
+
+    @Test
+    fun `the banner goes by itself and gives focus to the screen when the control is gone`() {
+        setScreen()
+        rule.runOnIdle { secondShown = false }
+        rule.waitForIdle()
+
+        rule.mainClock.advanceTimeBy(CinemaAnimation.reminderBannerDismissMs)
+        rule.waitForIdle()
+
+        assertNull(GameReminderAlerts.banner.value)
+        walk.assertFocused("First")
     }
 }
