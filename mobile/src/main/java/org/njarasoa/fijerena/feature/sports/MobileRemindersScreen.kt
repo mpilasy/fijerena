@@ -105,6 +105,7 @@ fun MobileRemindersScreen(
     var openGameKey by rememberSaveable { mutableStateOf<String?>(null) }
     val loaded = state as? RemindersState.Loaded
 
+    val gameGone = stringResource(R.string.reminders_game_gone)
     // The open game, read from its team's schedule. A game no longer there says so and closes.
     val sheetGame by produceState<SportsGame?>(null, openGameKey, loaded != null) {
         value = null
@@ -113,7 +114,7 @@ fun MobileRemindersScreen(
         val item = current.upcoming.filterIsInstance<ReminderItem.Game>().firstOrNull { it.key == key }
         val game = item?.let { gameOrNull(viewModel, it) }
         if (game == null) {
-            if (item != null) AppNotices.show(context.getString(R.string.reminders_game_gone))
+            if (item != null) AppNotices.show(gameGone)
             openGameKey = null
         } else {
             value = game
@@ -382,7 +383,7 @@ private fun TeamRuleCard(
                 CinemaText(
                     text =
                         listOfNotNull(
-                            rule.nextStartEpochSec?.let { context.getString(R.string.reminders_next_game, dayAndTime(context, it)) },
+                            rule.nextStartEpochSec?.let { stringResource(R.string.reminders_next_game, dayAndTime(context, it)) },
                             pluralStringResource(R.plurals.reminders_team_games, rule.gameCount, rule.gameCount),
                         ).joinToString(" · "),
                     role = TextRole.BodySmall,
