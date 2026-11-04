@@ -23,9 +23,9 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
  * WorkManager worker for background EPG sync (all device types).
  *
  * Refreshes the guide sources of every source of the profile in use that Search the guide reads
- * ([GuideScope]), each source's in a run of its own: those due by their own interval
- * ([EpgRefreshSchedule.isDue]). It runs at the shortest interval among every provider's guide
- * sources (`EpgFileManager.scheduleAutoRefresh`).
+ * ([GuideScope]), all in one run: those due by their own interval ([EpgRefreshSchedule.isDue]).
+ * A guide source that several sources read is in the run one time. It runs at the shortest
+ * interval among every provider's guide sources (`EpgFileManager.scheduleAutoRefresh`).
  *
  * Runs as a foreground service via setForeground() to bypass Android Doze mode,
  * which blocks DNS on Ethernet-connected Shield TVs during overnight maintenance windows.
@@ -99,25 +99,21 @@ class EpgSyncWorker(
             // throws, so a full disk can't fail the guide refresh along with it.
             providerRepo.sweepOrphanedCatalogData(onlyIfPending = false)
             if (force) Log.i(TAG, "doWork: force=true, refreshing all sources of providers $providerIds")
-            val runs = sourcesToRefresh(providerIds) { if (force) fileManager.getAllSources(it) else fileManager.getStaleSources(it) }
-            if (runs.isEmpty()) {
+            val staleSources =
+                sourcesToRefresh(providerIds) { if (force) fileManager.getAllSources(it) else fileManager.getStaleSources(it) }
+            if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()
             } else {
-                // Inline, one provider after another: a run reports on one provider, and the work
-                // must stay inside doWork() to keep the wake lock (Doze kills local work too).
-                var sourceCount = 0
-                var errorCount = 0
-                for (staleSources in runs) {
-                    Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
-                    fileManager.processAllSources(staleSources)
-                    sourceCount += staleSources.size
-                    val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
-                    if (completed != null) errorCount += completed.errors
-                }
+                // Inline: the work must stay inside doWork() to keep the wake lock (Doze kills
+                // local work too).
+                Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
+                fileManager.processAllSources(staleSources)
+                val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
+                val errorCount = completed?.errors ?: 0
 
-                if (errorCount == sourceCount) {
-                    Log.w(TAG, "doWork: all $sourceCount source(s) failed, will retry")
+                if (errorCount == staleSources.size) {
+                    Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed, will retry")
                     if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
                 } else {
                     Log.i(TAG, "doWork: refresh complete")
@@ -145,10 +141,10 @@ class EpgSyncWorker(
         /** The periodic guide refresh's unique work name (`EpgFileManager` schedules it). */
         const val WORK_NAME = "epg_sync"
 
-        /** The guide sources to refresh, one list (run) per provider of [providerIds] that has any. */
+        /** The guide sources to refresh for all of [providerIds], in one list, each one time. */
         internal suspend fun sourcesToRefresh(
             providerIds: List<Long>,
             sourcesOf: suspend (providerId: Long) -> List<EpgSourceEntity>,
-        ): List<List<EpgSourceEntity>> = providerIds.map { sourcesOf(it) }.filter { it.isNotEmpty() }
+        ): List<EpgSourceEntity> = providerIds.flatMap { sourcesOf(it) }.distinctBy { it.id }
     }
 }

@@ -84,9 +84,9 @@ class EpgFileManager private constructor(
         private const val MAX_RETRIES = 3
 
         /**
-         * Task ids carry the provider, because [RefreshQueue] coalesces same-id submissions into
-         * the running task. A refresh covers one provider's sources only, so an unsuffixed id
-         * would let a second provider's refresh silently become the first one's run.
+         * Task ids carry the providers, because [RefreshQueue] coalesces same-id submissions into
+         * the running task. A refresh covers the guide sources of its providers only, so an
+         * unsuffixed id would let a second provider's refresh silently become the first one's run.
          */
         fun refreshStaleTaskId(providerId: Long): String = refreshStaleTaskId(listOf(providerId))
 
@@ -94,6 +94,12 @@ class EpgFileManager private constructor(
         fun refreshStaleTaskId(providerIds: List<Long>): String = "epg_refresh_stale_${providerIds.joinToString("_")}"
 
         fun refreshFailedTaskId(providerIds: List<Long>): String = "epg_refresh_failed_${providerIds.joinToString("_")}"
+
+        /** True when a run that covers [runProviderIds] (null: no run yet) is shown to a screen for [providerIds]. */
+        internal fun isRunFor(
+            runProviderIds: Set<Long>?,
+            providerIds: Set<Long>,
+        ): Boolean = runProviderIds == null || runProviderIds.any { it in providerIds }
 
         private const val RETRY_DELAY_MS = 5000L
 
@@ -319,8 +325,11 @@ class EpgFileManager private constructor(
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
-    /** Provider whose sources [_state] is reporting on. Null until the first refresh of the process. */
-    private val _refreshProviderId = MutableStateFlow<Long?>(null)
+    /**
+     * The providers that read the guide sources [_state] is reporting on. A shared guide source
+     * gives one run for all its providers. Null until the first refresh of the process.
+     */
+    private val _refreshProviderIds = MutableStateFlow<Set<Long>?>(null)
 
     /**
      * [state] as seen by [providerId]. One pipeline serves every provider, so a screen that reads
@@ -331,9 +340,15 @@ class EpgFileManager private constructor(
 
     /** [state] as seen by a screen reporting on all of [providerIds] (Search the guide's sources). */
     fun stateFor(providerIds: Set<Long>): Flow<MultiSourceState> =
-        combine(_state, _refreshProviderId) { state, owner ->
-            if (owner == null || owner in providerIds) state else MultiSourceState.Idle
+        combine(_state, _refreshProviderIds) { state, runProviderIds ->
+            if (isRunFor(runProviderIds, providerIds)) state else MultiSourceState.Idle
         }
+
+    /** Sets the run's providers from the links of the guide sources it covers. */
+    private suspend fun claimRun(sources: List<EpgSourceEntity>) {
+        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+        _refreshProviderIds.value = sources.flatMap { sourceDao.getProviderIds(it.id) }.toSet()
+    }
 
     /**
      * Serialises ingestion. The staging tables are a single process-wide pair, so a second run
@@ -491,15 +506,15 @@ class EpgFileManager private constructor(
      */
     private fun launchGenericTask(
         taskId: String,
-        providerId: Long?,
+        providerIds: Set<Long>?,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
         dbQueryAndProcess: suspend () -> Unit,
     ) {
         processJob?.cancel()
-        // Claim the state before the first Pending, so the waiting screen belongs to the provider
+        // Claim the state before the first Pending, so the waiting screen belongs to the providers
         // that asked for the refresh rather than to whoever ran last.
-        _refreshProviderId.value = providerId
+        _refreshProviderIds.value = providerIds
         if (_state.value !is MultiSourceState.Processing) {
             _state.value = MultiSourceState.Pending
         }
@@ -604,8 +619,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Refreshes the stale sources of each of [providerIds] in turn, one run per provider (a run
-     * reports on one provider), in one task: a second launch would cancel the first.
+     * Refreshes the stale guide sources of [providerIds] in one run. A guide source that several
+     * of them read is in the run one time.
      */
     fun launchRefreshStale(
         providerIds: List<Long>,
@@ -613,45 +628,34 @@ class EpgFileManager private constructor(
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
         if (providerIds.isEmpty()) return
-        launchGenericTask(refreshStaleTaskId(providerIds), providerIds.first(), onComplete, onCellularConfirm) {
+        launchGenericTask(refreshStaleTaskId(providerIds), providerIds.toSet(), onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
-            var refreshed = false
-            for (providerId in providerIds) {
-                val staleSources =
-                    sourceDao.getEnabledSourcesForProvider(providerId).filter { EpgRefreshSchedule.isStale(it, now, unsetHours) }
-                if (staleSources.isNotEmpty()) {
-                    processAllSourcesInternal(staleSources)
-                    refreshed = true
-                }
-            }
-            if (!refreshed && _state.value is MultiSourceState.Pending) {
-                _state.value = MultiSourceState.Idle
-            }
+            val staleSources =
+                sourceDao.getEnabledSourcesForProviders(providerIds).filter { EpgRefreshSchedule.isStale(it, now, unsetHours) }
+            processOrIdle(staleSources)
         }
     }
 
-    /** Retries the failed sources of each of [providerIds] in turn, in one task, as [launchRefreshStale]. */
+    /** Retries the failed guide sources of [providerIds] in one run, as [launchRefreshStale]. */
     fun launchRefreshFailed(
         providerIds: List<Long>,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
         if (providerIds.isEmpty()) return
-        launchGenericTask(refreshFailedTaskId(providerIds), providerIds.first(), onComplete, onCellularConfirm) {
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            var refreshed = false
-            for (providerId in providerIds) {
-                val failedSources = sourceDao.getFailedSources(providerId)
-                if (failedSources.isNotEmpty()) {
-                    processAllSourcesInternal(failedSources)
-                    refreshed = true
-                }
-            }
-            if (!refreshed && _state.value is MultiSourceState.Pending) {
-                _state.value = MultiSourceState.Idle
-            }
+        launchGenericTask(refreshFailedTaskId(providerIds), providerIds.toSet(), onComplete, onCellularConfirm) {
+            processOrIdle(SettingsDatabase.getInstance(context).epgSourceDao().getFailedSourcesForProviders(providerIds))
+        }
+    }
+
+    /** Processes [sources]; with none, a waiting screen goes back to Idle. */
+    private suspend fun processOrIdle(sources: List<EpgSourceEntity>) {
+        if (sources.isNotEmpty()) {
+            processAllSourcesInternal(sources)
+        } else if (_state.value is MultiSourceState.Pending) {
+            _state.value = MultiSourceState.Idle
         }
     }
 
@@ -660,7 +664,7 @@ class EpgFileManager private constructor(
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        // The run claims its media source once it reads the guide source (processSingleSourceInternal).
+        // The run claims its media sources once it reads the guide source (processSingleSourceInternal).
         launchGenericTask("epg_refresh_source_$sourceId", null, onComplete, onCellularConfirm) {
             processSingleSourceInternal(sourceId)
         }
@@ -706,13 +710,7 @@ class EpgFileManager private constructor(
                 return@withLock
             }
 
-            // The run reports on the first source's first media source (one guide source per URL plan, Phase 1).
-            _refreshProviderId.value =
-                SettingsDatabase
-                    .getInstance(context)
-                    .epgSourceDao()
-                    .getProviderIds(sources.first().id)
-                    .firstOrNull()
+            claimRun(sources)
             val startTime = System.currentTimeMillis()
             val fixedDevice = isFixedDevice()
             val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
@@ -1085,7 +1083,7 @@ class EpgFileManager private constructor(
                         _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
                         return@withLock
                     }
-                _refreshProviderId.value = sourceDao.getProviderIds(source.id).firstOrNull()
+                claimRun(listOf(source))
                 val indexer = EpgIndexer.getInstance(context)
                 val label = source.label.ifBlank { extractLabel(source.url) }
 
@@ -1729,7 +1727,8 @@ class EpgFileManager private constructor(
         return if (staleSources.isNotEmpty()) {
             val task =
                 object : RefreshTask {
-                    override val id = "epg_auto_refresh"
+                    // Per provider: [RefreshQueue] would drop a second provider's run with the same id.
+                    override val id = "epg_auto_refresh_$providerId"
                     override val priority = RefreshPriority.MEDIUM
 
                     override suspend fun execute() {
@@ -1744,9 +1743,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Returns the enabled sources of [providerId]. Used by [EpgSyncWorker] to query which sources
-     * to process before calling [processAllSources]; a source belongs to exactly one provider, so a
-     * refresh never touches another provider's guide.
+     * Returns the enabled guide sources that [providerId] reads. Used by [EpgSyncWorker] to query
+     * which sources to process before calling [processAllSources].
      */
     internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> =
         SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)

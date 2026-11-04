@@ -242,4 +242,11 @@ interface EpgSourceDao {
         """,
     )
     suspend fun resetAllIngestionState()
+
+    /** The enabled guide sources with an error that any of [providerIds] reads, each once. */
+    @Query(
+        "SELECT * FROM epg_source WHERE enabled = 1 AND last_error IS NOT NULL AND id IN " +
+            "(SELECT source_id FROM epg_source_provider WHERE provider_id IN (:providerIds)) ORDER BY added_at_ms ASC",
+    )
+    suspend fun getFailedSourcesForProviders(providerIds: Collection<Long>): List<EpgSourceEntity>
 }
