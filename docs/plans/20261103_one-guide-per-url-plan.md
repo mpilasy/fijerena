@@ -1,6 +1,6 @@
 # One guide source per URL
 
-**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lane G done (5e3d5832e); Lanes R, S and U in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
+**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lanes G (5e3d5832e) and R (3f745fbaa) done; Lanes S and U in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
 v19 offset work (`EpgOffsetShift`, `MIGRATION_18_19`) that Phase 1 builds on is committed (cff8ff566).
 
 ## Goal
@@ -425,7 +425,7 @@ t4  Phase W (lead) emulator walks, docs, release notes
 |---|---|---|
 | 0 | Done 2026-11-03: answers recorded | none |
 | 1 | Done 2026-11-04: schema v20, `MIGRATION_19_20` (`GuideMerge`, `GuideUrls`), link and alias tables, link triggers, `EpgIndexer.purgeOrphanedSources` startup step, automatic guides and source deletion on links; callers keep their behaviour (first link) | 0fe83452b |
-| R | In progress | none |
+| R | Done 2026-11-04: `_refreshProviderIds` set claimed from the run's links (`isRunFor`), one stale / failed run over the distinct guides (`getFailedSourcesForProviders`), `EpgSyncWorker` one run; auto-refresh task id per source so a second source's request is not dropped | 3f745fbaa |
 | G | Done 2026-11-04: `GuideScope.providerIdsBySourceId`, `GuideAiringMatcher.matchAll` / `isShown` (hidden per source), one airing per matching source in Search the Guide, sports lookup fan-out, `OwnXmltvIndex` single link | 5e3d5832e |
 | S | In progress | none |
 | U | In progress | none |
