@@ -1,6 +1,6 @@
 # Reminders page
 
-**Status:** Planned 2026-11-04. Not started. Open questions RP-Q1 and RP-Q2 wait for the user.
+**Status:** Planned 2026-11-04. Not started. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
 
 ## Goal
 
@@ -53,7 +53,14 @@ clear all.
 | RP-D9 | Time | Times in the device's 12/24-hour clock and the app language, with the shared date helper; a reminder today shows "Today", tomorrow "Tomorrow". |
 | RP-D10 | TV focus | Entry focus on the first row (Upcoming, else Every Game Of, else Clear All in the header). Right from a row walks its icon actions; Up from the first row reaches the header actions. After Remove, focus goes to the next row (else the previous, else the header). Back leaves the page onto the control that opened it. Follows the focus contract in CONTRIBUTING.md. |
 
-## Open questions
+## Answers (user, 2026-11-04)
+
+| # | Answer |
+|---|---|
+| RP-Q1 | (a) A bell in the Sports section header (TV and phone) and in Search the Guide's header, plus "Manage reminders" on the TV reminder banner and in the notification. |
+| RP-Q2 | (a) Reminders stay local to the device they were set on; the page says so. |
+
+## Open questions (answered, kept for the options)
 
 | # | Question | Options |
 |---|---|---|

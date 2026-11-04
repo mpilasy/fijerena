@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-04 | [Reminders page](./20261104_reminders-page-plan.md) | One page on TV and phone that lists the profile's upcoming reminders (games, guide programmes) and team rules; open, remove, stop a team's "every game", clear all | Planned 2026-11-04; open questions RP-Q1 (entry points) and RP-Q2 (sync) |
+| 2026-11-04 | [Reminders page](./20261104_reminders-page-plan.md) | One page on TV and phone that lists the profile's upcoming reminders (games, guide programmes) and team rules; open, remove, stop a team's "every game", clear all | Planned 2026-11-04; RP-Q1 and RP-Q2 answered |
 | 2026-11-03 | [One guide source per URL](./20261103_one-guide-per-url-plan.md) | A guide added for several sources is one guide source: downloaded, imported, stored and synced once, linked to the sources that use it; channel matching stays per source | Done 2026-11-04, walked on both emulators |
 | 2026-11-03 | [Nerd role, sync failures, TV reminder focus, Admin pages](./20261103_nerd-role-sync-failures-plan.md) | A Nerd role (not for a child) sees the stats and extra information that only an Admin saw; Guide Sources and Library Data show the last success plus the last failure, its reason and the failure count; the TV reminder banner takes focus; each Admin section is its own page on TV and phone | Done 2026-11-03, walked on both emulators |
 | 2026-11-01 | [Consistency round 2](./20261101_consistency-round-2-plan.md) | One build for each job on TV and phone: action menus, choice and toggle rows, dialog bodies, undo and empty states, raw Material leftovers; a gate rule for each class | Done 2026-11-01, walked on both emulators |
