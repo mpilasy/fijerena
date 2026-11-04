@@ -1,6 +1,6 @@
 # One guide source per URL
 
-**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lanes G (5e3d5832e) and R (3f745fbaa) done; Lanes S and U in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
+**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lanes G (5e3d5832e), R (3f745fbaa) and U (5fd079aca) done; Lane S in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
 v19 offset work (`EpgOffsetShift`, `MIGRATION_18_19`) that Phase 1 builds on is committed (cff8ff566).
 
 ## Goal
@@ -428,5 +428,5 @@ t4  Phase W (lead) emulator walks, docs, release notes
 | R | Done 2026-11-04: `_refreshProviderIds` set claimed from the run's links (`isRunFor`), one stale / failed run over the distinct guides (`getFailedSourcesForProviders`), `EpgSyncWorker` one run; auto-refresh task id per source so a second source's request is not dropped | 3f745fbaa |
 | G | Done 2026-11-04: `GuideScope.providerIdsBySourceId`, `GuideAiringMatcher.matchAll` / `isShown` (hidden per source), one airing per matching source in Search the Guide, sports lookup fan-out, `OwnXmltvIndex` single link | 5e3d5832e |
 | S | In progress | none |
-| U | In progress | none |
+| U | Done 2026-11-04: `GuideCard` / `GuidePage`, one card per guide with "Used for", Sources Without a Guide Source rows with Add, Use for on Add and Edit, Add to an existing URL links it, delete names the sources; TV entry focus on the first card or the Add row | 5fd079aca |
 | W | Not started | none |
