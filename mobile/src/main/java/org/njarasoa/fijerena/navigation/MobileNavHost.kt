@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
+import org.njarasoa.fijerena.core.network.sports.GameReminderNotifications
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
@@ -116,6 +117,7 @@ import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.feature.sports.MobileRemindersScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsLeagueScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.MobileSportsTeamScreen
@@ -486,6 +488,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     } else {
                         null
                     },
+                // The Sports tab's bell opens the Reminders page (the Reminders page plan, RP-Q1).
+                onReminders = { leaveTabRoot { navController.navigateOnce(Screen.Reminders) } }.takeIf { tab == MobileTab.SPORTS },
                 onProfile = { showProfileMenu = true },
             )
         }
@@ -701,6 +705,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         onGuideSources = {
                             navController.navigateOnce(Screen.EpgManagement())
                         },
+                        onReminders = { navController.navigateOnce(Screen.Reminders) },
                         // Its TV Guide opens on Recent (D7); Back from the grid returns here.
                         onTvGuide = { categoryId, categoryName, providerId ->
                             navController.navigateOnce(
@@ -1131,6 +1136,15 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 }
 
+                // The Reminders page (the Reminders page plan): from the Sports tab, Search the guide
+                // and a reminder's notification. A channel opens its mini-player; Back returns here.
+                composable<Screen.Reminders> {
+                    MobileRemindersScreen(
+                        onBack = { navController.navigateUp() },
+                        onPlay = { navController.navigateOnce(it) },
+                    )
+                }
+
                 composable<Screen.SportsLeague> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.SportsLeague>()
                     val league = remember(route) { route.league() }
@@ -1383,6 +1397,17 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 ),
                 query = "",
             )
+        }
+        // A tapped "Manage reminders" on a reminder notification: the Reminders page, over the
+        // screen in use. Dropped as a tune is: another profile, safe mode, a newer providers.db.
+        val pendingReminders by GameReminderNotifications.openReminders.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingReminders, currentEntry) {
+            if (pendingReminders == null || currentEntry == null || SafeMode.isActive || ProvidersDbGuard.isBlocked) return@LaunchedEffect
+            val profileId = GameReminderNotifications.takeOpenReminders() ?: return@LaunchedEffect
+            if (profileId != appSettings.activeProfileId) return@LaunchedEffect
+            // Not navigateOnce: at a cold start the first screen may not be resumed yet. Once only
+            // when the page is already open.
+            navController.navigate(Screen.Reminders) { launchSingleTop = true }
         }
         if (showBar && currentTab != null) {
             MobileBottomBar(

@@ -86,7 +86,8 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * status and reason; nothing when no source syncs. Before the title, the profile avatar:
  * [onProfile] opens the profile menu (switch profile, Settings, Browse entries); the clock keeps its
  * top-right corner, as on every screen. At the right, Search the guide ([onSearchGuide], Live TV only,
- * once the guide index is ready) and the section's Search ([onSearch]).
+ * once the guide index is ready), the Reminders page ([onReminders], the Sports tab's bell) and the
+ * section's Search ([onSearch]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +96,7 @@ fun MobileSourceTopBar(
     onSearch: (() -> Unit)?,
     onSearchGuide: (() -> Unit)?,
     onProfile: () -> Unit,
+    onReminders: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -131,6 +133,9 @@ fun MobileSourceTopBar(
                 )
                 if (onSearchGuide != null && hasEpgData) {
                     IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
+                }
+                if (onReminders != null) {
+                    IconAction(onClick = onReminders, icon = CinemaIcons.Bell, label = stringResource(R.string.reminders_manage))
                 }
                 if (onSearch != null) {
                     IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))

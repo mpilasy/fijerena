@@ -99,4 +99,5 @@
     <string name="game_reminder_title_vs">Hanomboka amin\'ny %3$s ny %1$s sy %2$s</string>
     <string name="game_reminder_title_one">Hanomboka amin\'ny %2$s ny %1$s</string>
     <string name="game_reminder_on_channel">Ao amin\'ny %1$s</string>
+    <string name="game_reminder_manage">Tantano ny fampahatsiahivana</string>
 </resources>

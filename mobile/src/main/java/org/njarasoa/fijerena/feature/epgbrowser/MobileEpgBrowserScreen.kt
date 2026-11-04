@@ -132,7 +132,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * checkbox — on by default — keeps the results on that guide's channels. One search, programme
  * titles (D7). When the profile has a source with live channels the top bar has TV Guide (the
  * grid for Recent on the first of them, [onTvGuide]) and Guide sources (the one Guide Sources
- * page, [onGuideSources]) beside Refresh.
+ * page, [onGuideSources]) beside Refresh. A bell opens the Reminders page ([onReminders]), where
+ * a programme's Remind me can be seen and removed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,6 +145,7 @@ fun MobileEpgBrowserScreen(
     providerId: Long = 0L,
     onGuideSources: () -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
+    onReminders: () -> Unit = {},
 ) {
     val context = LocalContext.current
     // An Admin's only: the Guide Sources button (the profile rules plan, PR-11).
@@ -190,6 +192,8 @@ fun MobileEpgBrowserScreen(
                         label = stringResource(R.string.common_tv_guide),
                     )
                 }
+                // The Reminders page (the Reminders page plan, RP-Q1).
+                IconAction(onClick = onReminders, icon = CinemaIcons.Bell, label = stringResource(R.string.reminders_manage))
                 if (isRefreshing) {
                     // Where the button was, at its size.
                     Box(modifier = Modifier.minimumInteractiveComponentSize(), contentAlignment = Alignment.Center) {

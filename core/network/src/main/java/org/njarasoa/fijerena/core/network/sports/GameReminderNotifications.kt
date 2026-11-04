@@ -12,6 +12,9 @@ import android.text.format.DateFormat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.njarasoa.fijerena.core.network.R
 import java.util.Date
 
@@ -20,9 +23,22 @@ import java.util.Date
  * is not on screen, else the banner shows). Its text is "<home> v <away> starts at <time>" ("<title>
  * starts at <time>" for a programme), then the best channel ("On Sky Sports 1") or the competition. Tapping it opens the app, which tunes the best channel when
  * there is one ([GameReminderAlerts.handleLaunchIntent]).
+ *
+ * On the phone it also has the action "Manage reminders", which opens the app on the Reminders
+ * page ([handleLaunchIntent], [openReminders]). The TV notification has no such action.
  */
 object GameReminderNotifications {
     private const val CHANNEL_ID = "game_reminders"
+    private const val EXTRA_MANAGE_PROFILE_ID = "org.njarasoa.fijerena.reminder.MANAGE_PROFILE_ID"
+    private const val EXTRA_MANAGE_NOTIFICATION_ID = "org.njarasoa.fijerena.reminder.MANAGE_NOTIFICATION_ID"
+
+    // One request code for all "Manage reminders" actions, not the tap's, so the tap's intent keeps its channel.
+    private val MANAGE_REQUEST_CODE = "reminders:manage".hashCode()
+
+    private val manageState = MutableStateFlow<String?>(null)
+
+    /** The profile whose Reminders page a tapped "Manage reminders" asks for; the nav host takes it with [takeOpenReminders]. */
+    val openReminders: StateFlow<String?> = manageState.asStateFlow()
 
     /**
      * Whether the app needs to ask for `POST_NOTIFICATIONS` before reminders can show (Android 13
@@ -70,7 +86,11 @@ object GameReminderNotifications {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(tapIntent(context, alert, id))
-                .build()
+                .apply {
+                    manageIntent(context, alert, id)?.let {
+                        addAction(android.R.drawable.ic_popup_reminder, context.getString(R.string.game_reminder_manage), it)
+                    }
+                }.build()
         try {
             manager.notify(id, notification)
         } catch (e: SecurityException) {
@@ -103,5 +123,63 @@ object GameReminderNotifications {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         alert.channel?.let { GameReminderAlerts.putTune(launch, ReminderTune(alert.profileId, it)) }
         return PendingIntent.getActivity(context, requestCode, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    /**
+     * "Manage reminders" (the Reminders page plan, RP-Q1): opens the app on the Reminders page of
+     * the reminder's profile. Null on TV: there, the banner has the action.
+     */
+    private fun manageIntent(
+        context: Context,
+        alert: GameReminderAlert,
+        notificationId: Int,
+    ): PendingIntent? {
+        val pm = context.packageManager
+        if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) return null
+        val launch = pm.getLaunchIntentForPackage(context.packageName) ?: return null
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        putOpenReminders(launch, alert.profileId, notificationId)
+        return PendingIntent.getActivity(
+            context,
+            MANAGE_REQUEST_CODE,
+            launch,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /** Puts "open the Reminders page of [profileId]" into an intent that opens the app ([handleLaunchIntent] reads it). */
+    fun putOpenReminders(
+        intent: Intent,
+        profileId: String,
+        notificationId: Int,
+    ): Intent =
+        intent
+            .putExtra(EXTRA_MANAGE_PROFILE_ID, profileId)
+            .putExtra(EXTRA_MANAGE_NOTIFICATION_ID, notificationId)
+
+    /**
+     * The phone's MainActivity, in `onCreate` (not on a recreation) and `onNewIntent`: a tapped
+     * "Manage reminders" asks for the Reminders page, and its notification is removed (a tapped
+     * action does not remove it). The extras are removed, so the same intent never opens the page
+     * two times.
+     */
+    fun handleLaunchIntent(
+        context: Context,
+        intent: Intent?,
+    ) {
+        val profileId = intent?.getStringExtra(EXTRA_MANAGE_PROFILE_ID) ?: return
+        val notificationId = intent.getIntExtra(EXTRA_MANAGE_NOTIFICATION_ID, 0)
+        intent.removeExtra(EXTRA_MANAGE_PROFILE_ID)
+        intent.removeExtra(EXTRA_MANAGE_NOTIFICATION_ID)
+        NotificationManagerCompat.from(context).cancel(notificationId)
+        manageState.value = profileId
+    }
+
+    /** The profile whose Reminders page is asked for, taken once: null when another caller took it first. */
+    fun takeOpenReminders(): String? {
+        while (true) {
+            val current = manageState.value ?: return null
+            if (manageState.compareAndSet(current, null)) return current
+        }
     }
 }

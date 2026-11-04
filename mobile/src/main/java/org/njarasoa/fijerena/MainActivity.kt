@@ -12,6 +12,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
+import org.njarasoa.fijerena.core.network.sports.GameReminderNotifications
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.history.ProvideSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
@@ -60,6 +61,8 @@ class MainActivity : ComponentActivity() {
 
         // A tapped game reminder asks to tune its channel; a recreated activity's intent was handled.
         if (savedInstanceState == null) GameReminderAlerts.handleLaunchIntent(intent)
+        // Its "Manage reminders" asks for the Reminders page.
+        if (savedInstanceState == null) GameReminderNotifications.handleLaunchIntent(applicationContext, intent)
 
         val appSettings = AppSettings(applicationContext)
         // The active profile's colour theme, Look and Feel and poster background: follows a profile switch, a change in
@@ -86,11 +89,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // A game reminder tapped while the app runs: the nav host tunes its channel.
+    // A game reminder tapped while the app runs: the nav host tunes its channel, or opens the
+    // Reminders page for its "Manage reminders".
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         GameReminderAlerts.handleLaunchIntent(intent)
+        GameReminderNotifications.handleLaunchIntent(applicationContext, intent)
     }
 
     private companion object {

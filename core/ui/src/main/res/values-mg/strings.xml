@@ -148,6 +148,7 @@
     <string name="reminders_lead_desc">Firy minitra mialoha ny fanombohana no maneno ny fampahatsiahivana, amin\'ity fitaovana ity</string>
     <string name="reminders_lead_at_start">Amin\'ny fanombohana</string>
     <string name="reminders_next_game">Manaraka: %1$s</string>
+    <string name="reminders_game_gone">Tsy ao amin\'ny fandaharan\'ny ekipany intsony ity lalao ity</string>
     <plurals name="reminders_team_games">
         <item quantity="one">Lalao %1$d ho avy</item>
         <item quantity="other">Lalao %1$d ho avy</item>

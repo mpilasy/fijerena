@@ -148,6 +148,7 @@
     <string name="reminders_lead_desc">Combien de temps avant le début un rappel sonne, sur cet appareil</string>
     <string name="reminders_lead_at_start">Au début</string>
     <string name="reminders_next_game">Prochain : %1$s</string>
+    <string name="reminders_game_gone">Ce match n’est plus dans le programme de son équipe</string>
     <plurals name="reminders_team_games">
         <item quantity="one">%1$d match à venir</item>
         <item quantity="other">%1$d matchs à venir</item>
