@@ -17,8 +17,10 @@ import org.njarasoa.fijerena.core.network.provider.SettingsTombstoneEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Presence
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Resolution
+import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
@@ -699,6 +701,10 @@ class SyncApplier(
                         )
                     }
                     markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)
+                }
+                // A changed offset moves the times already in the guide index, after the transaction.
+                sync.sourceByKey(sourceKey)?.let {
+                    EpgOffsetShift.reconcile(it.id, settingsDb.epgSourceDao(), EpgIndexer.getInstance(context))
                 }
                 Outcome.Applied
             }

@@ -64,6 +64,18 @@ data class EpgSourceEntity(
     /** Failed refreshes since the last success; 0 after a success (added v18). Local, never synced. */
     @ColumnInfo(name = "failures_since_success", defaultValue = "0")
     val failuresSinceSuccess: Int = 0,
+    /**
+     * The UTC offset, in minutes, the last import found on every programme time of the file; null
+     * when the times have different offsets, or before the first import (added v19). Local.
+     */
+    @ColumnInfo(name = "file_utc_offset_minutes")
+    val fileUtcOffsetMinutes: Int? = null,
+    /**
+     * The UTC offset, in minutes, the source's programmes in the guide index were read with; null
+     * when not known (added v19). Local. See `xmltv.EpgOffsetShift`.
+     */
+    @ColumnInfo(name = "applied_utc_offset_minutes")
+    val appliedUtcOffsetMinutes: Int? = null,
 ) {
     companion object {
         const val REFRESH_OFF = -1

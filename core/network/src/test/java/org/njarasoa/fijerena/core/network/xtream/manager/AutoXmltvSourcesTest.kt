@@ -475,7 +475,16 @@ class AutoXmltvSourcesTest {
             contentSha256: String?,
             etag: String?,
             lastModifiedHeader: String?,
+            fileUtcOffsetMinutes: Int?,
+            appliedUtcOffsetMinutes: Int?,
         ) = error("unused")
+
+        override suspend fun setAppliedOffset(
+            id: Long,
+            minutes: Int,
+        ) = error("unused")
+
+        override suspend fun forgetValidators(id: Long) = error("unused")
 
         override suspend fun markUnchanged(
             id: Long,

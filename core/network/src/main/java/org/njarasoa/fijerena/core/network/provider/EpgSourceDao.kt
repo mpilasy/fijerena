@@ -57,7 +57,8 @@ interface EpgSourceDao {
             last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod,
             last_ingestion_duration_ms = :ingestionDurationMs, last_download_duration_ms = :downloadDurationMs,
             last_content_sha256 = :contentSha256, etag = :etag, last_modified_header = :lastModifiedHeader,
-            last_failed_at_ms = NULL, failures_since_success = 0
+            last_failed_at_ms = NULL, failures_since_success = 0,
+            file_utc_offset_minutes = :fileUtcOffsetMinutes, applied_utc_offset_minutes = :appliedUtcOffsetMinutes
         WHERE id = :id
         """,
     )
@@ -73,7 +74,23 @@ interface EpgSourceDao {
         contentSha256: String? = null,
         etag: String? = null,
         lastModifiedHeader: String? = null,
+        fileUtcOffsetMinutes: Int? = null,
+        appliedUtcOffsetMinutes: Int? = null,
     )
+
+    /** The guide index now holds the source's programmes read with [minutes] — see `xmltv.EpgOffsetShift`. */
+    @Query("UPDATE epg_source SET applied_utc_offset_minutes = :minutes WHERE id = :id")
+    suspend fun setAppliedOffset(
+        id: Long,
+        minutes: Int,
+    )
+
+    /**
+     * Drops the source's validators and content hash, so its next refresh imports it again even
+     * when the file has not changed.
+     */
+    @Query("UPDATE epg_source SET etag = NULL, last_modified_header = NULL, last_content_sha256 = NULL WHERE id = :id")
+    suspend fun forgetValidators(id: Long)
 
     /**
      * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the

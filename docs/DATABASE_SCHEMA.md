@@ -16,7 +16,8 @@ user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 v16 added `epg_source.refresh_interval_hours`; v17, no schema change, dropped the login from
 automatic Xtream guide source URLs; v18 added the last failure time and the failure count,
 `providers.lastFailedAtMs` / `failuresSinceSuccess` and `epg_source.last_failed_at_ms` /
-`failures_since_success`.)
+`failures_since_success`; v19 added `epg_source.file_utc_offset_minutes` /
+`applied_utc_offset_minutes`, so a changed offset moves the guide's times.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -106,7 +107,7 @@ None of these sync bookkeeping columns is synced, exported or backed up.
 | `url` | TEXT | XMLTV source URL. An Xtream source's automatic guide source (label ending ` (Bulk)`) is stored as `<server>/xmltv.php`, without the login: `AutoXmltvSources.fetchUrl` adds `?username=…&password=…` from the encrypted credential store at download time, and live sync sends it with the login (inside the encrypted record) for older builds, stripped again on receipt. `MIGRATION_16_17` strips existing rows, with the sync triggers silenced. Hand-added URLs are stored as typed |
 | `label` | TEXT | Display label for the source |
 | `provider_id` | INTEGER | Owning provider ID (enforced `NOT NULL` in v8, backfilled from active/first provider) |
-| `timezone_offset_hours` | INTEGER | Manual offset for parsing |
+| `timezone_offset_hours` | INTEGER | Manual offset for parsing: when not 0, the file's times are read in this offset in place of their own zone part |
 | `added_at_ms` | INTEGER | Timestamp when added |
 | `last_ingested_at_ms` | INTEGER | Timestamp of last successful sync |
 | `last_error` | TEXT | Error of the last refresh, null when it succeeded |
@@ -124,6 +125,8 @@ None of these sync bookkeeping columns is synced, exported or backed up.
 | `refresh_interval_hours` | INTEGER (nullable) | The source's own auto-refresh interval in hours, `-1` = off; synced. Null = not set: rows from before v16 (`MIGRATION_15_16` adds the column with no default) and rows received from an older app version. A not-set row uses the retired device-wide interval (`epg_auto_refresh` / `epg_refresh_interval`, §5) until the one-time copy (`epg_refresh_interval_copied_v1`) fills it — the copy fills only null rows, with the sync triggers silenced. Sources added on v16 start at 24 (added v16) |
 | `last_failed_at_ms` | INTEGER (nullable) | Time of the last failed refresh (`EpgSourceDao.markError`); null after a success (`markIngested`, `markUnchanged`) or an ingest reset. `MIGRATION_17_18` sets the migration time on rows with an error, which kept no failure time (added v18) |
 | `failures_since_success` | INTEGER | Failed refreshes since the last success, 0 after a success or an ingest reset. `MIGRATION_17_18` sets 1 on rows with an error (added v18) |
+| `file_utc_offset_minutes` | INTEGER (nullable) | The UTC offset, in minutes, written on every programme start time of the file at the last import (`+0800` = 480, no zone part = 0); null when the times have more than one offset, or before the first import on v19. Local, never synced (added v19) |
+| `applied_utc_offset_minutes` | INTEGER (nullable) | The UTC offset, in minutes, the source's programme times in the guide index were read with: `timezone_offset_hours` × 60 when not 0, else `file_utc_offset_minutes`. `EpgOffsetShift.reconcile` compares it with the offset the source asks for after a save, a live sync change and each import, and moves `epg_programme.start_epoch` / `end_epoch` by the difference; when one of the two is null it drops the validators so the next refresh imports again. `MIGRATION_18_19` sets `timezone_offset_hours` × 60 on rows with an offset, null on the others. Local, never synced (added v19) |
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
 

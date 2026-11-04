@@ -296,6 +296,20 @@ object XmltvParser {
 
     private val timeZoneCache = java.util.concurrent.ConcurrentHashMap<String, TimeZone>()
 
+    /**
+     * The UTC offset, in minutes, of an XMLTV time's zone part ("+0800", "-05:30"): 0 for a time
+     * with no zone part (read as UTC), null for a zone part it cannot read.
+     */
+    fun zoneMinutes(zone: String): Int? {
+        if (zone.isEmpty()) return 0
+        val match = zoneRegex.matchEntire(zone) ?: return null
+        val (sign, hours, minutes) = match.destructured
+        val total = hours.toInt() * 60 + minutes.toInt()
+        return if (sign == "-") -total else total
+    }
+
+    private val zoneRegex = Regex("""([+-])(\d{2}):?(\d{2})""")
+
     fun parseTimestamp(
         ts: String,
         timezoneOverrideHours: Int = this.timezoneOverrideHours,

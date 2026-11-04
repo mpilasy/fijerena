@@ -108,12 +108,12 @@ class SettingsDatabaseMigrationTest {
                     SettingsDatabase.MIGRATION_12_13,
                     SettingsDatabase.MIGRATION_13_14,
                     SettingsDatabase.MIGRATION_14_15,
-                    // 15→16, 16→17 and 17→18 have their own JVM tests (SettingsDatabaseMigration15To16Test,
-                    // SettingsDatabaseMigration16To17Test, SettingsDatabaseMigration17To18Test). A version
-                    // bump adds its migration here too.
+                    // 15→16 to 18→19 have their own JVM tests (SettingsDatabaseMigration15To16Test to
+                    // SettingsDatabaseMigration18To19Test). A version bump adds its migration here too.
                     SettingsDatabase.MIGRATION_15_16,
                     SettingsDatabase.MIGRATION_16_17,
                     SettingsDatabase.MIGRATION_17_18,
+                    SettingsDatabase.MIGRATION_18_19,
                 ).build()
         assertEquals(SettingsDatabase.DB_VERSION, migratedDb.openHelper.writableDatabase.version)
 

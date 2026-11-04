@@ -133,6 +133,8 @@ class EpgIndexer private constructor(
     data class IngestionStats(
         val channelsIngested: Int = 0,
         val programmesIngested: Int = 0,
+        /** The UTC offset, in minutes, found on every programme's start time; null when they differ. */
+        val fileUtcOffsetMinutes: Int? = null,
     )
 
     @Volatile
@@ -228,6 +230,10 @@ class EpgIndexer private constructor(
             val dao = db.epgIndexDao()
             var channelCount = 0
             var programmeCount = 0
+            // The zone part of the programmes' start times: the first one seen, and whether another
+            // one came later (a file in local time across a daylight saving change).
+            var fileZone: String? = null
+            var mixedZones = false
 
             // Every programme the source provides is kept, past or future — no date filter.
 
@@ -291,6 +297,19 @@ class EpgIndexer private constructor(
                                     channelStagingBatch.clear()
                                 }
 
+                                val zone =
+                                    parser
+                                        .getAttributeValue(null, "start")
+                                        ?.trim()
+                                        ?.substringAfter(' ', "")
+                                        ?.trim()
+                                if (zone != null && !mixedZones) {
+                                    if (fileZone == null) {
+                                        fileZone = zone
+                                    } else if (zone != fileZone) {
+                                        mixedZones = true
+                                    }
+                                }
                                 XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
                                     if (useStaging) programmeStagingBatch.add(it.toStaging()) else programmeBatch.add(it)
                                     programmeCount++
@@ -344,7 +363,8 @@ class EpgIndexer private constructor(
                     }
                 }
 
-                val stats = IngestionStats(channelCount, programmeCount)
+                val fileOffset = fileZone?.takeUnless { mixedZones }?.let { XmltvParser.zoneMinutes(it) }
+                val stats = IngestionStats(channelCount, programmeCount, fileOffset)
                 lastIngestionStats = stats
                 stats
             } catch (e: OutOfMemoryError) {
@@ -747,6 +767,43 @@ class EpgIndexer private constructor(
                 if (useStaging) dao.clipOverlapsStaging(sourceId) else dao.clipOverlaps(sourceId)
             }
         }
+
+    /**
+     * Moves every programme time of [sourceId] in the live guide by [deltaSeconds]: its offset
+     * changed (see `xmltv.EpgOffsetShift`). The search index holds titles and descriptions only, so
+     * its two update triggers are left out for the update, then put back if they were there. Two
+     * steps: moving the starts in place could meet the next programme's start on the same channel,
+     * which the unique dedup index refuses, so the starts first go negative, then back.
+     */
+    suspend fun shiftSourceTimes(
+        sourceId: Long,
+        deltaSeconds: Long,
+    ) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            val db = EpgIndexDatabase.getInstance(context)
+            val sdb = db.openHelper.writableDatabase
+            db.withTransaction {
+                val updateTriggers = FTS_TRIGGER_NAMES.filter { it.endsWith("_UPDATE") }
+                val present =
+                    updateTriggers.filter { name ->
+                        sdb.query("SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = ?", arrayOf(name)).use { it.moveToFirst() }
+                    }
+                present.forEach { sdb.execSQL("DROP TRIGGER `$it`") }
+                sdb.execSQL(
+                    "UPDATE epg_programme SET start_epoch = -(start_epoch + ?), end_epoch = end_epoch + ? WHERE source_id = ?",
+                    arrayOf<Any>(deltaSeconds, deltaSeconds, sourceId),
+                )
+                sdb.execSQL(
+                    "UPDATE epg_programme SET start_epoch = -start_epoch WHERE source_id = ? AND start_epoch < 0",
+                    arrayOf<Any>(sourceId),
+                )
+                FTS_TRIGGER_DDL.filter { ddl -> present.any { ddl.contains("`$it`") } }.forEach { sdb.execSQL(it) }
+            }
+            // A new generation, as after an import: the listings caches keyed on it read the
+            // moved times again, and the open guide screens reload. During an import its end does it.
+            (_state.value as? EpgIndexState.Indexed)?.let { _state.value = it.copy(indexedAtMs = System.currentTimeMillis()) }
+        }
+    }
 
     /**
      * Whether the live guide (primary tables, never staging) holds any programme of [sourceId].

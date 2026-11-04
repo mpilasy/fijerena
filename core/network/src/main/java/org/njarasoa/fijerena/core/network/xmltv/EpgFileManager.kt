@@ -179,7 +179,11 @@ class EpgFileManager private constructor(
                     contentSha256 = record.contentSha256,
                     etag = record.etag,
                     lastModifiedHeader = record.lastModifiedHeader,
+                    fileUtcOffsetMinutes = record.fileUtcOffsetMinutes,
+                    appliedUtcOffsetMinutes = record.appliedUtcOffsetMinutes,
                 )
+                // The offset may have changed while the import ran.
+                EpgOffsetShift.reconcile(record.sourceId, sourceDao, indexer)
             }
         }
 
@@ -236,6 +240,8 @@ class EpgFileManager private constructor(
         val contentSha256: String? = null,
         val etag: String? = null,
         val lastModifiedHeader: String? = null,
+        val fileUtcOffsetMinutes: Int? = null,
+        val appliedUtcOffsetMinutes: Int? = null,
     )
 
     data class ActiveSourceProgress(
@@ -1652,6 +1658,9 @@ class EpgFileManager private constructor(
                     contentSha256 = contentSha256,
                     etag = downloaded.etag,
                     lastModifiedHeader = downloaded.lastModifiedHeader,
+                    fileUtcOffsetMinutes = ingestionStats.fileUtcOffsetMinutes,
+                    appliedUtcOffsetMinutes =
+                        EpgOffsetShift.readMinutes(source.timezoneOffsetHours, ingestionStats.fileUtcOffsetMinutes),
                 )
             if (!useStaging) {
                 sourceDao.markIngested(
@@ -1666,7 +1675,11 @@ class EpgFileManager private constructor(
                     contentSha256 = record.contentSha256,
                     etag = record.etag,
                     lastModifiedHeader = record.lastModifiedHeader,
+                    fileUtcOffsetMinutes = record.fileUtcOffsetMinutes,
+                    appliedUtcOffsetMinutes = record.appliedUtcOffsetMinutes,
                 )
+                // The offset may have changed while the import ran.
+                EpgOffsetShift.reconcile(record.sourceId, sourceDao, indexer)
             }
 
             return IngestOutcome(

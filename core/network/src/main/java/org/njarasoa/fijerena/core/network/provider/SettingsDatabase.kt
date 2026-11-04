@@ -36,7 +36,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 18
+        const val DB_VERSION = 19
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -379,6 +379,26 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * v18 → v19: `epg_source.file_utc_offset_minutes` and `applied_utc_offset_minutes`, so a
+         * changed guide offset moves the programme times already in the guide index (see
+         * `xmltv.EpgOffsetShift`). The file's offset is not known until the next import (null). A
+         * source with an offset other than 0 was read with that offset; with 0 it was read with the
+         * file's own offset, not known yet (null). Local columns: the live sync triggers do not
+         * watch them.
+         */
+        val MIGRATION_18_19 =
+            object : Migration(18, 19) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `file_utc_offset_minutes` INTEGER")
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `applied_utc_offset_minutes` INTEGER")
+                    db.execSQL(
+                        "UPDATE `epg_source` SET `applied_utc_offset_minutes` = `timezone_offset_hours` * 60 " +
+                            "WHERE `timezone_offset_hours` != 0",
+                    )
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -412,6 +432,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_15_16,
                         MIGRATION_16_17,
                         MIGRATION_17_18,
+                        MIGRATION_18_19,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

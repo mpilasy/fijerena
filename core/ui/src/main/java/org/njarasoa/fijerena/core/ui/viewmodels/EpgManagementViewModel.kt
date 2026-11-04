@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -171,7 +172,9 @@ class EpgManagementViewModel(
                     repository.setProvidesGuide(provider.id, enabled, byUser = true)
                     AutoXmltvSources.reconcileStored(context, provider.id)
                 } else {
-                    settingsDb().epgSourceDao().updateSource(source.copy(enabled = enabled))
+                    // On the row as it is now: the page's copy can be older than an import since.
+                    val dao = settingsDb().epgSourceDao()
+                    dao.getSourceById(source.id)?.let { dao.updateSource(it.copy(enabled = enabled)) }
                 }
             }
         }
@@ -316,10 +319,40 @@ class EpgManagementViewModel(
         }
     }
 
+    /**
+     * Saves [source]. A changed offset moves the times already in the guide index at once; when it
+     * cannot ([EpgOffsetShift.Result.NEEDS_IMPORT]), the source is imported again now.
+     */
     fun updateSource(source: EpgSourceEntity) {
         viewModelScope.launchGuarded("EpgManagementViewModel.updateSource") {
+            val dao = settingsDb().epgSourceDao()
+            // Only the fields the dialog edits, on the row as it is now: the page's copy can be
+            // older than an import that finished since (its stats and offsets).
             withContext(Dispatchers.IO) {
-                settingsDb().epgSourceDao().updateSource(source)
+                val current = dao.getSourceById(source.id) ?: return@withContext
+                dao.updateSource(
+                    current.copy(
+                        url = source.url,
+                        label = source.label,
+                        timezoneOffsetHours = source.timezoneOffsetHours,
+                        ingestMethod = source.ingestMethod,
+                        enabled = source.enabled,
+                    ),
+                )
+            }
+            when (EpgOffsetShift.reconcile(source.id, dao, indexer)) {
+                EpgOffsetShift.Result.SHIFTED -> {
+                    _dbGeneration.value++
+                    refreshDbStats()
+                }
+
+                EpgOffsetShift.Result.NEEDS_IMPORT -> {
+                    refreshSource(source)
+                }
+
+                EpgOffsetShift.Result.IN_STEP -> {
+                    Unit
+                }
             }
         }
     }
