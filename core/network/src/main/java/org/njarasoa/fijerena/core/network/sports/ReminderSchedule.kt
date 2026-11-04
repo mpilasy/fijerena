@@ -8,8 +8,11 @@ import kotlinx.serialization.json.Json
  * See the sports teams plan → Reminders.
  */
 object ReminderSchedule {
-    /** A reminder rings this long before the game starts. */
-    const val LEAD_SEC = 10 * 60L
+    /** How long before the start a reminder can ring, in minutes: the device's choice (`AppSettings.reminderLeadMinutes`). */
+    val LEAD_CHOICES_MINUTES = listOf(0, 5, 10, 15, 30, 60)
+
+    /** A reminder rings this long before the start unless the device chose another lead. */
+    const val DEFAULT_LEAD_MINUTES = 10
 
     /** A game read again whose start differs by less than this has not moved. */
     const val MOVED_SEC = 60L
@@ -32,17 +35,18 @@ object ReminderSchedule {
     }
 
     /**
-     * When the alarm of a game starting at [startEpochSec] rings: [LEAD_SEC] before the start, or
-     * at once ([nowMs]) when that is past but the game has not started. Null for a game that has
+     * When the alarm of a game starting at [startEpochSec] rings: [leadMinutes] before the start,
+     * or at once ([nowMs]) when that is past but the game has not started. Null for a game that has
      * started: it is not scheduled.
      */
     fun triggerAtMs(
         startEpochSec: Long,
         nowMs: Long,
+        leadMinutes: Int = DEFAULT_LEAD_MINUTES,
     ): Long? {
         val startMs = startEpochSec * 1000
         if (startMs <= nowMs) return null
-        return maxOf(nowMs, (startEpochSec - LEAD_SEC) * 1000)
+        return maxOf(nowMs, startMs - leadMinutes * 60_000L)
     }
 
     /** How the alarm of a reminder is set ([alarm]). */
@@ -64,27 +68,23 @@ object ReminderSchedule {
         ) : Alarm
     }
 
-    /** Without exact alarms, the alarm's window opens this long before the game starts. */
-    const val WINDOW_LEAD_MS = 20 * 60_000L
-
     /** Without exact alarms, the alarm's window is this long: the shortest window Android allows. */
     const val WINDOW_MS = 10 * 60_000L
 
     /**
-     * How the alarm that rings at [triggerAtMs] ([triggerAtMs] of the function above) for a game
-     * starting at [startEpochSec] is set at [nowMs]. With [exactAllowed], an exact alarm. Else never
-     * a plain inexact alarm, which Android can deliver up to an hour late: a 10-minute window that
-     * opens 20 minutes before the start, so the reminder rings 10 to 20 minutes before. When that
-     * window has opened already, the alarm is set for now.
+     * How the alarm that rings at [triggerAtMs] ([triggerAtMs] of the function above) is set at
+     * [nowMs]. With [exactAllowed], an exact alarm. Else never a plain inexact alarm, which Android
+     * can deliver up to an hour late: a 10-minute window that ends at [triggerAtMs], so with the
+     * default lead the reminder rings 10 to 20 minutes before the start. When that window has
+     * opened already, the alarm is set for now.
      */
     fun alarm(
         triggerAtMs: Long,
-        startEpochSec: Long,
         nowMs: Long,
         exactAllowed: Boolean,
     ): Alarm {
         if (exactAllowed) return Alarm.Exact(triggerAtMs)
-        val windowStartMs = startEpochSec * 1000 - WINDOW_LEAD_MS
+        val windowStartMs = triggerAtMs - WINDOW_MS
         return if (windowStartMs > nowMs) Alarm.Window(windowStartMs, WINDOW_MS) else Alarm.Now(nowMs)
     }
 

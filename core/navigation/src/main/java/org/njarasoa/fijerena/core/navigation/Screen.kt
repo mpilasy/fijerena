@@ -279,6 +279,13 @@ sealed interface Screen {
         val providerId: Long = 0L,
     ) : Screen
 
+    /**
+     * The profile's upcoming reminders and team rules on this device, with the device's reminder
+     * time (the Reminders page plan). From the Sports section, Search the Guide and a ringing reminder.
+     */
+    @Serializable
+    data object Reminders : Screen
+
     /** Settings → Live sync: linking this device to a sync account, pairing, devices. */
     @Serializable
     data object SyncSettings : Screen

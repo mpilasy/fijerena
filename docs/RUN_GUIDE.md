@@ -402,12 +402,13 @@ receiver's KDoc.
 
 ### Game reminders
 
-A game reminder is an `AlarmManager` alarm 10 minutes before the game (`GameReminders`,
+A game reminder is an `AlarmManager` alarm at the device's Reminder Time before the game (10 minutes
+by default; `AppSettings.reminderLeadMinutes`, `GameReminders`,
 `core:network` sports package). The permissions come from the `core:network` manifest:
 `USE_EXACT_ALARM` (Android 13 and later, granted at install) and `SCHEDULE_EXACT_ALARM` (Android 12
 and 12L only, granted at install; the user can turn off "Alarms & reminders"), so the alarm is exact
 on every supported version (Android 11 needs no permission). When exact alarms are not allowed, the
-alarm has a 10-minute window that opens 20 minutes before the game, never a plain inexact alarm,
+alarm has a 10-minute window that ends at the ring time (with the default 10 minutes, 20 to 10 minutes before the game), never a plain inexact alarm,
 which Android can deliver up to an hour late; `POST_NOTIFICATIONS`
 (asked when the first bell is set, Android 13 and later) and `RECEIVE_BOOT_COMPLETED`. Two
 receivers: `GameReminderReceiver` (the alarm, not exported) and `GameReminderRescheduleReceiver`

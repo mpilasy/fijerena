@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,8 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sports.GameReminders
+import org.njarasoa.fijerena.core.network.sports.ReminderSchedule
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.AdminTaps
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -45,6 +48,8 @@ data class SettingsUiState(
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val showClock: Boolean = false,
+    /** Minutes before the start a reminder rings on this device (the Reminders page plan, RP-D11). */
+    val reminderLeadMinutes: Int = ReminderSchedule.DEFAULT_LEAD_MINUTES,
     val showTmdbCharts: Boolean = true,
     val showSports: Boolean = true,
     val recentRowSize: Int = AppSettings.DEFAULT_WATCH_HISTORY_SIZE,
@@ -80,6 +85,7 @@ class SettingsViewModel(
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 showClock = appSettings.showClock,
+                reminderLeadMinutes = appSettings.reminderLeadMinutes,
                 showTmdbCharts = appSettings.showTmdbCharts,
                 showSports = appSettings.showSports,
                 recentRowSize = appSettings.recentRowSize,
@@ -188,6 +194,15 @@ class SettingsViewModel(
         if (!appSettings.isAdmin) return
         appSettings.showClock = show
         _uiState.value = _uiState.value.copy(showClock = show)
+    }
+
+    /** This device's reminder time; the alarms already set move to it. */
+    fun updateReminderLeadMinutes(minutes: Int) {
+        if (!appSettings.isAdmin) return
+        _uiState.value = _uiState.value.copy(reminderLeadMinutes = minutes)
+        viewModelScope.launchGuarded("SettingsViewModel.updateReminderLeadMinutes", Dispatchers.IO) {
+            GameReminders.getInstance(context).setLeadMinutes(appSettings, minutes)
+        }
     }
 
     fun updateShowTmdbCharts(show: Boolean) {

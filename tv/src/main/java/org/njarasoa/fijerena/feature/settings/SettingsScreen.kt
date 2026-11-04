@@ -70,6 +70,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
+import org.njarasoa.fijerena.feature.settings.components.ReminderTimePickerPane
+import org.njarasoa.fijerena.feature.settings.components.ReminderTimeSettingsRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
@@ -508,6 +510,14 @@ fun SettingsScreen(
                                 )
                             }
 
+                            SettingPicker.REMINDER_TIME -> {
+                                ReminderTimePickerPane(
+                                    leadMinutes = uiState.reminderLeadMinutes,
+                                    onPick = { minutes -> viewModel.updateReminderLeadMinutes(minutes) },
+                                    onBack = closePicker,
+                                )
+                            }
+
                             SettingPicker.LANGUAGE -> {
                                 LanguagePickerPane(
                                     selectedLanguage = uiState.language,
@@ -727,6 +737,14 @@ fun SettingsScreen(
                                                                             rowFocusRequester =
                                                                                 returnFocus.requesterFor(
                                                                                     SettingPicker.WATCH_DELAY.returnKey,
+                                                                                ),
+                                                                        )
+                                                                        ReminderTimeSettingsRow(
+                                                                            leadMinutes = uiState.reminderLeadMinutes,
+                                                                            onOpenPicker = { openPicker(SettingPicker.REMINDER_TIME) },
+                                                                            rowFocusRequester =
+                                                                                returnFocus.requesterFor(
+                                                                                    SettingPicker.REMINDER_TIME.returnKey,
                                                                                 ),
                                                                         )
                                                                         TvSwitchRow(
@@ -1056,6 +1074,7 @@ enum class SettingPicker(
     TEXT_SIZE("picker:textSize"),
     RECENT_SIZE("picker:recentSize"),
     WATCH_DELAY("picker:watchDelay"),
+    REMINDER_TIME("picker:reminderTime"),
     LANGUAGE("picker:language"),
     GUIDE_MAINTENANCE("picker:guideMaintenance"),
     TMDB_KEY("picker:tmdbKey"),

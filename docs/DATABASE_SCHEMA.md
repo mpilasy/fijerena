@@ -578,7 +578,7 @@ profile. A row whose kind or source the build does not know (written by a newer 
 not shown.
 
 ### Table: `game_reminder` (added v30)
-A profile's game reminders: an alarm rings 10 minutes before the game (`GameReminders`). Local
+A profile's game reminders: an alarm rings the device's Reminder Time before the game, 10 minutes by default (`GameReminders`, `AppSettings.reminderLeadMinutes`). Local
 only: not synced (no triggers, no tombstones), not exported; a reminder rings on the device where
 it was set. See the sports teams plan → Reminders.
 

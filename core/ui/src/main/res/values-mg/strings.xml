@@ -131,6 +131,31 @@
     <string name="sports_reminder_set">Voatendry ny fampahatsiahivana</string>
     <string name="sports_remind_team">Ampahatsiahivo aho isaky ny lalao</string>
     <string name="sports_remind_team_set">Voatendry ny fampahatsiahivana isaky ny lalao</string>
+    <string name="reminders_title">Fampahatsiahivana</string>
+    <string name="reminders_upcoming">Ho avy</string>
+    <string name="reminders_every_game_of">Lalao rehetra an\'i</string>
+    <string name="reminders_rings_at">Maneno amin\'ny %1$s</string>
+    <string name="reminders_device_only">Amin\'ity fitaovana ity ihany no maneno ny fampahatsiahivana</string>
+    <string name="reminders_empty">Tsy misy fampahatsiahivana. Ampiasao ny lakolosy amin\'ny lalao iray, na ny « Ampahatsiahivo aho » ao amin\'ny « Hikaroka ao amin\'ny fandaharana ».</string>
+    <string name="reminders_open">Sokafy</string>
+    <string name="reminders_remove">Esory ny fampahatsiahivana</string>
+    <string name="reminders_stop_team">Ajanony ny lalao rehetra</string>
+    <string name="reminders_clear_all">Fafao daholo</string>
+    <string name="reminders_clear_all_confirm_title">Hesorina daholo ve ny fampahatsiahivana?</string>
+    <string name="reminders_clear_all_confirm_message">Hesorina avokoa ny fampahatsiahivana sy ny « lalao rehetra » an\'ny ekipa rehetra an\'i %1$s amin\'ity fitaovana ity.</string>
+    <string name="reminders_manage">Tantano ny fampahatsiahivana</string>
+    <string name="reminders_lead_title">Fotoanan\'ny fampahatsiahivana</string>
+    <string name="reminders_lead_desc">Firy minitra mialoha ny fanombohana no maneno ny fampahatsiahivana, amin\'ity fitaovana ity</string>
+    <string name="reminders_lead_at_start">Amin\'ny fanombohana</string>
+    <string name="reminders_next_game">Manaraka: %1$s</string>
+    <plurals name="reminders_team_games">
+        <item quantity="one">Lalao %1$d ho avy</item>
+        <item quantity="other">Lalao %1$d ho avy</item>
+    </plurals>
+    <plurals name="reminders_lead_minutes">
+        <item quantity="one">%1$d minitra mialoha</item>
+        <item quantity="other">%1$d minitra mialoha</item>
+    </plurals>
     <string name="sport_soccer">Baolina kitra</string>
     <string name="sport_american_football">Baolina kitra amerikanina</string>
     <string name="sport_basketball">Basikety</string>
@@ -783,7 +808,7 @@
     <string name="settings_group_this_device">Ity fitaovana ity</string>
     <string name="settings_group_admin">Fitantanana</string>
     <string name="settings_group_admin_desc">Mombamomba, fanaraha-maso ny ray aman-dreny, ity fitaovana ity, loharano, fampifanarahana sy tahiry</string>
-    <string name="settings_group_this_device_desc">Fiteny, Vao haingana ary famataranandro, amin\'ity fitaovana ity ihany</string>
+    <string name="settings_group_this_device_desc">Fiteny, Vao haingana, fampahatsiahivana ary famataranandro, amin\'ity fitaovana ity ihany</string>
     <string name="settings_group_source_guide_desc">Loharano, fitarihana, antsipirian\'ny sarimihetsika, laharana ary fanatanjahantena</string>
     <string name="settings_group_sync_backup_desc">Fampifanarahana amin\'ireo fitaovanao hafa, ary tahiry ao anaty rakitra</string>
     <string name="settings_open_admin">Sokafy ny fitantanana</string>

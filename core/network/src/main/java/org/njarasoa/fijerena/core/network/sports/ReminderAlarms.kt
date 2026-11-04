@@ -26,7 +26,7 @@ interface ReminderAlarms {
 
 /**
  * [ReminderAlarms] on `AlarmManager`: `setExactAndAllowWhileIdle` when the app may set exact
- * alarms, else a 10-minute window that rings 10 to 20 minutes before the game
+ * alarms, else a 10-minute window that ends at the ring time (10 to 20 minutes before the game with the default lead)
  * ([ReminderSchedule.alarm]). The app may set exact alarms on every supported Android version
  * (see the `core:network` manifest), unless the user turns off "Alarms & reminders" on Android 12
  * or 12L. One alarm per reminder, told apart by its intent's data URI. The alarm intent carries the
@@ -44,7 +44,7 @@ class AndroidReminderAlarms(
         atMs: Long,
     ) {
         val pending = pendingIntent(reminder, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
-        val alarm = ReminderSchedule.alarm(atMs, reminder.startEpoch, System.currentTimeMillis(), canScheduleExact(alarmManager))
+        val alarm = ReminderSchedule.alarm(atMs, System.currentTimeMillis(), canScheduleExact(alarmManager))
         when (alarm) {
             is ReminderSchedule.Alarm.Exact -> {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.atMs, pending)

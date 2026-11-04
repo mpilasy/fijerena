@@ -13,6 +13,7 @@ import kotlinx.serialization.json.booleanOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
+import org.njarasoa.fijerena.core.network.sports.ReminderSchedule
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
@@ -85,6 +86,7 @@ class AppSettings(
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
+        private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
         private const val KEY_SHOW_SPORTS = "show_sports"
         const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
@@ -960,6 +962,27 @@ class AppSettings(
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, false)
         set(value) = prefs.edit { putBoolean(KEY_SHOW_CLOCK, value) }
+
+    /**
+     * How many minutes before the start a reminder rings on this device, one of
+     * [ReminderSchedule.LEAD_CHOICES_MINUTES]. A device setting: reminders ring only on the device
+     * where they were set, so it is not per profile and not synced. Set it through
+     * `GameReminders.setLeadMinutes`, which moves the alarms already set.
+     */
+    var reminderLeadMinutes: Int
+        get() =
+            prefs
+                .getInt(KEY_REMINDER_LEAD_MINUTES, ReminderSchedule.DEFAULT_LEAD_MINUTES)
+                .takeIf { it in ReminderSchedule.LEAD_CHOICES_MINUTES } ?: ReminderSchedule.DEFAULT_LEAD_MINUTES
+        set(value) = prefs.edit { putInt(KEY_REMINDER_LEAD_MINUTES, value) }
+
+    fun observeReminderLeadMinutes(): Flow<Int> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(reminderLeadMinutes) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(reminderLeadMinutes)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
 
     fun observeShowClock(): Flow<Boolean> =
         callbackFlow {

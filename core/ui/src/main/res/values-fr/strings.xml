@@ -131,6 +131,31 @@
     <string name="sports_reminder_set">Rappel activé</string>
     <string name="sports_remind_team">Rappel pour chaque match</string>
     <string name="sports_remind_team_set">Rappels activés pour chaque match</string>
+    <string name="reminders_title">Rappels</string>
+    <string name="reminders_upcoming">À venir</string>
+    <string name="reminders_every_game_of">Tous les matchs de</string>
+    <string name="reminders_rings_at">Sonne à %1$s</string>
+    <string name="reminders_device_only">Les rappels sonnent sur cet appareil uniquement</string>
+    <string name="reminders_empty">Aucun rappel. Utilisez la cloche d’un match, ou Rappel dans Rechercher dans le guide.</string>
+    <string name="reminders_open">Ouvrir</string>
+    <string name="reminders_remove">Retirer le rappel</string>
+    <string name="reminders_stop_team">Arrêter tous les matchs</string>
+    <string name="reminders_clear_all">Tout effacer</string>
+    <string name="reminders_clear_all_confirm_title">Retirer tous les rappels ?</string>
+    <string name="reminders_clear_all_confirm_message">Cela retire tous les rappels de %1$s sur cet appareil et arrête tous les « tous les matchs » des équipes.</string>
+    <string name="reminders_manage">Gérer les rappels</string>
+    <string name="reminders_lead_title">Heure du rappel</string>
+    <string name="reminders_lead_desc">Combien de temps avant le début un rappel sonne, sur cet appareil</string>
+    <string name="reminders_lead_at_start">Au début</string>
+    <string name="reminders_next_game">Prochain : %1$s</string>
+    <plurals name="reminders_team_games">
+        <item quantity="one">%1$d match à venir</item>
+        <item quantity="other">%1$d matchs à venir</item>
+    </plurals>
+    <plurals name="reminders_lead_minutes">
+        <item quantity="one">%1$d minute avant</item>
+        <item quantity="other">%1$d minutes avant</item>
+    </plurals>
     <string name="sport_soccer">Football</string>
     <string name="sport_american_football">Football américain</string>
     <string name="sport_basketball">Basket-ball</string>
@@ -1028,7 +1053,7 @@
     <string name="settings_group_this_device">Cet appareil</string>
     <string name="settings_group_admin">Administration</string>
     <string name="settings_group_admin_desc">Profils, contrôle parental, cet appareil, sources, synchronisation et sauvegardes</string>
-    <string name="settings_group_this_device_desc">Langue, Récents et heure, sur cet appareil seulement</string>
+    <string name="settings_group_this_device_desc">Langue, Récents, rappels et heure, sur cet appareil seulement</string>
     <string name="settings_group_source_guide_desc">Sources, guide, détails des films, classements et sports</string>
     <string name="settings_group_sync_backup_desc">Synchronisation avec vos autres appareils et sauvegardes dans un fichier</string>
     <string name="settings_open_admin">Ouvrir l’administration</string>

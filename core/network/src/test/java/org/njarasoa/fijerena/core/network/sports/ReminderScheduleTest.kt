@@ -44,7 +44,7 @@ class ReminderScheduleTest {
         val now = startMs - 3_600_000
         assertEquals(
             ReminderSchedule.Alarm.Exact(startMs - 600_000),
-            ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = true),
+            ReminderSchedule.alarm(startMs - 600_000, now, exactAllowed = true),
         )
     }
 
@@ -53,16 +53,39 @@ class ReminderScheduleTest {
         val now = startMs - 3 * 3_600_000
         assertEquals(
             ReminderSchedule.Alarm.Window(startMs - 1_200_000, 600_000),
-            ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = false),
+            ReminderSchedule.alarm(startMs - 600_000, now, exactAllowed = false),
         )
     }
 
     @Test
     fun `without exact alarms an alarm whose window has opened is set for now`() {
         val now = startMs - 900_000
-        assertEquals(ReminderSchedule.Alarm.Now(now), ReminderSchedule.alarm(startMs - 600_000, start, now, exactAllowed = false))
+        assertEquals(ReminderSchedule.Alarm.Now(now), ReminderSchedule.alarm(startMs - 600_000, now, exactAllowed = false))
         val late = startMs - 120_000
-        assertEquals(ReminderSchedule.Alarm.Now(late), ReminderSchedule.alarm(late, start, late, exactAllowed = false))
+        assertEquals(ReminderSchedule.Alarm.Now(late), ReminderSchedule.alarm(late, late, exactAllowed = false))
+    }
+
+    @Test
+    fun `the alarm rings at the device's lead before the start`() {
+        val now = startMs - 3 * 3_600_000
+        assertEquals(startMs, ReminderSchedule.triggerAtMs(start, now, leadMinutes = 0))
+        assertEquals(startMs - 300_000, ReminderSchedule.triggerAtMs(start, now, leadMinutes = 5))
+        assertEquals(startMs - 3_600_000, ReminderSchedule.triggerAtMs(start, now, leadMinutes = 60))
+        // A lead longer than the time left rings at once.
+        assertEquals(startMs - 1_800_000, ReminderSchedule.triggerAtMs(start, startMs - 1_800_000, leadMinutes = 60))
+    }
+
+    @Test
+    fun `without exact alarms the window ends at the ring time, whatever the lead`() {
+        val now = startMs - 3 * 3_600_000
+        assertEquals(
+            ReminderSchedule.Alarm.Window(startMs - 600_000, 600_000),
+            ReminderSchedule.alarm(startMs, now, exactAllowed = false),
+        )
+        assertEquals(
+            ReminderSchedule.Alarm.Window(startMs - 4_200_000, 600_000),
+            ReminderSchedule.alarm(startMs - 3_600_000, now, exactAllowed = false),
+        )
     }
 
     @Test

@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sports.ReminderSchedule
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
@@ -53,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.ChartRows
+import org.njarasoa.fijerena.core.ui.sports.reminderLeadLabel
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -268,6 +270,7 @@ fun MobileSettingsScreen(
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showWatchDelayPicker by remember { mutableStateOf(false) }
     var showRecentSizePicker by remember { mutableStateOf(false) }
+    var showReminderLeadPicker by remember { mutableStateOf(false) }
     if (showRecentSizePicker) {
         // The TV's presets; a size kept from a source before the move stays as its own choice.
         val sizes = (RECENT_ROW_SIZES + uiState.recentRowSize).distinct().sorted()
@@ -304,6 +307,18 @@ fun MobileSettingsScreen(
                 (context as? android.app.Activity)?.recreate()
             },
             onDismiss = { showLanguagePicker = false },
+        )
+    }
+    if (showReminderLeadPicker) {
+        SettingsPickerDialog(
+            title = stringResource(R.string.reminders_lead_title),
+            options = ReminderSchedule.LEAD_CHOICES_MINUTES.map { reminderLeadLabel(context.resources, it) to it },
+            selected = uiState.reminderLeadMinutes,
+            onSelect = { minutes ->
+                viewModel.updateReminderLeadMinutes(minutes)
+                showReminderLeadPicker = false
+            },
+            onDismiss = { showReminderLeadPicker = false },
         )
     }
     if (showWatchDelayPicker) {
@@ -489,6 +504,11 @@ fun MobileSettingsScreen(
                                 title = stringResource(R.string.settings_watch_delay_row_title),
                                 summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                                 onClick = { showWatchDelayPicker = true },
+                            )
+                            SettingsListRow(
+                                title = stringResource(R.string.reminders_lead_title),
+                                summary = reminderLeadLabel(context.resources, uiState.reminderLeadMinutes),
+                                onClick = { showReminderLeadPicker = true },
                             )
                             CinemaSwitchRow(
                                 checked = uiState.showClock,

@@ -28,9 +28,15 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             down("Text & Grid Size / Size of text and everything on screen, on every screen"),
             down("Items in Recent / How many films, episodes or channels Recent shows / 25"),
             down("Add a Channel to Recent After / So a channel you only zap past isn't added / 10 s"),
+            down("Reminder Time / How long before the start a reminder rings, on this device / 10 minutes before"),
             down("Show Clock / The time at the top right of every screen"),
             // The end of the section: Sources & Guide is a section of its own.
             down("Show Clock"),
+            up("Reminder Time"),
+            // Its picker opens on the current choice; Left closes it on its row.
+            center("10 minutes before"),
+            down("15 minutes before"),
+            left("Reminder Time"),
             up("Add a Channel to Recent After"),
             // OK opens the picker on the current value; Left closes it, focus back on its row, in
             // the section.
@@ -44,7 +50,7 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             up("Language"),
             // Up at the top of the section stays put; Back closes it, focus on its row.
             up("Language"),
-            back("This Device / Language, Recent and the clock, on this device only"),
+            back("This Device / Language, Recent, reminders and the clock, on this device only"),
             back("Admin"),
         )
     }

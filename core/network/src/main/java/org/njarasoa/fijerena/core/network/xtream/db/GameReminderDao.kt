@@ -13,6 +13,9 @@ interface GameReminderDao {
     @Query("SELECT * FROM game_reminder WHERE profileId = :profileId")
     fun observeAll(profileId: String): Flow<List<GameReminderEntity>>
 
+    @Query("SELECT * FROM game_reminder WHERE profileId = :profileId")
+    suspend fun getAll(profileId: String): List<GameReminderEntity>
+
     @Query("SELECT * FROM game_reminder WHERE profileId = :profileId AND source = :source AND gameId = :gameId")
     suspend fun get(
         profileId: String,

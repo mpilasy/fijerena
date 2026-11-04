@@ -29,7 +29,7 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
             // Each section's row says what is inside it.
             right("Profiles / Admin, Guest, Kid"),
             down("Parental Controls / The household's word lists, for every child profile"),
-            down("This Device / Language, Recent and the clock, on this device only"),
+            down("This Device / Language, Recent, reminders and the clock, on this device only"),
             down("Sources & Guide / Sources, the guide, film details, charts and sports"),
             down("Sync & Backup / Live sync with your other devices, and backups to a file"),
             // The end of Admin's list: Down stays put.

@@ -131,6 +131,31 @@
     <string name="sports_reminder_set">Reminder set</string>
     <string name="sports_remind_team">Remind me of every game</string>
     <string name="sports_remind_team_set">Reminders set for every game</string>
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_upcoming">Upcoming</string>
+    <string name="reminders_every_game_of">Every Game Of</string>
+    <string name="reminders_rings_at">Rings at %1$s</string>
+    <string name="reminders_device_only">Reminders ring on this device only</string>
+    <string name="reminders_empty">No reminders. Use the bell on a game, or Remind me in Search the Guide.</string>
+    <string name="reminders_open">Open</string>
+    <string name="reminders_remove">Remove reminder</string>
+    <string name="reminders_stop_team">Stop every game</string>
+    <string name="reminders_clear_all">Clear all</string>
+    <string name="reminders_clear_all_confirm_title">Remove All Reminders?</string>
+    <string name="reminders_clear_all_confirm_message">This removes every reminder of %1$s on this device, and stops every team\'s every game.</string>
+    <string name="reminders_manage">Manage reminders</string>
+    <string name="reminders_lead_title">Reminder Time</string>
+    <string name="reminders_lead_desc">How long before the start a reminder rings, on this device</string>
+    <string name="reminders_lead_at_start">At the start</string>
+    <string name="reminders_next_game">Next: %1$s</string>
+    <plurals name="reminders_team_games">
+        <item quantity="one">%1$d coming game</item>
+        <item quantity="other">%1$d coming games</item>
+    </plurals>
+    <plurals name="reminders_lead_minutes">
+        <item quantity="one">%1$d minute before</item>
+        <item quantity="other">%1$d minutes before</item>
+    </plurals>
     <string name="sport_soccer">Football</string>
     <string name="sport_american_football">American football</string>
     <string name="sport_basketball">Basketball</string>
@@ -1066,7 +1091,7 @@
     <string name="settings_group_this_device">This Device</string>
     <string name="settings_group_admin">Admin</string>
     <string name="settings_group_admin_desc">Profiles, parental controls, this device, sources, sync and backups</string>
-    <string name="settings_group_this_device_desc">Language, Recent and the clock, on this device only</string>
+    <string name="settings_group_this_device_desc">Language, Recent, reminders and the clock, on this device only</string>
     <string name="settings_group_source_guide_desc">Sources, the guide, film details, charts and sports</string>
     <string name="settings_group_sync_backup_desc">Live sync with your other devices, and backups to a file</string>
     <string name="settings_open_admin">Open Admin</string>

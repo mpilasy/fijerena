@@ -17,8 +17,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
- * Game reminders per profile (`game_reminder`, local, not synced): an alarm rings
- * [ReminderSchedule.LEAD_SEC] before a game. See the sports teams plan → Reminders.
+ * Game reminders per profile (`game_reminder`, local, not synced): an alarm rings the device's
+ * lead time ([leadMinutes], `AppSettings.reminderLeadMinutes`) before a game. See the sports teams plan → Reminders.
  *
  * - [set] / [clear] / [isSet] / [observe]: one game's bell.
  * - [setForTeam] / [clearForTeam] / [isSetForTeam]: "every game of this team". A standing team row
@@ -44,6 +44,7 @@ class GameReminders internal constructor(
     private val teamFollowed: suspend (profileId: String, source: SportsSource, teamId: String) -> Boolean = { _, _, _ -> true },
     private val background: CoroutineScope = AppScopes.create("GameReminders", Dispatchers.IO),
     private val now: () -> Long = System::currentTimeMillis,
+    private val leadMinutes: () -> Int = { ReminderSchedule.DEFAULT_LEAD_MINUTES },
 ) {
     /** What a profile has reminders for: games as "source/gameId", teams as their team keys. */
     data class Reminded(
@@ -194,6 +195,32 @@ class GameReminders internal constructor(
         updateRescheduleReceiver()
     }
 
+    /** Clears a guide programme's reminder ([setProgramme]). */
+    suspend fun clearProgramme(
+        profileId: String,
+        programmeId: String,
+    ) = lock.withLock {
+        dao.get(profileId, PROGRAMME_SOURCE, programmeId)?.let { remove(it) }
+        updateRescheduleReceiver()
+    }
+
+    /** Clears every reminder and team rule of [profileId], with their alarms (the Reminders page's Clear All). */
+    suspend fun clearAll(profileId: String) =
+        lock.withLock {
+            dao.getAll(profileId).filter { it.startEpoch > 0 }.forEach { alarms.cancel(it) }
+            dao.deleteProfile(profileId)
+            updateRescheduleReceiver()
+        }
+
+    /** The device rings reminders [minutes] before the start from now on; the alarms already set move. */
+    suspend fun setLeadMinutes(
+        settings: AppSettings,
+        minutes: Int,
+    ) {
+        settings.reminderLeadMinutes = minutes
+        rescheduleAll()
+    }
+
     /** On each app start (behind safe mode): every alarm set again, then the teams' new games. */
     suspend fun onAppStart() {
         rescheduleAll()
@@ -205,7 +232,7 @@ class GameReminders internal constructor(
         lock.withLock {
             val nowMs = now()
             for (reminder in dao.allGames()) {
-                val trigger = ReminderSchedule.triggerAtMs(reminder.startEpoch, nowMs)
+                val trigger = ReminderSchedule.triggerAtMs(reminder.startEpoch, nowMs, leadMinutes())
                 if (trigger == null) remove(reminder) else alarms.schedule(reminder, trigger)
             }
             dao.allMuted().filter { -it.startEpoch * 1000 <= nowMs }.forEach { remove(it) }
@@ -350,7 +377,7 @@ class GameReminders internal constructor(
 
     // Under the lock.
     private suspend fun schedule(reminder: GameReminderEntity): Boolean {
-        val trigger = ReminderSchedule.triggerAtMs(reminder.startEpoch, now()) ?: return false
+        val trigger = ReminderSchedule.triggerAtMs(reminder.startEpoch, now(), leadMinutes()) ?: return false
         val createdAt = dao.get(reminder.profileId, reminder.source, reminder.gameId)?.createdAt ?: reminder.createdAt
         val stored = reminder.copy(createdAt = createdAt)
         dao.upsert(stored)
@@ -365,7 +392,7 @@ class GameReminders internal constructor(
         startEpochSec: Long,
     ) {
         val moved = reminder.copy(startEpoch = startEpochSec)
-        val trigger = ReminderSchedule.triggerAtMs(startEpochSec, now())
+        val trigger = ReminderSchedule.triggerAtMs(startEpochSec, now(), leadMinutes())
         if (trigger == null) {
             remove(reminder)
         } else {
@@ -432,6 +459,7 @@ class GameReminders internal constructor(
                         teamFollowed = { profileId, source, teamId ->
                             FollowedSports.getInstance(app).isFollowed(profileId, FollowKind.TEAM, source, teamId)
                         },
+                        leadMinutes = { settings.reminderLeadMinutes },
                     )
                 }.also { instance = it }
             }

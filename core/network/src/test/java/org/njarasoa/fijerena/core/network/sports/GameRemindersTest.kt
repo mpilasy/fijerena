@@ -54,6 +54,7 @@ class GameRemindersTest {
     private var schedule: List<SportsGame> = emptyList()
     private var enabled = true
     private var followed = true
+    private var lead = ReminderSchedule.DEFAULT_LEAD_MINUTES
     private lateinit var reminders: GameReminders
 
     private val arsenal = SportsTeam(SportsSource.ESPN, "soccer/359", "Arsenal", sport = "soccer", league = "soccer/eng.1")
@@ -82,6 +83,7 @@ class GameRemindersTest {
                 teamFollowed = { _, _, _ -> followed },
                 background = background,
                 now = { nowMs },
+                leadMinutes = { lead },
             )
     }
 
@@ -97,6 +99,44 @@ class GameRemindersTest {
             assertTrue(reminders.isSet(P1, g))
             assertTrue(reminders.observe(P1).first().has(g))
             assertTrue(alarms.receiverOn)
+        }
+
+    @Test
+    fun `a new lead moves the alarms already set`() =
+        runBlocking {
+            val g = game("g1")
+            reminders.set(P1, g)
+
+            lead = 30
+            reminders.rescheduleAll()
+
+            assertEquals((g.startEpochSec - 1_800) * 1000, alarms.set["$P1/g1"])
+        }
+
+    @Test
+    fun `Clear All clears every reminder and team rule of the profile, and only that profile`() =
+        runBlocking {
+            reminders.set(P1, game("g1"))
+            reminders.setForTeam(P1, arsenal)
+            reminders.set("p2", game("g2"))
+
+            reminders.clearAll(P1)
+
+            assertTrue(db.gameReminderDao().getAll(P1).isEmpty())
+            assertEquals(listOf("p2/g2"), alarms.set.keys.toList())
+            assertTrue(alarms.receiverOn)
+        }
+
+    @Test
+    fun `a programme's reminder clears with its alarm`() =
+        runBlocking {
+            val programme = ProgrammeReminder("News", nowMs / 1000 + 3_600, ReminderChannel(1, 7, "news", "BBC One"))
+            reminders.setProgramme(P1, programme)
+
+            reminders.clearProgramme(P1, programme.id)
+
+            assertTrue(db.gameReminderDao().getAll(P1).isEmpty())
+            assertTrue(alarms.set.isEmpty())
         }
 
     @Test
