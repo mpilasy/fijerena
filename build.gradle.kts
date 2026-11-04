@@ -14,6 +14,14 @@ subprojects {
         version.set("1.8.0")
     }
 
+    // A failed unit test prints its whole stack trace, so a failure seen only in CI shows its cause.
+    tasks.withType<Test>().configureEach {
+        testLogging {
+            events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+    }
+
     // Prohibit all uninstall tasks across all modules to prevent accidental loss of app data/state
     tasks.matching { it.name.contains("uninstall", ignoreCase = true) }.configureEach {
         doFirst {
