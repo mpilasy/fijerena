@@ -88,6 +88,7 @@ fun MobileEpgManagementScreen(
     val page by viewModel.page.collectAsStateWithLifecycle(initialValue = null)
     val cards = page?.cards
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
+    val busySourceIds by viewModel.busySourceIds.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
@@ -193,6 +194,7 @@ fun MobileEpgManagementScreen(
                         card = card,
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
+                        waiting = source.id in busySourceIds,
                         wasUnchanged = wasUnchanged,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
@@ -326,6 +328,8 @@ private fun EpgSourceCard(
     card: EpgManagementViewModel.GuideCard,
     latestProgrammeTime: Long,
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
+    /** A refresh was asked for and has not reached this guide source yet: "Waiting to refresh". */
+    waiting: Boolean,
     wasUnchanged: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
@@ -403,6 +407,17 @@ private fun EpgSourceCard(
                 }
             }
 
+            if (activeProgress == null && waiting) {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
+                    CinemaText(
+                        text = stringResource(R.string.epg_source_phase_format, stringResource(R.string.epg_phase_waiting_to_refresh)),
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
+                    )
+                    CinemaProgressBar(progress = null, modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs))
+                }
+            }
             if (activeProgress != null) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {

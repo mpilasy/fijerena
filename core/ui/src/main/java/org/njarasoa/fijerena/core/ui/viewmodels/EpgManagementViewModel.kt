@@ -166,6 +166,21 @@ class EpgManagementViewModel(
     private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
     val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
 
+    /**
+     * The guide sources a refresh was asked for and has not finished: asked from this page, or a
+     * one-source refresh in the queue (its task id names the source, so a page opened again knows
+     * it too). A card in it shows "Waiting to refresh" until its download starts, and its Refresh
+     * says it is already refreshing.
+     */
+    val busySourceIds: StateFlow<Set<Long>> =
+        combine(_taskSourceIds, RefreshQueue.queuedTaskIds, RefreshQueue.activeTaskIds) { tasks, queued, active ->
+            tasks.values.flatten().toSet() + (queued + active).mapNotNull(::singleSourceIdOf)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    /** A task asked for and not finished: in the queue, running, or still being launched from this page. */
+    private fun isUnderway(taskId: String): Boolean =
+        taskId in RefreshQueue.queuedTaskIds.value || taskId in RefreshQueue.activeTaskIds.value || taskId in _taskSourceIds.value
+
     val isAdmin: Boolean get() = appSettings.isAdmin
 
     /** How old [source] may get before its status reads stale — see [EpgRefreshSchedule.staleAfterMs]. */
@@ -244,6 +259,20 @@ class EpgManagementViewModel(
     init {
         refreshDbStats()
         refreshMaintenanceState()
+        // A task seen in the queue and gone from it is over, whatever became of its onComplete (a
+        // run cancelled from elsewhere does not call it): its cards stop waiting.
+        viewModelScope.launchGuarded("EpgManagementViewModel.taskCleanup") {
+            val seen = HashSet<String>()
+            combine(RefreshQueue.queuedTaskIds, RefreshQueue.activeTaskIds) { queued, active -> queued + active }.collect { underway ->
+                val tasks = _taskSourceIds.value.keys
+                seen += tasks.filter { it in underway }
+                val over = seen.filter { it !in underway }
+                if (over.isNotEmpty()) {
+                    seen -= over.toSet()
+                    _taskSourceIds.value -= over.toSet()
+                }
+            }
+        }
         viewModelScope.launchGuarded("EpgManagementViewModel.init") {
             processingState.collect { state ->
                 if (state is EpgFileManager.MultiSourceState.Completed) {
@@ -452,11 +481,11 @@ class EpgManagementViewModel(
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshStale") {
             val providerIds = guideProviders.first().map { it.id }
             val taskId = EpgFileManager.refreshStaleTaskId(providerIds)
-            val queued = RefreshQueue.queuedTaskIds.value
-            if (queued.contains(taskId)) {
+            if (isUnderway(taskId)) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launchGuarded
             }
+            val queued = RefreshQueue.queuedTaskIds.value
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
@@ -489,7 +518,7 @@ class EpgManagementViewModel(
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshFailed") {
             val providerIds = guideProviders.first().map { it.id }
             val taskId = EpgFileManager.refreshFailedTaskId(providerIds)
-            if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
+            if (isUnderway(taskId)) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launchGuarded
             }
@@ -514,9 +543,10 @@ class EpgManagementViewModel(
 
     fun refreshSource(source: EpgSourceEntity) {
         val sourceId = source.id
-        val taskId = "epg_refresh_source_$sourceId"
-        val queued = RefreshQueue.queuedTaskIds.value
-        if (queued.contains(taskId)) {
+        val taskId = "$SINGLE_SOURCE_TASK_PREFIX$sourceId"
+        // Asked for already, alone or with others: the tap only says so (a second launch would
+        // cancel the first one's launcher).
+        if (isUnderway(taskId) || sourceId in busySourceIds.value) {
             _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
@@ -536,6 +566,11 @@ class EpgManagementViewModel(
     /** Shows [cellularDialog] and waits for the answer; a no drops [taskId]'s rows from the progress. */
     private suspend fun confirmCellular(taskId: String): Boolean =
         suspendCancellableCoroutine { cont ->
+            // Another launch cancels this one while it asks: the question goes, and so do its rows.
+            cont.invokeOnCancellation {
+                _cellularDialog.value = null
+                _taskSourceIds.value -= taskId
+            }
             _cellularDialog.value =
                 CellularConfirmDialog(
                     onConfirm = {
@@ -612,6 +647,13 @@ class EpgManagementViewModel(
     }
 
     companion object {
+        /** The task id of a one-source refresh is this and the guide source id (`EpgFileManager.launchProcessSingleSource`). */
+        internal const val SINGLE_SOURCE_TASK_PREFIX = "epg_refresh_source_"
+
+        /** The guide source of a one-source refresh's [taskId]; null for any other task. */
+        internal fun singleSourceIdOf(taskId: String): Long? =
+            if (taskId.startsWith(SINGLE_SOURCE_TASK_PREFIX)) taskId.removePrefix(SINGLE_SOURCE_TASK_PREFIX).toLongOrNull() else null
+
         private const val DAILY_HOURS = 24
 
         /**

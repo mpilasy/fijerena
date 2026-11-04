@@ -108,6 +108,7 @@ fun TvEpgManagementScreen(
     // Refresh stale / Retry failed, above the groups, only while there is something to refresh.
     val refreshRow = staleSourceCount > 0 || failedSourceCount > 0
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
+    val busySourceIds by viewModel.busySourceIds.collectAsStateWithLifecycle()
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -376,6 +377,25 @@ fun TvEpgManagementScreen(
                                     )
                                 }
 
+                                // A refresh was asked for and has not reached this guide source yet.
+                                if (activeProgress == null && source.id in busySourceIds) {
+                                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
+                                        CinemaText(
+                                            text =
+                                                stringResource(
+                                                    R.string.epg_source_phase_format,
+                                                    stringResource(R.string.epg_phase_waiting_to_refresh),
+                                                ),
+                                            role = TextRole.Caption,
+                                            tone = TextTone.Secondary,
+                                        )
+                                        CinemaProgressBar(
+                                            progress = null,
+                                            modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
+                                        )
+                                    }
+                                }
                                 if (activeProgress != null) {
                                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {

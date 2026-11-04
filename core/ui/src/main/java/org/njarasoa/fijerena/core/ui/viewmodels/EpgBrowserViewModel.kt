@@ -294,7 +294,8 @@ class EpgBrowserViewModel(
                 return@launch
             }
             val taskId = EpgFileManager.refreshStaleTaskId(providerIds)
-            if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
+            // Waiting in the queue or running already: the tap only says so.
+            if (taskId in RefreshQueue.queuedTaskIds.value || taskId in RefreshQueue.activeTaskIds.value) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launch
             }

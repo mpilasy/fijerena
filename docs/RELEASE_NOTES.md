@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Guide refresh tells you it is on its way:** on Guide Sources, a card you refreshed shows "Waiting to refresh" until its turn comes, for example while another refresh or the automatic one at start is running, then its progress. Tapping Refresh again, or Refresh stale and Retry failed, while that refresh waits or runs now says "Already refreshing" and starts nothing. Before, a second tap said nothing when the refresh was already running, and the card showed nothing until its download started. Search the Guide's Refresh stale does the same. TV and phone.
+
 ## Version: 0.9.20261104141735
 
 - **Reminders page:** one place for the reminders of the profile in use on this device. **Upcoming** lists the game and guide programme reminders, the soonest first, with the day, the time and when each rings; **Open** shows a game's sheet or tunes a programme's channel (asking first while it has not started), **Remove** clears one. **Every Game Of** lists each team with "every game" on, its next game and how many games it covers; **Stop** clears them. The header has **Reminder Time** and **Clear all** (it asks first). It opens from a bell in the Sports section's header and in Search the Guide's header, from **Manage reminders** on the TV reminder banner, and on the phone from **Manage reminders** on a reminder's notification. The TV banner now shows its buttons under its text, so a long title keeps its start time. TV and phone.
