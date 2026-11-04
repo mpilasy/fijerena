@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261104155327
 
 - **Guide refresh tells you it is on its way:** on Guide Sources, a card you refreshed shows "Waiting to refresh" until its turn comes, for example while another refresh or the automatic one at start is running, then its progress. Tapping Refresh again, or Refresh stale and Retry failed, while that refresh waits or runs now says "Already refreshing" and starts nothing. Before, a second tap said nothing when the refresh was already running, and the card showed nothing until its download started. Search the Guide's Refresh stale does the same. TV and phone.
 
