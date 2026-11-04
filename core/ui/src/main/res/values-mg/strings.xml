@@ -239,6 +239,7 @@
     <string name="epg_sources_without_guide_title">Loharano tsy misy loharanon\'ny fitarihana</string>
     <string name="epg_source_already_added_for">Efa loharanon\'ny fitarihana: nampiana ho an\'ny %1$s</string>
     <string name="epg_source_already_used_for">Efa loharanon\'ny fitarihana ho an\'ny %1$s</string>
+    <string name="epg_source_url_in_use">Efa loharanon\'ny fitarihana: %1$s</string>
     <string name="epg_delete_shared_source_confirm_message">Hofafana ho an\'ny loharano rehetra mampiasa azy (%2$s) ve i \"%1$s\"? Hofafana ny angon\'ny fandaharana avy aminy.</string>
     <string name="epg_edit_source_title">Hanova loharanon\'ny fitarihana</string>
     <string name="epg_xmltv_url_label">Rohin\'ny fandaharana (XMLTV)</string>

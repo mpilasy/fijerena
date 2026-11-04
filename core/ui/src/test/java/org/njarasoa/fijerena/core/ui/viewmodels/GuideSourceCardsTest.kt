@@ -209,6 +209,25 @@ class GuideSourceCardsTest {
     }
 
     @Test
+    fun `Edit to the URL of another guide source is refused and says so`() =
+        runBlocking {
+            val other = guide(20).copy(url = "http://g/other.xml", label = "Other")
+            val source = guide(10)
+            given(listOf(source, other), 10L to 1L, 20L to 3L)
+            coEvery { dao.getSourceById(10) } returns source
+            val viewModel = EpgManagementViewModel(context, providers)
+            val next = async(start = CoroutineStart.UNDISPATCHED) { viewModel.userMessage.first() }
+
+            viewModel.updateSource(source.copy(url = "HTTP://G/other.xml/"), providerIds = setOf(1L))
+
+            val message = withTimeout(TIMEOUT_MS) { next.await() } as UiText.StringResource
+            assertEquals(R.string.epg_source_url_in_use, message.resId)
+            assertEquals(listOf<Any>("Other"), message.args.toList())
+            coVerify(exactly = 0) { dao.updateSource(any()) }
+            coVerify(exactly = 0) { dao.setLinks(any(), any()) }
+        }
+
+    @Test
     fun `Delete deletes the guide source for every source`() {
         given(listOf(guide(10)), 10L to 1L, 10L to 3L)
 

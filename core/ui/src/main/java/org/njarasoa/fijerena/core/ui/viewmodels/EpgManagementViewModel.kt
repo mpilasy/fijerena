@@ -357,12 +357,15 @@ class EpgManagementViewModel(
     }
 
     /** The hand-added guide source whose URL is [url] ([GuideUrls.matchKey]); a source's own guide never matches (OG-D3). */
-    private suspend fun handAddedGuideAt(url: String): EpgSourceEntity? {
+    private suspend fun handAddedGuideAt(
+        url: String,
+        exceptId: Long? = null,
+    ): EpgSourceEntity? {
         val key = GuideUrls.matchKey(url)
         return settingsDb()
             .epgSourceDao()
             .getAllSourcesOnce()
-            .firstOrNull { GuideUrls.matchKey(it.url) == key && ownGuideOf(it) == null }
+            .firstOrNull { it.id != exceptId && GuideUrls.matchKey(it.url) == key && ownGuideOf(it) == null }
     }
 
     /** The Xtream source whose own guide [source] is, from its only link; null for a hand-added guide source. */
@@ -392,19 +395,29 @@ class EpgManagementViewModel(
             val dao = settingsDb().epgSourceDao()
             // Only the fields the dialog edits, on the row as it is now: the page's copy can be
             // older than an import that finished since (its stats and offsets).
-            withContext(Dispatchers.IO) {
-                val current = dao.getSourceById(source.id) ?: return@withContext
-                dao.updateSource(
-                    current.copy(
-                        url = source.url,
-                        label = source.label,
-                        timezoneOffsetHours = source.timezoneOffsetHours,
-                        ingestMethod = source.ingestMethod,
-                        enabled = source.enabled,
-                    ),
-                )
-                if (providerIds.isNotEmpty() && ownGuideOf(current) == null) dao.setLinks(source.id, providerIds)
-            }
+            val saved =
+                withContext(Dispatchers.IO) {
+                    val current = dao.getSourceById(source.id) ?: return@withContext false
+                    // A URL another guide source already has is refused: two guide sources for one
+                    // guide is what one guide source per URL removes. That guide's Use for shares it.
+                    val other = if (ownGuideOf(current) == null) handAddedGuideAt(source.url, exceptId = source.id) else null
+                    if (other != null) {
+                        _userMessage.tryEmit(UiText.StringResource(R.string.epg_source_url_in_use, other.label.ifBlank { other.url }))
+                        return@withContext false
+                    }
+                    dao.updateSource(
+                        current.copy(
+                            url = source.url,
+                            label = source.label,
+                            timezoneOffsetHours = source.timezoneOffsetHours,
+                            ingestMethod = source.ingestMethod,
+                            enabled = source.enabled,
+                        ),
+                    )
+                    if (providerIds.isNotEmpty() && ownGuideOf(current) == null) dao.setLinks(source.id, providerIds)
+                    true
+                }
+            if (!saved) return@launchGuarded
             when (EpgOffsetShift.reconcile(source.id, dao, indexer)) {
                 EpgOffsetShift.Result.SHIFTED -> {
                     _dbGeneration.value++
