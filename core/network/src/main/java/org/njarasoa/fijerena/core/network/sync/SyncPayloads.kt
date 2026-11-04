@@ -203,6 +203,11 @@ object SyncPayloads {
     /**
      * [refreshIntervalHours]: the source's own auto-refresh interval. Null — a record from an older
      * version, or a source without one of its own — keeps the receiver's value.
+     *
+     * [providerKeys]: the media sources that read the guide, the first link first. Empty in a
+     * record from an older build, which names only [providerKey]. [providerKey] is always the
+     * first link, so an older build sees the guide for that source (the one guide source per URL
+     * plan, OG-Q3).
      */
     @Serializable
     data class EpgSource(
@@ -212,12 +217,16 @@ object SyncPayloads {
         val timezoneOffsetHours: Int,
         val enabled: Boolean,
         val refreshIntervalHours: Int? = null,
+        val providerKeys: List<String> = emptyList(),
     ) {
+        /** The media sources the record names: [providerKeys], or [providerKey] from an older build. */
+        val keys: List<String> get() = providerKeys.ifEmpty { listOf(providerKey) }
+
         companion object {
             fun of(
                 e: EpgSourceEntity,
-                providerKey: String,
-            ) = EpgSource(providerKey, e.url, e.label, e.timezoneOffsetHours, e.enabled, e.refreshIntervalHours)
+                providerKeys: List<String>,
+            ) = EpgSource(providerKeys.first(), e.url, e.label, e.timezoneOffsetHours, e.enabled, e.refreshIntervalHours, providerKeys)
         }
     }
 

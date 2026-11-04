@@ -7,6 +7,8 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import org.njarasoa.fijerena.core.network.sync.SyncKind
+import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
 
 @Dao
 interface EpgSourceDao {
@@ -61,11 +63,19 @@ interface EpgSourceDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertLink(link: EpgSourceProviderEntity)
 
-    @Query("DELETE FROM epg_source_provider WHERE source_id = :sourceId AND provider_id = :providerId")
+    /**
+     * Media source [providerId] no longer reads guide source [sourceId]. The aliases of that pair
+     * go too, each with a tombstone, so an older build deletes its copy for that source.
+     */
+    @Transaction
     suspend fun unlink(
         sourceId: Long,
         providerId: Long,
-    )
+    ) {
+        tombstoneAliases(sourceId, providerId)
+        deleteAliasesFor(sourceId, providerId)
+        deleteLink(sourceId, providerId)
+    }
 
     @Query("DELETE FROM epg_source_provider WHERE source_id = :sourceId")
     suspend fun deleteLinksOf(sourceId: Long)
@@ -120,9 +130,13 @@ interface EpgSourceDao {
         }
     }
 
-    /** Deletes guide source [id] with its links and aliases. Its guide index rows are the caller's. */
+    /**
+     * Deletes guide source [id] with its links and aliases. Each alias gets a tombstone, so older
+     * builds delete their copies too. Its guide index rows are the caller's.
+     */
     @Transaction
     suspend fun deleteGuide(id: Long) {
+        tombstoneAliases(id, null)
         deleteLinksOf(id)
         deleteAliasesOf(id)
         deleteSource(id)
@@ -243,4 +257,50 @@ interface EpgSourceDao {
             "(SELECT source_id FROM epg_source_provider WHERE provider_id IN (:providerIds)) ORDER BY added_at_ms ASC",
     )
     suspend fun getFailedSourcesForProviders(providerIds: Collection<Long>): List<EpgSourceEntity>
+
+    @Query("DELETE FROM epg_source_provider WHERE source_id = :sourceId AND provider_id = :providerId")
+    suspend fun deleteLink(
+        sourceId: Long,
+        providerId: Long,
+    )
+
+    @Query("DELETE FROM epg_source_alias WHERE source_id = :sourceId AND provider_id = :providerId")
+    suspend fun deleteAliasesFor(
+        sourceId: Long,
+        providerId: Long,
+    )
+
+    /**
+     * A tombstone (stamped and queued by the `sync_tombstone_insert` trigger) for each alias of
+     * guide source [sourceId]: of media source [providerId] only, or all of them when it is null.
+     * Not while live sync applies a received record: the device that made the change sends them.
+     */
+    @Transaction
+    suspend fun tombstoneAliases(
+        sourceId: Long,
+        providerId: Long?,
+    ) {
+        deleteAliasTombstones(sourceId, providerId)
+        insertAliasTombstones(sourceId, providerId)
+    }
+
+    @Query(
+        "DELETE FROM sync_tombstone WHERE kind = '${SyncKind.EPG_SOURCE}' AND itemKey IN " +
+            "(SELECT alias_key FROM epg_source_alias WHERE source_id = :sourceId AND (:providerId IS NULL OR provider_id = :providerId)) " +
+            "AND (SELECT applying FROM sync_clock WHERE id = ${SyncClockEntity.SINGLE_ROW}) = 0",
+    )
+    suspend fun deleteAliasTombstones(
+        sourceId: Long,
+        providerId: Long?,
+    )
+
+    @Query(
+        "INSERT INTO sync_tombstone (kind, itemKey, deletedAt) SELECT '${SyncKind.EPG_SOURCE}', alias_key, 0 FROM epg_source_alias " +
+            "WHERE source_id = :sourceId AND (:providerId IS NULL OR provider_id = :providerId) " +
+            "AND (SELECT applying FROM sync_clock WHERE id = ${SyncClockEntity.SINGLE_ROW}) = 0",
+    )
+    suspend fun insertAliasTombstones(
+        sourceId: Long,
+        providerId: Long?,
+    )
 }

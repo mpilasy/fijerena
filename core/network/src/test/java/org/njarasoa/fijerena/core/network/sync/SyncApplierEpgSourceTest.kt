@@ -54,6 +54,9 @@ class SyncApplierEpgSourceTest {
         coEvery { sync.getTombstone(any(), any()) } returns null
         coEvery { sync.providerByKey("prov-1") } returns provider
         coEvery { sync.sourceByKey("src-1") } returns local
+        coEvery { sync.providerById(7) } returns provider
+        coEvery { sync.autoGuideOf(any()) } returns null
+        coEvery { sources.getAlias(any()) } returns null
     }
 
     @After
@@ -101,7 +104,7 @@ class SyncApplierEpgSourceTest {
     @Test
     fun `a new source received without an interval is stored as not set`() {
         coEvery { sync.sourceByKey("src-1") } returns null
-        coEvery { sync.sourcesAt(any(), any()) } returns emptyList()
+        coEvery { sync.guidesAtUrl(any()) } returns emptyList()
         val inserted = slot<EpgSourceEntity>()
         coEvery { sources.insertGuide(capture(inserted), listOf(7L)) } returns 1L
         val legacy = """{"providerKey":"prov-1","url":"http://epg.test/new.xml","label":"N","timezoneOffsetHours":0,"enabled":true}"""
@@ -142,8 +145,6 @@ class SyncApplierEpgSourceTest {
     @Test
     fun `a new automatic guide source is matched and inserted without its login`() {
         coEvery { sync.sourceByKey("src-1") } returns null
-        val lookedUp = slot<String>()
-        coEvery { sync.sourcesAt(any(), capture(lookedUp)) } returns emptyList()
         val inserted = slot<EpgSourceEntity>()
         coEvery { sources.insertGuide(capture(inserted), listOf(7L)) } returns 1L
         val withLogin = "http://iptv.test/xmltv.php?username=me&password=secret"
@@ -152,7 +153,7 @@ class SyncApplierEpgSourceTest {
             applier().apply(listOf(record(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", withLogin, "iptv.test (Bulk)", 0, true)))))
         }
 
-        assertEquals("http://iptv.test/xmltv.php", lookedUp.captured)
+        coVerify { sync.autoGuideOf(7) }
         assertEquals("http://iptv.test/xmltv.php", inserted.captured.url)
     }
 
@@ -167,11 +168,11 @@ class SyncApplierEpgSourceTest {
 
     @Test
     fun `a source's interval is sent, and a source without one sends none`() {
-        assertTrue(SyncPayloads.encode(SyncPayloads.EpgSource.of(local, "prov-1")).contains("\"refreshIntervalHours\":6"))
+        assertTrue(SyncPayloads.encode(SyncPayloads.EpgSource.of(local, listOf("prov-1"))).contains("\"refreshIntervalHours\":6"))
         assertFalse(
             SyncPayloads
                 .encode(
-                    SyncPayloads.EpgSource.of(local.copy(refreshIntervalHours = null), "prov-1"),
+                    SyncPayloads.EpgSource.of(local.copy(refreshIntervalHours = null), listOf("prov-1")),
                 ).contains("refreshIntervalHours"),
         )
     }
