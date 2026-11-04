@@ -52,7 +52,7 @@ Tables and columns are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (`epg_source`
 
 ### EpgFileManager
 
-**Singleton** (`core/network/.../xmltv/EpgFileManager.kt`) running the multi-source download-ingest pipeline. One pipeline serves every provider: a refresh covers one provider's sources, and screens read `stateFor(providerId)`, which reports `Idle` for another provider's run.
+**Singleton** (`core/network/.../xmltv/EpgFileManager.kt`) running the multi-source download-ingest pipeline. One pipeline serves every provider. A run covers a list of guide sources, each one time, also when several providers read it (a shared guide source downloads one time). The run's providers are the links of its guide sources (`epg_source_provider`). Screens read `stateFor(providerId)` or `stateFor(providerIds)`, which shows the run when one of its providers is in the set, and `Idle` for any other run.
 
 **Key design decisions:**
 - OkHttp client derived from `NetworkModule.okHttpClient`: 60-second connect timeout, 3-minute read timeout
@@ -89,7 +89,7 @@ Downloads and ingestion are decoupled via a Kotlin `Channel<DownloadedSource>`.
 - **Concurrency:** up to 3 concurrent downloads on phones, 2 on TVs and other fixed devices (a `Semaphore`); 2 ingestion workers
 - **Download phase:** each source is downloaded to a cache file (`cacheDir/xmltv_source_<id>_tmp`, on every device). On success the `DownloadedSource` is sent to the ingestion channel; an unchanged one is recorded and skipped.
 - **Ingestion phase:** the workers wait for `EpgIndexer.beginBulkIngestion(useStaging)` (started in parallel with the downloads), then ingest each file via `EpgIndexer.ingestFromStream()` in batches of 500 rows on phones, 5000 on TVs.
-- **Finalizing:** once nothing is left, `Finalizing("Rebuilding indexes…")`; if any source ingested rows, `Finalizing("Swapping to primary guide…")` and `swapThenMarkIngested` on the staging path, or `rebuildFtsAndUpdateState()` on the direct path; then `incrementalVacuum()` and `endBulkIngestion()`. All inline in the caller's coroutine, so under `EpgSyncWorker` the wake lock covers it. The parsed-EPG cache of the providers whose sources ingested is cleared.
+- **Finalizing:** once nothing is left, `Finalizing("Rebuilding indexes…")`; if any source ingested rows, `Finalizing("Swapping to primary guide…")` and `swapThenMarkIngested` on the staging path, or `rebuildFtsAndUpdateState()` on the direct path; then `incrementalVacuum()` and `endBulkIngestion()`. All inline in the caller's coroutine, so under `EpgSyncWorker` the wake lock covers it. The parsed-EPG cache of every provider linked to a guide source that ingested is cleared.
 - **Completion:** `Completed` is emitted only after the swap / rebuild and index restore, and the run summary is written to `epg_pipeline_stats` (`updateLastPipelineStats`).
 
 **Progress tracking (`ActiveSourceProgress`):**
@@ -125,13 +125,13 @@ A cancelled run (`CancellationException`) restores the bulk-ingestion state and 
 
 **Lifecycle:**
 - `initialize()` — called from `FijerenaApplication.onCreate()`: migrates the legacy global `epg_url` into an `epg_source` row (once), runs the one-time cleanup of automatic Xtream guide sources (below), restores the index state (`EpgIndexer.initialize()`), deletes stray `xmltv_*` cache files, enqueues `EpgFtsRebuildWorker` when a previous session left FTS stale, copies the retired device-wide refresh interval into guide sources without one of their own (once, `epg_refresh_interval_copied_v1`), and then keeps the periodic sync scheduled: it watches `epg_source` and reschedules whenever the shortest interval changes
-- `launchRefreshStale(providerId)` / `launchRefreshStale(providerIds)` — refresh the provider's (or each provider's, one run per provider) enabled sources never ingested or stale by their own interval (`EpgRefreshSchedule.isStale`)
-- `launchRefreshFailed(providerId)` — retry sources whose last attempt errored
+- `launchRefreshStale(providerId)` / `launchRefreshStale(providerIds)` — one run over the distinct enabled guide sources of the providers (`getEnabledSourcesForProviders`) never ingested or stale by their own interval (`EpgRefreshSchedule.isStale`)
+- `launchRefreshFailed(providerIds)` — one run over the distinct guide sources of the providers whose last attempt errored (`getFailedSourcesForProviders`)
 - `launchProcessSingleSource(providerId, sourceId)` — one source, same download / staging / swap steps
 - `launchClearAllData()` — cancel processing, set `Clearing`, wait for `ingestMutex`, then `EpgIndexer.clearAll()` and `EpgSourceDao.resetAllIngestionState()`
 - `setRefreshInterval(sourceId, hours)` — one guide source's auto-refresh interval (`-1` = off); the schedule follows by itself
 - `scheduleAutoRefresh(intervalHours)` (private) — one periodic `EpgSyncWorker` (unique work `epg_sync`, `ExistingPeriodicWorkPolicy.UPDATE`, needing a connected network) at the shortest interval among the enabled guide sources of every provider (`EpgRefreshSchedule.workIntervalHours`); no time of day. Cancelled when every source is off (or there are none)
-- `refreshOutdatedSources(providerId)` — submits the provider's sources due by their own interval (`EpgRefreshSchedule.isDue`) to `RefreshQueue` as `epg_auto_refresh`; called by `XtreamSessionManager` when the automatic guide source was added or rewritten
+- `refreshOutdatedSources(providerId)` — submits the provider's sources due by their own interval (`EpgRefreshSchedule.isDue`) to `RefreshQueue` as `epg_auto_refresh_<providerId>` (one id per provider, so a second provider's request is not dropped); called by `XtreamSessionManager` when the automatic guide source was added or rewritten
 - `processAllSources(sources)` — the pipeline run directly, without `RefreshQueue` or the task retries; used by `EpgSyncWorker`
 
 Each `launch*` call takes an `onCellularConfirm` callback: on a cellular network the EPG management screen asks before downloading.
@@ -170,7 +170,7 @@ Older builds also created `xtream://<providerId>` sources for an Xtream-API inge
 
 | Worker / receiver | Work | What it does |
 |---|---|---|
-| `EpgSyncWorker` | periodic, unique `epg_sync` (all devices) | Runs as a foreground service (`setForeground`, data-sync type on API 34+) so DNS keeps working in Doze. Waits up to 15 s for an active network. Runs at the shortest guide-source interval (see `scheduleAutoRefresh`), so with no guide source on, it doesn't run at all. Works on the sources Search the guide reads (`GuideScope.searchedProviders`: every source of the profile in use that can have channels — all but Jellyfin and SMB): first `ProviderRepository.sweepOrphanedCatalogData(onlyIfPending = false)` (never throws), then each provider's guide sources due by their own interval (`EpgRefreshSchedule.isDue`: never ingested, or older than half their interval; an off source only if never ingested) — or all their enabled sources with input `force=true` — one `EpgFileManager.processAllSources()` run per provider (a run reports on one provider), in turn, directly inside `doWork()`, not `RefreshQueue` and never a launched coroutine, so the wake lock covers download, ingest, swap and FTS rebuild. Retries (`BackoffPolicy.LINEAR`, 10 minutes; WorkManager's ~30 s default just keeps hammering a source that is rate-limiting) when every source of every run failed or the run threw, up to 5 times; a `CancellationException` propagates as a cancellation. |
+| `EpgSyncWorker` | periodic, unique `epg_sync` (all devices) | Runs as a foreground service (`setForeground`, data-sync type on API 34+) so DNS keeps working in Doze. Waits up to 15 s for an active network. Runs at the shortest guide-source interval (see `scheduleAutoRefresh`), so with no guide source on, it doesn't run at all. Works on the sources Search the guide reads (`GuideScope.searchedProviders`: every source of the profile in use that can have channels — all but Jellyfin and SMB): first `ProviderRepository.sweepOrphanedCatalogData(onlyIfPending = false)` (never throws), then each provider's guide sources due by their own interval (`EpgRefreshSchedule.isDue`: never ingested, or older than half their interval; an off source only if never ingested) — or all their enabled sources with input `force=true` — in one `EpgFileManager.processAllSources()` run over the distinct guide sources (`sourcesToRefresh`; a guide source that several providers read is in it one time), directly inside `doWork()`, not `RefreshQueue` and never a launched coroutine, so the wake lock covers download, ingest, swap and FTS rebuild. Retries (`BackoffPolicy.LINEAR`, 10 minutes; WorkManager's ~30 s default just keeps hammering a source that is rate-limiting) when every source of the run failed or the run threw, up to 5 times; a `CancellationException` propagates as a cancellation. |
 | `EpgFtsRebuildWorker` | one-shot, unique `epg_fts_rebuild` (`KEEP`) | Enqueued by `EpgFileManager.initialize()` when `fts_stale` was left set (the process died mid-rebuild). Foreground, like the sync worker; runs `rebuildFtsAndUpdateState()` then `incrementalVacuum()`; up to 3 retries. |
 | `EpgSyncDebugReceiver` | one-shot, unique `epg_sync_debug` (`REPLACE`) | Debug builds only (`core/network/src/debug`), guarded by `android.permission.DUMP` so only the adb shell can send it. Enqueues `EpgSyncWorker` with `force=true` and the same backoff. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` |
 
@@ -279,7 +279,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 **Filters (screen side):** "Matched only" (`filterMatchedOnly`) keeps airings matched to a stream on any of the searched sources. It is always on: its toggle was removed 2026-10-13 (`matchedOnly = true` in both screens) until a later change gives it a home. Opened from a TV Guide (GD5, `Screen.EpgBrowser(categoryId, categoryName, providerId)` — the guide's source), the ViewModel resolves that guide's channels on that source the way the guide does (`CategoryViewModel.virtualCategoryItems`, else `getItems`) into `contextChannels: GuideChannels` — their stream ids, and the same streams by the guide channel (`MediaRepository.matchGuideChannels`, xmltv id lowercased). Both screens then show an "In <category> only" toggle, on by default, applied after "Matched only" (`filterToStreams`): an airing is kept when its matched stream is one of the guide's, or when it is on one of the guide's guide channels — then it is pointed at the guide's own stream, so it shows and plays the channel the guide shows. Only airings of the guide's own source are kept (`GuideChannels.providerId`).
 
-**Header:** the freshness line, stale / never-run counts and the progress state cover the guide sources of every searched source (`EpgFileManager.stateFor(providerIds)`); Refresh stale refreshes them all in one task (`launchRefreshStale(providerIds)`, one run per provider). The paged now-playing list reads the same guide sources.
+**Header:** the freshness line, stale / never-run counts and the progress state cover the guide sources of every searched source (`EpgFileManager.stateFor(providerIds)`); Refresh stale refreshes them all in one run (`launchRefreshStale(providerIds)`, each guide source one time). The paged now-playing list reads the same guide sources.
 
 ### Search UI
 
@@ -318,7 +318,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 - `markIngested()` — records a successful ingest with stats and validators
 - `markUnchanged()` — records a confirmed-unchanged refresh (timestamp, error cleared)
 - `markError()` — records an error for a source
-- `getFailedSources(providerId)`, `getEnabledSourcesForProvider(providerId)` (stale sources are picked in `EpgFileManager.getStaleSources(providerId)` by each source's own interval)
+- `getFailedSources(providerId)`, `getEnabledSourcesForProvider(providerId)`, and for several providers, each guide source one time: `getEnabledSourcesForProviders(ids)`, `getFailedSourcesForProviders(ids)` (stale sources are picked in `EpgFileManager.getStaleSources(providerId)` by each source's own interval)
 
 ---
 

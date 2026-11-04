@@ -549,5 +549,7 @@ class AutoXmltvSourcesTest {
         override suspend fun getSourceCount() = rows.size
 
         override suspend fun resetAllIngestionState() = error("unused")
+
+        override suspend fun getFailedSourcesForProviders(providerIds: Collection<Long>) = error("unused")
     }
 }

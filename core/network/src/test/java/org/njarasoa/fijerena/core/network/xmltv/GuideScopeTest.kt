@@ -125,19 +125,28 @@ class GuideScopeTest {
     }
 
     @Test
-    fun `the worker refreshes the guide sources of every searched source, one run each`() =
+    fun `the worker refreshes the guide sources of every searched source in one run`() =
         runTest {
             val providerIds = GuideScope.searchedProviders(listOf(xtreamA, jellyfin, xtreamB)).map { it.id }
-            val runs = EpgSyncWorker.sourcesToRefresh(providerIds) { guides.getValue(it) }
+            val sources = EpgSyncWorker.sourcesToRefresh(providerIds) { guides.getValue(it) }
 
-            assertEquals(listOf(listOf(11L, 12L), listOf(21L)), runs.map { run -> run.map { it.id } })
+            assertEquals(listOf(11L, 12L, 21L), sources.map { it.id })
         }
 
     @Test
     fun `the worker skips a source with nothing to refresh`() =
         runTest {
-            val runs = EpgSyncWorker.sourcesToRefresh(listOf(1L, 2L)) { if (it == 1L) emptyList() else guides.getValue(it) }
+            val sources = EpgSyncWorker.sourcesToRefresh(listOf(1L, 2L)) { if (it == 1L) emptyList() else guides.getValue(it) }
 
-            assertEquals(listOf(listOf(21L)), runs.map { run -> run.map { it.id } })
+            assertEquals(listOf(21L), sources.map { it.id })
+        }
+
+    @Test
+    fun `the worker refreshes a guide source that two sources read one time`() =
+        runTest {
+            val shared = mapOf(1L to listOf(guide(11), guide(12)), 2L to listOf(guide(12), guide(21)))
+            val sources = EpgSyncWorker.sourcesToRefresh(listOf(1L, 2L)) { shared.getValue(it) }
+
+            assertEquals(listOf(11L, 12L, 21L), sources.map { it.id })
         }
 }
