@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261104192322
 
 - **Guide refresh shows the indexing step:** on Guide Sources, after a guide source is imported its card now shows "Indexing…" while the guide index takes the new data in. Before, the card showed nothing or "Waiting to refresh" during that step, which can take several minutes on a slow device, so the refresh looked stuck. Each card's statistics now have **Indexed in** next to **Downloaded in** and **Imported in**; it shows 0 until the next import. TV and phone.
 - **A waiting card says what it waits for:** a card whose refresh has not started yet now names the guide source being downloaded, imported or indexed: "Waiting for <name> to finish…". It says "Waiting to refresh…" when no guide source is in progress. TV and phone.
