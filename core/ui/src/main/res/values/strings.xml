@@ -148,6 +148,7 @@
     <string name="reminders_lead_desc">How long before the start a reminder rings, on this device</string>
     <string name="reminders_lead_at_start">At the start</string>
     <string name="reminders_next_game">Next: %1$s</string>
+    <string name="reminders_game_not_found">Couldn\'t find %1$s</string>
     <plurals name="reminders_team_games">
         <item quantity="one">%1$d coming game</item>
         <item quantity="other">%1$d coming games</item>

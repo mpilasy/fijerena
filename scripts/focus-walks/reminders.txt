@@ -1,0 +1,24 @@
+# The Reminders page (the Reminders page plan, RP-D10), TV emulator, Admin's Sports switch on, the
+# profile following at least one team, with two game reminders set (the bell on two games) and
+# "every game" on for one team. The rows' names and times change, so rows are unasserted; only the
+# fixed controls are.
+# Start: the Sports section, focus on the first followed logo.
+# Covers: Up → Find teams, Right → the Reminders bell, OK → the page on its first row; Right → Open
+# → Remove reminder; Left back to the row; Up from the first row → Reminder Time (its label is the
+# time chosen, so unasserted), Right → Clear all, Down → the first row; Back → the Sports section's
+# bell. It presses no Remove, Stop or Clear all, so the reminders stay: RemindersFocusTest covers
+# the focus after a removal.
+# Written 2026-11-04 from the focus tests; re-record with -r on the emulator before relying on it.
+UP	Find teams
+RIGHT	Reminders
+CENTER
+WAIT 2
+RIGHT	Open
+RIGHT	Remove reminder
+LEFT	Open
+LEFT
+UP
+RIGHT	Clear all
+DOWN
+RIGHT	Open
+BACK	Reminders

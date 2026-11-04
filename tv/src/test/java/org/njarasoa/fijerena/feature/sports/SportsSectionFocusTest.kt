@@ -49,9 +49,9 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The TV Sports section (the sports teams plan → Sports section): focus on the first followed
  * logo, Right along the logos, Down to the games (a game of a followed team in a followed league
- * once), Right to its bell, which sets the reminder; Up from the logos to Find teams and Down back;
- * OK on a game opens its sheet, whose bell is above its first channel. Nothing followed: Find teams
- * has focus.
+ * once), Right to its bell, which sets the reminder; Up from the logos to Find teams and Down back,
+ * Right from Find teams to Reminders; OK on a game opens its sheet, whose bell is above its first
+ * channel. Nothing followed: Find teams has focus, Reminders above it.
  */
 @RunWith(RobolectricTestRunner::class)
 class SportsSectionFocusTest {
@@ -120,6 +120,7 @@ class SportsSectionFocusTest {
         bells: FakeBells = FakeBells(),
         onFindTeams: () -> Unit = {},
         played: MutableList<Screen.CategoryList> = mutableListOf(),
+        onReminders: () -> Unit = {},
     ) {
         val vm = SportsSectionViewModel(FakeData(follows), now = { NOW_MS }).also { created += it }
         rule.setContent {
@@ -130,6 +131,7 @@ class SportsSectionFocusTest {
                         onLeagueSelected = {},
                         onFindTeams = onFindTeams,
                         onPlay = { played += it },
+                        onReminders = onReminders,
                         viewModel = vm,
                     )
                 }
@@ -184,11 +186,14 @@ class SportsSectionFocusTest {
     }
 
     @Test
-    fun `Right from Find teams goes nowhere, not to a game's bell`() {
-        setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)))
+    fun `Right from Find teams goes to Reminders and no further, not to a game's bell`() {
+        var reminders = 0
+        setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)), onReminders = { reminders++ })
 
         walk.awaitFocused("A / Arsenal")
-        walk.run(up("Find teams"), right("Find teams"), down("A / Arsenal"))
+        walk.run(up("Find teams"), right("Reminders"), right("Reminders"), down("A / Arsenal"), up("Find teams"), right("Reminders"))
+        walk.press(Key.DirectionCenter)
+        assertEquals(1, reminders)
     }
 
     @Test
@@ -243,6 +248,7 @@ class SportsSectionFocusTest {
         setSection(FollowedSports.Followed(), onFindTeams = { searches++ })
 
         walk.awaitFocused("Find teams")
+        walk.run(up("Reminders"), down("Find teams"))
         walk.press(Key.DirectionCenter)
         assertEquals(1, searches)
     }

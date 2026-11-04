@@ -55,34 +55,58 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * The TV game reminder banner's keys (the sports teams plan → Reminders; the Nerd role plan → R).
  * The banner never takes focus: the control under it keeps focus, so it is still focused when the
  * banner closes. While the banner shows, the remote's keys go to it ([reminderBannerKeys], on the
- * screen's content): Left and Right choose Watch or Dismiss (Watch first, Dismiss without a
- * channel), OK acts on the choice, Back closes the banner, and no other key reaches the screen
- * (volume keys still work). The banner goes by itself after [CinemaAnimation.reminderBannerDismissMs].
+ * screen's content): Left and Right choose Watch, Dismiss or Manage reminders, in that order (Watch
+ * first, Dismiss without a channel), OK acts on the choice, Back closes the banner, and no other
+ * key reaches the screen (volume keys still work). The banner goes by itself after
+ * [CinemaAnimation.reminderBannerDismissMs].
  */
 @Stable
 class ReminderBannerState {
+    /** The banner's buttons, in their order on screen. */
+    internal enum class Choice { WATCH, DISMISS, MANAGE }
+
     /** The reminder on screen, which has the keys; null while none shows or a Dialog window is on top. */
     internal var shown: GameReminderAlert? = null
 
-    /** Watch is chosen, else Dismiss; without a channel Dismiss is the only choice. */
-    internal var watchChosen by mutableStateOf(true)
+    /** The chosen button; Watch at first, which a reminder without a channel reads as Dismiss ([chosen]). */
+    private var choice by mutableStateOf(Choice.WATCH)
 
     internal var onWatch: (GameReminderAlert) -> Unit = {}
+
+    internal var onManage: (GameReminderAlert) -> Unit = {}
 
     /** The key that went down while the banner showed: its key up acts, never one from before. */
     private var down: Key? = null
 
+    /** [alert]'s buttons: Watch only with a channel. */
+    private fun choices(alert: GameReminderAlert): List<Choice> = Choice.entries.filter { it != Choice.WATCH || alert.channel != null }
+
+    internal fun chosen(alert: GameReminderAlert): Choice = choice.takeIf { it in choices(alert) } ?: Choice.DISMISS
+
     internal fun close(alert: GameReminderAlert) {
         shown = null
-        watchChosen = true
+        choice = Choice.WATCH
         down = null
         GameReminderAlerts.dismissBanner(alert)
     }
 
     internal fun act(alert: GameReminderAlert) {
-        val watch = watchChosen && alert.channel != null
+        val acted = chosen(alert)
         close(alert)
-        if (watch) onWatch(alert)
+        when (acted) {
+            Choice.WATCH -> onWatch(alert)
+            Choice.MANAGE -> onManage(alert)
+            Choice.DISMISS -> Unit
+        }
+    }
+
+    /** Moves the choice [step] buttons along, stopping at the first and the last. */
+    private fun move(
+        alert: GameReminderAlert,
+        step: Int,
+    ) {
+        val all = choices(alert)
+        choice = all[(all.indexOf(chosen(alert)) + step).coerceIn(0, all.lastIndex)]
     }
 
     /** Takes [event] while a reminder shows; volume keys go on to the system. */
@@ -92,8 +116,8 @@ class ReminderBannerState {
         if (event.type == KeyEventType.KeyDown) {
             down = event.key
             when (event.key) {
-                Key.DirectionLeft -> watchChosen = true
-                Key.DirectionRight -> watchChosen = false
+                Key.DirectionLeft -> move(alert, -1)
+                Key.DirectionRight -> move(alert, 1)
             }
         } else if (event.type == KeyEventType.KeyUp && event.key == down) {
             down = null
@@ -117,7 +141,8 @@ fun Modifier.reminderBannerKeys(state: ReminderBannerState): Modifier = onPrevie
 
 /**
  * The reminder that rang while the TV app is on screen ([GameReminderAlerts.banner]): "Arsenal v
- * Chelsea starts at 20:00", the best channel, and Watch (only with a channel) and Dismiss. Place it
+ * Chelsea starts at 20:00", the best channel, and Watch (only with a channel), Dismiss and Manage
+ * reminders ([onManage], the Reminders page; the banner closes). Place it
  * at the top centre, after the content, so it draws over it. While composed and the app is started,
  * it counts as the banner host, so reminders show here instead of as notifications. See
  * [ReminderBannerState] for its keys.
@@ -127,6 +152,7 @@ fun TvGameReminderBanner(
     state: ReminderBannerState,
     onWatch: (GameReminderAlert) -> Unit,
     modifier: Modifier = Modifier,
+    onManage: (GameReminderAlert) -> Unit = {},
 ) {
     LifecycleStartEffect(Unit) {
         GameReminderAlerts.bannerHostStarted()
@@ -139,6 +165,7 @@ fun TvGameReminderBanner(
     SideEffect {
         state.shown = alert?.takeIf { windowFocused }
         state.onWatch = onWatch
+        state.onManage = onManage
     }
     val current = alert ?: return
     val context = LocalContext.current
@@ -149,7 +176,7 @@ fun TvGameReminderBanner(
         state.close(current)
     }
     if (!windowFocused) return
-    val watchChosen = hasChannel && state.watchChosen
+    val chosen = state.chosen(current)
 
     val shape = cornerShape(CornerRadius.medium)
     Row(
@@ -188,15 +215,24 @@ fun TvGameReminderBanner(
                     onWatch(current)
                 },
                 text = stringResource(R.string.epg_browser_watch_now_btn),
-                modifier = Modifier.reminderChoice(watchChosen),
-                highlighted = watchChosen,
+                modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.WATCH),
+                highlighted = chosen == ReminderBannerState.Choice.WATCH,
             )
         }
         CinemaSecondaryButton(
             onClick = { state.close(current) },
             text = stringResource(R.string.game_reminder_dismiss),
-            modifier = Modifier.reminderChoice(!watchChosen),
-            highlighted = !watchChosen,
+            modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.DISMISS),
+            highlighted = chosen == ReminderBannerState.Choice.DISMISS,
+        )
+        CinemaSecondaryButton(
+            onClick = {
+                state.close(current)
+                onManage(current)
+            },
+            text = stringResource(R.string.reminders_manage),
+            modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.MANAGE),
+            highlighted = chosen == ReminderBannerState.Choice.MANAGE,
         )
     }
 }
