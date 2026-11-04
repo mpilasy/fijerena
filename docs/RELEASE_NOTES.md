@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261104035358
 
 - **A changed guide offset applies at once:** saving a new offset in Edit Guide Source now moves that source's programme times in the guide, TV Guide and Search at once, without a download. Before, the new offset applied only when the file changed on the server, as a refresh skips an unchanged file. The same happens on your other devices when live sync brings the change. When the times cannot be moved (a file whose times have more than one offset, or the first change after this update on a source with offset 0), the source is downloaded and imported again at once. Turning a guide source on or off, or saving it, no longer puts back older statistics when an import finished meanwhile. TV and phone.
 
