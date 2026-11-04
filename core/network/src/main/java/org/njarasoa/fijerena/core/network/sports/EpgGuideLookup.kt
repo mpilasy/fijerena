@@ -92,16 +92,21 @@ class EpgGuideLookup(
         fromSec: Long,
         toSec: Long,
     ): List<GuideProgramme> =
-        filter { it.startEpoch in fromSec..toSec }.map { row ->
-            GuideProgramme(
-                providerId = scope.providerIdBySourceId[row.sourceId] ?: 0L,
-                channelId = row.channelId,
-                channelName = row.channelDisplayName,
-                title = row.title,
-                description = row.description,
-                category = row.category,
-                startSec = row.startEpoch,
-                endSec = row.endEpoch,
-            )
+        // A guide source read by several sources gives one programme per source, each matched on
+        // that source's channels.
+        filter { it.startEpoch in fromSec..toSec }.flatMap { row ->
+            scope.providerIdsOf(row.sourceId).ifEmpty { listOf(0L) }.map { providerId -> row.toProgramme(providerId) }
         }
+
+    private fun EpgSearchResultRow.toProgramme(providerId: Long): GuideProgramme =
+        GuideProgramme(
+            providerId = providerId,
+            channelId = channelId,
+            channelName = channelDisplayName,
+            title = title,
+            description = description,
+            category = category,
+            startSec = startEpoch,
+            endSec = endEpoch,
+        )
 }

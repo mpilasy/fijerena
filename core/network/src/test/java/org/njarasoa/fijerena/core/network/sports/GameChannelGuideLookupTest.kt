@@ -24,8 +24,8 @@ class GameChannelGuideLookupTest {
     private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var db: EpgIndexDatabase
 
-    // Guide source 11 belongs to source 1; guide source 99 is not in the profile.
-    private val scope = GuideScope(emptyList(), mapOf(11L to 1L))
+    // Guide source 11 is read by source 1; guide source 99 is not in the profile.
+    private val scope = GuideScope(emptyList(), mapOf(11L to listOf(1L)))
 
     @Before
     fun setup() {
@@ -86,6 +86,17 @@ class GameChannelGuideLookupTest {
             assertEquals(listOf("Paris FC / Paris-SG", "Live: Ligue 1 – PSG / OM"), found.map { it.title })
             assertEquals(listOf(1L, 1L), found.map { it.providerId })
             assertEquals("DAZN 1", found[1].channelName)
+        }
+
+    @Test
+    fun `a guide source read by two sources gives one programme per source`() =
+        runBlocking {
+            val lookup = EpgGuideLookup(db.epgIndexDao(), GuideScope(emptyList(), mapOf(11L to listOf(1L, 2L))))
+            val found = lookup.searchTitles(listOf("OM"), from, to)
+            assertEquals(
+                listOf("Live: Ligue 1 – PSG / OM" to 1L, "Live: Ligue 1 – PSG / OM" to 2L),
+                found.map { it.title to it.providerId },
+            )
         }
 
     @Test

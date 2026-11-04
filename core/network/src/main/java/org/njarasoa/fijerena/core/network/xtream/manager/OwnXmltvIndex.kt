@@ -26,11 +26,12 @@ class OwnXmltvIndex(
     ): Set<PanelGuideTimes.Listing>? {
         val settings = SettingsDatabase.getInstance(context)
         val provider = settings.providerDao().getProviderById(providerId) ?: return null
+        val sourceDao = settings.epgSourceDao()
+        // The automatic guide has one link: this source.
         val sourceIds =
-            settings
-                .epgSourceDao()
+            sourceDao
                 .getEnabledSourcesForProvider(providerId)
-                .filter { AutoXmltvSources.isAutoXmltvSource(it, provider.url) }
+                .filter { AutoXmltvSources.isAutoXmltvSource(it, provider.url) && sourceDao.getProviderIds(it.id) == listOf(providerId) }
                 .map { it.id }
         if (sourceIds.isEmpty()) return null
         val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
