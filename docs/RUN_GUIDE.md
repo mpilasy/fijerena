@@ -415,7 +415,11 @@ receivers: `GameReminderReceiver` (the alarm, not exported) and `GameReminderRes
 (boot, app update, clock and time zone changes, exact-alarm permission changes), which is off in the
 manifest and turned on only while a reminder is stored, so the app is not started at every boot for
 nothing. On TV, a reminder shows as a banner at the top while the app is on screen, else as a
-notification (in the notification panel only).
+notification (in the notification panel only). On the phone, the notification also has the action
+**Manage reminders**: it opens the app (the launch intent with the extra
+`org.njarasoa.fijerena.reminder.MANAGE_PROFILE_ID`) on the Reminders page of that profile, and
+removes the notification (`GameReminderNotifications.handleLaunchIntent`). The TV notification has
+no such action.
 
 ```bash
 # The app's alarms (one per reminder; the intent data is fijerena-reminder://game/<profile>/<source>/<game>).
