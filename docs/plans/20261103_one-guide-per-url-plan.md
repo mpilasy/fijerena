@@ -1,6 +1,6 @@
 # One guide source per URL
 
-**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lanes G (5e3d5832e), R (3f745fbaa) and U (5fd079aca) done; Lane S in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
+**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); all lanes done (G 5e3d5832e, R 3f745fbaa, S ba769d91f, U 5fd079aca) and merged; Phase W (walks) next. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
 v19 offset work (`EpgOffsetShift`, `MIGRATION_18_19`) that Phase 1 builds on is committed (cff8ff566).
 
 ## Goal
@@ -427,6 +427,6 @@ t4  Phase W (lead) emulator walks, docs, release notes
 | 1 | Done 2026-11-04: schema v20, `MIGRATION_19_20` (`GuideMerge`, `GuideUrls`), link and alias tables, link triggers, `EpgIndexer.purgeOrphanedSources` startup step, automatic guides and source deletion on links; callers keep their behaviour (first link) | 0fe83452b |
 | R | Done 2026-11-04: `_refreshProviderIds` set claimed from the run's links (`isRunFor`), one stale / failed run over the distinct guides (`getFailedSourcesForProviders`), `EpgSyncWorker` one run; auto-refresh task id per source so a second source's request is not dropped | 3f745fbaa |
 | G | Done 2026-11-04: `GuideScope.providerIdsBySourceId`, `GuideAiringMatcher.matchAll` / `isShown` (hidden per source), one airing per matching source in Search the Guide, sports lookup fan-out, `OwnXmltvIndex` single link | 5e3d5832e |
-| S | In progress | none |
+| S | Done 2026-11-04: `providerKeys` in the record, applier target order (guide key, alias, own guide, same URL, new) with first-sync adoption and union, alias tombstones on local delete and unlink, export one entry per guide with `providers`, import merges by URL. An older build's record adds its source and keeps the other links (replacing them would unlink every other source) | ba769d91f |
 | U | Done 2026-11-04: `GuideCard` / `GuidePage`, one card per guide with "Used for", Sources Without a Guide Source rows with Add, Use for on Add and Edit, Add to an existing URL links it, delete names the sources; TV entry focus on the first card or the Add row | 5fd079aca |
-| W | Not started | none |
+| W | In progress: full suite, lint and gates pass on main (79f21f492); emulator walks next | none |
