@@ -318,7 +318,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 - `markIngested()` — records a successful ingest with stats and validators
 - `markUnchanged()` — records a confirmed-unchanged refresh (timestamp, error cleared)
 - `markError()` — records an error for a source
-- `getFailedSources(providerId)`, `getEnabledSourcesForProvider(providerId)`, and for several providers, each guide source one time: `getEnabledSourcesForProviders(ids)`, `getFailedSourcesForProviders(ids)` (stale sources are picked in `EpgFileManager.getStaleSources(providerId)` by each source's own interval)
+- `getEnabledSourcesForProvider(providerId)`, and for several providers, each guide source one time: `getEnabledSourcesForProviders(ids)`, `getFailedSourcesForProviders(ids)` (stale sources are picked in `EpgFileManager.getStaleSources(providerId)` by each source's own interval)
 
 ---
 

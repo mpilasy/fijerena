@@ -537,8 +537,6 @@ class AutoXmltvSourcesTest {
             failedAtMs: Long,
         ) = error("unused")
 
-        override suspend fun getFailedSources(providerId: Long) = error("unused")
-
         override suspend fun setRefreshInterval(
             id: Long,
             hours: Int,

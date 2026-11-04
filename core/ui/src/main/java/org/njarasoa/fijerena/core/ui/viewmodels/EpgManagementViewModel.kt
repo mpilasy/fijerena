@@ -448,7 +448,8 @@ class EpgManagementViewModel(
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
             val sourcesToRefresh =
                 withContext(Dispatchers.IO) {
-                    providerIds.flatMap { settingsDb().epgSourceDao().getEnabledSourcesForProvider(it) }
+                    // Each guide source once, however many of the sources read it.
+                    settingsDb().epgSourceDao().getEnabledSourcesForProviders(providerIds)
                 }.filter { EpgRefreshSchedule.isStale(it, now, unsetHours) && !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
@@ -478,7 +479,7 @@ class EpgManagementViewModel(
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launchGuarded
             }
-            val sources = withContext(Dispatchers.IO) { providerIds.flatMap { settingsDb().epgSourceDao().getFailedSources(it) } }
+            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSourcesForProviders(providerIds) }
             if (sources.isEmpty()) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
                 return@launchGuarded

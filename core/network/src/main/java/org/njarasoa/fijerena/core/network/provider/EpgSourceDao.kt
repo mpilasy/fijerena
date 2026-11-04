@@ -214,12 +214,6 @@ interface EpgSourceDao {
         failedAtMs: Long = System.currentTimeMillis(),
     )
 
-    @Query(
-        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
-            "WHERE s.enabled = 1 AND l.provider_id = :providerId AND s.last_error IS NOT NULL ORDER BY s.added_at_ms ASC",
-    )
-    suspend fun getFailedSources(providerId: Long): List<EpgSourceEntity>
-
     @Query("UPDATE epg_source SET refresh_interval_hours = :hours WHERE id = :id")
     suspend fun setRefreshInterval(
         id: Long,
