@@ -235,6 +235,11 @@
     <string name="epg_source_none">Aucun</string>
     <string name="epg_add_source_title">Ajouter une source de guide</string>
     <string name="epg_use_for_label">Utiliser pour</string>
+    <string name="epg_source_used_for">Utilisée pour : %1$s</string>
+    <string name="epg_sources_without_guide_title">Sources sans source de guide</string>
+    <string name="epg_source_already_added_for">Déjà une source de guide : ajoutée pour %1$s</string>
+    <string name="epg_source_already_used_for">Déjà une source de guide pour %1$s</string>
+    <string name="epg_delete_shared_source_confirm_message">Supprimer « %1$s » pour toutes les sources qui l’utilisent (%2$s) ? Ses données de guide seront effacées.</string>
     <string name="epg_edit_source_title">Modifier la source de guide</string>
     <string name="epg_xmltv_url_label">Lien du guide (XMLTV)</string>
     <string name="epg_label_optional">Étiquette (facultatif)</string>

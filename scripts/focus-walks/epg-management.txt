@@ -1,12 +1,13 @@
 # T6 — Guide Sources (TvEpgManagementScreen), TV emulator, opened on source panel-b (Xtream; on
 # the emulator it has one guide source, a weekly "Bulk" one; iptv has none, so it cannot be used).
 # Start: Settings → Sources & guide → Manage sources → OK on panel-b's row (Edit Source) → Guide
-# sources; title "Guide Sources". Since 2026-10-24 the page shows every source's guide sources,
-# under a header with each source's name; opened from Edit Source, focus is in panel-b's group.
-# The title row has one button, Add guide source (an icon action, its label on focus; consistency
-# round 2, finding 23); Refresh stale / Retry failed sit above the groups only when there is one.
-# Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
-# source it is "Add guide source" under "No guide sources configured.". No System Status or
+# sources; title "Guide Sources". The page shows one card for each guide source,
+# with a "Used for: …" line, then "Sources Without a Guide Source" with an Add for each such source
+# (the one guide source per URL plan); opened from Edit Source, focus is on the first card panel-b
+# uses. The title row has one button, Add guide source (an icon action, its label on focus;
+# consistency round 2, finding 23); Refresh stale / Retry failed sit above the cards only when there
+# is one. Entry focus is that card's on/off switch ("Use this guide"); when panel-b uses no guide
+# source it is panel-b's "Add guide source" under "Sources Without a Guide Source". No System Status or
 # Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /
 # Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
 # the third its auto-refresh ("Refreshes daily", "Auto-refresh off").

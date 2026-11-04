@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -34,6 +35,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
+import org.njarasoa.fijerena.core.network.xmltv.GuideUrls
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -54,13 +56,27 @@ class EpgManagementViewModel(
     private val appSettings = AppSettings(context)
 
     /**
-     * One group of the Guide Sources page: a source that can have channels and its guide sources
-     * (the one guide sources page plan). [usedByProfile]: the profile in use has the source.
+     * One card of the Guide Sources page: a guide source, shown once (the one guide source per URL
+     * plan, OG-D11). [usedBy]: the sources that read it, in the Sources list's order.
+     * [ownGuideOf]: the Xtream source whose own guide it is (`<host> (Bulk)`), else null.
+     * [usedByProfile]: one of [usedBy] is a source of the profile in use.
      */
-    data class GuideGroup(
-        val provider: ProviderEntity,
+    data class GuideCard(
+        val source: EpgSourceEntity,
+        val usedBy: List<ProviderEntity>,
+        val ownGuideOf: ProviderEntity?,
         val usedByProfile: Boolean,
-        val sources: List<EpgSourceEntity>,
+    )
+
+    /**
+     * The Guide Sources page: its [cards], then the [sourcesWithoutGuide] (the sources with channels
+     * that read no guide source). [providers]: every source with channels, in the Sources list's
+     * order, the "Use for" list of Add and Edit.
+     */
+    data class GuidePage(
+        val cards: List<GuideCard>,
+        val sourcesWithoutGuide: List<ProviderEntity>,
+        val providers: List<ProviderEntity>,
     )
 
     /** Every source on the device that can have channels, not only the profile's (GS-D2), in the Sources list's order. */
@@ -77,24 +93,24 @@ class EpgManagementViewModel(
     // Generation counter for index DB
     private val _dbGeneration = MutableStateFlow(0)
 
-    val groups: Flow<List<GuideGroup>> =
+    val page: Flow<GuidePage> =
         combine(
             guideProviders,
             providerRepository.profileSources(appSettings.activeProfileId),
             settingsDb().epgSourceDao().getAllSources(),
             settingsDb().epgSourceDao().getAllLinks(),
         ) { providers, profileSources, all, links ->
-            val inProfile = profileSources.mapTo(HashSet()) { it.id }
-            val byId = all.associateBy { it.id }
-            // A guide source several sources read shows in each of their groups for now (the one
-            // guide source per URL plan, Phase 1; Lane U shows it once).
-            val byProvider = links.groupBy({ it.providerId }) { byId[it.sourceId] }.mapValues { (_, list) -> list.filterNotNull() }
-            providers.map { GuideGroup(it, it.id in inProfile, byProvider[it.id].orEmpty().sortedBy { s -> s.addedAtMs }) }
+            buildPage(providers, profileSources.mapTo(HashSet()) { it.id }, all, links)
         }.distinctUntilChanged()
 
-    /** Every guide source on the page, group after group. */
+    /** Every guide source on the page, each once. */
+    val cards: Flow<List<GuideCard>> = page.map { it.cards }.distinctUntilChanged()
+
+    val sourcesWithoutGuide: Flow<List<ProviderEntity>> = page.map { it.sourcesWithoutGuide }.distinctUntilChanged()
+
+    /** Every guide source on the page, card after card. */
     val sources: Flow<List<EpgSourceEntity>> =
-        groups.map { list -> list.flatMap { it.sources } }.distinctUntilChanged()
+        cards.map { list -> list.map { it.source } }.distinctUntilChanged()
 
     val staleSourceCount: StateFlow<Int> =
         sources
@@ -165,20 +181,19 @@ class EpgManagementViewModel(
      * does; any other guide source is turned on or off by itself.
      */
     fun setSourceEnabled(
-        source: EpgSourceEntity,
+        card: GuideCard,
         enabled: Boolean,
     ) {
         viewModelScope.launchGuarded("EpgManagementViewModel.setSourceEnabled") {
             withContext(Dispatchers.IO) {
-                val repository = ProviderRepository(context)
-                val provider = repository.guideProviderIds(source.id).singleOrNull()?.let { repository.getProviderById(it) }
-                if (provider != null && AutoXmltvSources.isAutoXmltvSource(source, provider.url)) {
-                    repository.setProvidesGuide(provider.id, enabled, byUser = true)
-                    AutoXmltvSources.reconcileStored(context, provider.id)
+                val owner = card.ownGuideOf
+                if (owner != null) {
+                    providerRepository.setProvidesGuide(owner.id, enabled, byUser = true)
+                    AutoXmltvSources.reconcileStored(context, owner.id)
                 } else {
                     // On the row as it is now: the page's copy can be older than an import since.
                     val dao = settingsDb().epgSourceDao()
-                    dao.getSourceById(source.id)?.let { dao.updateSource(it.copy(enabled = enabled)) }
+                    dao.getSourceById(card.source.id)?.let { dao.updateSource(it.copy(enabled = enabled)) }
                 }
             }
         }
@@ -280,7 +295,11 @@ class EpgManagementViewModel(
             indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
         }
 
-    /** Adds the guide source to each of [providerIds] (GS-D1); a source that already has the URL is skipped. */
+    /**
+     * Adds one guide source for each URL, read by [providerIds] (OG-D11). When a hand-added guide
+     * source has the same URL ([GuideUrls.matchKey]), the sources are linked to it and its label,
+     * offset and interval stay (OG-Q4); a message names the sources added.
+     */
     fun addSource(
         url: String,
         label: String,
@@ -296,38 +315,78 @@ class EpgManagementViewModel(
                         .split("\n", ",", " ")
                         .map { it.trim() }
                         .filter { it.startsWith("http://") || it.startsWith("https://") }
+                val wanted = providerIds.distinct()
+                if (wanted.isEmpty()) return@withContext
 
                 val dao = settingsDb().epgSourceDao()
-                for (providerId in providerIds) {
-                    for (u in urls) {
-                        if (dao.getSourcesForProviderOnce(providerId).any { it.url == u }) continue
-                        val finalLabel =
-                            if (urls.size == 1) {
-                                label.ifBlank { EpgFileManager.extractLabel(u) }
+                for (u in urls) {
+                    val existing = handAddedGuideAt(u)
+                    if (existing != null) {
+                        val current = dao.getProviderIds(existing.id)
+                        val added = wanted.filter { it !in current }
+                        if (added.isNotEmpty()) dao.setLinks(existing.id, current + added)
+                        _userMessage.tryEmit(
+                            if (added.isNotEmpty()) {
+                                UiText.StringResource(R.string.epg_source_already_added_for, sourceNames(added))
                             } else {
-                                EpgFileManager.extractLabel(u)
-                            }
-                        dao.insertGuide(
-                            EpgSourceEntity(
-                                url = u,
-                                label = finalLabel,
-                                timezoneOffsetHours = timezoneOffsetHours,
-                                ingestMethod = ingestMethod,
-                                enabled = enabled,
-                            ),
-                            listOf(providerId),
+                                UiText.StringResource(R.string.epg_source_already_used_for, sourceNames(current))
+                            },
                         )
+                        continue
                     }
+                    val finalLabel =
+                        if (urls.size == 1) {
+                            label.ifBlank { EpgFileManager.extractLabel(u) }
+                        } else {
+                            EpgFileManager.extractLabel(u)
+                        }
+                    dao.insertGuide(
+                        EpgSourceEntity(
+                            url = u,
+                            label = finalLabel,
+                            timezoneOffsetHours = timezoneOffsetHours,
+                            ingestMethod = ingestMethod,
+                            enabled = enabled,
+                        ),
+                        wanted,
+                    )
                 }
             }
         }
     }
 
+    /** The hand-added guide source whose URL is [url] ([GuideUrls.matchKey]); a source's own guide never matches (OG-D3). */
+    private suspend fun handAddedGuideAt(url: String): EpgSourceEntity? {
+        val key = GuideUrls.matchKey(url)
+        return settingsDb()
+            .epgSourceDao()
+            .getAllSourcesOnce()
+            .firstOrNull { GuideUrls.matchKey(it.url) == key && ownGuideOf(it) == null }
+    }
+
+    /** The Xtream source whose own guide [source] is, from its only link; null for a hand-added guide source. */
+    private suspend fun ownGuideOf(source: EpgSourceEntity): ProviderEntity? =
+        settingsDb()
+            .epgSourceDao()
+            .getProviderIds(source.id)
+            .singleOrNull()
+            ?.let { providerRepository.getProviderById(it) }
+            ?.takeIf { AutoXmltvSources.isAutoXmltvSource(source, it.url) }
+
+    /** The names of [providerIds], joined: "A, B". */
+    private suspend fun sourceNames(providerIds: List<Long>): String =
+        providerIds.mapNotNull { providerRepository.getProviderById(it)?.name }.joinToString(", ")
+
     /**
      * Saves [source]. A changed offset moves the times already in the guide index at once; when it
-     * cannot ([EpgOffsetShift.Result.NEEDS_IMPORT]), the source is imported again now.
+     * cannot ([EpgOffsetShift.Result.NEEDS_IMPORT]), the source is imported again now. A
+     * hand-added guide source is then read by exactly [providerIds] ("Use for"); empty keeps its
+     * sources, and a source's own guide keeps its one source (OG-D3).
      */
-    fun updateSource(source: EpgSourceEntity) {
+    fun updateSource(
+        source: EpgSourceEntity,
+        providerIds: Collection<Long> = emptyList(),
+    ) {
         viewModelScope.launchGuarded("EpgManagementViewModel.updateSource") {
             val dao = settingsDb().epgSourceDao()
             // Only the fields the dialog edits, on the row as it is now: the page's copy can be
@@ -343,6 +402,7 @@ class EpgManagementViewModel(
                         enabled = source.enabled,
                     ),
                 )
+                if (providerIds.isNotEmpty() && ownGuideOf(current) == null) dao.setLinks(source.id, providerIds)
             }
             when (EpgOffsetShift.reconcile(source.id, dao, indexer)) {
                 EpgOffsetShift.Result.SHIFTED -> {
@@ -361,10 +421,11 @@ class EpgManagementViewModel(
         }
     }
 
+    /** Deletes guide source [id] for every source that reads it (OG-Q8), with its guide data. */
     fun deleteSource(id: Long) {
         viewModelScope.launchGuarded("EpgManagementViewModel.deleteSource") {
             withContext(Dispatchers.IO) {
-                settingsDb().epgSourceDao().deleteSource(id)
+                settingsDb().epgSourceDao().deleteGuide(id)
                 // Also delete its transient data from the index (manual cascade)
                 indexDb().epgIndexDao().deleteBySourceId(id)
                 refreshDbStats()
@@ -537,6 +598,34 @@ class EpgManagementViewModel(
 
     companion object {
         private const val DAILY_HOURS = 24
+
+        /**
+         * The page from every source with channels ([providers], in the Sources list's order), the
+         * profile's sources ([inProfile]) and every guide source with its [links]. A guide source
+         * that no source in [providers] reads is left out (Shrink Database deletes it). Cards are in
+         * the order of their first source in the Sources list, then in the order they were added.
+         */
+        fun buildPage(
+            providers: List<ProviderEntity>,
+            inProfile: Set<Long>,
+            all: List<EpgSourceEntity>,
+            links: List<EpgSourceProviderEntity>,
+        ): GuidePage {
+            val place = providers.withIndex().associate { (i, provider) -> provider.id to i }
+            val linksOf = links.groupBy({ it.sourceId }) { it.providerId }
+            val cards =
+                all
+                    .mapNotNull { source ->
+                        val linked = linksOf[source.id].orEmpty()
+                        val usedBy = providers.filter { it.id in linked }
+                        val owner =
+                            usedBy.singleOrNull()?.takeIf { linked.size == 1 && AutoXmltvSources.isAutoXmltvSource(source, it.url) }
+                        usedBy.firstOrNull()?.let { GuideCard(source, usedBy, owner, usedBy.any { it.id in inProfile }) }
+                    }.sortedWith(compareBy({ place.getValue(it.usedBy.first().id) }, { it.source.addedAtMs }))
+            val linkedIds = links.mapTo(HashSet()) { it.providerId }
+            return GuidePage(cards, providers.filter { it.id !in linkedIds }, providers)
+        }
+
         private const val WEEKLY_HOURS = 168
 
         /** A guide source's auto-refresh choices (D2): off, every 6 h, 12 h, daily, weekly. */

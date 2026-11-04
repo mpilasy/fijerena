@@ -235,6 +235,11 @@
     <string name="epg_source_none">None</string>
     <string name="epg_add_source_title">Add Guide Source</string>
     <string name="epg_use_for_label">Use for</string>
+    <string name="epg_source_used_for">Used for: %1$s</string>
+    <string name="epg_sources_without_guide_title">Sources Without a Guide Source</string>
+    <string name="epg_source_already_added_for">Already a guide source: added for %1$s</string>
+    <string name="epg_source_already_used_for">Already a guide source for %1$s</string>
+    <string name="epg_delete_shared_source_confirm_message">Delete \"%1$s\" for every source that uses it (%2$s)? Its guide data will be deleted.</string>
     <string name="epg_edit_source_title">Edit Guide Source</string>
     <string name="epg_xmltv_url_label">Guide link (XMLTV)</string>
     <string name="epg_label_optional">Label (optional)</string>
