@@ -101,9 +101,10 @@ private data class FollowedItem(
  *
  * Focus: the first logo on opening, and whenever focus comes in from outside (Right from the rail
  * before the follows were read); Down to the games, Up from the games to the logo last focused (the
- * first one at first), Up from the logos to the header's Find Teams, which Right leaves alone; Left
- * from the first logo, a game row or Find Teams opens the rail. Back from a page, a channel or Search
- * returns to the control that opened it; Back on the section goes to the rail (the nav host).
+ * first one at first), Up from the logos to the header's Find Teams, Right from it to the Reminders
+ * bell ([onReminders]), which Right leaves alone; Left from the first logo, a game row or Find Teams
+ * opens the rail. Back from a page, a channel, Search or Reminders returns to the control that
+ * opened it; Back on the section goes to the rail (the nav host).
  */
 @Composable
 fun SportsSectionScreen(
@@ -111,6 +112,7 @@ fun SportsSectionScreen(
     onLeagueSelected: (Screen.SportsLeague) -> Unit,
     onFindTeams: () -> Unit,
     onPlay: (Screen.CategoryList) -> Unit,
+    onReminders: () -> Unit = {},
     viewModel: SportsSectionViewModel =
         viewModel(key = "sports_section", factory = SportsSectionViewModel.Factory(LocalContext.current)),
 ) {
@@ -189,21 +191,33 @@ fun SportsSectionScreen(
         ) {
             item(key = "header") {
                 TvScreenHeader(title = stringResource(R.string.sports_title)) {
-                    if (!items.isNullOrEmpty()) {
+                    val followsSome = !items.isNullOrEmpty()
+                    if (followsSome) {
                         TvIconAction(
                             onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
                             icon = CinemaIcons.Search,
                             label = stringResource(R.string.sports_find_teams),
-                            // Down: the first logo, not a game's bell under the header's end; Right: nothing (no bell).
+                            // Down: the first logo, not a game's bell under the header's end.
                             modifier =
                                 Modifier
                                     .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
-                                    .focusProperties {
-                                        down = firstItemFocus
-                                        right = FocusRequester.Cancel
-                                    },
+                                    .focusProperties { down = firstItemFocus },
                         )
                     }
+                    // The Reminders page, also with nothing followed (a programme's reminder).
+                    TvIconAction(
+                        onClick = { leave(RETURN_REMINDERS, onReminders) },
+                        icon = CinemaIcons.Bell,
+                        label = stringResource(R.string.reminders_title),
+                        // Down: the first logo (Find Teams with nothing followed); Right: nothing.
+                        modifier =
+                            Modifier
+                                .navReturnFocusTarget(returnFocus, RETURN_REMINDERS)
+                                .focusProperties {
+                                    down = if (followsSome) firstItemFocus else findTeamsFocus
+                                    right = FocusRequester.Cancel
+                                },
+                    )
                 }
             }
             val list = items
@@ -373,3 +387,6 @@ private fun Loading() {
 
 // The key of Find Teams (the header's icon or the empty section's button) — see rememberNavReturnFocus.
 private const val RETURN_FIND_TEAMS = "sports:find-teams"
+
+// The key of the header's Reminders bell.
+private const val RETURN_REMINDERS = "sports:reminders"

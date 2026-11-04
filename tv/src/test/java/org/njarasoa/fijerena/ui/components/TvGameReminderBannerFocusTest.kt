@@ -41,7 +41,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The TV game reminder banner takes the remote's keys, never focus (the Nerd role plan → R): it
- * shows with Watch chosen (Dismiss without a channel), Left and Right choose, OK acts, Back closes
+ * shows with Watch chosen (Dismiss without a channel), Left and Right choose (Watch, Dismiss,
+ * Manage reminders), OK acts, Back closes
  * it, and no key reaches the screen under it. The control under it, here nested in a list row,
  * keeps focus through it all. Under a Dialog window it waits for the dialog to close.
  */
@@ -66,6 +67,7 @@ class TvGameReminderBannerFocusTest {
         )
     private val noChannel = alert.copy(channel = null)
     private val watched = mutableListOf<GameReminderAlert>()
+    private val managed = mutableListOf<GameReminderAlert>()
 
     /** The keys the screen under the banner saw. */
     private val screenKeys = mutableListOf<Key>()
@@ -117,7 +119,12 @@ class TvGameReminderBannerFocusTest {
                     }
                 }
                 CompositionLocalProvider(LocalWindowInfo provides screenWindow) {
-                    TvGameReminderBanner(banner, onWatch = { watched += it }, modifier = Modifier.align(Alignment.TopCenter))
+                    TvGameReminderBanner(
+                        banner,
+                        onWatch = { watched += it },
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        onManage = { managed += it },
+                    )
                 }
                 if (dialogOpen) {
                     Dialog(onDismissRequest = { dialogOpen = false }) {
@@ -154,15 +161,34 @@ class TvGameReminderBannerFocusTest {
     }
 
     @Test
-    fun `Left and Right choose Watch or Dismiss`() {
+    fun `Left and Right choose Watch, Dismiss or Manage reminders`() {
         setScreen()
 
         walk.press(Key.DirectionRight)
         assertChosen("Dismiss")
         walk.press(Key.DirectionRight)
+        assertChosen("Manage reminders")
+        walk.press(Key.DirectionRight)
+        assertChosen("Manage reminders")
+        walk.press(Key.DirectionLeft)
         assertChosen("Dismiss")
         walk.press(Key.DirectionLeft)
         assertChosen("Watch now")
+        walk.press(Key.DirectionLeft)
+        assertChosen("Watch now")
+        walk.assertFocused(NESTED)
+    }
+
+    @Test
+    fun `OK on Manage reminders closes the banner and opens the page`() {
+        setScreen(noChannel)
+        walk.press(Key.DirectionRight)
+        assertChosen("Manage reminders")
+        walk.press(Key.DirectionCenter)
+
+        assertEquals(listOf(noChannel), managed)
+        assertEquals(emptyList<GameReminderAlert>(), watched)
+        assertNull(GameReminderAlerts.banner.value)
         walk.assertFocused(NESTED)
     }
 

@@ -170,13 +170,15 @@ import org.njarasoa.fijerena.ui.theme.scaled
 // Header buttons that navigate away, for rememberNavReturnFocus.
 private const val RETURN_GUIDE_SOURCES = "header:guideSources"
 private const val RETURN_TV_GUIDE = "header:tvGuide"
+private const val RETURN_REMINDERS = "header:reminders"
 
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
  * toggle — on by default — keeps the results on that guide's channels. One search, programme
  * titles (D7: the channel mode is gone). When the profile has a source with live channels the
  * header has TV Guide, opening the grid for Recent on the first of them ([onTvGuide], D7), and
- * Guide sources next to Refresh, opening the one Guide Sources page ([onGuideSources]).
+ * Guide sources next to Refresh, opening the one Guide Sources page ([onGuideSources]). A bell
+ * opens the Reminders page ([onReminders]).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -187,6 +189,7 @@ fun TvEpgBrowserScreen(
     providerId: Long = 0L,
     onGuideSources: () -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
+    onReminders: () -> Unit = {},
 ) {
     val context = LocalContext.current
     // An Admin's only: the Guide Sources button (the profile rules plan, PR-11).
@@ -243,6 +246,16 @@ fun TvEpgBrowserScreen(
                         modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_TV_GUIDE),
                     )
                 }
+                // The Reminders page: Remind me here sets a programme's reminder.
+                TvIconAction(
+                    onClick = {
+                        headerReturnFocus.leaveFrom(RETURN_REMINDERS)
+                        onReminders()
+                    },
+                    icon = CinemaIcons.Bell,
+                    label = stringResource(R.string.reminders_title),
+                    modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_REMINDERS),
+                )
                 // Never disabled: a disabled button drops the focus it holds. A press while
                 // refreshing does nothing; the icon turns meanwhile, as on the TV Guide.
                 val refreshTurn = rememberInfiniteTransition(label = "guideSearchRefresh")

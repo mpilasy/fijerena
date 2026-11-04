@@ -100,6 +100,7 @@ import org.njarasoa.fijerena.feature.settings.SettingsScreen
 import org.njarasoa.fijerena.feature.sports.SportsLeagueScreen
 import org.njarasoa.fijerena.feature.sports.SportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.SportsTeamScreen
+import org.njarasoa.fijerena.feature.sports.TvRemindersScreen
 import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
@@ -711,6 +712,7 @@ fun TvNavHost(
                                 onGuideSources = {
                                     navController.navigateOnce(Screen.EpgManagement())
                                 },
+                                onReminders = { navController.navigateOnce(Screen.Reminders) },
                                 // Its TV Guide opens on Recent (D7); Back from the grid returns here.
                                 onTvGuide = { categoryId, categoryName, providerId ->
                                     navController.navigateOnce(
@@ -770,6 +772,14 @@ fun TvNavHost(
                                     navController.navigateToSearch(teamsSearch())
                                 },
                                 onPlay = { navController.navigateOnce(it) },
+                                onReminders = { navController.navigateOnce(Screen.Reminders) },
+                            )
+                        }
+                        // The Reminders page (the Reminders page plan): a channel opens as a guide result.
+                        composable<Screen.Reminders> {
+                            TvRemindersScreen(
+                                onPlay = { navController.navigateOnce(it) },
+                                onBack = { navController.navigateUp() },
                             )
                         }
 
@@ -1312,10 +1322,15 @@ fun TvNavHost(
                 // The app's plain messages (AppNotices), over the screens; never focused.
                 TvNoticeHost()
                 // A game reminder while the app is on screen, over everything; it takes the remote's
-                // keys until it closes, and focus stays where it is. Watch tunes as a tapped reminder notification does (below).
+                // keys until it closes, and focus stays where it is. Watch tunes as a tapped reminder notification does (below);
+                // Manage reminders opens the Reminders page.
                 TvGameReminderBanner(
                     state = reminderBanner,
                     onWatch = { alert -> alert.channel?.let { GameReminderAlerts.requestTune(ReminderTune(alert.profileId, it)) } },
+                    onManage = {
+                        val destination = navController.currentDestination
+                        if (destination != null && canTuneFrom(destination)) navController.navigateOnce(Screen.Reminders)
+                    },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 // A tapped game reminder notification, or the banner's Watch: the preview pane on the
