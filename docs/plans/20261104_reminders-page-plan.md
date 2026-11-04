@@ -51,6 +51,7 @@ clear all.
 | RP-D7 | Empty state | The shared empty state: "No reminders. Use the bell on a game, or Remind Me in Search the Guide." |
 | RP-D8 | Profile | The page shows the profile in use. A child profile has no Sports section; the page opens only from where that profile can set reminders. |
 | RP-D9 | Time | Times in the device's 12/24-hour clock and the app language, with the shared date helper; a reminder today shows "Today", tomorrow "Tomorrow". |
+| RP-D11 | Lead time (user, 2026-11-04) | One setting per device, as reminders ring only on their device: **at the start, 5, 10 (default), 15, 30 or 60 minutes before**, for games and programmes. A "Ring <n> min before" action in the Reminders page header opens the picker; the same setting is in Settings → This Device. A change moves the alarms of the reminders already set (`GameReminders.rescheduleAll`). Not synced. |
 | RP-D10 | TV focus | Entry focus on the first row (Upcoming, else Every Game Of, else Clear All in the header). Right from a row walks its icon actions; Up from the first row reaches the header actions. After Remove, focus goes to the next row (else the previous, else the header). Back leaves the page onto the control that opened it. Follows the focus contract in CONTRIBUTING.md. |
 
 ## Answers (user, 2026-11-04)
@@ -68,6 +69,22 @@ clear all.
 | RP-Q2 | Sync across devices | (a) **Keep reminders local, as today; the page says so.** Recommended: a reminder rings on the device it was set on, by design. (b) Sync them per profile: a separate, larger plan (alarms on every device, ringing on all of them). |
 
 ## Design
+
+### L. Lead time (core/network, core/ui)
+
+- `AppSettings.reminderLeadMinutes` (device key, not per profile, not in `SYNCED_SETTING_KEYS`),
+  default 10, values `ReminderSchedule.LEAD_CHOICES` = 0, 5, 10, 15, 30, 60; a stored value not in
+  the list reads as 10.
+- `ReminderSchedule.triggerAtMs(startEpochSec, nowMs, leadSec)` and `alarm(...)` take the lead in
+  place of `LEAD_SEC`; without exact alarms the window opens `leadSec` + 10 minutes before the start
+  (today 20 minutes for a 10-minute lead), with the same 10-minute length. `GameReminders` reads the
+  setting where it schedules.
+- Setting it calls `GameReminders.rescheduleAll()`.
+- The "Rings at" time on the page (RP-D3) uses the setting.
+- Tests: `ReminderScheduleTest` for each lead (0 rings at the start; a past ring time rings at once;
+  the inexact window), a rescheduling test.
+- Strings: the row "Reminder Time" / its summary ("10 minutes before", "At the start"), the picker
+  choices, the header action label; en, fr, mg.
 
 ### V. View model (core/ui)
 
@@ -126,7 +143,7 @@ famataranandro).
 
 | Phase | Owner | Work | Tests | Docs |
 |---|---|---|---|---|
-| 1 | lead | Design V and S; `GameReminders.clearAll`; the route | `RemindersPageTest`, `RemindersViewModelTest` | none |
+| 1 | lead | Design V, L and S; `GameReminders.clearAll`; the route; the This Device rows on TV and phone | `RemindersPageTest`, `RemindersViewModelTest`, `ReminderScheduleTest` | FEATURES (Reminders: lead time) |
 | 2 | agent | Design T (TV page, entry points) | `RemindersFocusTest`, focus-walk file | FEATURES (Reminders), NAVIGATION_GUIDE |
 | 3 | agent | Design P (phone page, entry points, notification action) | phone tests | FEATURES (Reminders) |
 | W | lead | Merge, full suite, lint, gates, walks on both emulators (set a game reminder, a team rule and a programme reminder; open, remove, stop, clear all; let one ring with the page open) | | RELEASE_NOTES; this plan's Done notes |
