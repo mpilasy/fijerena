@@ -301,9 +301,10 @@ class EpgBrowserViewModel(
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+            // A guide source read by several sources counts one time.
             val stale =
                 withContext(Dispatchers.IO) {
-                    providerIds.flatMap { sourceDao.getEnabledSourcesForProvider(it) }
+                    sourceDao.getEnabledSourcesForProviders(providerIds)
                 }.filter { it.lastIngestedAtMs == 0L || isOlderThanInterval(it, now, unsetHours) }
             if (stale.isEmpty()) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
@@ -453,7 +454,7 @@ class EpgBrowserViewModel(
                             streams
                         }
                 }
-                airingMatcher = GuideAiringMatcher(scope.providerIdBySourceId, matchers, hidden)
+                airingMatcher = GuideAiringMatcher(scope.providerIdsBySourceId, matchers, hidden)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -518,26 +519,34 @@ class EpgBrowserViewModel(
                     }
 
                     val sourceNames = scope.sourceNames
+                    val matcher = airingMatcher
+                    // One airing per source that has the channel: a guide source read by several
+                    // sources is matched on each source's own channels. With no match, one airing
+                    // on the guide source's first source.
                     val allAirings =
-                        result.programmes.map { prog ->
+                        result.programmes.flatMap { prog ->
                             val channel = result.channels[prog.channelId]
-                            val providerId = scope.providerIdBySourceId[prog.sourceId] ?: 0L
-                            AiringWithProgramme(
-                                title = prog.title,
-                                description = prog.description,
-                                category = prog.category,
-                                airing =
-                                    EpgBrowserAiring(
-                                        channelId = prog.channelId,
-                                        channelName = channel?.displayName ?: prog.channelId,
-                                        channelIconUrl = channel?.iconUrl,
-                                        startEpoch = prog.startEpoch,
-                                        endEpoch = prog.endEpoch,
-                                        sourceId = prog.sourceId,
-                                        providerId = providerId,
-                                        sourceName = sourceNames[providerId],
-                                    ),
-                            )
+                            val channelName = channel?.displayName ?: prog.channelId
+                            val airing =
+                                EpgBrowserAiring(
+                                    channelId = prog.channelId,
+                                    channelName = channelName,
+                                    channelIconUrl = channel?.iconUrl,
+                                    startEpoch = prog.startEpoch,
+                                    endEpoch = prog.endEpoch,
+                                    sourceId = prog.sourceId,
+                                )
+                            val matches = matcher?.matchAll(prog.sourceId, prog.channelId, channelName).orEmpty()
+                            val airings =
+                                if (matches.isEmpty()) {
+                                    val providerId = scope.providerIdsOf(prog.sourceId).firstOrNull() ?: 0L
+                                    listOf(airing.copy(providerId = providerId, sourceName = sourceNames[providerId]))
+                                } else {
+                                    matches.map {
+                                        airing.copy(matchedStream = it, providerId = it.providerId, sourceName = sourceNames[it.providerId])
+                                    }
+                                }
+                            airings.map { AiringWithProgramme(prog.title, prog.description, prog.category, it) }
                         }
 
                     val dateGroups = applyChannelMatching(groupByDate(allAirings))
@@ -643,8 +652,7 @@ class EpgBrowserViewModel(
                     }.flow
                         .map { pagingData ->
                             pagingData.filter { row ->
-                                val matched = matcher?.match(row.sourceId, row.channelId, row.channelDisplayName)
-                                matched == null || matcher?.isHidden(matched) != true
+                                matcher?.isShown(row.sourceId, row.channelId, row.channelDisplayName) != false
                             }
                         }.cachedIn(viewModelScope)
             }
@@ -680,7 +688,8 @@ class EpgBrowserViewModel(
                                     val unmatchedList = ArrayList<EpgBrowserAiring>()
 
                                     for (airing in program.airings) {
-                                        val matched = matcher.match(airing.sourceId, airing.channelId, airing.channelName)
+                                        // Matched per source in performSearch.
+                                        val matched = airing.matchedStream
                                         when {
                                             // excluded channel, or one in a hidden category: drop from search results
                                             matched != null && matcher.isHidden(matched) -> Unit

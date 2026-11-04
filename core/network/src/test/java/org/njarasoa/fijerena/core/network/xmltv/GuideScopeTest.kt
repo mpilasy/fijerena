@@ -62,7 +62,19 @@ class GuideScopeTest {
             val scope = GuideScope.of(listOf(xtreamA, xtreamB)) { guides.getValue(it) }
 
             assertEquals(listOf(11L, 12L, 21L), scope.sourceIds)
-            assertEquals(mapOf(11L to 1L, 12L to 1L, 21L to 2L), scope.providerIdBySourceId)
+            assertEquals(mapOf(11L to listOf(1L), 12L to listOf(1L), 21L to listOf(2L)), scope.providerIdsBySourceId)
+        }
+
+    @Test
+    fun `a guide source read by several sources maps to each, in the profile's order`() =
+        runTest {
+            val shared = mapOf(1L to listOf(guide(11), guide(50)), 2L to listOf(guide(50), guide(21)))
+            val scope = GuideScope.of(listOf(xtreamB, xtreamA)) { shared.getValue(it) }
+
+            assertEquals(listOf(50L, 21L, 11L), scope.sourceIds)
+            assertEquals(listOf(2L, 1L), scope.providerIdsOf(50L))
+            assertEquals(listOf(1L), scope.providerIdsOf(11L))
+            assertTrue(scope.providerIdsOf(99L).isEmpty())
         }
 
     @Test
@@ -89,7 +101,7 @@ class GuideScopeTest {
     fun `an airing is matched on its own source's channel`() {
         val matcher =
             GuideAiringMatcher(
-                providerIdBySourceId = mapOf(11L to 1L, 21L to 2L),
+                providerIdsBySourceId = mapOf(11L to listOf(1L), 21L to listOf(2L)),
                 matchers =
                     mapOf(
                         1L to EpgChannelMatcher(listOf(stream(100, "BBC One", "bbc1.uk", 1L)), 1L),
@@ -103,7 +115,7 @@ class GuideScopeTest {
 
         assertEquals(100 to 1L, onA?.streamId to onA?.providerId)
         assertEquals(200 to 2L, onB?.streamId to onB?.providerId)
-        assertEquals(2L, matcher.providerIdOf(21L))
+        assertEquals(listOf(2L), matcher.providerIdsOf(21L))
         assertNull(matcher.match(99L, "bbc1.uk", "BBC One"))
     }
 
@@ -111,7 +123,7 @@ class GuideScopeTest {
     fun `hidden categories are each source's own`() {
         val matcher =
             GuideAiringMatcher(
-                providerIdBySourceId = mapOf(11L to 1L, 21L to 2L),
+                providerIdsBySourceId = mapOf(11L to listOf(1L), 21L to listOf(2L)),
                 matchers =
                     mapOf(
                         1L to EpgChannelMatcher(listOf(stream(100, "Kids One", "kids.uk", 1L, categoryId = "7")), 1L),
@@ -122,6 +134,48 @@ class GuideScopeTest {
 
         assertTrue(matcher.isHidden(matcher.match(11L, "kids.uk", "Kids One")!!))
         assertFalse(matcher.isHidden(matcher.match(21L, "kids.uk", "Kids One")!!))
+    }
+
+    private fun sharedMatcher(hiddenCategoryIds: Map<Long, Set<String>> = emptyMap()) =
+        GuideAiringMatcher(
+            providerIdsBySourceId = mapOf(50L to listOf(1L, 2L)),
+            matchers =
+                mapOf(
+                    1L to EpgChannelMatcher(listOf(stream(100, "Kids One", "kids.uk", 1L, categoryId = "7")), 1L),
+                    2L to EpgChannelMatcher(listOf(stream(200, "Kids One HD", "kids.uk", 2L, categoryId = "7")), 2L),
+                ),
+            hiddenCategoryIds = hiddenCategoryIds,
+        )
+
+    @Test
+    fun `a shared guide source matches the channel on each source that has it`() {
+        val matcher = sharedMatcher()
+
+        assertEquals(listOf(100 to 1L, 200 to 2L), matcher.matchAll(50L, "kids.uk", "Kids One").map { it.streamId to it.providerId })
+        assertTrue(matcher.matchAll(50L, "none.uk", "None").isEmpty())
+        assertEquals(100, matcher.match(50L, "kids.uk", "Kids One")?.streamId)
+    }
+
+    @Test
+    fun `a shared guide source keeps each source's hidden categories`() {
+        val matcher = sharedMatcher(hiddenCategoryIds = mapOf(1L to setOf("7")))
+        val (onA, onB) = matcher.matchAll(50L, "kids.uk", "Kids One")
+
+        assertTrue(matcher.isHidden(onA))
+        assertFalse(matcher.isHidden(onB))
+        // The first match that is not hidden.
+        assertEquals(200, matcher.match(50L, "kids.uk", "Kids One")?.streamId)
+        assertTrue(matcher.isShown(50L, "kids.uk", "Kids One"))
+    }
+
+    @Test
+    fun `a channel hidden on every source of a shared guide source stays hidden`() {
+        val matcher = sharedMatcher(hiddenCategoryIds = mapOf(1L to setOf("7"), 2L to setOf("7")))
+
+        assertTrue(matcher.isHidden(matcher.match(50L, "kids.uk", "Kids One")!!))
+        assertFalse(matcher.isShown(50L, "kids.uk", "Kids One"))
+        // A channel no source has stays in the paged results, as before.
+        assertTrue(matcher.isShown(50L, "none.uk", "None"))
     }
 
     @Test
