@@ -1,6 +1,6 @@
 # Reminders page
 
-**Status:** Planned 2026-11-04. Phase 1 in progress. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
+**Status:** Planned 2026-11-04. Phase 1 done (26935d276); Phases 2 (TV) and 3 (phone) in progress. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
 
 ## Goal
 
@@ -154,7 +154,7 @@ Phases 2 and 3 run in parallel after Phase 1 (two agents, own worktrees).
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | In progress | none |
-| 2 | Not started | none |
-| 3 | Not started | none |
+| 1 | Done 2026-11-04: `RemindersViewModel` / `RemindersPage`, `GameReminders.clearProgramme` / `clearAll` / `setLeadMinutes`, Reminder Time setting (`AppSettings.reminderLeadMinutes`, This Device row on TV and phone), `Screen.Reminders`, strings | 26935d276 |
+| 2 | In progress | none |
+| 3 | In progress | none |
 | W | Not started | none |
