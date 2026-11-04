@@ -184,6 +184,13 @@ interface EpgSourceDao {
         appliedUtcOffsetMinutes: Int? = null,
     )
 
+    /** The guide index took [durationMs] to take in the last import of [ids]. */
+    @Query("UPDATE epg_source SET last_index_duration_ms = :durationMs WHERE id IN (:ids)")
+    suspend fun setIndexDuration(
+        ids: List<Long>,
+        durationMs: Long,
+    )
+
     /** The guide index now holds the source's programmes read with [minutes] — see `xmltv.EpgOffsetShift`. */
     @Query("UPDATE epg_source SET applied_utc_offset_minutes = :minutes WHERE id = :id")
     suspend fun setAppliedOffset(
@@ -244,7 +251,7 @@ interface EpgSourceDao {
     @Query(
         """
         UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0,
-            last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0,
+            last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0, last_index_duration_ms = 0,
             last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL,
             last_failed_at_ms = NULL, failures_since_success = 0
         """,

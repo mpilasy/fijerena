@@ -175,6 +175,7 @@ fun MobileEpgManagementScreen(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
                 items(cardList, key = { it.source.id }, contentType = { "source" }) { card ->
+                    val unnamed = stringResource(R.string.epg_unnamed_source)
                     val source = card.source
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
@@ -195,6 +196,12 @@ fun MobileEpgManagementScreen(
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
                         waiting = source.id in busySourceIds,
+                        waitingFor =
+                            EpgManagementViewModel
+                                .waitingFor(cardList, EpgManagementViewModel.workingOn(processingState), source.id)
+                                .joinToString { it.label.ifBlank { unnamed } },
+                        indexing =
+                            (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true,
                         wasUnchanged = wasUnchanged,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
@@ -330,6 +337,10 @@ private fun EpgSourceCard(
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
     /** A refresh was asked for and has not reached this guide source yet: "Waiting to refresh". */
     waiting: Boolean,
+    /** The names of the guide sources a refresh is working on now, that a waiting card waits for; "" when none. */
+    waitingFor: String,
+    /** The guide index is taking in this guide source's import: "Indexing". */
+    indexing: Boolean,
     wasUnchanged: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
@@ -407,11 +418,19 @@ private fun EpgSourceCard(
                 }
             }
 
-            if (activeProgress == null && waiting) {
+            if (activeProgress == null && (indexing || waiting)) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
                     CinemaText(
-                        text = stringResource(R.string.epg_source_phase_format, stringResource(R.string.epg_phase_waiting_to_refresh)),
+                        text =
+                            stringResource(
+                                R.string.epg_source_phase_format,
+                                when {
+                                    indexing -> stringResource(R.string.epg_phase_indexing)
+                                    waitingFor.isNotEmpty() -> stringResource(R.string.epg_phase_waiting_for, waitingFor)
+                                    else -> stringResource(R.string.epg_phase_waiting_to_refresh)
+                                },
+                            ),
                         role = TextRole.Caption,
                         tone = TextTone.Accent,
                     )
@@ -485,6 +504,8 @@ private fun EpgSourceCard(
                                         NumberUtils.formatDuration(LocalResources.current, source.lastDownloadDurationMs),
                                     stringResource(R.string.epg_source_stat_ingest) to
                                         NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
+                                    stringResource(R.string.epg_source_stat_index) to
+                                        NumberUtils.formatDuration(LocalResources.current, source.lastIndexDurationMs),
                                 )
                             } +
                             listOf(

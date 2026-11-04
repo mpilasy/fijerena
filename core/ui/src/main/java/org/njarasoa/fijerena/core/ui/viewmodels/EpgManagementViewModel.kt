@@ -654,6 +654,24 @@ class EpgManagementViewModel(
         internal fun singleSourceIdOf(taskId: String): Long? =
             if (taskId.startsWith(SINGLE_SOURCE_TASK_PREFIX)) taskId.removePrefix(SINGLE_SOURCE_TASK_PREFIX).toLongOrNull() else null
 
+        /**
+         * The guide sources a refresh is downloading, importing or indexing now in [state]: a card
+         * that waits names them ("Waiting for … to finish").
+         */
+        fun workingOn(state: EpgFileManager.MultiSourceState): Set<Long> =
+            when (state) {
+                is EpgFileManager.MultiSourceState.Processing -> state.activeProgress.keys
+                is EpgFileManager.MultiSourceState.Finalizing -> state.indexingSourceIds
+                else -> emptySet()
+            }
+
+        /** The guide sources of [cards] that a waiting card waits for: those in [working], [self] left out. */
+        fun waitingFor(
+            cards: List<GuideCard>,
+            working: Set<Long>,
+            self: Long,
+        ): List<EpgSourceEntity> = cards.map { it.source }.filter { it.id != self && it.id in working }
+
         private const val DAILY_HOURS = 24
 
         /**

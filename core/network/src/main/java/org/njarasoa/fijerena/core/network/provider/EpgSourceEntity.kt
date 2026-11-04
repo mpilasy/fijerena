@@ -74,6 +74,13 @@ data class EpgSourceEntity(
      */
     @ColumnInfo(name = "applied_utc_offset_minutes")
     val appliedUtcOffsetMinutes: Int? = null,
+    /**
+     * How long the guide index took to take in the last import: the swap and the search index
+     * rebuild (added v21). A run that imports several sources rebuilds the index once, so each of
+     * its sources gets the same time. Local.
+     */
+    @ColumnInfo(name = "last_index_duration_ms", defaultValue = "0")
+    val lastIndexDurationMs: Long = 0,
 ) {
     companion object {
         const val REFRESH_OFF = -1

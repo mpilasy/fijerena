@@ -39,7 +39,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 20
+        const val DB_VERSION = 21
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -504,6 +504,18 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * v20 → v21: `epg_source.last_index_duration_ms`, how long the guide index took to take in
+         * the last import (0 until the next import). A local column: the live sync triggers do not
+         * watch it.
+         */
+        val MIGRATION_20_21 =
+            object : Migration(20, 21) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `last_index_duration_ms` INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
         /** `epg_source`'s columns from v20 (no `provider_id`), in Room's order. */
         private val EPG_SOURCE_V20_COLUMN_NAMES =
             listOf(
@@ -578,6 +590,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_17_18,
                         MIGRATION_18_19,
                         MIGRATION_19_20,
+                        MIGRATION_20_21,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

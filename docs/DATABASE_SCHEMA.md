@@ -7,7 +7,7 @@ Room's own exported schema for `xtream_v2.db` and `providers.db` is committed un
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 20
+**Version:** 21
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
@@ -19,7 +19,8 @@ automatic Xtream guide source URLs; v18 added the last failure time and the fail
 `failures_since_success`; v19 added `epg_source.file_utc_offset_minutes` /
 `applied_utc_offset_minutes`, so a changed offset moves the guide's times; v20 made one guide
 source per URL: `epg_source` lost `provider_id`, and `epg_source_provider` links a guide source to
-the media sources that read it, with `epg_source_alias` for the sync keys of merged copies.)
+the media sources that read it, with `epg_source_alias` for the sync keys of merged copies; v21 added
+`epg_source.last_index_duration_ms`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -119,6 +120,7 @@ None of these sync bookkeeping columns is synced, exported or backed up.
 | `ingest_method` | TEXT | Always `DOWNLOADED` (the only ingest path left); nothing reads it |
 | `last_ingestion_duration_ms` | INTEGER | Time spent parsing/inserting |
 | `last_download_duration_ms` | INTEGER | Time spent fetching XML file |
+| `last_index_duration_ms` | INTEGER | Time the guide index took to take in the last import: the swap from staging, the search index rebuild and the vacuum. A run that imports several sources indexes them once, so each gets the same time. 0 until the next import after `MIGRATION_20_21`. Local, never synced (added v21) |
 | `last_content_sha256` | TEXT | SHA-256 of the last ingested payload, decompressed for `.gz` sources; null = never hashed (added v10) |
 | `etag` | TEXT | `ETag` from the last download, sent back as `If-None-Match` (added v10) |
 | `last_modified_header` | TEXT | `Last-Modified` from the last download, sent back as `If-Modified-Since` (added v10) |

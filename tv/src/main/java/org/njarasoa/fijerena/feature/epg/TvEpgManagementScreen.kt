@@ -288,6 +288,10 @@ fun TvEpgManagementScreen(
                                 null
                             }
 
+                        // The guide index is taking in this guide source's import.
+                        val indexing =
+                            (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true
+
                         // Whether the run that just finished confirmed this source's data hadn't
                         // changed (304, or a matching content hash) — true only right after that run,
                         // resets once the next processing state replaces this one.
@@ -377,15 +381,36 @@ fun TvEpgManagementScreen(
                                     )
                                 }
 
-                                // A refresh was asked for and has not reached this guide source yet.
-                                if (activeProgress == null && source.id in busySourceIds) {
+                                // Indexing, or a refresh was asked for and has not reached this guide source yet.
+                                if (activeProgress == null && (indexing || source.id in busySourceIds)) {
+                                    // The guide sources a refresh is working on now, named on a waiting card.
+                                    val unnamed = stringResource(R.string.epg_unnamed_source)
+                                    val waitingFor =
+                                        EpgManagementViewModel
+                                            .waitingFor(cardList, EpgManagementViewModel.workingOn(processingState), source.id)
+                                            .joinToString { it.label.ifBlank { unnamed } }
                                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
                                         CinemaText(
                                             text =
                                                 stringResource(
                                                     R.string.epg_source_phase_format,
-                                                    stringResource(R.string.epg_phase_waiting_to_refresh),
+                                                    when {
+                                                        indexing -> {
+                                                            stringResource(R.string.epg_phase_indexing)
+                                                        }
+
+                                                        waitingFor.isNotEmpty() -> {
+                                                            stringResource(
+                                                                R.string.epg_phase_waiting_for,
+                                                                waitingFor,
+                                                            )
+                                                        }
+
+                                                        else -> {
+                                                            stringResource(R.string.epg_phase_waiting_to_refresh)
+                                                        }
+                                                    },
                                                 ),
                                             role = TextRole.Caption,
                                             tone = TextTone.Secondary,
@@ -479,6 +504,11 @@ fun TvEpgManagementScreen(
                                             SourceStat(
                                                 stringResource(R.string.epg_source_stat_ingest),
                                                 NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
+                                                scale,
+                                            )
+                                            SourceStat(
+                                                stringResource(R.string.epg_source_stat_index),
+                                                NumberUtils.formatDuration(LocalResources.current, source.lastIndexDurationMs),
                                                 scale,
                                             )
                                         }

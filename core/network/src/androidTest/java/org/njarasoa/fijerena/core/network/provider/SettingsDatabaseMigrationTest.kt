@@ -115,6 +115,7 @@ class SettingsDatabaseMigrationTest {
                     SettingsDatabase.MIGRATION_17_18,
                     SettingsDatabase.MIGRATION_18_19,
                     SettingsDatabase.MIGRATION_19_20,
+                    SettingsDatabase.MIGRATION_20_21,
                 ).build()
         assertEquals(SettingsDatabase.DB_VERSION, migratedDb.openHelper.writableDatabase.version)
 

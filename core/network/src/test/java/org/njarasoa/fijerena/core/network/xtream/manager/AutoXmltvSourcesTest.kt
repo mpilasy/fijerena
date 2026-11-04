@@ -539,6 +539,11 @@ class AutoXmltvSourcesTest {
             appliedUtcOffsetMinutes: Int?,
         ) = error("unused")
 
+        override suspend fun setIndexDuration(
+            ids: List<Long>,
+            durationMs: Long,
+        ) = error("unused")
+
         override suspend fun setAppliedOffset(
             id: Long,
             minutes: Int,

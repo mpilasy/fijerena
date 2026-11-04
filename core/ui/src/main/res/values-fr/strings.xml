@@ -251,6 +251,7 @@
     <string name="epg_source_stat_label">Dernière synchro</string>
     <string name="epg_source_stat_download">Téléchargé en</string>
     <string name="epg_source_stat_ingest">Importé en</string>
+    <string name="epg_source_stat_index">Indexé en</string>
     <string name="epg_source_stat_latest">Programmes jusqu’au</string>
     <string name="epg_source_stat_channels">Chaînes</string>
     <string name="epg_source_stat_programmes">Programmes</string>
@@ -850,8 +851,10 @@
     <!-- EPG phase labels -->
     <string name="epg_phase_downloading">Téléchargement</string>
     <string name="epg_phase_ingesting">Importation</string>
+    <string name="epg_phase_indexing">Indexation</string>
     <string name="epg_phase_awaiting_ingestion">En attente d’importation</string>
     <string name="epg_phase_waiting_to_refresh">En attente d’actualisation</string>
+    <string name="epg_phase_waiting_for">En attente de la fin de %1$s</string>
     <string name="epg_phase_rebuilding_indexes">Reconstruction des index…</string>
     <string name="epg_phase_swapping_primary_guide">Passage au nouveau guide…</string>
     <plurals name="category_count_format">

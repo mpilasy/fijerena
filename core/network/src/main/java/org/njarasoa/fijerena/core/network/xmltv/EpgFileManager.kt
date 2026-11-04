@@ -308,6 +308,8 @@ class EpgFileManager private constructor(
          */
         data class Finalizing(
             val phase: String,
+            /** The guide sources whose import the guide index is taking in: their cards say "Indexing". */
+            val indexingSourceIds: Set<Long> = emptySet(),
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
             val totalDownloadBytes: Long = 0,
@@ -895,12 +897,17 @@ class EpgFileManager private constructor(
                 val totalChannels = allStats.sumOf { it.channelsIngested }
                 val totalProgrammes = allStats.sumOf { it.programmesIngested }
                 val totalBytes = allStats.sumOf { it.downloadBytes }
+                // A skipped (unchanged) source must never be in here: swapAndRebuildFts deletes that
+                // source's primary rows before transferring staging, and staging has nothing for it.
+                val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
+                val indexStartMs = System.currentTimeMillis()
 
                 // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
                 // Show this phase so the UI doesn't appear stuck after ingestion completes.
                 _state.value =
                     MultiSourceState.Finalizing(
                         phase = "Rebuilding indexes\u2026",
+                        indexingSourceIds = syncedIds.toSet(),
                         totalChannels = totalChannels,
                         totalProgrammes = totalProgrammes,
                         totalDownloadBytes = totalBytes,
@@ -926,14 +933,11 @@ class EpgFileManager private constructor(
                     _state.value =
                         MultiSourceState.Finalizing(
                             phase = "Swapping to primary guide\u2026",
+                            indexingSourceIds = syncedIds.toSet(),
                             totalChannels = totalChannels,
                             totalProgrammes = totalProgrammes,
                             totalDownloadBytes = totalBytes,
                         )
-                    // A skipped (unchanged) source must never appear here: swapAndRebuildFts deletes
-                    // that source's primary rows before transferring staging, and staging has nothing
-                    // for it \u2014 including it would wipe its guide instead of leaving it alone.
-                    val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
                     swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
                 }
 
@@ -955,6 +959,7 @@ class EpgFileManager private constructor(
                         Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                         CrashLog.record("guide index rebuild failed", e)
                     }
+                    sourceDao.setIndexDuration(syncedIds, System.currentTimeMillis() - indexStartMs)
                 }
 
                 // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
@@ -1175,10 +1180,14 @@ class EpgFileManager private constructor(
                         SourceStats(source.id, label, error = context.getString(R.string.sync_error_download_failed))
                     }
 
+                val indexing = if (stats.error == null && !stats.unchanged) setOf(sourceId) else emptySet()
+                val indexStartMs = System.currentTimeMillis()
+
                 // Finalizing: rebuild B-tree query indexes.
                 _state.value =
                     MultiSourceState.Finalizing(
                         phase = "Rebuilding indexes\u2026",
+                        indexingSourceIds = indexing,
                         totalChannels = stats.channelsIngested,
                         totalProgrammes = stats.programmesIngested,
                         totalDownloadBytes = stats.downloadBytes,
@@ -1191,6 +1200,7 @@ class EpgFileManager private constructor(
                     _state.value =
                         MultiSourceState.Finalizing(
                             phase = "Swapping to primary guide\u2026",
+                            indexingSourceIds = indexing,
                             totalChannels = stats.channelsIngested,
                             totalProgrammes = stats.programmesIngested,
                             totalDownloadBytes = stats.downloadBytes,
@@ -1213,6 +1223,7 @@ class EpgFileManager private constructor(
                         Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                         CrashLog.record("guide index rebuild failed", e)
                     }
+                    sourceDao.setIndexDuration(listOf(sourceId), System.currentTimeMillis() - indexStartMs)
                 }
 
                 // Restore FTS sync triggers only now — see the identical comment in
