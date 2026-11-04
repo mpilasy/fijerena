@@ -10,12 +10,14 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersSerializer
+import org.njarasoa.fijerena.core.network.provider.EpgSourceAliasEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
-import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.provider.SettingsTombstoneEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
+import org.njarasoa.fijerena.core.network.provider.isAutomaticGuide
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Presence
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Resolution
 import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
@@ -642,82 +644,147 @@ class SyncApplier(
         markSettingsVersion(kind, SyncKind.SHARED, itemKey, hlc)
     }
 
+    /** Where a received guide source record goes on this device (the one guide source per URL plan, Design S). */
+    private sealed interface GuideTarget {
+        /** The guide with the record's key. */
+        data class Own(
+            val guide: EpgSourceEntity,
+        ) : GuideTarget
+
+        /**
+         * The record's key is an alias of [guide]: an older build's copy for media source
+         * [providerId], or the same guide under another key when it is null.
+         */
+        data class Alias(
+            val guide: EpgSourceEntity,
+            val providerId: Long?,
+        ) : GuideTarget
+
+        /** The same guide, added here before the devices were linked: the server never had its key. */
+        data class Adopt(
+            val guide: EpgSourceEntity,
+        ) : GuideTarget
+
+        /** The same guide under a key the server knows: the record's key becomes its alias. */
+        data class NewAlias(
+            val guide: EpgSourceEntity,
+            val providerId: Long?,
+        ) : GuideTarget
+
+        data object None : GuideTarget
+    }
+
+    /** The key of the guide a record's key is another name for, whose version also counts. */
+    private val GuideTarget.otherKey: String?
+        get() =
+            when (this) {
+                is GuideTarget.Alias -> guide.sourceKey
+                is GuideTarget.NewAlias -> guide.sourceKey
+                else -> null
+            }
+
+    /**
+     * In this order: the guide with [sourceKey]; the guide [sourceKey] is an alias of; for a
+     * record ([remote] read by [linked]), the same guide here — the source's automatic guide
+     * for an automatic record, else a hand-added guide at the same URL (`GuideUrls.matchKey`).
+     */
+    private suspend fun guideTarget(
+        sourceKey: String,
+        remote: SyncPayloads.EpgSource?,
+        remoteGuide: EpgSourceEntity?,
+        linked: List<ProviderEntity>,
+    ): GuideTarget {
+        val own = sync.sourceByKey(sourceKey)
+        val alias = if (own == null) settingsDb.epgSourceDao().getAlias(sourceKey) else null
+        val aliased = alias?.let { settingsDb.epgSourceDao().getSourceById(it.sourceId) }
+        val same =
+            if (own == null && aliased == null && remoteGuide != null && linked.isNotEmpty()) {
+                if (isAutomaticGuide(remoteGuide, linked)) {
+                    sync.autoGuideOf(linked.first().id)
+                } else {
+                    sync.guidesAtUrl(remoteGuide.url).firstOrNull()
+                }
+            } else {
+                null
+            }
+        return when {
+            own != null -> GuideTarget.Own(own)
+
+            aliased != null -> GuideTarget.Alias(aliased, alias.providerId)
+
+            same == null -> GuideTarget.None
+
+            !sync.knownToServer(SyncKind.EPG_SOURCE, same.sourceKey) -> GuideTarget.Adopt(same)
+
+            // A record of one source is an older build's copy for it; one of several is the guide.
+            else -> GuideTarget.NewAlias(same, linked.first().id.takeIf { remote?.keys?.size == 1 })
+        }
+    }
+
+    /** Unknown when one of [keys] is not here yet, deleted when all are gone, else known. */
+    private suspend fun providersPresence(keys: List<String>): Presence {
+        val all = keys.map { providerPresence(it) }
+        return when {
+            Presence.UNKNOWN in all -> Presence.UNKNOWN
+            all.all { it == Presence.DELETED } -> Presence.DELETED
+            else -> Presence.KNOWN
+        }
+    }
+
+    /**
+     * A guide source record: one guide (a URL) with the media sources that read it. Its key can
+     * also be an alias of a guide here: an older build's copy for one source, or the same guide
+     * added on two devices. See the one guide source per URL plan → Design S.
+     */
     private suspend fun applyEpgSource(record: SyncRecord): Outcome {
         val sourceKey = record.key.itemId
         val payload = if (record.deleted) null else SyncPayloads.decode<SyncPayloads.EpgSource>(record.payload)
+        // The record's sources that this device has; a deleted one is left out.
+        val linked = payload?.keys.orEmpty().mapNotNull { sync.providerByKey(it) }
+        val remoteGuide = payload?.let { receivedGuide(sourceKey, it, linked.firstOrNull()) }
+        val target = guideTarget(sourceKey, payload, remoteGuide, linked)
         val local =
             SyncMerge.Local(
-                version = settingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey),
+                version =
+                    listOfNotNull(
+                        settingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey),
+                        target.otherKey?.let { settingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, it) },
+                    ).maxOrNull(),
                 tombstone = sync.getTombstone(SyncKind.EPG_SOURCE, sourceKey)?.deletedAt,
-                provider = payload?.let { providerPresence(it.providerKey) } ?: Presence.NOT_APPLICABLE,
+                provider = payload?.let { providersPresence(it.keys) } ?: Presence.NOT_APPLICABLE,
             )
         return when (val resolution = SyncMerge.resolve(record, local)) {
             Resolution.Upsert -> {
-                val provider = sync.providerByKey(payload!!.providerKey) ?: return Outcome.Deferred
-                val providerId = provider.id
-                // An automatic Xtream guide source arrives with its login (older builds store it so):
-                // kept without it here, like every automatic source on this version.
-                val remote =
-                    if (provider.type ==
-                        "XTREAM"
-                    ) {
-                        payload.copy(url = AutoXmltvSources.withoutLogin(payload.url, payload.label, provider.url))
-                    } else {
-                        payload
+                if (linked.isEmpty()) return Outcome.Deferred
+                val guideId =
+                    inSettingsApply {
+                        val (id, requeue) =
+                            upsertGuide(
+                                sourceKey,
+                                remoteGuide!!,
+                                payload.providerKeys.isNotEmpty(),
+                                linked.map { it.id },
+                                target,
+                            )
+                        markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)
+                        // The guide here has more sources than the record: the other devices get them.
+                        if (requeue) sync.queue(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey)
+                        id
                     }
-                inSettingsApply {
-                    val dao = settingsDb.epgSourceDao()
-                    // First sync: the same source added on both devices before linking adopts this key.
-                    if (sync.sourceByKey(sourceKey) == null) {
-                        sync
-                            .sourcesAt(providerId, remote.url)
-                            .firstOrNull { !sync.knownToServer(SyncKind.EPG_SOURCE, it.sourceKey) }
-                            ?.let { sync.adoptSourceKey(it.sourceKey, sourceKey) }
-                    }
-                    val existing = sync.sourceByKey(sourceKey)
-                    // None (an older version's record) or one this version can't use: keep ours.
-                    val interval = remote.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) }
-                    if (existing != null) {
-                        dao.updateSource(
-                            existing.copy(
-                                url = remote.url,
-                                label = remote.label,
-                                timezoneOffsetHours = remote.timezoneOffsetHours,
-                                enabled = remote.enabled,
-                                refreshIntervalHours = interval ?: existing.refreshIntervalHours,
-                            ),
-                        )
-                        dao.insertLink(EpgSourceProviderEntity(existing.id, providerId))
-                    } else {
-                        dao.insertGuide(
-                            EpgSourceEntity(
-                                url = remote.url,
-                                label = remote.label,
-                                timezoneOffsetHours = remote.timezoneOffsetHours,
-                                enabled = remote.enabled,
-                                sourceKey = sourceKey,
-                                refreshIntervalHours = interval,
-                            ),
-                            listOf(providerId),
-                        )
-                    }
-                    markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)
-                }
                 // A changed offset moves the times already in the guide index, after the transaction.
-                sync.sourceByKey(sourceKey)?.let {
-                    EpgOffsetShift.reconcile(it.id, settingsDb.epgSourceDao(), EpgIndexer.getInstance(context))
-                }
+                EpgOffsetShift.reconcile(guideId, settingsDb.epgSourceDao(), EpgIndexer.getInstance(context))
                 Outcome.Applied
             }
 
             Resolution.Delete -> {
-                val existing = sync.sourceByKey(sourceKey)
-                inSettingsApply {
-                    existing?.let { settingsDb.epgSourceDao().deleteSource(it.id) }
-                    sync.upsertTombstone(SettingsTombstoneEntity(SyncKind.EPG_SOURCE, sourceKey, record.hlc))
-                    markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)
-                }
-                existing?.let { EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceId(it.id) }
+                val deleted =
+                    inSettingsApply {
+                        val gone = deleteGuide(target)
+                        sync.upsertTombstone(SettingsTombstoneEntity(SyncKind.EPG_SOURCE, sourceKey, record.hlc))
+                        markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)
+                        gone
+                    }
+                deleted?.let { EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceId(it) }
                 Outcome.Applied
             }
 
@@ -725,6 +792,122 @@ class SyncApplier(
                 skippedOrDeferred(resolution)
             }
         }
+    }
+
+    /**
+     * The guide [payload] describes, as this device stores it. An automatic Xtream guide source
+     * arrives with its login (older builds store it so): kept without it here, like every
+     * automatic source on this version.
+     */
+    private fun receivedGuide(
+        sourceKey: String,
+        payload: SyncPayloads.EpgSource,
+        first: ProviderEntity?,
+    ): EpgSourceEntity =
+        EpgSourceEntity(
+            url = if (first?.type == "XTREAM") AutoXmltvSources.withoutLogin(payload.url, payload.label, first.url) else payload.url,
+            label = payload.label,
+            timezoneOffsetHours = payload.timezoneOffsetHours,
+            enabled = payload.enabled,
+            sourceKey = sourceKey,
+            // None (an older version's record) or one this version can't use: not set.
+            refreshIntervalHours = payload.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) },
+        )
+
+    /**
+     * Writes [remote] to [target] with media sources [providerIds]. [fullList]: the record names
+     * every source of the guide, so they replace the links; a record from an older build names one
+     * source only, which is added. Returns the guide's id, and whether it must be sent again.
+     */
+    private suspend fun upsertGuide(
+        sourceKey: String,
+        remote: EpgSourceEntity,
+        fullList: Boolean,
+        providerIds: List<Long>,
+        target: GuideTarget,
+    ): Pair<Long, Boolean> {
+        val dao = settingsDb.epgSourceDao()
+        val addLinks: suspend (Long, List<Long>) -> Unit = { id, ids -> dao.setLinks(id, dao.getProviderIds(id) + ids) }
+        val setLinks: suspend (Long) -> Unit = { id -> if (fullList) dao.setLinks(id, providerIds) else addLinks(id, providerIds) }
+        return when (target) {
+            is GuideTarget.Own -> {
+                writeFields(target.guide, remote)
+                setLinks(target.guide.id)
+                target.guide.id to false
+            }
+
+            // An older build's copy for one source: the guide keeps its other sources.
+            is GuideTarget.Alias -> {
+                writeFields(target.guide, remote)
+                if (target.providerId != null) addLinks(target.guide.id, listOf(target.providerId)) else setLinks(target.guide.id)
+                target.guide.id to false
+            }
+
+            // First sync: the same guide added on both devices before linking takes this key and
+            // keeps the sources of both.
+            is GuideTarget.Adopt -> {
+                val id = target.guide.id
+                sync.adoptSourceKey(target.guide.sourceKey, sourceKey)
+                writeFields(target.guide.copy(sourceKey = sourceKey), remote)
+                addLinks(id, providerIds)
+                id to (dao.getProviderIds(id).toSet() != providerIds.toSet())
+            }
+
+            is GuideTarget.NewAlias -> {
+                dao.insertAlias(EpgSourceAliasEntity(sourceKey, target.guide.id, target.providerId))
+                writeFields(target.guide, remote)
+                addLinks(target.guide.id, providerIds)
+                target.guide.id to false
+            }
+
+            GuideTarget.None -> {
+                dao.insertGuide(remote, providerIds) to false
+            }
+        }
+    }
+
+    /** The synced fields of [remote] on [existing]; an interval of null keeps the one here. */
+    private suspend fun writeFields(
+        existing: EpgSourceEntity,
+        remote: EpgSourceEntity,
+    ) = settingsDb.epgSourceDao().updateSource(
+        existing.copy(
+            url = remote.url,
+            label = remote.label,
+            timezoneOffsetHours = remote.timezoneOffsetHours,
+            enabled = remote.enabled,
+            refreshIntervalHours = remote.refreshIntervalHours ?: existing.refreshIntervalHours,
+        ),
+    )
+
+    /**
+     * A received deletion of [target]: the guide for its own key or for a guide alias; for an
+     * older build's copy, only that source's link, and the guide when no source reads it then.
+     * Returns the id of the guide deleted, whose index rows go too.
+     */
+    private suspend fun deleteGuide(target: GuideTarget): Long? {
+        val dao = settingsDb.epgSourceDao()
+        val id =
+            when (target) {
+                is GuideTarget.Own -> {
+                    target.guide.id
+                }
+
+                is GuideTarget.Alias -> {
+                    if (target.providerId == null) {
+                        target.guide.id
+                    } else {
+                        dao.unlink(target.guide.id, target.providerId)
+                        target.guide.id.takeIf { dao.getProviderIds(it).isEmpty() }
+                    }
+                }
+
+                else -> {
+                    null
+                }
+            }
+        id?.let { dao.deleteGuide(it) }
+        return id
     }
 
     // --- Settings, logins, category filters ---

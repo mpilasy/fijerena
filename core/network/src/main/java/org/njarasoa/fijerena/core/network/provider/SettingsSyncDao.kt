@@ -3,7 +3,19 @@ package org.njarasoa.fijerena.core.network.provider
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
+import org.njarasoa.fijerena.core.network.xmltv.GuideUrls
 import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
+
+/**
+ * Whether [source] is the automatic guide of an Xtream source: it has one link ([linked]), and
+ * its URL and label are that server's automatic guide. Such a guide is never merged with another
+ * (the one guide source per URL plan, OG-D3).
+ */
+internal fun isAutomaticGuide(
+    source: EpgSourceEntity,
+    linked: List<ProviderEntity>,
+): Boolean = linked.singleOrNull()?.let { it.type == "XTREAM" && AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true
 
 /**
  * The sync versions of `providers.db` ([SettingsVersionEntity]): queueing for values that live
@@ -127,18 +139,47 @@ interface SettingsSyncDao {
     @Query("SELECT * FROM providers")
     suspend fun allProviders(): List<ProviderEntity>
 
-    /** The first media source that reads guide source [sourceId]. */
-    @Query("SELECT provider_id FROM epg_source_provider WHERE source_id = :sourceId ORDER BY linked_at_ms ASC, provider_id ASC LIMIT 1")
-    suspend fun firstLinkedProviderId(sourceId: Long): Long?
-
+    /** The keys of the media sources that read guide source [sourceId], the first link first. */
     @Query(
-        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
-            "WHERE l.provider_id = :providerId AND s.url = :url",
+        "SELECT p.providerKey FROM epg_source_provider l JOIN providers p ON p.id = l.provider_id " +
+            "WHERE l.source_id = :sourceId ORDER BY l.linked_at_ms ASC, l.provider_id ASC",
     )
-    suspend fun sourcesAt(
-        providerId: Long,
-        url: String,
-    ): List<EpgSourceEntity>
+    suspend fun linkedProviderKeys(sourceId: Long): List<String>
+
+    /** The media sources that read guide source [sourceId], the first link first. */
+    @Query(
+        "SELECT p.* FROM epg_source_provider l JOIN providers p ON p.id = l.provider_id " +
+            "WHERE l.source_id = :sourceId ORDER BY l.linked_at_ms ASC, l.provider_id ASC",
+    )
+    suspend fun linkedProviders(sourceId: Long): List<ProviderEntity>
+
+    @Query("SELECT * FROM epg_source ORDER BY id ASC")
+    suspend fun allSources(): List<EpgSourceEntity>
+
+    /** The guide sources only [providerId] reads. */
+    @Query(
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id WHERE l.provider_id = :providerId " +
+            "AND (SELECT COUNT(*) FROM epg_source_provider o WHERE o.source_id = s.id) = 1 ORDER BY s.id ASC",
+    )
+    suspend fun guidesOnlyFor(providerId: Long): List<EpgSourceEntity>
+
+    /**
+     * The hand-added guide sources at [url], compared with [GuideUrls.matchKey]. Automatic Xtream
+     * guides are never in the list: two logins on one server share their URL (the one guide source
+     * per URL plan, OG-D3).
+     */
+    @Transaction
+    suspend fun guidesAtUrl(url: String): List<EpgSourceEntity> {
+        val wanted = GuideUrls.matchKey(url)
+        return allSources().filter { GuideUrls.matchKey(it.url) == wanted && !isAutomaticGuide(it, linkedProviders(it.id)) }
+    }
+
+    /** The automatic Xtream guide source of media source [providerId], if it has one. */
+    @Transaction
+    suspend fun autoGuideOf(providerId: Long): EpgSourceEntity? {
+        val provider = providerById(providerId)
+        return provider?.let { p -> guidesOnlyFor(providerId).firstOrNull { isAutomaticGuide(it, listOf(p)) } }
+    }
 
     /** A local provider adopting the key another device gave the same provider (first sync). */
     @Transaction

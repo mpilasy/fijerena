@@ -499,6 +499,26 @@ class AutoXmltvSourcesTest {
 
         override suspend fun deleteAliasesOf(sourceId: Long) = Unit
 
+        override suspend fun deleteLink(
+            sourceId: Long,
+            providerId: Long,
+        ) = error("unused")
+
+        override suspend fun deleteAliasesFor(
+            sourceId: Long,
+            providerId: Long,
+        ) = Unit
+
+        override suspend fun deleteAliasTombstones(
+            sourceId: Long,
+            providerId: Long?,
+        ) = Unit
+
+        override suspend fun insertAliasTombstones(
+            sourceId: Long,
+            providerId: Long?,
+        ) = Unit
+
         override suspend fun deleteSource(id: Long) = deleteSources(listOf(id))
 
         override suspend fun deleteAllSources() = error("unused")

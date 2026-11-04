@@ -173,21 +173,27 @@ class LocalRecords(
             SyncKind.EPG_SOURCE -> {
                 val key = SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, v.itemKey)
                 val source = sync.sourceByKey(v.itemKey)
-                // The guide's first link names its source (one guide source per URL plan, Phase 1).
-                val providerKey = source?.let { sync.firstLinkedProviderId(it.id) }?.let { sync.providerKey(it) }
+                // The media sources that read the guide, the first link first.
+                val providerKeys = source?.let { sync.linkedProviderKeys(it.id) }.orEmpty()
                 when {
+                    // Another key of a guide that exists: the guide goes under its own key. A
+                    // deletion here would make older builds delete their copy for that source.
+                    source == null && settingsDb.epgSourceDao().getAlias(v.itemKey) != null -> {
+                        null
+                    }
+
                     source == null -> {
                         SyncRecord(key, v.hlc, deleted = true)
                     }
 
-                    providerKey == null -> {
+                    providerKeys.isEmpty() -> {
                         null
                     }
 
                     // An automatic Xtream guide source goes with its login, as older builds store it.
                     else -> {
                         val sent = source.copy(url = AutoXmltvSources.syncUrl(providers, source))
-                        SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(sent, providerKey)))
+                        SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(sent, providerKeys)))
                     }
                 }
             }

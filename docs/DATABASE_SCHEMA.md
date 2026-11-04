@@ -165,6 +165,18 @@ to sources that are gone, then guide sources with no link.
 
 **Index:** `index_epg_source_alias_source_id` on `(source_id)`. Deleted with its guide source.
 
+Live sync reads an incoming `epg_source` record whose key is an alias as a change to the guide
+(`SyncApplier.applyEpgSource`): with a source, the fields go to the guide and that source's link is
+added; a deletion removes that link, and the guide when no link is left. Without a source, the
+record is the guide. The last writer wins on the newer of the alias key's and the guide key's
+`sync_version`. The applier adds an alias when a record names a guide that is here under a key the
+server knows already (the same URL by `GuideUrls.matchKey`, or the source's automatic guide). An
+alias key is never sent as a record of its own. `EpgSourceDao.deleteGuide` removes every alias of
+the guide and `EpgSourceDao.unlink` the aliases of that source; each records an `epg_source`
+tombstone for the alias key (`deletedAt` = 0, stamped and queued by `sync_tombstone_insert`), so an
+older build deletes its copy. Not while `applying` is set: the device that made the change sends
+them.
+
 `last_content_sha256`, `etag` and `last_modified_header` drive refresh change detection — see
 `docs/epg_guide.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
 other ingest bookkeeping (the failure time and count too) whenever the guide index is destroyed.
@@ -191,6 +203,7 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 | `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled` or `refresh_interval_hours` (`provider_id` until v20) | `epg_source` |
 | `sync_epg_source_provider_insert` / `_delete` (v20) | a link added or removed, while its guide source exists | the guide source's `epg_source` key |
 | `sync_epg_source_delete` | delete | records an `epg_source` tombstone (which queues it) |
+| none (v20, in `EpgSourceDao.deleteGuide` / `unlink`) | an alias removed with its guide or its link | records an `epg_source` tombstone for the alias key, unless `applying` is set |
 | `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's kind; stamps `deletedAt` when it is 0 |
 
 Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are

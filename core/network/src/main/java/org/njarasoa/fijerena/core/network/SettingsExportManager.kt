@@ -14,11 +14,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNames
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
+import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.provider.isAutomaticGuide
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
+import org.njarasoa.fijerena.core.network.xmltv.GuideUrls
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FollowedSportEntity
@@ -99,6 +103,109 @@ class SettingsExportManager(
             url: String,
             owner: ProviderEntity,
         ): Boolean = owner.type == "XTREAM" && AutoXmltvSources.isServerXmltv(url, owner.url)
+
+        /**
+         * One entry for each hand-added guide source, with the media sources that read it, the
+         * first link first ([links] in link order). A guide with no source here, or that is the own
+         * guide of one of its sources (it holds or needs the login), stays out. See the one guide
+         * source per URL plan → Design E.
+         */
+        internal fun exportedEpgSources(
+            sources: List<EpgSourceEntity>,
+            links: List<EpgSourceProviderEntity>,
+            providersById: Map<Long, ProviderEntity>,
+        ): List<ExportedEpgSource> {
+            val ownersOf = links.groupBy({ it.sourceId }, { it.providerId })
+            return sources.mapNotNull { source ->
+                ownersOf[source.id]
+                    .orEmpty()
+                    .mapNotNull { providersById[it] }
+                    .takeIf { owners -> owners.isNotEmpty() && owners.none { isXtreamOwnGuide(source.url, it) } }
+                    ?.let { owners ->
+                        ExportedEpgSource(
+                            url = source.url,
+                            label = source.label,
+                            timezoneOffsetHours = source.timezoneOffsetHours,
+                            enabled = source.enabled,
+                            providerName = owners.first().name,
+                            providerUrl = owners.first().url,
+                            refreshIntervalHours = source.refreshIntervalHours,
+                            providers = owners.map { ExportedSourceRef(it.name, it.url) },
+                        )
+                    }
+            }
+        }
+
+        /**
+         * Adds the guide sources of a file. An entry names its sources in [ExportedEpgSource.providers],
+         * or in its own name and URL in an older file, which has one entry for each (guide, source).
+         * A source not on this device is left out. A hand-added guide with the same URL
+         * (`GuideUrls.matchKey`) gets the sources it does not have yet; else the guide is added.
+         * Returns the number of entries added and skipped.
+         */
+        internal suspend fun importEpgSources(
+            entries: List<ExportedEpgSource>,
+            global: GlobalSettings,
+            providers: List<ProviderEntity>,
+            dao: EpgSourceDao,
+        ): Pair<Int, Int> {
+            val byNameUrl = providers.associateBy { "${it.name}\u0000${it.url}" }
+            val byName = providers.associateBy { it.name }
+            val byId = providers.associateBy { it.id }
+            val links = dao.getAllLinksOnce().groupBy({ it.sourceId }, { it.providerId })
+            // The hand-added guides by URL key, with their sources. Automatic guides are never
+            // merged (OG-D3). The file's own guides are added as they are imported.
+            val guides = HashMap<String, Pair<Long, List<Long>>>()
+            for (source in dao.getAllSourcesOnce()) {
+                val owners = links[source.id].orEmpty()
+                if (!isAutomaticGuide(source, owners.mapNotNull { byId[it] })) {
+                    guides.putIfAbsent(
+                        GuideUrls.matchKey(source.url),
+                        source.id to owners,
+                    )
+                }
+            }
+            var added = 0
+            var skipped = 0
+            for (entry in entries) {
+                val refs = entry.providers.ifEmpty { listOf(ExportedSourceRef(entry.providerName, entry.providerUrl)) }
+                val owners = refs.mapNotNull { byNameUrl["${it.name}\u0000${it.url}"] ?: byName[it.name] }.distinctBy { it.id }
+                val key = GuideUrls.matchKey(entry.url)
+                val existing = guides[key]
+                val missing = owners.map { it.id }.filter { existing == null || it !in existing.second }
+                when {
+                    // An older file may hold an Xtream source's own guide, login included: left
+                    // out, as this version's exports do. The source's next login adds it.
+                    missing.isEmpty() || owners.any { isXtreamOwnGuide(entry.url, it) } -> {
+                        skipped++
+                    }
+
+                    existing != null -> {
+                        val (id, current) = existing
+                        dao.setLinks(id, current + missing)
+                        guides[key] = id to current + missing
+                        added++
+                    }
+
+                    else -> {
+                        val id =
+                            dao.insertGuide(
+                                EpgSourceEntity(
+                                    url = entry.url,
+                                    label = entry.label,
+                                    timezoneOffsetHours = entry.timezoneOffsetHours,
+                                    enabled = entry.enabled,
+                                    refreshIntervalHours = importedRefreshIntervalHours(entry, global),
+                                ),
+                                missing,
+                            )
+                        guides[key] = id to missing
+                        added++
+                    }
+                }
+            }
+            return added to skipped
+        }
 
         /**
          * The active profile's sources after an import: [current] with each of [changes] (a source's
@@ -199,13 +306,23 @@ class SettingsExportManager(
         val label: String = "",
         val timezoneOffsetHours: Int = 0,
         val enabled: Boolean = true,
-        // EPG sources belong to a provider. Provider ids aren't stable across devices, so the
-        // owner is recorded by name + URL, matching how [ProviderFavorites] identifies providers.
+        // The guide's first source. Provider ids aren't stable across devices, so the source is
+        // recorded by name + URL, matching how [ProviderFavorites] identifies providers.
         val providerName: String = "",
         val providerUrl: String = "",
         // Its own auto-refresh interval in hours, -1 = off. Null in a file from before it existed
         // (see importedRefreshIntervalHours) or for a source without one of its own.
         val refreshIntervalHours: Int? = null,
+        // Every source that reads the guide, the first link first ([providerName] and
+        // [providerUrl] are the first, for older builds). Empty in an older file.
+        val providers: List<ExportedSourceRef> = emptyList(),
+    )
+
+    /** A media source in a settings file, by name and URL: ids are not the same on two devices. */
+    @Serializable
+    data class ExportedSourceRef(
+        val name: String,
+        val url: String,
     )
 
     @Serializable
@@ -359,27 +476,12 @@ class SettingsExportManager(
                 }
 
             val providersById = allProviders.associateBy { it.id }
-            // A guide source's first link names its source in the file.
-            val firstProviderOf =
-                settingsDb
-                    .epgSourceDao()
-                    .getAllLinksOnce()
-                    .groupBy { it.sourceId }
-                    .mapValues { (_, links) -> links.first().providerId }
             val epgSources =
-                settingsDb.epgSourceDao().getAllSourcesOnce().mapNotNull { source ->
-                    val owner = firstProviderOf[source.id]?.let { providersById[it] } ?: return@mapNotNull null
-                    if (isXtreamOwnGuide(source.url, owner)) return@mapNotNull null
-                    ExportedEpgSource(
-                        url = source.url,
-                        label = source.label,
-                        timezoneOffsetHours = source.timezoneOffsetHours,
-                        enabled = source.enabled,
-                        providerName = owner.name,
-                        providerUrl = owner.url,
-                        refreshIntervalHours = source.refreshIntervalHours,
-                    )
-                }
+                exportedEpgSources(
+                    settingsDb.epgSourceDao().getAllSourcesOnce(),
+                    settingsDb.epgSourceDao().getAllLinksOnce(),
+                    providersById,
+                )
 
             // Favourites and watch state are the active profile's only; the format has no notion of
             // profiles (the live sync plan → Decisions).
@@ -713,43 +815,20 @@ class SettingsExportManager(
                     appSettings.setProfileSourceKeys(profile, importedProfileSources(appSettings.profileSourceKeys(profile), changes))
                 }
 
-                // Import EPG sources (merge: add new, skip existing by URL within the same provider)
+                // Import EPG sources: one guide per URL, with the sources of the file that are here.
                 var sourcesAdded = 0
                 var sourcesSkipped = 0
 
                 if (options.importEpgSources) {
-                    val settingsDb = SettingsDatabase.getInstance(context)
-                    val sourceDao = settingsDb.epgSourceDao()
-                    val urlsById = sourceDao.getAllSourcesOnce().associate { it.id to it.url }
-                    val existingKeys =
-                        sourceDao.getAllLinksOnce().mapNotNullTo(
-                            HashSet(),
-                        ) { link -> urlsById[link.sourceId]?.let { link.providerId to it } }
-
-                    for (es in exported.epgSources) {
-                        // EPG belongs to a provider - skip sources whose owner isn't on this device.
-                        val owner =
-                            allProvidersForFavorites.firstOrNull {
-                                it.name == es.providerName && it.url == es.providerUrl
-                            } ?: providersByName[es.providerName]
-                        // An older file may hold an Xtream source's own guide, login included:
-                        // left out, as this version's exports do. The source's next login adds it.
-                        if (owner == null || (owner.id to es.url) in existingKeys || isXtreamOwnGuide(es.url, owner)) {
-                            sourcesSkipped++
-                            continue
-                        }
-                        sourceDao.insertGuide(
-                            EpgSourceEntity(
-                                url = es.url,
-                                label = es.label,
-                                timezoneOffsetHours = es.timezoneOffsetHours,
-                                enabled = es.enabled,
-                                refreshIntervalHours = importedRefreshIntervalHours(es, exported.global),
-                            ),
-                            listOf(owner.id),
+                    val (added, skipped) =
+                        importEpgSources(
+                            exported.epgSources,
+                            exported.global,
+                            allProvidersForFavorites,
+                            SettingsDatabase.getInstance(context).epgSourceDao(),
                         )
-                        sourcesAdded++
-                    }
+                    sourcesAdded = added
+                    sourcesSkipped = skipped
                 }
 
                 // Favourites and watch state restore into the active profile, whichever profile
