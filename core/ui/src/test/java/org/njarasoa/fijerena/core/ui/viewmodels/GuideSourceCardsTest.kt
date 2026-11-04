@@ -165,8 +165,8 @@ class GuideSourceCardsTest {
             val viewModel = EpgManagementViewModel(context, providers)
             val next = async(start = CoroutineStart.UNDISPATCHED) { viewModel.userMessage.first() }
 
-            // The same URL once normalised (OG-Q5).
-            viewModel.addSource("http://G:80/new.xml/", "New", 0, providerIds = listOf(1L, 3L))
+            // The same URL once normalised (OG-Q5), the scheme in capitals too.
+            viewModel.addSource("HTTP://G:80/new.xml/", "New", 0, providerIds = listOf(1L, 3L))
 
             coVerify(timeout = TIMEOUT_MS) { dao.setLinks(10, listOf(1L, 3L)) }
             coVerify(exactly = 0) { dao.insertGuide(any(), any()) }

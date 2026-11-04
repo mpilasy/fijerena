@@ -314,7 +314,8 @@ class EpgManagementViewModel(
                     url
                         .split("\n", ",", " ")
                         .map { it.trim() }
-                        .filter { it.startsWith("http://") || it.startsWith("https://") }
+                        // The scheme in any case, as GuideUrls.matchKey reads it.
+                        .filter { it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true) }
                 val wanted = providerIds.distinct()
                 if (wanted.isEmpty()) return@withContext
 
