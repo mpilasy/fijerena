@@ -71,7 +71,7 @@ object AutoXmltvSources {
         providerUrl: String,
     ): Boolean = isAutoXmltvSource(source.url, source.label, providerUrl)
 
-    private fun isAutoXmltvSource(
+    internal fun isAutoXmltvSource(
         url: String,
         label: String,
         providerUrl: String,
@@ -135,7 +135,8 @@ object AutoXmltvSources {
         source: EpgSourceEntity,
     ): String? =
         withContext(Dispatchers.IO) {
-            val provider = repository.getProviderById(source.providerId)
+            // An automatic guide has one source, the one whose login it needs.
+            val provider = repository.guideProviderIds(source.id).singleOrNull()?.let { repository.getProviderById(it) }
             if (provider != null && needsLogin(source, provider)) {
                 val login = repository.getLogin(provider)
                 if (login.username.isNotEmpty() &&
@@ -178,7 +179,7 @@ object AutoXmltvSources {
     }
 
     /**
-     * What to do with [providerId]'s automatic source, given all its sources.
+     * What to do with [providerId]'s automatic source, given the guide sources it reads ([sources]).
      *
      * - [hasLiveChannels] `false`: delete every automatic source. `null` (unknown): add nothing,
      *   delete nothing beyond the duplicates.
@@ -206,7 +207,7 @@ object AutoXmltvSources {
         providesGuide: Boolean = true,
         enableKept: Boolean = false,
     ): Plan {
-        val own = sources.filter { it.providerId == providerId }
+        val own = sources
         val serverUrls = listOfNotNull(providerUrl, previousProviderUrl)
         val autos = own.filter { source -> serverUrls.any { isAutoXmltvSource(source, it) } }.sortedBy { it.addedAtMs }
         val keep = if (hasLiveChannels == false) null else autos.firstOrNull { it.url == currentUrl } ?: autos.firstOrNull()
@@ -238,7 +239,7 @@ object AutoXmltvSources {
                 currentUrl != null &&
                 own.none { it.url.substringBefore('?') == currentUrl }
             ) {
-                EpgSourceEntity(url = currentUrl, label = label(providerUrl), enabled = true, providerId = providerId)
+                EpgSourceEntity(url = currentUrl, label = label(providerUrl), enabled = true)
             } else {
                 null
             }
@@ -269,15 +270,16 @@ object AutoXmltvSources {
      */
     suspend fun apply(
         plan: Plan,
+        providerId: Long,
         sourceDao: EpgSourceDao,
         deleteIndexRows: suspend (List<Long>) -> Unit,
     ): Boolean {
         if (plan.deleteIds.isNotEmpty()) {
             deleteIndexRows(plan.deleteIds)
-            sourceDao.deleteSources(plan.deleteIds)
+            plan.deleteIds.forEach { sourceDao.deleteGuide(it) }
         }
         plan.update?.let { sourceDao.updateSource(it) }
-        plan.insert?.let { sourceDao.insertSource(it) }
+        plan.insert?.let { sourceDao.insertGuide(it, listOf(providerId)) }
         return plan.insert != null || plan.update?.enabled == true
     }
 
@@ -323,7 +325,7 @@ object AutoXmltvSources {
             plan(
                 providerId = providerId,
                 providerUrl = providerUrl,
-                sources = sourceDao.getAllSourcesOnce(),
+                sources = sourceDao.getSourcesForProviderOnce(providerId),
                 currentUrl = currentUrl,
                 hasLiveChannels = hasLiveChannels,
                 addMissing = true,
@@ -332,7 +334,7 @@ object AutoXmltvSources {
                 enableKept = enableKept,
             )
         if (!plan.isEmpty) Log.i(TAG, "Provider $providerId: ${describe(plan)}")
-        return apply(plan, sourceDao, deleteIndexRows)
+        return apply(plan, providerId, sourceDao, deleteIndexRows)
     }
 
     /**
@@ -405,7 +407,7 @@ object AutoXmltvSources {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             sourceIds.forEach { sourceId ->
                 val source = sourceDao.getSourceById(sourceId)
-                val provider = source?.let { repository.getProviderById(it.providerId) }
+                val provider = source?.let { sourceDao.getProviderIds(it.id).singleOrNull() }?.let { repository.getProviderById(it) }
                 if (source != null &&
                     provider != null &&
                     provider.type == PROVIDER_TYPE_XTREAM &&
@@ -457,13 +459,13 @@ object AutoXmltvSources {
                 plan(
                     providerId = provider.id,
                     providerUrl = provider.url,
-                    sources = sourceDao.getAllSourcesOnce(),
+                    sources = sourceDao.getSourcesForProviderOnce(provider.id),
                     currentUrl = provider.currentXmltvUrl,
                     hasLiveChannels = provider.hasLiveChannels,
                     addMissing = false,
                 )
             if (!plan.isEmpty) Log.i(TAG, "Cleanup, provider ${provider.id}: ${describe(plan)}")
-            apply(plan, sourceDao, deleteIndexRows)
+            apply(plan, provider.id, sourceDao, deleteIndexRows)
         }
     }
 

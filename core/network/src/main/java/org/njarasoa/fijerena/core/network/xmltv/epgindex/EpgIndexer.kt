@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -406,7 +407,7 @@ class EpgIndexer private constructor(
                 val ids = stale.map { it.id }
                 writeMutex.withLock {
                     EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(ids)
-                    sourceDao.deleteSources(ids)
+                    ids.forEach { sourceDao.deleteGuide(it) }
                 }
                 Log.i(TAG, "purgeXtreamApiSources: removed ${ids.size} self-created source(s)")
 
@@ -415,6 +416,41 @@ class EpgIndexer private constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "purgeXtreamApiSources failed: ${e.message}", e)
+            }
+        }
+
+    /**
+     * Deletes the guide index rows of guide sources that are no longer in the settings database:
+     * the copies [SettingsDatabase.MIGRATION_19_20] merged into one guide source (the one guide
+     * source per URL plan → Design C), and any other path that left rows behind. Runs at every
+     * start; with nothing to delete it is one query. Nothing is deleted when the settings
+     * database has no guide source or cannot be read, so a failed read never empties the guide.
+     * After a delete, the merged guide sources' times follow their offset ([EpgOffsetShift]).
+     */
+    suspend fun purgeOrphanedSources() =
+        withContext(Dispatchers.IO) {
+            try {
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+                val known = sourceDao.getAllSourcesOnce().mapTo(HashSet()) { it.id }
+                if (known.isEmpty()) return@withContext
+                val orphans =
+                    EpgIndexDatabase
+                        .getInstance(context)
+                        .epgIndexDao()
+                        .getIndexedSourceIds()
+                        .filter { it !in known }
+                if (orphans.isEmpty()) return@withContext
+
+                writeMutex.withLock {
+                    EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(orphans)
+                }
+                Log.i(TAG, "purgeOrphanedSources: removed the rows of ${orphans.size} guide source(s) no longer configured")
+                rebuildFtsAndUpdateState()
+                known.forEach { EpgOffsetShift.reconcile(it, sourceDao, this@EpgIndexer) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "purgeOrphanedSources failed: ${e.message}", e)
             }
         }
 

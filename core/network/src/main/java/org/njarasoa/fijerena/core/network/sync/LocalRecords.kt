@@ -173,7 +173,8 @@ class LocalRecords(
             SyncKind.EPG_SOURCE -> {
                 val key = SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, v.itemKey)
                 val source = sync.sourceByKey(v.itemKey)
-                val providerKey = source?.let { sync.providerKey(it.providerId) }
+                // The guide's first link names its source (one guide source per URL plan, Phase 1).
+                val providerKey = source?.let { sync.firstLinkedProviderId(it.id) }?.let { sync.providerKey(it) }
                 when {
                     source == null -> {
                         SyncRecord(key, v.hlc, deleted = true)

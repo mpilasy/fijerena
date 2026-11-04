@@ -25,7 +25,6 @@ class EpgRefreshScheduleTest {
         enabled: Boolean = true,
     ) = EpgSourceEntity(
         url = "http://epg.test/$intervalHours-$ingestedHoursAgo",
-        providerId = 1,
         enabled = enabled,
         lastIngestedAtMs = ingestedHoursAgo?.let { now - it * hour } ?: 0L,
         refreshIntervalHours = intervalHours,

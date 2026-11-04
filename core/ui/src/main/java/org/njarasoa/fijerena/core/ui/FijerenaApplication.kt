@@ -166,6 +166,11 @@ class FijerenaApplication :
             startupStep("purgeXtreamApiSources") {
                 EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
             }
+            // Drop the guide rows of guide sources no longer configured, such as the copies one
+            // guide source per URL merged — see EpgIndexer.purgeOrphanedSources().
+            startupStep("purgeOrphanedGuideSources") {
+                EpgIndexer.getInstance(this@FijerenaApplication).purgeOrphanedSources()
+            }
             // Once per install: drop the bogus stream favourites the Favourite categories list
             // used to save — see FavoriteCategoryRowCleanup.
             startupStep("FavoriteCategoryRowCleanup") {

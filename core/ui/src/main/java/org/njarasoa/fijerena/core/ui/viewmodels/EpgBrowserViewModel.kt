@@ -226,8 +226,13 @@ class EpgBrowserViewModel(
      * provider whose EPG had never run make a freshly-synced one read as "Never refreshed".
      */
     private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
-        combine(searchedProviderIdsFlow, SettingsDatabase.getInstance(context).epgSourceDao().getAllSources()) { providerIds, sources ->
-            sources.filter { it.providerId in providerIds }
+        combine(
+            searchedProviderIdsFlow,
+            SettingsDatabase.getInstance(context).epgSourceDao().getAllSources(),
+            SettingsDatabase.getInstance(context).epgSourceDao().getAllLinks(),
+        ) { providerIds, sources, links ->
+            val read = links.filter { it.providerId in providerIds }.mapTo(HashSet()) { it.sourceId }
+            sources.filter { it.id in read }
         }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**

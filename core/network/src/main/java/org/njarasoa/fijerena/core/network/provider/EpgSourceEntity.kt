@@ -8,7 +8,7 @@ import java.util.UUID
 
 @Entity(
     tableName = "epg_source",
-    indices = [Index("provider_id"), Index(value = ["source_key"], unique = true)],
+    indices = [Index(value = ["source_key"], unique = true)],
 )
 data class EpgSourceEntity(
     @PrimaryKey(autoGenerate = true)
@@ -37,8 +37,6 @@ data class EpgSourceEntity(
     val lastIngestionDurationMs: Long = 0,
     @ColumnInfo(name = "last_download_duration_ms", defaultValue = "0")
     val lastDownloadDurationMs: Long = 0,
-    @ColumnInfo(name = "provider_id")
-    val providerId: Long,
     /** SHA-256 of the last ingested payload (decompressed for `.gz` sources). Null = never hashed. */
     @ColumnInfo(name = "last_content_sha256")
     val lastContentSha256: String? = null,

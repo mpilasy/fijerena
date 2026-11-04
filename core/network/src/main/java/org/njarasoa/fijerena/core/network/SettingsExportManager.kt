@@ -359,9 +359,16 @@ class SettingsExportManager(
                 }
 
             val providersById = allProviders.associateBy { it.id }
+            // A guide source's first link names its source in the file.
+            val firstProviderOf =
+                settingsDb
+                    .epgSourceDao()
+                    .getAllLinksOnce()
+                    .groupBy { it.sourceId }
+                    .mapValues { (_, links) -> links.first().providerId }
             val epgSources =
                 settingsDb.epgSourceDao().getAllSourcesOnce().mapNotNull { source ->
-                    val owner = providersById[source.providerId] ?: return@mapNotNull null
+                    val owner = firstProviderOf[source.id]?.let { providersById[it] } ?: return@mapNotNull null
                     if (isXtreamOwnGuide(source.url, owner)) return@mapNotNull null
                     ExportedEpgSource(
                         url = source.url,
@@ -713,8 +720,11 @@ class SettingsExportManager(
                 if (options.importEpgSources) {
                     val settingsDb = SettingsDatabase.getInstance(context)
                     val sourceDao = settingsDb.epgSourceDao()
+                    val urlsById = sourceDao.getAllSourcesOnce().associate { it.id to it.url }
                     val existingKeys =
-                        sourceDao.getAllSourcesOnce().mapTo(HashSet()) { it.providerId to it.url }
+                        sourceDao.getAllLinksOnce().mapNotNullTo(
+                            HashSet(),
+                        ) { link -> urlsById[link.sourceId]?.let { link.providerId to it } }
 
                     for (es in exported.epgSources) {
                         // EPG belongs to a provider - skip sources whose owner isn't on this device.
@@ -728,15 +738,15 @@ class SettingsExportManager(
                             sourcesSkipped++
                             continue
                         }
-                        sourceDao.insertSource(
+                        sourceDao.insertGuide(
                             EpgSourceEntity(
                                 url = es.url,
                                 label = es.label,
                                 timezoneOffsetHours = es.timezoneOffsetHours,
                                 enabled = es.enabled,
-                                providerId = owner.id,
                                 refreshIntervalHours = importedRefreshIntervalHours(es, exported.global),
                             ),
+                            listOf(owner.id),
                         )
                         sourcesAdded++
                     }

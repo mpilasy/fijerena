@@ -457,13 +457,13 @@ class EpgFileManager private constructor(
                         ?.id
                 if (sourceDao.getSourceCount() == 0 && ownerId != null) {
                     val label = extractLabel(oldUrl)
-                    sourceDao.insertSource(
+                    sourceDao.insertGuide(
                         EpgSourceEntity(
                             url = oldUrl,
                             label = label,
                             timezoneOffsetHours = oldTz,
-                            providerId = ownerId,
                         ),
+                        listOf(ownerId),
                     )
                 }
             }
@@ -491,7 +491,7 @@ class EpgFileManager private constructor(
      */
     private fun launchGenericTask(
         taskId: String,
-        providerId: Long,
+        providerId: Long?,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
         dbQueryAndProcess: suspend () -> Unit,
@@ -656,12 +656,12 @@ class EpgFileManager private constructor(
     }
 
     fun launchProcessSingleSource(
-        providerId: Long,
         sourceId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask("epg_refresh_source_$sourceId", providerId, onComplete, onCellularConfirm) {
+        // The run claims its media source once it reads the guide source (processSingleSourceInternal).
+        launchGenericTask("epg_refresh_source_$sourceId", null, onComplete, onCellularConfirm) {
             processSingleSourceInternal(sourceId)
         }
     }
@@ -706,8 +706,13 @@ class EpgFileManager private constructor(
                 return@withLock
             }
 
-            // Every source in a refresh belongs to the same provider — that is what the run reports on.
-            _refreshProviderId.value = sources.first().providerId
+            // The run reports on the first source's first media source (one guide source per URL plan, Phase 1).
+            _refreshProviderId.value =
+                SettingsDatabase
+                    .getInstance(context)
+                    .epgSourceDao()
+                    .getProviderIds(sources.first().id)
+                    .firstOrNull()
             val startTime = System.currentTimeMillis()
             val fixedDevice = isFixedDevice()
             val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
@@ -1029,17 +1034,18 @@ class EpgFileManager private constructor(
     /**
      * Clear the per-provider parsed XMLTV cache (in memory, 12h TTL) for every
      * provider affected by a just-completed sync, so the player doesn't keep showing a
-     * pre-sync EPG snapshot until that TTL expires. Each source belongs to exactly one
-     * provider, so only that provider's cache needs clearing.
+     * pre-sync EPG snapshot until that TTL expires: the cache of every media source that reads a
+     * guide source the sync ingested.
      */
-    private fun invalidateXmltvCache(
+    private suspend fun invalidateXmltvCache(
         sources: List<EpgSourceEntity>,
         stats: List<SourceStats>,
     ) {
         val ingestedSourceIds = stats.filter { it.error == null }.map { it.sourceId }.toSet()
+        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
         sources
             .filter { it.id in ingestedSourceIds }
-            .map { it.providerId }
+            .flatMap { sourceDao.getProviderIds(it.id) }
             .distinct()
             .forEach { providerId ->
                 XmltvEpgService(context, providerId).clearCache()
@@ -1079,7 +1085,7 @@ class EpgFileManager private constructor(
                         _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
                         return@withLock
                     }
-                _refreshProviderId.value = source.providerId
+                _refreshProviderId.value = sourceDao.getProviderIds(source.id).firstOrNull()
                 val indexer = EpgIndexer.getInstance(context)
                 val label = source.label.ifBlank { extractLabel(source.url) }
 

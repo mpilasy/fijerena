@@ -17,17 +17,14 @@ class GuideScopeTest {
     private val jellyfin = ProviderEntity(id = 3, name = "J", url = "http://j.test", username = "me", type = "JELLYFIN")
     private val m3u = ProviderEntity(id = 4, name = "M", url = "http://m.test", username = "", type = "REMOTE_M3U")
 
-    private fun guide(
-        id: Long,
-        providerId: Long,
-    ) = EpgSourceEntity(id = id, url = "http://g$id.test/xmltv.php", providerId = providerId)
+    private fun guide(id: Long) = EpgSourceEntity(id = id, url = "http://g$id.test/xmltv.php")
 
     private val guides =
         mapOf(
-            1L to listOf(guide(11, 1), guide(12, 1)),
-            2L to listOf(guide(21, 2)),
-            3L to listOf(guide(31, 3)),
-            4L to listOf(guide(41, 4)),
+            1L to listOf(guide(11), guide(12)),
+            2L to listOf(guide(21)),
+            3L to listOf(guide(31)),
+            4L to listOf(guide(41)),
         )
 
     private fun stream(

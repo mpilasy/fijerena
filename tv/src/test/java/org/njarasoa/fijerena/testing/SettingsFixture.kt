@@ -55,14 +55,14 @@ object SettingsFixture {
         val sourceOne = providers.insertProvider(xtream("Source One", SOURCE_ONE))
         providers.insertProvider(xtream("Source Two", SOURCE_TWO))
         // Source One's guide, refreshed an hour ago: not stale, so no screen offers to refresh it.
-        database.epgSourceDao().insertSource(
+        database.epgSourceDao().insertGuide(
             EpgSourceEntity(
                 url = "http://guide.invalid/xmltv.php",
                 label = GUIDE,
                 lastIngestedAtMs = System.currentTimeMillis() - HOUR_MS,
-                providerId = sourceOne,
                 refreshIntervalHours = WEEK_HOURS,
             ),
+            listOf(sourceOne),
         )
 
         val settings = AppSettings(context)

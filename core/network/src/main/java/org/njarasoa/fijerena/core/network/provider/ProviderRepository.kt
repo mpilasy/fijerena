@@ -290,6 +290,9 @@ class ProviderRepository(
     /** [providerId]'s guide sources, as they change (Edit Source's Guide sources row). */
     fun getGuideSources(providerId: Long): Flow<List<EpgSourceEntity>> = db.epgSourceDao().getSourcesForProvider(providerId)
 
+    /** The media sources that read guide source [sourceId], the first link first. */
+    suspend fun guideProviderIds(sourceId: Long): List<Long> = db.epgSourceDao().getProviderIds(sourceId)
+
     /**
      * Add a new provider. Stores the password in a per-provider encrypted prefs file. The new
      * source is on for the profile in use (multi-source plan, P1); nothing else changes.
@@ -468,13 +471,7 @@ class ProviderRepository(
                     cleanupOrphanedPrefs(validProviderIds(), includeCredentials = userRequested)
 
                     if (userRequested) {
-                        val sourceDao = this@ProviderRepository.db.epgSourceDao()
-                        val allSourceProviderIds = sourceDao.getAllSourcesOnce().map { it.providerId }.toSet()
-                        // No tombstones: an orphan source's provider is gone, and that provider's
-                        // own tombstone already covers it on the other devices (see F-11).
-                        for (orphanId in allSourceProviderIds - validProviderIds()) {
-                            deleteProviderEpgSources(orphanId, recordTombstones = false)
-                        }
+                        pruneOrphanedGuideSources()
 
                         // auto_vacuum = FULL already returns freed pages to the file as rows go, so
                         // a VACUUM here only defragments, and in WAL mode it rewrites the whole
@@ -544,8 +541,9 @@ class ProviderRepository(
     }
 
     /**
-     * EPG sources belong to a single provider, and their indexed channels/programmes live in a
-     * separate database ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
+     * A guide source another source still reads stays, without this source's link; one only this
+     * source read goes, with its indexed channels and programmes, which live in a separate database
+     * ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
      *
      * EPG source records carry no provider tag, so the server's provider cascade doesn't reach
      * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
@@ -553,23 +551,49 @@ class ProviderRepository(
      * them again pushed every one back. See
      * the rock solid stability resilience plan → F-11.
      */
-    private suspend fun deleteProviderEpgSources(
+    internal suspend fun deleteProviderEpgSources(
         id: Long,
         recordTombstones: Boolean = true,
     ) {
         val sourceDao = db.epgSourceDao()
-        val sourceIds = sourceDao.getSourceIdsForProvider(id)
-        if (sourceIds.isNotEmpty()) {
-            EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(sourceIds)
+        val change: suspend () -> Unit = {
+            for (sourceId in sourceDao.getSourceIdsForProvider(id)) {
+                if (sourceDao.getProviderIds(sourceId).any { it != id }) {
+                    // Another source still reads the guide: only this source's link goes.
+                    sourceDao.unlink(sourceId, id)
+                } else {
+                    EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(listOf(sourceId))
+                    sourceDao.deleteGuide(sourceId)
+                }
+            }
         }
         if (recordTombstones) {
-            sourceDao.deleteSourcesForProvider(id)
+            change()
         } else {
             db.withTransaction {
                 db.settingsSyncDao().setApplying(true)
-                sourceDao.deleteSourcesForProvider(id)
+                change()
                 db.settingsSyncDao().setApplying(false)
             }
+        }
+    }
+
+    /**
+     * Shrink Database: the links to sources that are gone, then the guide sources no source reads,
+     * with their guide index rows. No tombstones: a gone source's own tombstone already covers its
+     * guide sources on the other devices (see F-11).
+     */
+    private suspend fun pruneOrphanedGuideSources() {
+        val sourceDao = db.epgSourceDao()
+        db.withTransaction {
+            db.settingsSyncDao().setApplying(true)
+            sourceDao.deleteLinksToMissingProviders()
+            val orphans = sourceDao.getUnlinkedSources().map { it.id }
+            if (orphans.isNotEmpty()) {
+                EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(orphans)
+                orphans.forEach { sourceDao.deleteGuide(it) }
+            }
+            db.settingsSyncDao().setApplying(false)
         }
     }
 

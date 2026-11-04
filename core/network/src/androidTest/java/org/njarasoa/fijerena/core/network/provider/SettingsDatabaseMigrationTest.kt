@@ -56,7 +56,7 @@ class SettingsDatabaseMigrationTest {
                     ProviderEntity(name = "Other provider", url = "http://other.test", username = "user"),
                 )
             }
-        runBlocking { seedDb.epgSourceDao().insertSource(EpgSourceEntity(url = "http://epg.test/a.xml", providerId = providerId)) }
+        runBlocking { seedDb.epgSourceDao().insertSource(EpgSourceEntity(url = "http://epg.test/a.xml")) }
         val rawDb = seedDb.openHelper.writableDatabase
         rawDb.execSQL("DROP TABLE `profiles`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
@@ -108,12 +108,13 @@ class SettingsDatabaseMigrationTest {
                     SettingsDatabase.MIGRATION_12_13,
                     SettingsDatabase.MIGRATION_13_14,
                     SettingsDatabase.MIGRATION_14_15,
-                    // 15→16 to 18→19 have their own JVM tests (SettingsDatabaseMigration15To16Test to
-                    // SettingsDatabaseMigration18To19Test). A version bump adds its migration here too.
+                    // 15→16 to 19→20 have their own JVM tests (SettingsDatabaseMigration15To16Test to
+                    // SettingsDatabaseMigration19To20Test). A version bump adds its migration here too.
                     SettingsDatabase.MIGRATION_15_16,
                     SettingsDatabase.MIGRATION_16_17,
                     SettingsDatabase.MIGRATION_17_18,
                     SettingsDatabase.MIGRATION_18_19,
+                    SettingsDatabase.MIGRATION_19_20,
                 ).build()
         assertEquals(SettingsDatabase.DB_VERSION, migratedDb.openHelper.writableDatabase.version)
 

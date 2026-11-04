@@ -322,6 +322,10 @@ interface EpgIndexDao {
         deleteChannelsBySourceId(sourceId)
     }
 
+    /** Every guide source with channels or programmes in the index. */
+    @Query("SELECT source_id FROM epg_channel UNION SELECT source_id FROM epg_programme")
+    suspend fun getIndexedSourceIds(): List<Long>
+
     @Transaction
     suspend fun deleteBySourceIds(sourceIds: List<Long>) {
         deleteProgrammesBySourceIds(sourceIds)

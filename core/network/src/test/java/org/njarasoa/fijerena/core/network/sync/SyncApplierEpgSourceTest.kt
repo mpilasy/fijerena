@@ -36,7 +36,7 @@ class SyncApplierEpgSourceTest {
     private val settingsDb = mockk<SettingsDatabase>(relaxed = true)
     private val provider = ProviderEntity(id = 7, name = "IPTV", url = "http://iptv.test", username = "me", providerKey = "prov-1")
     private val local =
-        EpgSourceEntity(id = 3, url = "http://epg.test/a.xml", label = "A", providerId = 7, sourceKey = "src-1", refreshIntervalHours = 6)
+        EpgSourceEntity(id = 3, url = "http://epg.test/a.xml", label = "A", sourceKey = "src-1", refreshIntervalHours = 6)
 
     @Before
     fun setup() {
@@ -103,12 +103,12 @@ class SyncApplierEpgSourceTest {
         coEvery { sync.sourceByKey("src-1") } returns null
         coEvery { sync.sourcesAt(any(), any()) } returns emptyList()
         val inserted = slot<EpgSourceEntity>()
-        coEvery { sources.insertSource(capture(inserted)) } returns 1L
+        coEvery { sources.insertGuide(capture(inserted), listOf(7L)) } returns 1L
         val legacy = """{"providerKey":"prov-1","url":"http://epg.test/new.xml","label":"N","timezoneOffsetHours":0,"enabled":true}"""
 
         runBlocking { applier().apply(listOf(record(legacy))) }
 
-        coVerify { sources.insertSource(any()) }
+        coVerify { sources.insertGuide(any(), listOf(7L)) }
         assertNull(inserted.captured.refreshIntervalHours)
     }
 
@@ -145,7 +145,7 @@ class SyncApplierEpgSourceTest {
         val lookedUp = slot<String>()
         coEvery { sync.sourcesAt(any(), capture(lookedUp)) } returns emptyList()
         val inserted = slot<EpgSourceEntity>()
-        coEvery { sources.insertSource(capture(inserted)) } returns 1L
+        coEvery { sources.insertGuide(capture(inserted), listOf(7L)) } returns 1L
         val withLogin = "http://iptv.test/xmltv.php?username=me&password=secret"
 
         runBlocking {

@@ -76,7 +76,7 @@ class EpgOffsetShiftTest {
         offsetHours: Int = 0,
     ): Long {
         val dao = settings.epgSourceDao()
-        val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/g.xml", timezoneOffsetHours = offsetHours, providerId = 1))
+        val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/g.xml", timezoneOffsetHours = offsetHours))
         val stats =
             EpgIndexer
                 .getInstance(
@@ -175,7 +175,7 @@ class EpgOffsetShiftTest {
     fun `a source with nothing in the index yet is left alone`() =
         runBlocking {
             val dao = settings.epgSourceDao()
-            val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/new.xml", providerId = 1))
+            val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/new.xml"))
 
             assertEquals(EpgOffsetShift.Result.IN_STEP, setOffset(id, 8))
         }

@@ -26,7 +26,6 @@ class EpgFileManagerChangeDetectionTest {
         EpgSourceEntity(
             id = 7,
             url = "http://example.invalid/guide.xml",
-            providerId = 1,
             lastIngestedAtMs = System.currentTimeMillis(),
             lastContentSha256 = "abc",
             etag = "\"v1\"",

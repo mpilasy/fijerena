@@ -82,10 +82,14 @@ class EpgManagementViewModel(
             guideProviders,
             providerRepository.profileSources(appSettings.activeProfileId),
             settingsDb().epgSourceDao().getAllSources(),
-        ) { providers, profileSources, all ->
+            settingsDb().epgSourceDao().getAllLinks(),
+        ) { providers, profileSources, all, links ->
             val inProfile = profileSources.mapTo(HashSet()) { it.id }
-            val byProvider = all.groupBy { it.providerId }
-            providers.map { GuideGroup(it, it.id in inProfile, byProvider[it.id].orEmpty()) }
+            val byId = all.associateBy { it.id }
+            // A guide source several sources read shows in each of their groups for now (the one
+            // guide source per URL plan, Phase 1; Lane U shows it once).
+            val byProvider = links.groupBy({ it.providerId }) { byId[it.sourceId] }.mapValues { (_, list) -> list.filterNotNull() }
+            providers.map { GuideGroup(it, it.id in inProfile, byProvider[it.id].orEmpty().sortedBy { s -> s.addedAtMs }) }
         }.distinctUntilChanged()
 
     /** Every guide source on the page, group after group. */
@@ -167,7 +171,7 @@ class EpgManagementViewModel(
         viewModelScope.launchGuarded("EpgManagementViewModel.setSourceEnabled") {
             withContext(Dispatchers.IO) {
                 val repository = ProviderRepository(context)
-                val provider = repository.getProviderById(source.providerId)
+                val provider = repository.guideProviderIds(source.id).singleOrNull()?.let { repository.getProviderById(it) }
                 if (provider != null && AutoXmltvSources.isAutoXmltvSource(source, provider.url)) {
                     repository.setProvidesGuide(provider.id, enabled, byUser = true)
                     AutoXmltvSources.reconcileStored(context, provider.id)
@@ -296,22 +300,22 @@ class EpgManagementViewModel(
                 val dao = settingsDb().epgSourceDao()
                 for (providerId in providerIds) {
                     for (u in urls) {
-                        if (dao.getSourceByUrl(u, providerId) != null) continue
+                        if (dao.getSourcesForProviderOnce(providerId).any { it.url == u }) continue
                         val finalLabel =
                             if (urls.size == 1) {
                                 label.ifBlank { EpgFileManager.extractLabel(u) }
                             } else {
                                 EpgFileManager.extractLabel(u)
                             }
-                        dao.insertSource(
+                        dao.insertGuide(
                             EpgSourceEntity(
                                 url = u,
                                 label = finalLabel,
                                 timezoneOffsetHours = timezoneOffsetHours,
                                 ingestMethod = ingestMethod,
                                 enabled = enabled,
-                                providerId = providerId,
                             ),
+                            listOf(providerId),
                         )
                     }
                 }
@@ -444,7 +448,6 @@ class EpgManagementViewModel(
         _taskSourceIds.value += (taskId to setOf(sourceId))
 
         epgFileManager.launchProcessSingleSource(
-            providerId = source.providerId,
             sourceId = sourceId,
             onComplete = {
                 refreshDbStats()

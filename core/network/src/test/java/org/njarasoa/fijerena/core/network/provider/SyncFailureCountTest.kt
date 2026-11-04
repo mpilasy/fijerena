@@ -91,7 +91,7 @@ class SyncFailureCountTest {
     fun `a guide source's failures count, each success kind clears them`() =
         runBlocking {
             val dao = db.epgSourceDao()
-            val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/a.xml", providerId = 1, lastIngestedAtMs = 500))
+            val id = dao.insertSource(EpgSourceEntity(url = "http://epg.test/a.xml", lastIngestedAtMs = 500))
             val queued = pending()
 
             dao.markError(id, "one", failedAtMs = 1_000)

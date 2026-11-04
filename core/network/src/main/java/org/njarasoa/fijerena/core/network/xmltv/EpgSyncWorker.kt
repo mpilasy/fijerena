@@ -109,7 +109,7 @@ class EpgSyncWorker(
                 var sourceCount = 0
                 var errorCount = 0
                 for (staleSources in runs) {
-                    Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s) of provider ${staleSources.first().providerId}")
+                    Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
                     fileManager.processAllSources(staleSources)
                     sourceCount += staleSources.size
                     val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed

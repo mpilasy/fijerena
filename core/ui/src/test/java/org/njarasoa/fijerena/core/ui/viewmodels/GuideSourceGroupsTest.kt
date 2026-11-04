@@ -22,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -64,15 +65,18 @@ class GuideSourceGroupsTest {
         Dispatchers.resetMain()
     }
 
-    private fun guide(
-        id: Long,
-        providerId: Long,
-    ) = EpgSourceEntity(id = id, url = "http://g/$id.xml", providerId = providerId)
+    private fun guide(id: Long) = EpgSourceEntity(id = id, url = "http://g/$id.xml")
+
+    /** One guide source for each of [links] (guide id to source id), read by that source. */
+    private fun given(vararg links: Pair<Long, Long>) {
+        every { dao.getAllSources() } returns flowOf(links.map { guide(it.first) })
+        every { dao.getAllLinks() } returns flowOf(links.map { EpgSourceProviderEntity(it.first, it.second, 0) })
+    }
 
     @Test
     fun `a group for each source with channels, every source on the device`() =
         runBlocking {
-            every { dao.getAllSources() } returns flowOf(listOf(guide(10, 1), guide(30, 3), guide(31, 3), guide(90, 9)))
+            given(10L to 1L, 30L to 3L, 31L to 3L, 90L to 9L)
 
             val groups = EpgManagementViewModel(context, providers).groups.first()
 
@@ -86,7 +90,7 @@ class GuideSourceGroupsTest {
     @Test
     fun `a source with no guide source still has its group`() =
         runBlocking {
-            every { dao.getAllSources() } returns flowOf(listOf(guide(10, 1)))
+            given(10L to 1L)
 
             val groups = EpgManagementViewModel(context, providers).groups.first()
 
@@ -96,16 +100,16 @@ class GuideSourceGroupsTest {
     @Test
     fun `Add adds the guide source to each source picked, skipping one that has it`() {
         val url = "http://g/new.xml"
-        coEvery { dao.getSourceByUrl(url, 1) } returns guide(10, 1).copy(url = url)
-        coEvery { dao.getSourceByUrl(url, 3) } returns null
+        coEvery { dao.getSourcesForProviderOnce(1) } returns listOf(guide(10).copy(url = url))
+        coEvery { dao.getSourcesForProviderOnce(3) } returns emptyList()
 
         EpgManagementViewModel(context, providers).addSource(url, "New", 0, providerIds = listOf(1L, 3L))
 
         coVerify(
             timeout = TIMEOUT_MS,
             exactly = 1,
-        ) { dao.insertSource(match { it.url == url && it.providerId == 3L && it.label == "New" }) }
-        coVerify(exactly = 0) { dao.insertSource(match { it.providerId == 1L }) }
+        ) { dao.insertGuide(match { it.url == url && it.label == "New" }, listOf(3L)) }
+        coVerify(exactly = 0) { dao.insertGuide(any(), listOf(1L)) }
     }
 
     private companion object {

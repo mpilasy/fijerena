@@ -85,11 +85,29 @@ internal object SettingsSyncTriggers {
                     "label",
                     "timezone_offset_hours",
                     "enabled",
-                    "provider_id",
                     "refresh_interval_hours",
                 )}) " +
                 "BEGIN $TICK $source END",
         )
+        // The media sources a guide source is linked to are part of its record (v20): a link added
+        // or removed queues the guide. EXISTS: links deleted after their guide queue nothing. Not on
+        // a database older than v20 (a migration test installs the triggers an earlier open left).
+        val hasLinks =
+            db
+                .query(
+                    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'epg_source_provider'",
+                ).use { it.moveToFirst() }
+        for ((event, row) in listOf("INSERT" to "NEW", "DELETE" to "OLD").takeIf { hasLinks }.orEmpty()) {
+            val guideKey = "(SELECT `source_key` FROM `epg_source` WHERE `id` = $row.`source_id`)"
+            val name = "sync_epg_source_provider_${event.lowercase()}"
+            createTrigger(
+                db,
+                name,
+                "CREATE TRIGGER `$name` AFTER $event ON `epg_source_provider` " +
+                    "WHEN $NOT_APPLYING AND EXISTS (SELECT 1 FROM `epg_source` WHERE `id` = $row.`source_id`) " +
+                    "BEGIN $TICK ${queue("'${SyncKind.EPG_SOURCE}'", guideKey)} END",
+            )
+        }
         createTrigger(
             db,
             "sync_epg_source_delete",

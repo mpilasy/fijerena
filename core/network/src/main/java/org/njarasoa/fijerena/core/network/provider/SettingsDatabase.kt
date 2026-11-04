@@ -8,6 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
@@ -15,6 +16,8 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
     entities = [
         ProviderEntity::class,
         EpgSourceEntity::class,
+        EpgSourceProviderEntity::class,
+        EpgSourceAliasEntity::class,
         EpgPipelineStatsEntity::class,
         ProfileEntity::class,
         SettingsTombstoneEntity::class,
@@ -36,7 +39,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 19
+        const val DB_VERSION = 20
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -399,6 +402,147 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * v19 → v20: one guide source per URL (the one guide source per URL plan → Design M). The
+         * copies of one hand-added guide, one per media source, become one `epg_source` row, linked
+         * to its sources in `epg_source_provider`; the other copies' sync keys go to
+         * `epg_source_alias`. [GuideMerge] says which row keeps its id and which values win.
+         * `epg_source` is built again without `provider_id`. Nothing is queued for live sync: every
+         * updated device merges its own rows the same way. The merged copies' guide index rows are
+         * deleted at the next start (`EpgIndexer.purgeOrphanedSources`), as a migration of this
+         * database cannot reach the guide index.
+         */
+        val MIGRATION_19_20 =
+            object : Migration(19, 20) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // The live sync triggers, from an earlier open, still exist: hold them off.
+                    db.execSQL("UPDATE `sync_clock` SET `applying` = 1 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `epg_source_provider` (`source_id` INTEGER NOT NULL, `provider_id` INTEGER NOT NULL, " +
+                            "`linked_at_ms` INTEGER NOT NULL, PRIMARY KEY(`source_id`, `provider_id`))",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_epg_source_provider_provider_id` ON `epg_source_provider` (`provider_id`)",
+                    )
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `epg_source_alias` (`alias_key` TEXT NOT NULL, `source_id` INTEGER NOT NULL, " +
+                            "`provider_id` INTEGER, PRIMARY KEY(`alias_key`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_epg_source_alias_source_id` ON `epg_source_alias` (`source_id`)")
+                    db.execSQL("CREATE TABLE `epg_source_new` ($EPG_SOURCE_V20_COLUMNS)")
+
+                    val rows =
+                        db
+                            .query(
+                                "SELECT e.`id`, e.`url`, e.`label`, e.`provider_id`, p.`id`, p.`type`, p.`url`, e.`source_key`, " +
+                                    "e.`timezone_offset_hours`, e.`refresh_interval_hours`, e.`enabled`, e.`last_ingested_at_ms`, " +
+                                    "e.`added_at_ms`, v.`hlc` FROM `epg_source` e LEFT JOIN `providers` p ON p.`id` = e.`provider_id` " +
+                                    "LEFT JOIN `sync_version` v ON v.`kind` = '${SyncKind.EPG_SOURCE}' " +
+                                    "AND v.`profileId` = '${SyncKind.SHARED}' AND v.`itemKey` = e.`source_key`",
+                            ).use { c ->
+                                buildList {
+                                    while (c.moveToNext()) {
+                                        val exists = !c.isNull(4)
+                                        add(
+                                            GuideMerge.Row(
+                                                id = c.getLong(0),
+                                                url = c.getString(1),
+                                                label = c.getString(2),
+                                                providerId = c.getLong(3),
+                                                providerExists = exists,
+                                                auto =
+                                                    exists && c.getString(5) == "XTREAM" &&
+                                                        AutoXmltvSources.isAutoXmltvSource(c.getString(1), c.getString(2), c.getString(6)),
+                                                sourceKey = c.getString(7),
+                                                offsetHours = c.getInt(8),
+                                                intervalHours = if (c.isNull(9)) null else c.getInt(9),
+                                                enabled = c.getInt(10) != 0,
+                                                lastIngestedAtMs = c.getLong(11),
+                                                addedAtMs = c.getLong(12),
+                                                hlc = if (c.isNull(13)) null else c.getLong(13),
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
+
+                    val columns = EPG_SOURCE_V20_COLUMN_NAMES.joinToString(", ") { "`$it`" }
+                    GuideMerge.groups(rows).map(GuideMerge::merge).forEach { guide ->
+                        val id = guide.survivorId
+                        db.execSQL("INSERT INTO `epg_source_new` ($columns) SELECT $columns FROM `epg_source` WHERE `id` = $id")
+                        db.execSQL(
+                            "UPDATE `epg_source_new` SET `source_key` = ?, `label` = ?, `timezone_offset_hours` = ?, " +
+                                "`refresh_interval_hours` = ?, `enabled` = ?, `added_at_ms` = ? WHERE `id` = ?",
+                            arrayOf<Any?>(
+                                guide.sourceKey,
+                                guide.label,
+                                guide.offsetHours,
+                                guide.intervalHours,
+                                if (guide.enabled) 1 else 0,
+                                guide.addedAtMs,
+                                id,
+                            ),
+                        )
+                        guide.links.forEach { (providerId, linkedAt) ->
+                            db.execSQL(
+                                "INSERT INTO `epg_source_provider` (`source_id`, `provider_id`, `linked_at_ms`) VALUES (?, ?, ?)",
+                                arrayOf<Any>(id, providerId, linkedAt),
+                            )
+                        }
+                        guide.aliases.forEach { (key, providerId) ->
+                            db.execSQL(
+                                "INSERT INTO `epg_source_alias` (`alias_key`, `source_id`, `provider_id`) VALUES (?, ?, ?)",
+                                arrayOf<Any>(key, id, providerId),
+                            )
+                        }
+                    }
+
+                    db.execSQL("DROP TABLE `epg_source`")
+                    db.execSQL("ALTER TABLE `epg_source_new` RENAME TO `epg_source`")
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_epg_source_source_key` ON `epg_source` (`source_key`)")
+                    db.execSQL("UPDATE `sync_clock` SET `applying` = 0 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                }
+            }
+
+        /** `epg_source`'s columns from v20 (no `provider_id`), in Room's order. */
+        private val EPG_SOURCE_V20_COLUMN_NAMES =
+            listOf(
+                "id",
+                "url",
+                "label",
+                "timezone_offset_hours",
+                "added_at_ms",
+                "last_ingested_at_ms",
+                "last_error",
+                "enabled",
+                "last_channels",
+                "last_programmes",
+                "last_download_bytes",
+                "ingest_method",
+                "last_ingestion_duration_ms",
+                "last_download_duration_ms",
+                "last_content_sha256",
+                "etag",
+                "last_modified_header",
+                "source_key",
+                "refresh_interval_hours",
+                "last_failed_at_ms",
+                "failures_since_success",
+                "file_utc_offset_minutes",
+                "applied_utc_offset_minutes",
+            )
+
+        private const val EPG_SOURCE_V20_COLUMNS =
+            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `url` TEXT NOT NULL, `label` TEXT NOT NULL, " +
+                "`timezone_offset_hours` INTEGER NOT NULL, `added_at_ms` INTEGER NOT NULL, `last_ingested_at_ms` INTEGER NOT NULL, " +
+                "`last_error` TEXT, `enabled` INTEGER NOT NULL, `last_channels` INTEGER NOT NULL DEFAULT 0, " +
+                "`last_programmes` INTEGER NOT NULL DEFAULT 0, `last_download_bytes` INTEGER NOT NULL DEFAULT 0, " +
+                "`ingest_method` TEXT NOT NULL DEFAULT 'DOWNLOADED', `last_ingestion_duration_ms` INTEGER NOT NULL DEFAULT 0, " +
+                "`last_download_duration_ms` INTEGER NOT NULL DEFAULT 0, `last_content_sha256` TEXT, `etag` TEXT, " +
+                "`last_modified_header` TEXT, `source_key` TEXT NOT NULL, `refresh_interval_hours` INTEGER, " +
+                "`last_failed_at_ms` INTEGER, `failures_since_success` INTEGER NOT NULL DEFAULT 0, " +
+                "`file_utc_offset_minutes` INTEGER, `applied_utc_offset_minutes` INTEGER"
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -433,6 +577,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_16_17,
                         MIGRATION_17_18,
                         MIGRATION_18_19,
+                        MIGRATION_19_20,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

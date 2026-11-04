@@ -7,7 +7,7 @@ Room's own exported schema for `xtream_v2.db` and `providers.db` is committed un
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 18
+**Version:** 20
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
@@ -17,7 +17,9 @@ v16 added `epg_source.refresh_interval_hours`; v17, no schema change, dropped th
 automatic Xtream guide source URLs; v18 added the last failure time and the failure count,
 `providers.lastFailedAtMs` / `failuresSinceSuccess` and `epg_source.last_failed_at_ms` /
 `failures_since_success`; v19 added `epg_source.file_utc_offset_minutes` /
-`applied_utc_offset_minutes`, so a changed offset moves the guide's times.)
+`applied_utc_offset_minutes`, so a changed offset moves the guide's times; v20 made one guide
+source per URL: `epg_source` lost `provider_id`, and `epg_source_provider` links a guide source to
+the media sources that read it, with `epg_source_alias` for the sync keys of merged copies.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -106,7 +108,6 @@ None of these sync bookkeeping columns is synced, exported or backed up.
 | `id` | INTEGER (PK) | Auto-generated ID |
 | `url` | TEXT | XMLTV source URL. An Xtream source's automatic guide source (label ending ` (Bulk)`) is stored as `<server>/xmltv.php`, without the login: `AutoXmltvSources.fetchUrl` adds `?username=…&password=…` from the encrypted credential store at download time, and live sync sends it with the login (inside the encrypted record) for older builds, stripped again on receipt. `MIGRATION_16_17` strips existing rows, with the sync triggers silenced. Hand-added URLs are stored as typed |
 | `label` | TEXT | Display label for the source |
-| `provider_id` | INTEGER | Owning provider ID (enforced `NOT NULL` in v8, backfilled from active/first provider) |
 | `timezone_offset_hours` | INTEGER | Manual offset for parsing: when not 0, the file's times are read in this offset in place of their own zone part |
 | `added_at_ms` | INTEGER | Timestamp when added |
 | `last_ingested_at_ms` | INTEGER | Timestamp of last successful sync |
@@ -128,7 +129,41 @@ None of these sync bookkeeping columns is synced, exported or backed up.
 | `file_utc_offset_minutes` | INTEGER (nullable) | The UTC offset, in minutes, written on every programme start time of the file at the last import (`+0800` = 480, no zone part = 0); null when the times have more than one offset, or before the first import on v19. Local, never synced (added v19) |
 | `applied_utc_offset_minutes` | INTEGER (nullable) | The UTC offset, in minutes, the source's programme times in the guide index were read with: `timezone_offset_hours` × 60 when not 0, else `file_utc_offset_minutes`. `EpgOffsetShift.reconcile` compares it with the offset the source asks for after a save, a live sync change and each import, and moves `epg_programme.start_epoch` / `end_epoch` by the difference; when one of the two is null it drops the validators so the next refresh imports again. `MIGRATION_18_19` sets `timezone_offset_hours` × 60 on rows with an offset, null on the others. Local, never synced (added v19) |
 
-**Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
+**Index:** `index_epg_source_source_key` (unique) on `(source_key)`. Until v20 a `provider_id` column
+(with `index_epg_source_provider_id`) named the one media source of each row: a guide added for
+several sources was one row per source. The media sources are now in `epg_source_provider`.
+
+**Migration 19 → 20 (`MIGRATION_19_20`, the one guide source per URL plan → Design M).** The rows of
+one hand-added guide — same URL by `GuideUrls.matchKey` (scheme and host case, a default port and a
+trailing `/` do not count) — become one row, as `GuideMerge` says: the row with the newest import
+keeps its id, guide index rows, stats, validators and offsets; the guide takes the lowest
+`source_key` (and that row's label), the offset edited last (highest `sync_version.hlc`), the
+shortest refresh interval that is on, and is on when one copy was on, linked to the sources whose
+copy was on. Each source's automatic Xtream guide stays its own row, as does a row whose source is
+gone (no link; Shrink Database deletes it). The table is built again without `provider_id`, with
+the sync triggers held off: nothing is queued. `EpgIndexer.purgeOrphanedSources` (a startup step)
+deletes the merged copies' guide index rows at the next start.
+
+### Table: `epg_source_provider` (added v20)
+| Column | Type | Description |
+|--------|------|-------------|
+| `source_id` | INTEGER (PK) | The guide source (`epg_source.id`) |
+| `provider_id` | INTEGER (PK) | A media source (`providers.id`) that reads it |
+| `linked_at_ms` | INTEGER | When the link was made. The first link (lowest, then `provider_id`) names the guide's source for older builds in live sync |
+
+**Index:** `index_epg_source_provider_provider_id` on `(provider_id)`. No foreign keys: deleting a
+source unlinks it from a guide another source still reads, and deletes a guide only it read, with
+its guide index rows (`ProviderRepository.deleteProviderEpgSources`). Shrink Database deletes links
+to sources that are gone, then guide sources with no link.
+
+### Table: `epg_source_alias` (added v20)
+| Column | Type | Description |
+|--------|------|-------------|
+| `alias_key` | TEXT (PK) | Another live sync key of a guide source: a merged copy's `source_key` |
+| `source_id` | INTEGER | The guide source it names |
+| `provider_id` | INTEGER (nullable) | With a source: an older build's row for that (guide, source) pair. Null: the same guide under another key |
+
+**Index:** `index_epg_source_alias_source_id` on `(source_id)`. Deleted with its guide source.
 
 `last_content_sha256`, `etag` and `last_modified_header` drive refresh change detection — see
 `docs/epg_guide.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
@@ -153,7 +188,8 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 |---|---|---|
 | `sync_providers_insert` / `_update` | insert; update changing `name`, `url`, `username`, `type`, `config` or `providerSettings` | `provider` |
 | `sync_profiles_insert` / `_update` | insert; update changing `name` or `colorIndex` | `profile` |
-| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled`, `provider_id` or `refresh_interval_hours` | `epg_source` |
+| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled` or `refresh_interval_hours` (`provider_id` until v20) | `epg_source` |
+| `sync_epg_source_provider_insert` / `_delete` (v20) | a link added or removed, while its guide source exists | the guide source's `epg_source` key |
 | `sync_epg_source_delete` | delete | records an `epg_source` tombstone (which queues it) |
 | `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's kind; stamps `deletedAt` when it is 0 |
 

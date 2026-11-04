@@ -62,7 +62,7 @@ class SettingsSyncTriggersTest {
     fun anEpgSourceIsQueuedButNotItsIngestionAndItsDeletionIsRecorded() =
         runBlocking {
             val sources = db.epgSourceDao()
-            val id = sources.insertSource(EpgSourceEntity(url = "http://trig.test/epg.xml", providerId = 1L))
+            val id = sources.insertSource(EpgSourceEntity(url = "http://trig.test/epg.xml"))
             val key = sources.getSourceById(id)!!.sourceKey
             val added = queued(SyncKind.EPG_SOURCE, key).single()
 

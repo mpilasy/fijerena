@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -18,20 +19,114 @@ interface EpgSourceDao {
     @Query("SELECT * FROM epg_source WHERE id = :id")
     suspend fun getSourceById(id: Long): EpgSourceEntity?
 
-    @Query("SELECT * FROM epg_source WHERE url = :url AND provider_id = :providerId LIMIT 1")
-    suspend fun getSourceByUrl(
-        url: String,
-        providerId: Long,
-    ): EpgSourceEntity?
-
-    @Query("SELECT * FROM epg_source WHERE provider_id = :providerId ORDER BY added_at_ms ASC")
+    // A guide source is linked to the media sources that read it (epg_source_provider, v20).
+    @Query(
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
+            "WHERE l.provider_id = :providerId ORDER BY s.added_at_ms ASC",
+    )
     fun getSourcesForProvider(providerId: Long): Flow<List<EpgSourceEntity>>
 
-    @Query("SELECT id FROM epg_source WHERE provider_id = :providerId")
+    @Query(
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
+            "WHERE l.provider_id = :providerId ORDER BY s.added_at_ms ASC",
+    )
+    suspend fun getSourcesForProviderOnce(providerId: Long): List<EpgSourceEntity>
+
+    @Query("SELECT source_id FROM epg_source_provider WHERE provider_id = :providerId")
     suspend fun getSourceIdsForProvider(providerId: Long): List<Long>
 
-    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId ORDER BY added_at_ms ASC")
+    @Query(
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
+            "WHERE s.enabled = 1 AND l.provider_id = :providerId ORDER BY s.added_at_ms ASC",
+    )
     suspend fun getEnabledSourcesForProvider(providerId: Long): List<EpgSourceEntity>
+
+    /** The enabled guide sources any of [providerIds] reads, each once. */
+    @Query(
+        "SELECT * FROM epg_source WHERE enabled = 1 AND id IN " +
+            "(SELECT source_id FROM epg_source_provider WHERE provider_id IN (:providerIds)) ORDER BY added_at_ms ASC",
+    )
+    suspend fun getEnabledSourcesForProviders(providerIds: Collection<Long>): List<EpgSourceEntity>
+
+    /** The media sources that read guide source [sourceId], the first link first. */
+    @Query("SELECT provider_id FROM epg_source_provider WHERE source_id = :sourceId ORDER BY linked_at_ms ASC, provider_id ASC")
+    suspend fun getProviderIds(sourceId: Long): List<Long>
+
+    @Query("SELECT * FROM epg_source_provider ORDER BY linked_at_ms ASC, provider_id ASC")
+    fun getAllLinks(): Flow<List<EpgSourceProviderEntity>>
+
+    @Query("SELECT * FROM epg_source_provider ORDER BY linked_at_ms ASC, provider_id ASC")
+    suspend fun getAllLinksOnce(): List<EpgSourceProviderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertLink(link: EpgSourceProviderEntity)
+
+    @Query("DELETE FROM epg_source_provider WHERE source_id = :sourceId AND provider_id = :providerId")
+    suspend fun unlink(
+        sourceId: Long,
+        providerId: Long,
+    )
+
+    @Query("DELETE FROM epg_source_provider WHERE source_id = :sourceId")
+    suspend fun deleteLinksOf(sourceId: Long)
+
+    /** Links to media sources that no longer exist. */
+    @Query("DELETE FROM epg_source_provider WHERE provider_id NOT IN (SELECT id FROM providers)")
+    suspend fun deleteLinksToMissingProviders(): Int
+
+    /** Guide sources no media source reads. */
+    @Query("SELECT * FROM epg_source WHERE id NOT IN (SELECT source_id FROM epg_source_provider)")
+    suspend fun getUnlinkedSources(): List<EpgSourceEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAlias(alias: EpgSourceAliasEntity)
+
+    @Query("SELECT * FROM epg_source_alias WHERE alias_key = :key")
+    suspend fun getAlias(key: String): EpgSourceAliasEntity?
+
+    @Query("SELECT * FROM epg_source_alias WHERE source_id = :sourceId")
+    suspend fun getAliasesOf(sourceId: Long): List<EpgSourceAliasEntity>
+
+    @Query("DELETE FROM epg_source_alias WHERE source_id = :sourceId")
+    suspend fun deleteAliasesOf(sourceId: Long)
+
+    /** Adds [source] read by [providerIds], the first of them the first link. Returns its id. */
+    @Transaction
+    suspend fun insertGuide(
+        source: EpgSourceEntity,
+        providerIds: List<Long>,
+    ): Long {
+        val id = insertSource(source)
+        val now = System.currentTimeMillis()
+        providerIds.distinct().forEachIndexed { i, providerId -> insertLink(EpgSourceProviderEntity(id, providerId, now + i)) }
+        return id
+    }
+
+    /** Guide source [sourceId] is read by exactly [providerIds]; links kept keep their order. */
+    @Transaction
+    suspend fun setLinks(
+        sourceId: Long,
+        providerIds: Collection<Long>,
+    ) {
+        val wanted = providerIds.toSet()
+        val current = getProviderIds(sourceId)
+        current.filter { it !in wanted }.forEach { unlink(sourceId, it) }
+        val now = System.currentTimeMillis()
+        wanted.filter { it !in current }.forEachIndexed {
+            i,
+            providerId,
+            ->
+            insertLink(EpgSourceProviderEntity(sourceId, providerId, now + i))
+        }
+    }
+
+    /** Deletes guide source [id] with its links and aliases. Its guide index rows are the caller's. */
+    @Transaction
+    suspend fun deleteGuide(id: Long) {
+        deleteLinksOf(id)
+        deleteAliasesOf(id)
+        deleteSource(id)
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: EpgSourceEntity): Long
@@ -44,9 +139,6 @@ interface EpgSourceDao {
 
     @Query("DELETE FROM epg_source WHERE id IN (:ids)")
     suspend fun deleteSources(ids: List<Long>)
-
-    @Query("DELETE FROM epg_source WHERE provider_id = :providerId")
-    suspend fun deleteSourcesForProvider(providerId: Long)
 
     @Query("DELETE FROM epg_source")
     suspend fun deleteAllSources()
@@ -123,7 +215,8 @@ interface EpgSourceDao {
     )
 
     @Query(
-        "SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId AND last_error IS NOT NULL ORDER BY added_at_ms ASC",
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
+            "WHERE s.enabled = 1 AND l.provider_id = :providerId AND s.last_error IS NOT NULL ORDER BY s.added_at_ms ASC",
     )
     suspend fun getFailedSources(providerId: Long): List<EpgSourceEntity>
 

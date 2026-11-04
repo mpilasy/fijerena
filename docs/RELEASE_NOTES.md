@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **One guide source per URL (in progress):** a guide source added for several sources is now kept once, linked to the sources that read it, so it is downloaded, imported and stored one time. The update merges the copies you already have (the newest import keeps its data; the offset you edited last, the shortest refresh interval that is on). Each Xtream source's own guide stays its own. The Guide Sources page still shows a shared guide under each of its sources until the page is reworked. TV and phone.
+
 ## Version: 0.9.20261104035358
 
 - **A changed guide offset applies at once:** saving a new offset in Edit Guide Source now moves that source's programme times in the guide, TV Guide and Search at once, without a download. Before, the new offset applied only when the file changed on the server, as a refresh skips an unchanged file. The same happens on your other devices when live sync brings the change. When the times cannot be moved (a file whose times have more than one offset, or the first change after this update on a source with offset 0), the source is downloaded and imported again at once. Turning a guide source on or off, or saving it, no longer puts back older statistics when an import finished meanwhile. TV and phone.

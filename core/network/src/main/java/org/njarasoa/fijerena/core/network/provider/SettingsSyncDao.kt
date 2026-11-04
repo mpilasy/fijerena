@@ -127,7 +127,14 @@ interface SettingsSyncDao {
     @Query("SELECT * FROM providers")
     suspend fun allProviders(): List<ProviderEntity>
 
-    @Query("SELECT * FROM epg_source WHERE provider_id = :providerId AND url = :url")
+    /** The first media source that reads guide source [sourceId]. */
+    @Query("SELECT provider_id FROM epg_source_provider WHERE source_id = :sourceId ORDER BY linked_at_ms ASC, provider_id ASC LIMIT 1")
+    suspend fun firstLinkedProviderId(sourceId: Long): Long?
+
+    @Query(
+        "SELECT s.* FROM epg_source s JOIN epg_source_provider l ON l.source_id = s.id " +
+            "WHERE l.provider_id = :providerId AND s.url = :url",
+    )
     suspend fun sourcesAt(
         providerId: Long,
         url: String,

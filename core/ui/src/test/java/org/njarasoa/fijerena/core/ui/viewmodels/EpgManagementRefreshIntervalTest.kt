@@ -58,7 +58,7 @@ class EpgManagementRefreshIntervalTest {
         Dispatchers.resetMain()
     }
 
-    private fun source(hours: Int?) = EpgSourceEntity(id = 7, url = "u", providerId = 1, refreshIntervalHours = hours)
+    private fun source(hours: Int?) = EpgSourceEntity(id = 7, url = "u", refreshIntervalHours = hours)
 
     @Test
     fun `a choice offers the five choices, off first`() {

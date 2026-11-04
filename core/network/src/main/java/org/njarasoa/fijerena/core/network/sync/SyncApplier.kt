@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersSerializer
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.provider.SettingsTombstoneEntity
@@ -683,21 +684,21 @@ class SyncApplier(
                                 label = remote.label,
                                 timezoneOffsetHours = remote.timezoneOffsetHours,
                                 enabled = remote.enabled,
-                                providerId = providerId,
                                 refreshIntervalHours = interval ?: existing.refreshIntervalHours,
                             ),
                         )
+                        dao.insertLink(EpgSourceProviderEntity(existing.id, providerId))
                     } else {
-                        dao.insertSource(
+                        dao.insertGuide(
                             EpgSourceEntity(
                                 url = remote.url,
                                 label = remote.label,
                                 timezoneOffsetHours = remote.timezoneOffsetHours,
                                 enabled = remote.enabled,
-                                providerId = providerId,
                                 sourceKey = sourceKey,
                                 refreshIntervalHours = interval,
                             ),
+                            listOf(providerId),
                         )
                     }
                     markSettingsVersion(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, record.hlc)

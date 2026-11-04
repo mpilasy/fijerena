@@ -171,7 +171,7 @@ class SyncApplierTest {
                 ),
             )
             val stored = sync.sourceByKey(sourceKey)!!
-            assertEquals(providerId, stored.providerId)
+            assertEquals(listOf(providerId), settingsDb.epgSourceDao().getProviderIds(stored.id))
             assertEquals(1, stored.timezoneOffsetHours)
             assertReceived(SyncKind.EPG_SOURCE, SyncKind.SHARED, sourceKey, FAR_FUTURE)
         }

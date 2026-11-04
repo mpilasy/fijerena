@@ -75,6 +75,7 @@ class SettingsDatabaseMigration15To16Test {
                     SettingsDatabase.MIGRATION_16_17,
                     SettingsDatabase.MIGRATION_17_18,
                     SettingsDatabase.MIGRATION_18_19,
+                    SettingsDatabase.MIGRATION_19_20,
                 ).allowMainThreadQueries()
                 .build()
         SettingsSyncTriggers.install(db.openHelper.writableDatabase)
@@ -82,7 +83,7 @@ class SettingsDatabaseMigration15To16Test {
         val ownId =
             runBlocking {
                 db.epgSourceDao().insertSource(
-                    EpgSourceEntity(url = "http://epg.test/own.xml", providerId = 1, refreshIntervalHours = 6),
+                    EpgSourceEntity(url = "http://epg.test/own.xml", refreshIntervalHours = 6),
                 )
             }
         val pendingBefore = runBlocking { db.settingsSyncDao().getPending(100).size }
@@ -107,7 +108,7 @@ class SettingsDatabaseMigration15To16Test {
         val unsetId =
             runBlocking {
                 db.epgSourceDao().insertSource(
-                    EpgSourceEntity(url = "http://epg.test/unset.xml", providerId = 1, refreshIntervalHours = null),
+                    EpgSourceEntity(url = "http://epg.test/unset.xml", refreshIntervalHours = null),
                 )
             }
         runBlocking { EpgRefreshSchedule.copyLegacyIntervalOnce(settings) { EpgRefreshSchedule.fillUnsetIntervals(db, it) } }
