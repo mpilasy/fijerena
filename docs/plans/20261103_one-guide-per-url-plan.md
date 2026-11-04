@@ -1,6 +1,6 @@
 # One guide source per URL
 
-**Status:** Planned 2026-11-03. Not started. Open questions OG-Q1 to OG-Q8 wait for the user. The
+**Status:** Planned 2026-11-03. Not started. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
 v19 offset work (`EpgOffsetShift`, `MIGRATION_18_19`) that Phase 1 builds on is committed (cff8ff566).
 
 ## Goal
@@ -68,7 +68,7 @@ Profile visibility: `GuideScope.searchedProviders(profileSources)` selects the p
 sources. A guide is read for a profile when one of its linked sources is in that profile. This rule
 does not change.
 
-## Decisions (proposed; confirmed with the user before Phase 1)
+## Decisions
 
 | # | Subject | Decision |
 |---|---|---|
@@ -85,7 +85,20 @@ does not change.
 | OG-D11 | Guide Sources page | A flat list of guide cards, each shown one time, with a "Used for" line. Below the cards, the sources with no guide, each with its own Add (Design U). |
 | OG-D12 | `enabled` | Stays per guide. "Use for" says which sources read the guide. There is no switch per link. |
 
-## Open questions
+## Answers (user, 2026-11-03)
+
+| # | Answer |
+|---|---|
+| OG-Q1 | (a) The row edited last wins. |
+| OG-Q2 | (a) The shortest interval that is on. |
+| OG-Q3 | (a) One record per guide; an older build sees a shared guide only for its first source; the user updates every device. |
+| OG-Q4 | (a) Link the chosen sources to the existing guide. |
+| OG-Q5 | **(b) Normalised.** Two URLs are the same when they match after trim, with the scheme and host in lower case, no trailing `/` on the path, and no default port (`:80` for http, `:443` for https). One helper, `GuideUrls.matchKey(url)` in core/network/.../xmltv/, gives the key; the migration, Add, the sync applier and the import all use it. The stored URL stays as typed (the survivor row's URL after a merge). The path and the query stay as they are: a different path or query is a different guide. |
+| OG-Q6 | (a) One entry per guide, with a `providers` list. |
+| OG-Q7 | (a) The guide is on when one row is on; only the sources whose row was on get a link. |
+| OG-Q8 | (a) Delete for all sources; the confirmation names them. |
+
+## Open questions (answered, kept for the options)
 
 | # | Question | Options |
 |---|---|---|
@@ -143,7 +156,7 @@ CREATE INDEX `index_epg_source_alias_source_id` ON `epg_source_alias` (`source_i
      provider.url)`): one group each.
    - **Rows whose provider is gone**: one group each, with no link. Shrink Database deletes them
      later, as today.
-   - **All other rows**: grouped by `url.trim()` (OG-Q5).
+   - **All other rows**: grouped by `GuideUrls.matchKey(url)` (OG-Q5).
 4. For each group, build one guide:
    - id, stats, validators, `last_content_sha256`, `ingest_method`, `file_utc_offset_minutes`,
      `applied_utc_offset_minutes`, failure columns: from the survivor row (OG-D4).
@@ -367,7 +380,7 @@ CREATE INDEX `index_epg_source_alias_source_id` ON `epg_source_alias` (`source_i
 ## Parallel execution (max 4 agents)
 
 ```
-t0  Phase 0 (lead)  the user answers OG-Q1..OG-Q8
+t0  Phase 0 (lead)  answers recorded (done)
 t1  Phase 1 (lead, on main, alone)  schema v20, migration, DAO, cleanup hook,
                                     automatic guide, source deletion, every caller compiles
 t2  ┌ Lane R (agent) refresh ─────────────┐
@@ -410,7 +423,7 @@ t4  Phase W (lead) emulator walks, docs, release notes
 
 | Phase | Status | Commit |
 |---|---|---|
-| 0 | Waiting for the answers to OG-Q1..OG-Q8 | none |
+| 0 | Done 2026-11-03: answers recorded | none |
 | 1 | Not started | none |
 | R | Not started | none |
 | G | Not started | none |
