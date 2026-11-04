@@ -1,6 +1,6 @@
 # Reminders page
 
-**Status:** Planned 2026-11-04. Phase 1 done (26935d276); Phases 2 (9f7a248e6) and 3 (ab00c0446) done and merged; walks next. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
+**Status:** Planned 2026-11-04. Phase 1 done (26935d276); all phases done and walked on both emulators. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
 
 ## Goal
 
@@ -157,4 +157,4 @@ Phases 2 and 3 run in parallel after Phase 1 (two agents, own worktrees).
 | 1 | Done 2026-11-04: `RemindersViewModel` / `RemindersPage`, `GameReminders.clearProgramme` / `clearAll` / `setLeadMinutes`, Reminder Time setting (`AppSettings.reminderLeadMinutes`, This Device row on TV and phone), `Screen.Reminders`, strings | 26935d276 |
 | 2 | Done 2026-11-04: `TvRemindersScreen` (header Reminder Time and Clear all, rows with Open and Remove reminder, team rows with Stop every game, focus per RP-D10; an empty page opens on Reminder Time, never on Clear all, by the focus contract's rule 7), bells in the Sports section and Search the Guide headers, Manage reminders as the banner's third choice. Merge: one "game gone" message for both apps | 9f7a248e6 |
 | 3 | Done 2026-11-04: `MobileRemindersScreen` (Reminder Time and Clear All in the top bar, rows with Open and Remove, team rows with Stop), bells in the Sports tab and Search the Guide top bars, "Manage reminders" notification action (phone only). No Undo after Remove: the view model cannot restore a removed reminder | ab00c0446 |
-| W | In progress: full suite passes on main | none |
+| W | Done 2026-11-04. Walked on both emulators by scripted testers: all three kinds set, list and Rings at times, Reminder Time 30 (times moved, Settings shows it), Open game sheet and programme question, Remove (team game muted, count fell), Stop, a real ring with the page open (row left; phone notification Manage reminders; TV banner Manage reminders), Clear all. Walk fixes: a bell-off icon for Stop; the TV banner's buttons under its text (a long title lost its start time) (5e09e4607). Not changed: no bell in the rail Search's Guide tab; no Undo after Remove | 5e09e4607 |
