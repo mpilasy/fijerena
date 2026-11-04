@@ -1,6 +1,6 @@
 # Reminders page
 
-**Status:** Planned 2026-11-04. Phase 1 done (26935d276); Phase 3 (phone) done (ab00c0446); Phase 2 (TV) in progress. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
+**Status:** Planned 2026-11-04. Phase 1 done (26935d276); Phases 2 (9f7a248e6) and 3 (ab00c0446) done and merged; walks next. The user answered RP-Q1 and RP-Q2 on 2026-11-04 (see Answers).
 
 ## Goal
 
@@ -155,6 +155,6 @@ Phases 2 and 3 run in parallel after Phase 1 (two agents, own worktrees).
 | Phase | Status | Commit |
 |---|---|---|
 | 1 | Done 2026-11-04: `RemindersViewModel` / `RemindersPage`, `GameReminders.clearProgramme` / `clearAll` / `setLeadMinutes`, Reminder Time setting (`AppSettings.reminderLeadMinutes`, This Device row on TV and phone), `Screen.Reminders`, strings | 26935d276 |
-| 2 | In progress | none |
+| 2 | Done 2026-11-04: `TvRemindersScreen` (header Reminder Time and Clear all, rows with Open and Remove reminder, team rows with Stop every game, focus per RP-D10; an empty page opens on Reminder Time, never on Clear all, by the focus contract's rule 7), bells in the Sports section and Search the Guide headers, Manage reminders as the banner's third choice. Merge: one "game gone" message for both apps | 9f7a248e6 |
 | 3 | Done 2026-11-04: `MobileRemindersScreen` (Reminder Time and Clear All in the top bar, rows with Open and Remove, team rows with Stop), bells in the Sports tab and Search the Guide top bars, "Manage reminders" notification action (phone only). No Undo after Remove: the view model cannot restore a removed reminder | ab00c0446 |
-| W | Not started | none |
+| W | In progress: full suite passes on main | none |
