@@ -1,6 +1,6 @@
 # One guide source per URL
 
-**Status:** Planned 2026-11-03. Phase 1 in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
+**Status:** Planned 2026-11-03. Phase 1 done (0fe83452b); Lanes R, G, S and U in progress. The user answered OG-Q1 to OG-Q8 on 2026-11-03 (see Answers). The
 v19 offset work (`EpgOffsetShift`, `MIGRATION_18_19`) that Phase 1 builds on is committed (cff8ff566).
 
 ## Goal
@@ -424,9 +424,9 @@ t4  Phase W (lead) emulator walks, docs, release notes
 | Phase | Status | Commit |
 |---|---|---|
 | 0 | Done 2026-11-03: answers recorded | none |
-| 1 | In progress | none |
-| R | Not started | none |
-| G | Not started | none |
-| S | Not started | none |
-| U | Not started | none |
+| 1 | Done 2026-11-04: schema v20, `MIGRATION_19_20` (`GuideMerge`, `GuideUrls`), link and alias tables, link triggers, `EpgIndexer.purgeOrphanedSources` startup step, automatic guides and source deletion on links; callers keep their behaviour (first link) | 0fe83452b |
+| R | In progress | none |
+| G | In progress | none |
+| S | In progress | none |
+| U | In progress | none |
 | W | Not started | none |
