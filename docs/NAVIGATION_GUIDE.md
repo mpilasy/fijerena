@@ -61,7 +61,7 @@ sealed interface Screen {
     @Serializable data class EpgBrowser(
         val categoryId: String? = null, val categoryName: String? = null, val providerId: Long = 0L,
     ) : Screen  // "Search the Guide"; categoryId/providerId: the TV Guide it was opened from
-    @Serializable data class EpgManagement(val providerId: Long = 0L) : Screen  // every source's guide sources, grouped; providerId opens on that source's group, 0 at the top
+    @Serializable data class EpgManagement(val providerId: Long = 0L) : Screen  // every guide source, one card each; providerId opens on the first card that source uses (else its Add), 0 at the top
     @Serializable data object SyncSettings : Screen  // Live sync
     @Serializable data object ParentalControls : Screen  // mobile; TV shows it inside Settings
     @Serializable data class ParentalListEdit(val listKey: String) : Screen  // mobile: one Parental controls list
@@ -154,7 +154,7 @@ EpgGuide ──→ Player(channel, catchup window)               Start over in a
 EpgBrowser ─→ CategoryList(LIVE_TV, category, channel)   Watch
            ├─→ EpgGuide("recent", Recent)                 TV Guide button (source with live channels)
            └─→ EpgManagement(providerId = 0)              Guide sources button (no source chooser)
-AddProvider(editId) ─→ EpgManagement(editId)             Guide sources row (source with live channels): opens on that source's group
+AddProvider(editId) ─→ EpgManagement(editId)             Guide sources row (source with live channels): opens on that source's first card, else its Add
 
 Search ─→ TmdbTitle                        a "Not in your sources" result (wanted titles plan)
 Search ─→ Person                           a person in the People type's results (people search plan)
@@ -180,7 +180,7 @@ MovieDetails ─────→ Player | CategoryList(MOVIES, category) | MovieD
 EpisodeSelection ─→ Player | CategoryList(TV_SHOWS, category) | EpisodeSelection (related title)
 
 Settings                                 Your Profile, Admin (an admin only), About (the admin settings plan). Phone: Your Profile is the personal rows of the profile in use on Settings itself, no route; a child profile has no Settings (`isSettingsArea`: the gate opens Home). Admin asks the PIN once on the way in, then lists its sections: Profiles, Parental Controls, This Device, Sources & Guide (Shrink Database last), Sync & Backup; each opens its own page (TV: a rail row, the list in the pane, a section in place of the list, Back or Left returns to its row; phone: a row, the list in place of Settings' list, a section's page in place of Admin's list with its name in the top bar, Parental Controls its own screen; Back returns to Admin's list, then to Settings)
-├─→ ProviderSelection ─→ AddProvider() | AddProvider(editId) | EpgManagement(id)   Admin → Sources & Guide → Manage Sources (a source's Guide button: the page on that source's group)
+├─→ ProviderSelection ─→ AddProvider() | AddProvider(editId) | EpgManagement(id)   Admin → Sources & Guide → Manage Sources (a source's Guide button: the page on that source's first card, else its Add)
 ├─→ EpgManagement(providerId = 0)        Admin → Sources & Guide → Guide sources (no source chooser; shown when a source on the device has live channels)
 ├─→ ProfileEdit(profileId)               Mobile: no longer opened (Settings shows Your Profile's rows itself); TV: the Your Profile pane, a grown-up's own page (not an admin) ending on Add Profile
 ├─→ ProfileEdit(profileId, admin = true) Admin → Profiles → a profile's row (mobile): its page with the Admin rows too; a route to another profile for anyone but an admin shows the profile in use's own page (`Screen.ProfileEdit.shownProfileId`); TV: a page in Admin's pane

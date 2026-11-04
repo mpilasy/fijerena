@@ -31,13 +31,13 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
-import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -75,10 +75,12 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * One source's guide sources (A-9, T6): "Guide sources · <source>", the list under its bulk
- * actions, and an empty state that offers to add one. Each row shows its own auto-refresh, and
- * its Auto-refresh button drills into a picker in place of the list (P5b). Guide maintenance is
- * device-wide: its row is at the foot of this list and in Settings (Sources & guide).
+ * Every guide source on one page (A-9, T6; the one guide source per URL plan, OG-D11): the bulk
+ * actions, one card for each guide source with the sources it is used for, then the sources with
+ * no guide source, each with its own Add; an empty state that offers to add one. Each card shows
+ * its own auto-refresh, and its Auto-refresh button drills into a picker in place of the list
+ * (P5b). Guide maintenance is device-wide: its row is at the foot of this list and in Settings
+ * (Sources & guide).
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -96,9 +98,9 @@ fun TvEpgManagementScreen(
         )
 
     // null until the first emission, so the empty state doesn't flash (or take focus) while the
-    // list loads. One group per source with channels (the one guide sources page plan).
-    val groups by viewModel.groups.collectAsStateWithLifecycle(initialValue = null)
-    val sources = groups?.flatMap { it.sources }
+    // list loads. One card per guide source (the one guide source per URL plan).
+    val page by viewModel.page.collectAsStateWithLifecycle(initialValue = null)
+    val cards = page?.cards
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
@@ -116,35 +118,36 @@ fun TvEpgManagementScreen(
     }
 
     var showAddDialog by remember { mutableStateOf(false) }
-    // The source an empty group's own Add was pressed for; null: the Add at the top.
+    // The source whose own Add (under Sources Without a Guide Source) was pressed; null: the Add at the top.
     var addForSource by remember { mutableStateOf<Long?>(null) }
-    var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
+    var editingCard by remember { mutableStateOf<EpgManagementViewModel.GuideCard?>(null) }
+    var deletingCard by remember { mutableStateOf<EpgManagementViewModel.GuideCard?>(null) }
 
     val scale = LocalUiScale.current
     val listState = rememberLazyListState()
-    val groupList = groups.orEmpty()
-    // The group the page was opened on ([providerId]), if it is one of them.
-    val openGroup = groupList.firstOrNull { it.provider.id == providerId }
+    val cardList = cards.orEmpty()
+    val withoutGuide = page?.sourcesWithoutGuide.orEmpty()
+    val guideProviders = page?.providers.orEmpty()
 
-    // Entry focus, once the list has loaded: the first guide source of the group the page was
-    // opened on (scrolled into view), else the first guide source; Add guide source when that group
-    // has none. TvEmptyState focuses its action itself (the TV focus contract, plan Part I, B).
+    // Entry focus, once the list has loaded: opened on a source ([providerId]), the first card it
+    // uses (scrolled into view), else its Add under Sources Without a Guide Source; opened at the
+    // top, the first card. TvEmptyState focuses its action itself (the TV focus contract, plan
+    // Part I, B).
     val entryRowFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
-    val emptyGroupAddFocus = remember { FocusRequester() }
+    val entryAddRowFocus = remember { FocusRequester() }
     var entrySourceId by remember { mutableStateOf<Long?>(null) }
-    val loaded = groups != null
+    val loaded = page != null
     LaunchedEffect(loaded) {
-        if (!loaded || sources.isNullOrEmpty()) return@LaunchedEffect
-        val target = if (openGroup != null) openGroup.sources.firstOrNull() else sources.first()
-        if (target == null) {
-            // The group opened on has no guide source: its own Add, scrolled into view.
-            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id, refreshRow)) }
-            emptyGroupAddFocus.requestFocusWithRetry()
+        if (!loaded || cardList.isEmpty()) return@LaunchedEffect
+        val cardAt = cardList.indexOfFirst { card -> card.usedBy.any { it.id == providerId } }
+        val addAt = withoutGuide.indexOfFirst { it.id == providerId }
+        if (cardAt < 0 && addAt >= 0) {
+            listState.scrollToItem(addRowIndex(cardList.size, addAt, refreshRow))
+            entryAddRowFocus.requestFocusWithRetry()
         } else {
-            entrySourceId = target.id
-            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id, refreshRow)) }
+            entrySourceId = cardList[maxOf(cardAt, 0)].source.id
+            if (cardAt > 0) listState.scrollToItem(cardIndex(cardAt, refreshRow))
             entryRowFocus.requestFocusWithRetry()
         }
     }
@@ -219,7 +222,7 @@ fun TvEpgManagementScreen(
         ) {
             // Add is an icon action in the header, as on every Settings page (Sources, Live Sync).
             TvScreenHeader(title = stringResource(R.string.epg_management_screen_title)) {
-                if (sources?.isEmpty() == false) {
+                if (cards?.isEmpty() == false) {
                     TvIconAction(
                         onClick = { showAddDialog = true },
                         icon = CinemaIcons.Add,
@@ -232,7 +235,7 @@ fun TvEpgManagementScreen(
             // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).
             // The action takes focus itself; Left from it goes to the navigation rail (leftToRail
             // here reaches the action, the only focusable inside).
-            if (sources?.isEmpty() == true) {
+            if (cards?.isEmpty() == true) {
                 TvEmptyState(
                     message = stringResource(R.string.epg_summary_no_sources),
                     icon = CinemaIcons.DateRange,
@@ -247,7 +250,7 @@ fun TvEpgManagementScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                 ) {
-                    if (sources != null && refreshRow) {
+                    if (cards != null && refreshRow) {
                         // Refreshing the stale or failed sources of this list.
                         item {
                             Row(
@@ -273,274 +276,264 @@ fun TvEpgManagementScreen(
                         }
                     }
 
-                    groupList.forEach { group ->
-                        item(key = "group-${group.provider.id}", contentType = "group") { GuideGroupHeader(group, scale) }
-                        if (group.sources.isEmpty()) {
-                            // No guide source: say so, and an Add for this source (the page opens on it
-                            // from this source's Edit Source).
-                            item(key = "none-${group.provider.id}", contentType = "none") {
-                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                    CinemaText(
-                                        text = stringResource(R.string.epg_summary_no_sources),
-                                        role = TextRole.BodySmall,
-                                        tone = TextTone.Secondary,
+                    items(cardList, key = { it.source.id }, contentType = { "source" }) { card ->
+                        val source = card.source
+                        val latestTime = latestProgrammeTimes[source.id] ?: 0L
+
+                        val activeProgress =
+                            if (processingState is MultiSourceState.Processing) {
+                                (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                            } else {
+                                null
+                            }
+
+                        // Whether the run that just finished confirmed this source's data hadn't
+                        // changed (304, or a matching content hash) — true only right after that run,
+                        // resets once the next processing state replaces this one.
+                        val wasUnchanged =
+                            (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
+                        GlassPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                                ) {
+                                    // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
+                                    val useLabel = stringResource(R.string.epg_source_use_label)
+                                    TvSwitchButton(
+                                        checked = source.enabled,
+                                        onToggle = { viewModel.setSourceEnabled(card, !source.enabled) },
+                                        modifier =
+                                            (if (source.id == entrySourceId) Modifier.focusRequester(entryRowFocus) else Modifier)
+                                                .leftToRail()
+                                                .semantics { contentDescription = useLabel },
+                                    )
+
+                                    StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        CinemaText(
+                                            text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
+                                            role = TextRole.Heading,
+                                        )
+                                        CinemaText(
+                                            text = guideSourceUrlHint(source.url),
+                                            role = TextRole.BodySmall,
+                                            tone = TextTone.Secondary,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                        GuideCardUse(card)
+                                        CinemaText(
+                                            text =
+                                                EpgManagementViewModel
+                                                    .refreshSummary(
+                                                        source.enabled,
+                                                        viewModel.refreshIntervalHours(source),
+                                                    ).asString(),
+                                            role = TextRole.BodySmall,
+                                            tone = TextTone.Secondary,
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                                    TvIconAction(
+                                        onClick = { viewModel.refreshSource(source) },
+                                        icon = CinemaIcons.Refresh,
+                                        label = stringResource(R.string.common_refresh),
+                                        modifier = Modifier.leftToRail(),
                                     )
                                     TvIconAction(
-                                        onClick = {
-                                            addForSource = group.provider.id
-                                            showAddDialog = true
-                                        },
-                                        icon = CinemaIcons.Add,
-                                        label = stringResource(R.string.epg_add_source),
+                                        onClick = { editingCard = card },
+                                        icon = CinemaIcons.Edit,
+                                        label = stringResource(R.string.provider_edit_button),
+                                    )
+                                    TvIconAction(
+                                        onClick = { intervalSource = source },
+                                        icon = CinemaIcons.Schedule,
+                                        label = stringResource(R.string.epg_auto_refresh_title),
                                         modifier =
-                                            (
-                                                if (group.provider.id == openGroup?.provider?.id) {
-                                                    Modifier.focusRequester(emptyGroupAddFocus)
-                                                } else {
-                                                    Modifier
-                                                }
-                                            ).leftToRail(),
+                                            if (source.id ==
+                                                intervalReturnId
+                                            ) {
+                                                Modifier.focusRequester(intervalButtonFocus)
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                    TvIconAction(
+                                        onClick = { deletingCard = card },
+                                        icon = CinemaIcons.Delete,
+                                        label = stringResource(R.string.provider_delete_button),
+                                        danger = true,
                                     )
                                 }
-                            }
-                        }
-                        items(group.sources, key = { it.id }, contentType = { "source" }) { source ->
-                            val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
-                            val activeProgress =
-                                if (processingState is MultiSourceState.Processing) {
-                                    (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                                } else {
-                                    null
-                                }
-
-                            // Whether the run that just finished confirmed this source's data hadn't
-                            // changed (304, or a matching content hash) — true only right after that run,
-                            // resets once the next processing state replaces this one.
-                            val wasUnchanged =
-                                (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
-
-                            GlassPanel(
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                    ) {
-                                        // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
-                                        val useLabel = stringResource(R.string.epg_source_use_label)
-                                        TvSwitchButton(
-                                            checked = source.enabled,
-                                            onToggle = { viewModel.setSourceEnabled(source, !source.enabled) },
-                                            modifier =
-                                                (if (source.id == entrySourceId) Modifier.focusRequester(entryRowFocus) else Modifier)
-                                                    .leftToRail()
-                                                    .semantics { contentDescription = useLabel },
-                                        )
-
-                                        StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            CinemaText(
-                                                text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
-                                                role = TextRole.Heading,
-                                            )
-                                            CinemaText(
-                                                text = guideSourceUrlHint(source.url),
-                                                role = TextRole.BodySmall,
-                                                tone = TextTone.Secondary,
-                                                maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                            )
-                                            // The source's own guide, whose switch is "Provides a guide" (Edit Source).
-                                            if (AutoXmltvSources.isAutoXmltvSource(source, group.provider.url)) {
-                                                CinemaText(
-                                                    text = stringResource(R.string.epg_source_own_guide_hint),
-                                                    role = TextRole.BodySmall,
-                                                    tone = TextTone.Secondary,
-                                                )
-                                            }
+                                if (activeProgress != null) {
+                                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
                                             CinemaText(
                                                 text =
-                                                    EpgManagementViewModel
-                                                        .refreshSummary(
-                                                            source.enabled,
-                                                            viewModel.refreshIntervalHours(source),
-                                                        ).asString(),
-                                                role = TextRole.BodySmall,
+                                                    stringResource(
+                                                        R.string.epg_source_phase_format,
+                                                        localizedEpgPhase(activeProgress.phase),
+                                                    ),
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Secondary,
+                                            )
+                                            CinemaText(
+                                                // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
+                                                text =
+                                                    if (activeProgress.progressPercent >= 0) {
+                                                        stringResource(
+                                                            R.string.epg_source_progress_percent,
+                                                            activeProgress.progressPercent,
+                                                        )
+                                                    } else {
+                                                        NumberUtils.formatBytes(LocalResources.current, activeProgress.downloadedBytes)
+                                                    },
+                                                role = TextRole.Caption,
                                                 tone = TextTone.Secondary,
                                             )
                                         }
+                                        if (activeProgress.progressPercent >= 0) {
+                                            CinemaProgressBar(progress = {
+                                                activeProgress.progressPercent / 100f
+                                            }, modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)))
+                                        } else {
+                                            CinemaProgressBar(
+                                                progress = null,
+                                                modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
+                                            )
+                                        }
                                     }
-
+                                } else {
                                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                        TvIconAction(
-                                            onClick = { viewModel.refreshSource(source) },
-                                            icon = CinemaIcons.Refresh,
-                                            label = stringResource(R.string.common_refresh),
-                                            modifier = Modifier.leftToRail(),
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                    ) {
+                                        val lastIngested =
+                                            if (source.lastIngestedAtMs > 0) {
+                                                DateText.dateTime(LocalContext.current, source.lastIngestedAtMs)
+                                            } else {
+                                                stringResource(R.string.epg_source_never)
+                                            }
+
+                                        val latestProgStr =
+                                            if (latestTime > 0) {
+                                                DateText.dateTime(LocalContext.current, latestTime * 1000L)
+                                            } else {
+                                                stringResource(R.string.epg_source_none)
+                                            }
+
+                                        SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
+                                        if (wasUnchanged) {
+                                            // The last run confirmed no change and skipped parsing —
+                                            // the stored download/ingest durations are from whenever
+                                            // it last actually ran, so showing them here would read
+                                            // as work that didn't happen this time.
+                                            CinemaText(
+                                                text = stringResource(R.string.epg_source_stat_unchanged),
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Warning,
+                                            )
+                                        } else {
+                                            SourceStat(
+                                                stringResource(R.string.epg_source_stat_download),
+                                                NumberUtils.formatDuration(LocalResources.current, source.lastDownloadDurationMs),
+                                                scale,
+                                            )
+                                            SourceStat(
+                                                stringResource(R.string.epg_source_stat_ingest),
+                                                NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
+                                                scale,
+                                            )
+                                        }
+                                        SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_channels),
+                                            NumberUtils.formatCount(LocalResources.current, source.lastChannels),
+                                            scale,
                                         )
-                                        TvIconAction(
-                                            onClick = { editingSource = source },
-                                            icon = CinemaIcons.Edit,
-                                            label = stringResource(R.string.provider_edit_button),
-                                        )
-                                        TvIconAction(
-                                            onClick = { intervalSource = source },
-                                            icon = CinemaIcons.Schedule,
-                                            label = stringResource(R.string.epg_auto_refresh_title),
-                                            modifier =
-                                                if (source.id ==
-                                                    intervalReturnId
-                                                ) {
-                                                    Modifier.focusRequester(intervalButtonFocus)
-                                                } else {
-                                                    Modifier
-                                                },
-                                        )
-                                        TvIconAction(
-                                            onClick = { deletingSource = source },
-                                            icon = CinemaIcons.Delete,
-                                            label = stringResource(R.string.provider_delete_button),
-                                            danger = true,
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_programmes),
+                                            NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
+                                            scale,
                                         )
                                     }
 
-                                    if (activeProgress != null) {
-                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                            ) {
-                                                CinemaText(
-                                                    text =
-                                                        stringResource(
-                                                            R.string.epg_source_phase_format,
-                                                            localizedEpgPhase(activeProgress.phase),
-                                                        ),
-                                                    role = TextRole.Caption,
-                                                    tone = TextTone.Secondary,
-                                                )
-                                                CinemaText(
-                                                    // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
-                                                    text =
-                                                        if (activeProgress.progressPercent >= 0) {
-                                                            stringResource(
-                                                                R.string.epg_source_progress_percent,
-                                                                activeProgress.progressPercent,
-                                                            )
-                                                        } else {
-                                                            NumberUtils.formatBytes(LocalResources.current, activeProgress.downloadedBytes)
-                                                        },
-                                                    role = TextRole.Caption,
-                                                    tone = TextTone.Secondary,
-                                                )
-                                            }
-                                            if (activeProgress.progressPercent >= 0) {
-                                                CinemaProgressBar(progress = {
-                                                    activeProgress.progressPercent / 100f
-                                                }, modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)))
-                                            } else {
-                                                CinemaProgressBar(
-                                                    progress = null,
-                                                    modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
+                                    // The last refresh failed: its time, the failures since the
+                                    // last success and the reason, on a line of their own.
+                                    val lastError = source.lastError
+                                    if (lastError != null) {
+                                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
                                         ) {
-                                            val lastIngested =
-                                                if (source.lastIngestedAtMs > 0) {
-                                                    DateText.dateTime(LocalContext.current, source.lastIngestedAtMs)
-                                                } else {
-                                                    stringResource(R.string.epg_source_never)
-                                                }
-
-                                            val latestProgStr =
-                                                if (latestTime > 0) {
-                                                    DateText.dateTime(LocalContext.current, latestTime * 1000L)
-                                                } else {
-                                                    stringResource(R.string.epg_source_none)
-                                                }
-
-                                            SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
-                                            if (wasUnchanged) {
-                                                // The last run confirmed no change and skipped parsing —
-                                                // the stored download/ingest durations are from whenever
-                                                // it last actually ran, so showing them here would read
-                                                // as work that didn't happen this time.
-                                                CinemaText(
-                                                    text = stringResource(R.string.epg_source_stat_unchanged),
-                                                    role = TextRole.Caption,
-                                                    tone = TextTone.Warning,
-                                                )
-                                            } else {
+                                            source.lastFailedAtMs?.let { failedAt ->
                                                 SourceStat(
-                                                    stringResource(R.string.epg_source_stat_download),
-                                                    NumberUtils.formatDuration(LocalResources.current, source.lastDownloadDurationMs),
-                                                    scale,
-                                                )
-                                                SourceStat(
-                                                    stringResource(R.string.epg_source_stat_ingest),
-                                                    NumberUtils.formatDuration(LocalResources.current, source.lastIngestionDurationMs),
+                                                    stringResource(R.string.epg_source_stat_last_failure),
+                                                    DateText.dateTime(LocalContext.current, failedAt),
                                                     scale,
                                                 )
                                             }
-                                            SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
-                                            SourceStat(
-                                                stringResource(R.string.epg_source_stat_channels),
-                                                NumberUtils.formatCount(LocalResources.current, source.lastChannels),
-                                                scale,
-                                            )
-                                            SourceStat(
-                                                stringResource(R.string.epg_source_stat_programmes),
-                                                NumberUtils.formatCount(LocalResources.current, source.lastProgrammes),
-                                                scale,
-                                            )
-                                        }
-
-                                        // The last refresh failed: its time, the failures since the
-                                        // last success and the reason, on a line of their own.
-                                        val lastError = source.lastError
-                                        if (lastError != null) {
-                                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
-                                            ) {
-                                                source.lastFailedAtMs?.let { failedAt ->
-                                                    SourceStat(
-                                                        stringResource(R.string.epg_source_stat_last_failure),
-                                                        DateText.dateTime(LocalContext.current, failedAt),
-                                                        scale,
-                                                    )
-                                                }
-                                                if (source.failuresSinceSuccess > 0) {
-                                                    SourceStat(
-                                                        stringResource(R.string.epg_source_stat_failures),
-                                                        NumberUtils.formatCount(LocalResources.current, source.failuresSinceSuccess),
-                                                        scale,
-                                                    )
-                                                }
-                                                CinemaText(
-                                                    text = stringResource(R.string.epg_database_error, storedErrorText(lastError)),
-                                                    role = TextRole.Caption,
-                                                    tone = TextTone.Danger,
+                                            if (source.failuresSinceSuccess > 0) {
+                                                SourceStat(
+                                                    stringResource(R.string.epg_source_stat_failures),
+                                                    NumberUtils.formatCount(LocalResources.current, source.failuresSinceSuccess),
+                                                    scale,
                                                 )
                                             }
+                                            CinemaText(
+                                                text = stringResource(R.string.epg_database_error, storedErrorText(lastError)),
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Danger,
+                                            )
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                    if (withoutGuide.isNotEmpty()) {
+                        item(key = "without-guide", contentType = "heading") {
+                            SectionHeader(
+                                title = stringResource(R.string.epg_sources_without_guide_title),
+                                modifier = Modifier.padding(top = Spacing.sm.scaled(scale)),
+                            )
+                        }
+                        // Each source with no guide source, with its own Add (that source checked in Use for).
+                        items(withoutGuide, key = { "add-${it.id}" }, contentType = { "add" }) { provider ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                            ) {
+                                TvIconAction(
+                                    onClick = {
+                                        addForSource = provider.id
+                                        showAddDialog = true
+                                    },
+                                    icon = CinemaIcons.Add,
+                                    label = stringResource(R.string.epg_add_source),
+                                    modifier =
+                                        (if (provider.id == providerId) Modifier.focusRequester(entryAddRowFocus) else Modifier)
+                                            .leftToRail(),
+                                )
+                                CinemaText(text = provider.name, role = TextRole.Heading)
                             }
                         }
                     }
@@ -580,45 +573,58 @@ fun TvEpgManagementScreen(
                 addForSource = null
             },
             scale = scale,
-            // Use for (GS-D1): the group whose own Add was pressed, else the group the page was
-            // opened on, else the first.
-            forSources = groupList.map { it.provider },
-            initialFor = setOfNotNull(addForSource ?: (openGroup ?: groupList.firstOrNull())?.provider?.id),
+            // Use for: the source whose own Add was pressed, else the source the page was opened
+            // on, else the first.
+            forSources = guideProviders,
+            initialFor =
+                setOfNotNull(
+                    addForSource ?: guideProviders.firstOrNull { it.id == providerId }?.id ?: guideProviders.firstOrNull()?.id,
+                ),
         )
     }
 
-    editingSource?.let { source ->
+    editingCard?.let { card ->
+        val source = card.source
         EpgSourceEditDialog(
             initialSource = source,
-            onDismiss = { editingSource = null },
-            onConfirm = { url, label, tz, method, enabled, _ ->
+            onDismiss = { editingCard = null },
+            onConfirm = { url, label, tz, method, enabled, forSources ->
                 viewModel.updateSource(
                     source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled),
+                    forSources,
                 )
-                editingSource = null
+                editingCard = null
             },
             scale = scale,
+            forSources = guideProviders,
+            initialFor = card.usedBy.mapTo(HashSet()) { it.id },
+            ownGuideOf = card.ownGuideOf,
         )
     }
 
-    deletingSource?.let { source ->
+    deletingCard?.let { card ->
+        val name = card.source.label.ifBlank { card.source.url }
         CinemaAlertDialog(
-            onDismissRequest = { deletingSource = null },
+            onDismissRequest = { deletingCard = null },
             danger =
                 DialogAction(stringResource(R.string.provider_delete_button)) {
-                    viewModel.deleteSource(source.id)
-                    deletingSource = null
+                    viewModel.deleteSource(card.source.id)
+                    deletingCard = null
                 },
-            cancel = DialogAction(stringResource(R.string.common_cancel)) { deletingSource = null },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { deletingCard = null },
             title = stringResource(R.string.epg_delete_source_confirm_title),
             text = {
                 CinemaText(
-                    stringResource(
-                        R.string.epg_delete_source_confirm_message,
-                        source.label.ifBlank {
-                            source.url
-                        },
-                    ),
+                    // Several sources use it: it goes for all of them (OG-Q8), so the text names them.
+                    if (card.usedBy.size > 1) {
+                        stringResource(
+                            R.string.epg_delete_shared_source_confirm_message,
+                            name,
+                            card.usedBy.joinToString(", ") { it.name },
+                        )
+                    } else {
+                        stringResource(R.string.epg_delete_source_confirm_message, name)
+                    },
                     tone = TextTone.Secondary,
                 )
             },
@@ -626,36 +632,44 @@ fun TvEpgManagementScreen(
     }
 }
 
-/** The list index of [providerId]'s group header: after the buttons row, each group's header, then its rows (or its "none" line). */
-private fun groupHeaderIndex(
-    groups: List<EpgManagementViewModel.GuideGroup>,
-    providerId: Long,
-    // The refresh row above the groups, when it shows.
+/** The list index of card [index]: after the refresh row, when it shows. */
+private fun cardIndex(
+    index: Int,
     refreshRow: Boolean,
-): Int {
-    var index = if (refreshRow) 1 else 0
-    for (group in groups) {
-        if (group.provider.id == providerId) return index
-        index += 1 + maxOf(group.sources.size, 1)
-    }
-    return 0
-}
+): Int = index + if (refreshRow) 1 else 0
 
-/** A group's header: the source's name, and "Not used by this profile" when the profile in use doesn't have it. */
+/** The list index of the Add row [index] under Sources Without a Guide Source: after the [cardCount] cards and the heading. */
+private fun addRowIndex(
+    cardCount: Int,
+    index: Int,
+    refreshRow: Boolean,
+): Int = cardIndex(cardCount, refreshRow) + 1 + index
+
+/**
+ * A card's lines on its use: "Used for: A, B", then "Not used by this profile" when the profile
+ * in use has none of them; a source's own guide adds that its switch is "Provides a guide" (Edit
+ * Source).
+ */
 @Composable
-private fun GuideGroupHeader(
-    group: EpgManagementViewModel.GuideGroup,
-    scale: Float,
-) {
-    Column(modifier = Modifier.padding(top = Spacing.sm.scaled(scale))) {
-        CinemaText(text = group.provider.name, role = TextRole.Title)
-        if (!group.usedByProfile) {
-            CinemaText(
-                text = stringResource(R.string.provider_not_in_profile),
-                role = TextRole.BodySmall,
-                tone = TextTone.Secondary,
-            )
-        }
+private fun GuideCardUse(card: EpgManagementViewModel.GuideCard) {
+    CinemaText(
+        text = stringResource(R.string.epg_source_used_for, card.usedBy.joinToString(", ") { it.name }),
+        role = TextRole.BodySmall,
+        tone = TextTone.Secondary,
+    )
+    if (!card.usedByProfile) {
+        CinemaText(
+            text = stringResource(R.string.provider_not_in_profile),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
+        )
+    }
+    if (card.ownGuideOf != null) {
+        CinemaText(
+            text = stringResource(R.string.epg_source_own_guide_hint),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
+        )
     }
 }
 
@@ -735,14 +749,18 @@ private fun EpgSourceEditDialog(
     onDismiss: () -> Unit,
     onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean, forSources: Set<Long>) -> Unit,
     scale: Float,
-    // Adding: the sources the guide source can be for; the list shows with two or more (GS-D1).
+    // The sources the guide source can be for, and the ones checked; the list shows with two or
+    // more, on Add and on Edit of a hand-added guide source.
     forSources: List<ProviderEntity> = emptyList(),
     initialFor: Set<Long> = emptySet(),
+    // Editing a source's own guide: it is for that source only (OG-D3), shown as text.
+    ownGuideOf: ProviderEntity? = null,
 ) {
     var url by remember { mutableStateOf(initialSource?.url ?: "") }
     var checkedFor by remember { mutableStateOf(initialFor) }
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
+    val showUseFor = ownGuideOf == null && forSources.size > 1
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -750,8 +768,9 @@ private fun EpgSourceEditDialog(
         main =
             DialogAction(
                 stringResource(R.string.provider_save_button),
+                // At least one source: Add always, Edit when it shows Use for.
                 enabled =
-                    url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
+                    url.isNotBlank() && ((initialSource != null && !showUseFor) || checkedFor.isNotEmpty()),
             ) {
                 onConfirm(
                     url,
@@ -759,7 +778,7 @@ private fun EpgSourceEditDialog(
                     tzOffset.toIntOrNull() ?: 0,
                     initialSource?.ingestMethod ?: "DOWNLOADED",
                     initialSource?.enabled ?: true,
-                    checkedFor,
+                    if (showUseFor || initialSource == null) checkedFor else emptySet(),
                 )
             },
         cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
@@ -792,7 +811,13 @@ private fun EpgSourceEditDialog(
                     keyboardOptions = FieldKeyboards.SignedNumber,
                 )
                 FieldNote(stringResource(R.string.epg_timezone_hint))
-                if (initialSource == null && forSources.size > 1) {
+                if (ownGuideOf != null) {
+                    CinemaText(
+                        stringResource(R.string.epg_source_used_for, ownGuideOf.name),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
+                    )
+                } else if (showUseFor) {
                     CinemaText(stringResource(R.string.epg_use_for_label), role = TextRole.Label, tone = TextTone.Secondary)
                     forSources.forEach { source ->
                         TvCheckRow(
