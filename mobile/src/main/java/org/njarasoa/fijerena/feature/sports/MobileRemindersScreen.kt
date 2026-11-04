@@ -393,7 +393,7 @@ private fun TeamRuleCard(
             }
             IconAction(
                 onClick = onStop,
-                icon = CinemaIcons.Delete,
+                icon = CinemaIcons.BellOff,
                 label = stringResource(R.string.reminders_stop_team),
                 tone = TextTone.Danger,
             )

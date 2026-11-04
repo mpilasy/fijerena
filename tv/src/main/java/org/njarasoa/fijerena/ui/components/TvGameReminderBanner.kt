@@ -179,7 +179,9 @@ fun TvGameReminderBanner(
     val chosen = state.chosen(current)
 
     val shape = cornerShape(CornerRadius.medium)
-    Row(
+    // The text over the buttons, so a long title keeps its start time: with three buttons beside
+    // it, the title had little room left and lost its end.
+    Column(
         modifier =
             modifier
                 // The TV Surface's Box passes its minimum size on to its content: without this, the
@@ -191,10 +193,9 @@ fun TvGameReminderBanner(
                 .background(CinemaTheme.colors.surface, shape)
                 .border(TvDimensions.borderDefault, CinemaTheme.colors.glassBorder, shape)
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             CinemaText(
                 text = GameReminderNotifications.title(context, current),
                 role = TextRole.Heading,
@@ -208,32 +209,37 @@ fun TvGameReminderBanner(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (hasChannel) {
-            CinemaPrimaryButton(
+        Row(
+            modifier = Modifier.align(Alignment.End),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            if (hasChannel) {
+                CinemaPrimaryButton(
+                    onClick = {
+                        state.close(current)
+                        onWatch(current)
+                    },
+                    text = stringResource(R.string.epg_browser_watch_now_btn),
+                    modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.WATCH),
+                    highlighted = chosen == ReminderBannerState.Choice.WATCH,
+                )
+            }
+            CinemaSecondaryButton(
+                onClick = { state.close(current) },
+                text = stringResource(R.string.game_reminder_dismiss),
+                modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.DISMISS),
+                highlighted = chosen == ReminderBannerState.Choice.DISMISS,
+            )
+            CinemaSecondaryButton(
                 onClick = {
                     state.close(current)
-                    onWatch(current)
+                    onManage(current)
                 },
-                text = stringResource(R.string.epg_browser_watch_now_btn),
-                modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.WATCH),
-                highlighted = chosen == ReminderBannerState.Choice.WATCH,
+                text = stringResource(R.string.reminders_manage),
+                modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.MANAGE),
+                highlighted = chosen == ReminderBannerState.Choice.MANAGE,
             )
         }
-        CinemaSecondaryButton(
-            onClick = { state.close(current) },
-            text = stringResource(R.string.game_reminder_dismiss),
-            modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.DISMISS),
-            highlighted = chosen == ReminderBannerState.Choice.DISMISS,
-        )
-        CinemaSecondaryButton(
-            onClick = {
-                state.close(current)
-                onManage(current)
-            },
-            text = stringResource(R.string.reminders_manage),
-            modifier = Modifier.reminderChoice(chosen == ReminderBannerState.Choice.MANAGE),
-            highlighted = chosen == ReminderBannerState.Choice.MANAGE,
-        )
     }
 }
 

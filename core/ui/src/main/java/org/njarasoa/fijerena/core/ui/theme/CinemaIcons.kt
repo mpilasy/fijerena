@@ -60,6 +60,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RadioButtonChecked
@@ -118,6 +119,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonChecked
@@ -176,6 +178,7 @@ import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material.icons.sharp.Movie
 import androidx.compose.material.icons.sharp.NotificationsActive
 import androidx.compose.material.icons.sharp.NotificationsNone
+import androidx.compose.material.icons.sharp.NotificationsOff
 import androidx.compose.material.icons.sharp.Pause
 import androidx.compose.material.icons.sharp.PlayArrow
 import androidx.compose.material.icons.sharp.RadioButtonChecked
@@ -432,6 +435,11 @@ object CinemaIcons {
     val Bell: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.NotificationsNone, Icons.Outlined.NotificationsNone, Icons.Sharp.NotificationsNone)
+
+    /** Stop the reminders of a team's "every game" (the Reminders page plan). */
+    val BellOff: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.NotificationsOff, Icons.Outlined.NotificationsOff, Icons.Sharp.NotificationsOff)
 
     /** A game's reminder bell, set. */
     val BellOn: ImageVector

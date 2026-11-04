@@ -555,7 +555,7 @@ private fun TeamRuleRow(
     ) {
         TvIconAction(
             onClick = onStop,
-            icon = CinemaIcons.Delete,
+            icon = CinemaIcons.BellOff,
             label = stringResource(R.string.reminders_stop_team),
             danger = true,
             modifier = rowFocus(rowKey + ACTION_SEPARATOR + STOP).focusProperties { right = FocusRequester.Cancel },
