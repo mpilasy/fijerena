@@ -62,8 +62,11 @@ class SettingsDatabaseMigrationTest {
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
+        // v20 links a guide source to its media sources in tables of their own; v14 had a
+        // `provider_id` column in `epg_source`, the source's one media source.
+        rawDb.execSQL("DROP TABLE `epg_source_provider`")
+        rawDb.execSQL("DROP TABLE `epg_source_alias`")
         rawDb.execSQL("DROP INDEX `index_epg_source_source_key`")
-        rawDb.execSQL("DROP INDEX `index_epg_source_provider_id`")
         rawDb.execSQL("ALTER TABLE `epg_source` RENAME TO `epg_source_v14`")
         rawDb.execSQL(
             "CREATE TABLE `epg_source` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `url` TEXT NOT NULL, " +
@@ -77,8 +80,10 @@ class SettingsDatabaseMigrationTest {
         val sourceColumns =
             "`id`, `url`, `label`, `timezone_offset_hours`, `added_at_ms`, `last_ingested_at_ms`, `last_error`, `enabled`, " +
                 "`last_channels`, `last_programmes`, `last_download_bytes`, `ingest_method`, `last_ingestion_duration_ms`, " +
-                "`last_download_duration_ms`, `provider_id`, `last_content_sha256`, `etag`, `last_modified_header`"
-        rawDb.execSQL("INSERT INTO `epg_source` ($sourceColumns) SELECT $sourceColumns FROM `epg_source_v14`")
+                "`last_download_duration_ms`, `last_content_sha256`, `etag`, `last_modified_header`"
+        rawDb.execSQL(
+            "INSERT INTO `epg_source` ($sourceColumns, `provider_id`) SELECT $sourceColumns, $providerId FROM `epg_source_v14`",
+        )
         rawDb.execSQL("DROP TABLE `epg_source_v14`")
         rawDb.execSQL("CREATE INDEX `index_epg_source_provider_id` ON `epg_source` (`provider_id`)")
         rawDb.execSQL("DROP INDEX `index_providers_providerKey`")
