@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261105231019
 
 - **Guide refreshes no longer slow down playback:** a guide refresh now updates the search index only for the guide sources it refreshed, not the whole guide, and in small steps. While a video plays, indexing waits, and it continues a minute after playback stops; the guide card says "Indexing waits until playback stops". On a small device such as a Chromecast, rebuilding the whole index took about 8 minutes on every refresh and, during playback, could make the app stop responding. Until indexing ends, guide search still finds the refreshed guide's programmes by title and description, only more slowly. If the app closes during indexing, it continues where it stopped. TV and phone.
 
