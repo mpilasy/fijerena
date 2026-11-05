@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261105014113
 
 - **No guide refresh or catalogue sync on a full device:** when the device's storage is almost full (less than 5% free, at most 500 MB), a guide refresh or a catalogue sync does not start, as it can need a few hundred MB more while it runs. The automatic ones wait until there is space again and then start by themselves. A refresh you start says why it did not run: each guide source's card shows the failure "This device's storage is almost full. Free up space, then try again.", and Guide Sources shows "Storage almost full (… free): guide refreshes do not start until you free up space on this device." at the top while it lasts. A catalogue sync shows the same reason as its last failure. TV and phone.
 
