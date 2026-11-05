@@ -23,6 +23,8 @@ class EpgGuideLookup(
     private val scope: GuideScope,
     private val isIndexed: () -> Boolean = { true },
     private val isFtsStale: () -> Boolean = { false },
+    /** The guide sources whose index entries a refresh is still writing: read without FTS. */
+    private val pendingSourceIds: () -> Set<Long> = { emptySet() },
 ) : GuideLookup {
     companion object {
         private const val TAG = "EpgGuideLookup"
@@ -36,6 +38,7 @@ class EpgGuideLookup(
                 scope = GuideScope.load(context),
                 isIndexed = { indexer.state.value !is EpgIndexState.NotIndexed },
                 isFtsStale = indexer::isFtsStale,
+                pendingSourceIds = indexer::pendingIndexSourceIds,
             )
         }
 
@@ -66,18 +69,29 @@ class EpgGuideLookup(
     ): List<GuideProgramme> {
         val sourceIds = scope.sourceIds
         if (terms.isEmpty() || sourceIds.isEmpty() || !isIndexed()) return emptyList()
+
+        // Folded terms have no `\`, `%` or `_` to escape.
+        fun patterns() = terms.map(SportsText::fold).filter { it.isNotBlank() }.distinct()
         val rows =
             if (isFtsStale()) {
-                terms
-                    // Folded terms have no `\`, `%` or `_` to escape.
-                    .map(SportsText::fold)
-                    .filter { it.isNotBlank() }
-                    .distinct()
-                    .flatMap { pattern -> read { dao.searchByTitleLike(pattern, sourceIds, fromSec, toSec) } }
-                    .distinctBy { it.id }
+                patterns().flatMap { pattern -> read { dao.searchByTitleLike(pattern, sourceIds, fromSec, toSec) } }.distinctBy { it.id }
             } else {
+                // Sources a refresh is still indexing: titles and descriptions without FTS
+                // (docs/plans/20261105_pausable-guide-indexing-plan.md).
+                val pending = pendingSourceIds().intersect(sourceIds.toSet()).toList()
+                val indexed = sourceIds.filter { it !in pending }
                 val query = ftsQuery(terms)
-                if (query.isEmpty()) emptyList() else read { dao.searchByTitleFts(query, sourceIds, fromSec, toSec) }
+                val fromIndex =
+                    if (query.isEmpty() || indexed.isEmpty()) emptyList() else read { dao.searchByTitleFts(query, indexed, fromSec, toSec) }
+                val fromPending =
+                    if (pending.isEmpty()) {
+                        emptyList()
+                    } else {
+                        patterns().flatMap { pattern ->
+                            read { dao.searchByTextLike(pattern, pending, fromSec, toSec) }
+                        }
+                    }
+                (fromIndex + fromPending).distinctBy { it.id }
             }
         return rows.toProgrammes(fromSec, toSec)
     }

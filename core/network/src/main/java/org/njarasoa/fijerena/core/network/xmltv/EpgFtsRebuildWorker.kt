@@ -14,6 +14,8 @@ import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.trySetForeground
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.isVideoPlaying
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
@@ -60,7 +62,12 @@ class EpgFtsRebuildWorker(
         Log.i(TAG, "doWork: starting FTS rebuild under foreground service wake lock")
         return try {
             val indexer = EpgIndexer.getInstance(applicationContext)
-            indexer.rebuildFtsAndUpdateState()
+            // An incremental update a killed run left continues where it stopped, waiting while
+            // video plays (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2); a stale
+            // index is rebuilt whole.
+            if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause(::isVideoPlaying))) {
+                indexer.rebuildFtsAndUpdateState()
+            }
             indexer.incrementalVacuum()
             Log.i(TAG, "doWork: FTS rebuild complete")
             Result.success()

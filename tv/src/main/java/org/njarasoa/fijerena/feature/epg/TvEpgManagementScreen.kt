@@ -30,6 +30,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
@@ -302,6 +303,8 @@ fun TvEpgManagementScreen(
                         // The guide index is taking in this guide source's import.
                         val indexing =
                             (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true
+                        // Indexing waits until video stops playing.
+                        val indexingWaits = indexing && (processingState as? MultiSourceState.Finalizing)?.waitingForPlayback == true
 
                         // Whether the run that just finished confirmed this source's data hadn't
                         // changed (304, or a matching content hash) — true only right after that run,
@@ -407,6 +410,10 @@ fun TvEpgManagementScreen(
                                                 stringResource(
                                                     R.string.epg_source_phase_format,
                                                     when {
+                                                        indexingWaits -> {
+                                                            stringResource(R.string.epg_phase_indexing_waits)
+                                                        }
+
                                                         indexing -> {
                                                             stringResource(R.string.epg_phase_indexing)
                                                         }
@@ -742,6 +749,8 @@ internal fun localizedEpgPhase(phase: String): String =
         "Awaiting Ingestion" -> stringResource(R.string.epg_phase_awaiting_ingestion)
         "Rebuilding indexes…" -> stringResource(R.string.epg_phase_rebuilding_indexes)
         "Swapping to primary guide…" -> stringResource(R.string.epg_phase_swapping_primary_guide)
+        EpgFileManager.PHASE_INDEXING -> stringResource(R.string.epg_phase_indexing)
+        EpgFileManager.PHASE_INDEXING_WAITS -> stringResource(R.string.epg_phase_indexing_waits)
         else -> phase
     }
 

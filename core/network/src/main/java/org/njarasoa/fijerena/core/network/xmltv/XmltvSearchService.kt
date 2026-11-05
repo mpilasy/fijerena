@@ -31,6 +31,9 @@ class XmltvSearchService(
         private const val TAG = "XmltvSearchService"
         private const val FTS_TIMEOUT_MS = 10_000L
 
+        // The most programmes a search returns, as each query's LIMIT.
+        private const val MAX_RESULTS = 500
+
         // Pre-compiled regex — avoid recompiling on every search call
         private val WHITESPACE_REGEX = Regex("\\s+")
 
@@ -74,7 +77,52 @@ class XmltvSearchService(
         }
     }
 
+    /**
+     * The guide sources whose index entries a refresh is still writing are read without FTS, in
+     * titles and descriptions; the others through the index
+     * (docs/plans/20261105_pausable-guide-indexing-plan.md).
+     */
     private suspend fun searchFromIndex(
+        query: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+    ): XmltvSearchResult? {
+        val indexer = EpgIndexer.getInstance(context)
+        val pending = if (indexer.isFtsStale()) emptySet() else indexer.pendingIndexSourceIds().intersect(sourceIds.toSet())
+        if (pending.isEmpty()) return searchIndexed(query, sourceIds, windowStart, windowEnd)
+        val indexedIds = sourceIds.filter { it !in pending }
+        val indexed = if (indexedIds.isEmpty()) null else searchIndexed(query, indexedIds, windowStart, windowEnd)
+        val pattern = escapeLike(sanitizeQuery(query).lowercase(Locale.ROOT))
+        if (pattern.isBlank()) return indexed ?: rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
+        val pendingRows =
+            try {
+                withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                    EpgIndexDatabase.getInstance(context).epgIndexDao().searchByTextLike(pattern, pending.toList(), windowStart, windowEnd)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Search of the sources still being indexed failed", e)
+                null
+            }
+        if (pendingRows == null) {
+            // Those sources couldn't answer in time: what the index found, else "still updating".
+            return indexed?.takeIf { it.programmes.isNotEmpty() } ?: throw EpgIndexBusyException()
+        }
+        val fromPending = rowsToSearchResult(pendingRows, searchedFromIndex = true, searchPath = EpgSearchPath.LIKE_FALLBACK)
+        if (indexed == null) return fromPending
+        return XmltvSearchResult(
+            channels = indexed.channels + fromPending.channels,
+            programmes = (indexed.programmes + fromPending.programmes).sortedBy { it.startEpoch }.take(MAX_RESULTS),
+            totalScanned = indexed.totalScanned + fromPending.totalScanned,
+            truncated = indexed.truncated || fromPending.truncated,
+            searchedFromIndex = true,
+            searchPath = if (indexed.searchPath == EpgSearchPath.NONE) EpgSearchPath.LIKE_FALLBACK else indexed.searchPath,
+        )
+    }
+
+    private suspend fun searchIndexed(
         query: String,
         sourceIds: List<Long>,
         windowStart: Long,

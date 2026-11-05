@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
@@ -80,6 +81,10 @@ class EpgFileManager private constructor(
     companion object {
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
+
+        /** The Finalizing phases of the incremental index (localised on the cards and Settings rows). */
+        const val PHASE_INDEXING = "Indexing"
+        const val PHASE_INDEXING_WAITS = "Indexing waits"
         private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
@@ -173,6 +178,16 @@ class EpgFileManager private constructor(
             pending: Map<Long, IngestRecord>,
         ) {
             indexer.swapAndRebuildFts(syncedIds)
+            markIngested(indexer, sourceDao, syncedIds, pending)
+        }
+
+        /** After the swap: records each refreshed source's import, then moves its times if its offset changed meanwhile. */
+        internal suspend fun markIngested(
+            indexer: EpgIndexer,
+            sourceDao: EpgSourceDao,
+            syncedIds: List<Long>,
+            pending: Map<Long, IngestRecord>,
+        ) {
             syncedIds.mapNotNull { pending[it] }.forEach { record ->
                 sourceDao.markIngested(
                     id = record.sourceId,
@@ -311,6 +326,8 @@ class EpgFileManager private constructor(
             val phase: String,
             /** The guide sources whose import the guide index is taking in: their cards say "Indexing". */
             val indexingSourceIds: Set<Long> = emptySet(),
+            /** Indexing waits until video stops playing: their cards say so. */
+            val waitingForPlayback: Boolean = false,
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
             val totalDownloadBytes: Long = 0,
@@ -903,6 +920,7 @@ class EpgFileManager private constructor(
                 // source's primary rows before transferring staging, and staging has nothing for it.
                 val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
                 val indexStartMs = System.currentTimeMillis()
+                var incrementalIndexMs: Long? = null
 
                 // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
                 // Show this phase so the UI doesn't appear stuck after ingestion completes.
@@ -940,10 +958,35 @@ class EpgFileManager private constructor(
                             totalProgrammes = totalProgrammes,
                             totalDownloadBytes = totalBytes,
                         )
-                    swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
-                }
-
-                if (anyIngested) {
+                    // The index of the refreshed sources only, in batches that wait while video
+                    // plays (docs/plans/20261105_pausable-guide-indexing-plan.md). A stale index
+                    // (an earlier rebuild was cut off) still needs the full rebuild.
+                    if (indexer.isFtsStale()) {
+                        swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
+                        invalidateXmltvCache(sources, allStats)
+                    } else {
+                        fun indexing(waiting: Boolean) =
+                            MultiSourceState.Finalizing(
+                                phase = if (waiting) PHASE_INDEXING_WAITS else PHASE_INDEXING,
+                                indexingSourceIds = syncedIds.toSet(),
+                                waitingForPlayback = waiting,
+                                totalChannels = totalChannels,
+                                totalProgrammes = totalProgrammes,
+                                totalDownloadBytes = totalBytes,
+                            )
+                        _state.value = indexing(waiting = false)
+                        incrementalIndexMs =
+                            indexer.swapAndIndexIncrementally(
+                                sourceIds = syncedIds,
+                                pause = PlaybackPause(::isPlaybackActive),
+                                onWaiting = { waiting -> _state.value = indexing(waiting) },
+                                onSwapped = {
+                                    markIngested(indexer, sourceDao, syncedIds, pendingIngests)
+                                    invalidateXmltvCache(sources, allStats)
+                                },
+                            )
+                    }
+                } else if (anyIngested) {
                     invalidateXmltvCache(sources, allStats)
                 }
 
@@ -961,7 +1004,8 @@ class EpgFileManager private constructor(
                         Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                         CrashLog.record("guide index rebuild failed", e)
                     }
-                    sourceDao.setIndexDuration(syncedIds, System.currentTimeMillis() - indexStartMs)
+                    // The incremental index counts its own time, waits for playback left out.
+                    sourceDao.setIndexDuration(syncedIds, incrementalIndexMs ?: (System.currentTimeMillis() - indexStartMs))
                 }
 
                 // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both

@@ -726,6 +726,7 @@
     <string name="epg_phase_downloading">Alaina</string>
     <string name="epg_phase_ingesting">Ampidirina</string>
     <string name="epg_phase_indexing">Mandamina ny fikarohana</string>
+    <string name="epg_phase_indexing_waits">Miandry ny fijanonan\'ny video vao mandamina ny fikarohana</string>
     <string name="epg_phase_awaiting_ingestion">Miandry ho ampidirina</string>
     <string name="epg_phase_waiting_to_refresh">Miandry ny fanavaozana</string>
     <string name="epg_phase_waiting_for">Miandry ny fahavitan\'ny %1$s</string>

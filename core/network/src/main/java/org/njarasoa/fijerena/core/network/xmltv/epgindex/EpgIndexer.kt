@@ -6,6 +6,7 @@ import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,14 @@ class EpgIndexer private constructor(
     }
 
     fun isFtsStale(): Boolean = ftsStale.get()
+
+    // The guide sources whose index entries an incremental update is still writing: search reads
+    // their rows without FTS (docs/plans/20261105_pausable-guide-indexing-plan.md).
+    @Volatile
+    private var pendingSourceIds: Set<Long> = emptySet()
+
+    /** The guide sources whose search index entries are still being written after a refresh. */
+    fun pendingIndexSourceIds(): Set<Long> = pendingSourceIds
 
     fun markFtsStale() {
         ftsStale.set(true)
@@ -199,7 +208,43 @@ class EpgIndexer private constructor(
                 Log.w(TAG, "Failed to restore index state", e)
                 _state.value = EpgIndexState.NotIndexed
             }
-            wasStale
+            wasStale || restoreIncrementalProgress()
+        }
+
+    // An incremental index update a killed run left (docs/plans/20261105_pausable-guide-indexing-plan.md
+    // → IX2). Add or Merge unfinished: true, the worker continues it. Remove unfinished: the swap
+    // never happened and some entries are gone, so the index is marked stale for a full rebuild
+    // (true too); the next refresh imports those sources again.
+    private suspend fun restoreIncrementalProgress(): Boolean =
+        try {
+            val sdb = EpgIndexDatabase.getInstance(context).openHelper.writableDatabase
+            val progress = writeMutex.withLock { IncrementalFts.read(sdb) }
+            when (progress?.phase) {
+                null -> {
+                    false
+                }
+
+                FtsProgress.Phase.REMOVE -> {
+                    Log.w(TAG, "initialize: an index update stopped before its swap; rebuilding the index")
+                    writeMutex.withLock { IncrementalFts.clear(sdb) }
+                    markFtsStale()
+                    true
+                }
+
+                FtsProgress.Phase.ADD -> {
+                    pendingSourceIds = progress.sourceIds.toSet()
+                    true
+                }
+
+                FtsProgress.Phase.MERGE -> {
+                    true
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read the index update progress", e)
+            false
         }
 
     /**
@@ -524,6 +569,10 @@ class EpgIndexer private constructor(
                         ),
                     )
 
+                    // A full rebuild covers every row: an incremental update left unfinished has
+                    // nothing more to do.
+                    IncrementalFts.clear(sdb)
+                    pendingSourceIds = emptySet()
                     // Clean before Indexed, not after: a search waiting on Indexed reruns the
                     // moment it's published and must not still find the index marked stale.
                     markFtsClean()
@@ -611,11 +660,180 @@ class EpgIndexer private constructor(
                 }
                 // The rebuild covered every row, so a flag left by an earlier interrupted rebuild
                 // is resolved too. Before Indexed, as in rebuildFtsAndUpdateState().
+                IncrementalFts.clear(sdb)
+                pendingSourceIds = emptySet()
                 markFtsClean()
                 _state.value = EpgIndexState.Indexed(channelCount, programmeCount, now)
             }
             Log.i(TAG, "swapAndRebuildFts: complete in ${System.currentTimeMillis() - startMs}ms")
         }
+
+    /**
+     * Moves [sourceIds]' staging rows into the primary tables and brings the search index up to
+     * date for them only, in batches that wait while video plays
+     * (docs/plans/20261105_pausable-guide-indexing-plan.md):
+     *
+     * 1. Remove: the index entries of the rows the swap deletes (those sources' live rows and the
+     *    ended ones), while those rows still exist.
+     * 2. Swap: one short transaction, as [swapAndRebuildFts] without the rebuild; then [onSwapped].
+     * 3. Add: the index entries of the new rows.
+     * 4. Merge: the index's segments, a step at a time.
+     *
+     * Before each batch, [pause] waits while video plays; [onWaiting] is told when a wait starts
+     * and ends. From Remove to the end of Add, [pendingIndexSourceIds] has [sourceIds], and search
+     * reads their rows without FTS. Each batch commits with its progress, so a killed run continues
+     * where it stopped ([resumeIncrementalIndex]). Returns the time spent indexing, waits left out.
+     *
+     * Call it with the FTS triggers dropped (during a refresh run) and the index not stale.
+     * Throws if a step fails; a failure before the swap leaves the previous guide live and marks
+     * the index stale, so the next start rebuilds it.
+     */
+    suspend fun swapAndIndexIncrementally(
+        sourceIds: List<Long>,
+        pause: PlaybackPause,
+        onWaiting: (Boolean) -> Unit,
+        onSwapped: suspend () -> Unit,
+    ): Long =
+        withContext(Dispatchers.IO) {
+            require(sourceIds.isNotEmpty()) { "no guide source to index" }
+            val startMs = System.currentTimeMillis()
+            val db = EpgIndexDatabase.getInstance(context)
+            val sdb = db.openHelper.writableDatabase
+            val cutoff = System.currentTimeMillis() / 1000 - KEEP_ENDED_SECONDS
+            var progress = FtsProgress(FtsProgress.Phase.REMOVE, sourceIds, cursor = 0, cutoff = cutoff, boundary = 0)
+            var waitedMs = 0L
+            Log.i(TAG, "swapAndIndexIncrementally: sources $sourceIds")
+            writeMutex.withLock { IncrementalFts.write(sdb, progress) }
+            pendingSourceIds = sourceIds.toSet()
+            try {
+                while (true) {
+                    waitedMs += pause.await(onWaiting)
+                    progress = writeMutex.withLock { withBatchCache(sdb) { IncrementalFts.removeBatch(sdb, progress) } } ?: break
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The swap didn't happen and some entries are gone: only a full rebuild can tell.
+                Log.e(TAG, "swapAndIndexIncrementally: removing index entries failed: ${e.message}", e)
+                writeMutex.withLock { IncrementalFts.clear(sdb) }
+                pendingSourceIds = emptySet()
+                markFtsStale()
+                throw e
+            }
+
+            writeMutex.withLock {
+                val dao = db.epgIndexDao()
+                val previousState = _state.value
+                val now = System.currentTimeMillis()
+                var channelCount = 0
+                var programmeCount = 0
+                try {
+                    db.withTransaction {
+                        val boundary = dao.getMaxProgrammeId()
+                        dao.executeSwap(sourceIds)
+                        dao.deleteStaleProgrammes(cutoff)
+                        progress = progress.copy(phase = FtsProgress.Phase.ADD, cursor = boundary, boundary = boundary)
+                        IncrementalFts.write(sdb, progress)
+                        channelCount = dao.getChannelCount()
+                        programmeCount = dao.getProgrammeCount()
+                        dao.insertMetadata(
+                            EpgIndexMetadata(
+                                fileSizeBytes = 0,
+                                fileLastModifiedMs = 0,
+                                indexedAtMs = now,
+                                channelCount = channelCount,
+                                programmeCount = programmeCount,
+                                timezoneOffsetHours = 0,
+                            ),
+                        )
+                    }
+                } catch (e: Throwable) {
+                    // Rolled back: the previous guide is still live, but its removed entries are
+                    // gone. As a failed Remove.
+                    _state.value = previousState
+                    if (e !is CancellationException) {
+                        IncrementalFts.clear(sdb)
+                        pendingSourceIds = emptySet()
+                        markFtsStale()
+                    }
+                    throw e
+                }
+                // A new generation: the guide screens read the new listings now, before the index
+                // has them (search reads the pending sources without it).
+                _state.value = EpgIndexState.Indexed(channelCount, programmeCount, now)
+            }
+            onSwapped()
+
+            waitedMs += finishIncrementalIndex(sdb, progress, pause, onWaiting)
+            val indexMs = System.currentTimeMillis() - startMs - waitedMs
+            Log.i(TAG, "swapAndIndexIncrementally: complete, ${indexMs}ms indexing, ${waitedMs}ms waiting for playback to stop")
+            indexMs
+        }
+
+    /**
+     * Continues an incremental index update a killed run left
+     * (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2): Add and Merge from where they
+     * stopped. Returns false when there was nothing to continue.
+     */
+    suspend fun resumeIncrementalIndex(
+        pause: PlaybackPause,
+        onWaiting: (Boolean) -> Unit = {},
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val sdb = EpgIndexDatabase.getInstance(context).openHelper.writableDatabase
+            val progress = writeMutex.withLock { IncrementalFts.read(sdb) } ?: return@withContext false
+            if (progress.phase == FtsProgress.Phase.REMOVE) return@withContext false
+            Log.i(TAG, "resumeIncrementalIndex: continuing ${progress.phase} after id ${progress.cursor} for ${progress.sourceIds}")
+            if (progress.phase == FtsProgress.Phase.ADD) pendingSourceIds = progress.sourceIds.toSet()
+            // The triggers are back after a restart: off while the batches write, as in a refresh run.
+            writeMutex.withLock { FTS_TRIGGER_NAMES.forEach { sdb.execSQL("DROP TRIGGER IF EXISTS `$it`") } }
+            try {
+                finishIncrementalIndex(sdb, progress, pause, onWaiting)
+            } finally {
+                withContext(NonCancellable) { writeMutex.withLock { FTS_TRIGGER_DDL.forEach { sdb.execSQL(it) } } }
+            }
+            true
+        }
+
+    // Add (from [start]'s cursor, when it is Add) and Merge, then clears the progress. Returns the
+    // time spent waiting for playback to stop.
+    private suspend fun finishIncrementalIndex(
+        sdb: SupportSQLiteDatabase,
+        start: FtsProgress,
+        pause: PlaybackPause,
+        onWaiting: (Boolean) -> Unit,
+    ): Long {
+        var waitedMs = 0L
+        var progress = start
+        if (progress.phase == FtsProgress.Phase.ADD) {
+            while (true) {
+                waitedMs += pause.await(onWaiting)
+                progress = writeMutex.withLock { withBatchCache(sdb) { IncrementalFts.addBatch(sdb, progress) } } ?: break
+            }
+            pendingSourceIds = emptySet()
+            progress = progress.copy(phase = FtsProgress.Phase.MERGE)
+            writeMutex.withLock { IncrementalFts.write(sdb, progress) }
+        }
+        while (true) {
+            waitedMs += pause.await(onWaiting)
+            if (!writeMutex.withLock { withBatchCache(sdb) { IncrementalFts.mergeStep(sdb) } }) break
+        }
+        writeMutex.withLock { IncrementalFts.clear(sdb) }
+        return waitedMs
+    }
+
+    // A larger page cache for one batch, as the full rebuild sets, then back to the default.
+    private inline fun <T> withBatchCache(
+        sdb: SupportSQLiteDatabase,
+        block: () -> T,
+    ): T {
+        sdb.execSQL("PRAGMA cache_size = -16000")
+        try {
+            return block()
+        } finally {
+            sdb.execSQL("PRAGMA cache_size = -2000")
+        }
+    }
 
     suspend fun clearStaging() =
         withContext(Dispatchers.IO) {

@@ -890,6 +890,7 @@
     <string name="epg_phase_downloading">Downloading</string>
     <string name="epg_phase_ingesting">Importing</string>
     <string name="epg_phase_indexing">Indexing</string>
+    <string name="epg_phase_indexing_waits">Indexing waits until playback stops</string>
     <string name="epg_phase_awaiting_ingestion">Waiting to import</string>
     <string name="epg_phase_waiting_to_refresh">Waiting to refresh</string>
     <string name="epg_phase_waiting_for">Waiting for %1$s to finish</string>

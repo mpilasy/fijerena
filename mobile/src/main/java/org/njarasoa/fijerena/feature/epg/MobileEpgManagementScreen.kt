@@ -27,6 +27,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
@@ -213,6 +214,7 @@ fun MobileEpgManagementScreen(
                                     .joinToString { it.label.ifBlank { unnamed } },
                             indexing =
                                 (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true,
+                            indexingWaits = (processingState as? MultiSourceState.Finalizing)?.waitingForPlayback == true,
                             wasUnchanged = wasUnchanged,
                             nowMs = nowMs,
                             staleThresholdMs = viewModel.staleThresholdMs(source),
@@ -338,6 +340,8 @@ internal fun localizedEpgPhase(phase: String): String =
         "Awaiting Ingestion" -> stringResource(R.string.epg_phase_awaiting_ingestion)
         "Rebuilding indexes…" -> stringResource(R.string.epg_phase_rebuilding_indexes)
         "Swapping to primary guide…" -> stringResource(R.string.epg_phase_swapping_primary_guide)
+        EpgFileManager.PHASE_INDEXING -> stringResource(R.string.epg_phase_indexing)
+        EpgFileManager.PHASE_INDEXING_WAITS -> stringResource(R.string.epg_phase_indexing_waits)
         else -> phase
     }
 
@@ -353,6 +357,8 @@ private fun EpgSourceCard(
     waitingFor: String,
     /** The guide index is taking in this guide source's import: "Indexing". */
     indexing: Boolean,
+    /** That indexing waits until video stops playing. */
+    indexingWaits: Boolean,
     wasUnchanged: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
@@ -438,6 +444,7 @@ private fun EpgSourceCard(
                             stringResource(
                                 R.string.epg_source_phase_format,
                                 when {
+                                    indexing && indexingWaits -> stringResource(R.string.epg_phase_indexing_waits)
                                     indexing -> stringResource(R.string.epg_phase_indexing)
                                     waitingFor.isNotEmpty() -> stringResource(R.string.epg_phase_waiting_for, waitingFor)
                                     else -> stringResource(R.string.epg_phase_waiting_to_refresh)

@@ -148,6 +148,36 @@ interface EpgIndexDao {
         maxResults: Int = 500,
     ): List<EpgSearchResultRow>
 
+    /**
+     * Title and description substring search that doesn't touch FTS, for guide sources whose index
+     * entries are still being written after a refresh (docs/plans/20261105_pausable-guide-indexing-plan.md).
+     * A scan of those sources' rows. [pattern] as in [searchByTitleLike].
+     */
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            WHERE (p2.title_lowercase LIKE '%' || :pattern || '%' ESCAPE '\'
+                   OR p2.description LIKE '%' || :pattern || '%' ESCAPE '\')
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    suspend fun searchByTextLike(
+        pattern: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+        maxResults: Int = 500,
+    ): List<EpgSearchResultRow>
+
     // --------------- Paged queries for large datasets (2M+ rows) ---------------
 
     @Query(
