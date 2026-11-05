@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261105234238
 
 - **Guide indexing also waits for other apps:** indexing after a guide refresh now also waits while another app plays sound, such as YouTube or a game, not only while Fijerena plays video. TV and phone.
 - **Small devices refresh the guide when idle:** on a device with under 2 GB of memory, such as a Chromecast HD, the automatic guide refresh now runs only when the device is idle (the TV off or asleep), so it never slows down the app you are using. A refresh you start yourself runs at once. TV and phone.
