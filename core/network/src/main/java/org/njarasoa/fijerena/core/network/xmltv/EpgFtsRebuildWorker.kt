@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.trySetForeground
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.isVideoPlaying
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.isMediaPlaying
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
@@ -63,9 +63,9 @@ class EpgFtsRebuildWorker(
         return try {
             val indexer = EpgIndexer.getInstance(applicationContext)
             // An incremental update a killed run left continues where it stopped, waiting while
-            // video plays (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2); a stale
+            // something plays (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2); a stale
             // index is rebuilt whole.
-            if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause(::isVideoPlaying))) {
+            if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause({ isMediaPlaying(applicationContext) }))) {
                 indexer.rebuildFtsAndUpdateState()
             }
             indexer.incrementalVacuum()

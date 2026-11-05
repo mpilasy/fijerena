@@ -1,4 +1,5 @@
 package org.njarasoa.fijerena.core.network.xmltv
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -53,6 +54,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.isMediaPlaying
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
@@ -81,6 +83,19 @@ class EpgFileManager private constructor(
     companion object {
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
+
+        /** Below this much RAM a device counts as low on memory: a Chromecast HD has 1.4 GB, a Shield 3 GB. */
+        internal const val LOW_MEMORY_BYTES = 2L * 1024 * 1024 * 1024
+
+        /** Whether a device with [totalMemBytes] of RAM counts as low on memory. */
+        internal fun isLowMemory(totalMemBytes: Long): Boolean = totalMemBytes in 1 until LOW_MEMORY_BYTES
+
+        /** Whether this device counts as low on memory ([isLowMemory]). */
+        fun isLowMemoryDevice(context: Context): Boolean {
+            val info = ActivityManager.MemoryInfo()
+            context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(info) ?: return false
+            return isLowMemory(info.totalMem)
+        }
 
         /** The Finalizing phases of the incremental index (localised on the cards and Settings rows). */
         const val PHASE_INDEXING = "Indexing"
@@ -978,7 +993,7 @@ class EpgFileManager private constructor(
                         incrementalIndexMs =
                             indexer.swapAndIndexIncrementally(
                                 sourceIds = syncedIds,
-                                pause = PlaybackPause(::isPlaybackActive),
+                                pause = PlaybackPause({ isMediaPlaying(context) }),
                                 onWaiting = { waiting -> _state.value = indexing(waiting) },
                                 onSwapped = {
                                     markIngested(indexer, sourceDao, syncedIds, pendingIngests)
@@ -1854,16 +1869,22 @@ class EpgFileManager private constructor(
         if (intervalHours == null) {
             workManager.cancelUniqueWork(EpgSyncWorker.WORK_NAME)
         } else {
+            // On a device with little memory (a Chromecast HD), the automatic refresh waits until
+            // the device is idle (the TV off or asleep), so it never competes with an app in use
+            // (docs/plans/20261105_pausable-guide-indexing-plan.md → IX4). WorkManager refuses a
+            // backoff on an idle job, so that one has none: it runs at the next idle time.
+            val idleOnly = isLowMemoryDevice(context)
             val constraints =
                 Constraints
                     .Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
                     .setRequiresStorageNotLow(true)
+                    .setRequiresDeviceIdle(idleOnly)
                     .build()
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+                    .apply { if (!idleOnly) setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES) }
                     .build()
             workManager.enqueueUniquePeriodicWork(EpgSyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
