@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Show Key Input: old keys go:** each key in the list now goes after 30 seconds on the screen, so the list shows only recent presses and goes away when no key is pressed. TV only.
+
 ## Version: 0.9.20261105183745
 
 - **Sports: no more unrelated channels on a game:** a game's channels no longer list every channel that starts with a broadcaster's name. For a Bundesliga game that ESPN gives on Hulu, the sheet listed "HULU ORIGINALS 1" to 8, none of which shows the game. A broadcaster's channel is now listed only with its exact name, that name and a number ("ESPN 2"), or a sport in its name. TV and phone.

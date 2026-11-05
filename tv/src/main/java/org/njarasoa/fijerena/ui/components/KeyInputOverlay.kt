@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.ui.components
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +49,13 @@ fun KeyInputOverlay(appSettings: AppSettings) {
             if (until != 0L) appSettings.keyInputUntil = 0L
         }
     }
+    // Each line goes after 30 s: wait for the oldest, remove it (and any as old), then the next.
+    val oldest = KeyInputLog.lines.firstOrNull()
+    LaunchedEffect(oldest) {
+        oldest ?: return@LaunchedEffect
+        delay(oldest.addedAtMs + KeyInputLog.LINE_LIFE_MS - SystemClock.uptimeMillis())
+        KeyInputLog.removeOld()
+    }
     if (until <= System.currentTimeMillis() || KeyInputLog.lines.isEmpty()) return
     // Below the clock's line: the screens' clock and the player's are both one Heading line,
     // Spacing.xl from the top; full screen the screens' clock is hidden, but the player's is there.
@@ -75,7 +83,7 @@ fun KeyInputOverlay(appSettings: AppSettings) {
                     .panel(PanelFill.Dim, PanelCorner.Chip)
                     .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         ) {
-            KeyInputLog.lines.forEach { CinemaCodeText(it, role = TextRole.Caption, maxLines = 1) }
+            KeyInputLog.lines.forEach { CinemaCodeText(it.text, role = TextRole.Caption, maxLines = 1) }
         }
     }
 }

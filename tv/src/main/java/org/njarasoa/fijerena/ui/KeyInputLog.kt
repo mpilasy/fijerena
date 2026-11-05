@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.ui
 
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.compose.runtime.mutableStateListOf
 import java.text.SimpleDateFormat
@@ -8,11 +9,14 @@ import java.util.Locale
 
 /**
  * Show Key Input (Admin → This Device): the last [MAX_LINES] keys the activity received, for
- * finding presses that seem to go missing. MainActivity records each key after it dispatched
+ * finding presses that seem to go missing; a line goes after [LINE_LIFE_MS]. MainActivity records each key after it dispatched
  * it; KeyInputOverlay shows the lines while [on].
  */
 object KeyInputLog {
     const val MAX_LINES = 10
+
+    /** How long a line stays on the screen. */
+    const val LINE_LIFE_MS = 30_000L
 
     /** KEYCODE_DPAD_CENTER's length: the D-pad keys' columns line up. */
     private const val KEY_NAME_WIDTH = 19
@@ -20,8 +24,14 @@ object KeyInputLog {
     /** Set by KeyInputOverlay while Show Key Input lasts; off, nothing is recorded. */
     @Volatile var on: Boolean = false
 
+    /** A line and when it was added ([SystemClock.uptimeMillis]). */
+    data class Line(
+        val text: String,
+        val addedAtMs: Long,
+    )
+
     /** Oldest first. Main thread only: key dispatch and composition. */
-    val lines = mutableStateListOf<String>()
+    val lines = mutableStateListOf<Line>()
 
     /** After the activity dispatched [event]: [handled] is what dispatch returned. */
     fun record(
@@ -30,9 +40,15 @@ object KeyInputLog {
     ) {
         if (!on) return
         // The event's uptime as a wall-clock time, so lines match a log or a note of the time.
-        val wallTime = System.currentTimeMillis() - (android.os.SystemClock.uptimeMillis() - event.eventTime)
-        lines += line(KeyEvent.keyCodeToString(event.keyCode), wallTime, event.action, event.repeatCount, handled)
+        val now = SystemClock.uptimeMillis()
+        val wallTime = System.currentTimeMillis() - (now - event.eventTime)
+        lines += Line(line(KeyEvent.keyCodeToString(event.keyCode), wallTime, event.action, event.repeatCount, handled), now)
         while (lines.size > MAX_LINES) lines.removeAt(0)
+    }
+
+    /** Removes the lines on the screen for [LINE_LIFE_MS] or more at [nowMs] (uptime). */
+    fun removeOld(nowMs: Long = SystemClock.uptimeMillis()) {
+        lines.removeAll { nowMs - it.addedAtMs >= LINE_LIFE_MS }
     }
 
     fun clear() {

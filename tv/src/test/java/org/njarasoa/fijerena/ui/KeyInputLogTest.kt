@@ -37,4 +37,16 @@ class KeyInputLogTest {
             KeyInputLog.line("KEYCODE_DPAD_UP", time, KeyEvent.ACTION_UP, 0, handled = false),
         )
     }
+
+    @Test
+    fun `a line goes after 30 seconds on the screen`() {
+        KeyInputLog.lines.clear()
+        KeyInputLog.lines += KeyInputLog.Line("old", addedAtMs = 1_000L)
+        KeyInputLog.lines += KeyInputLog.Line("new", addedAtMs = 20_000L)
+        KeyInputLog.removeOld(nowMs = 30_999L)
+        assertEquals(listOf("old", "new"), KeyInputLog.lines.map { it.text })
+        KeyInputLog.removeOld(nowMs = 31_000L)
+        assertEquals(listOf("new"), KeyInputLog.lines.map { it.text })
+        KeyInputLog.lines.clear()
+    }
 }
