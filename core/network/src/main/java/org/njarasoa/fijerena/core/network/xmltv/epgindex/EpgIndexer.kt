@@ -58,6 +58,9 @@ class EpgIndexer private constructor(
     /** The guide sources whose search index entries are still being written after a refresh. */
     fun pendingIndexSourceIds(): Set<Long> = pendingSourceIds
 
+    // Whether this process has looked for an incremental update a killed run left (or started one).
+    private val progressChecked = AtomicBoolean(false)
+
     fun markFtsStale() {
         ftsStale.set(true)
         stalePrefs.edit { putBoolean("fts_stale", true) }
@@ -208,7 +211,9 @@ class EpgIndexer private constructor(
                 Log.w(TAG, "Failed to restore index state", e)
                 _state.value = EpgIndexState.NotIndexed
             }
-            wasStale || restoreIncrementalProgress()
+            // Once per process, at its start: initialize() is called again later (Guide Sources
+            // calls it when the state reads NotIndexed), and a run in progress would look killed.
+            wasStale || (progressChecked.compareAndSet(false, true) && restoreIncrementalProgress())
         }
 
     // An incremental index update a killed run left (docs/plans/20261105_pausable-guide-indexing-plan.md
@@ -703,6 +708,8 @@ class EpgIndexer private constructor(
             var progress = FtsProgress(FtsProgress.Phase.REMOVE, sourceIds, cursor = 0, cutoff = cutoff, boundary = 0)
             var waitedMs = 0L
             Log.i(TAG, "swapAndIndexIncrementally: sources $sourceIds")
+            // The progress is this run's from now on, not a killed run's.
+            progressChecked.set(true)
             writeMutex.withLock { IncrementalFts.write(sdb, progress) }
             pendingSourceIds = sourceIds.toSet()
             try {

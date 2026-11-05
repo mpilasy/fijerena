@@ -136,6 +136,21 @@ class IncrementalFtsTest {
         }
 
     @Test
+    fun `initialize called again while a run removes entries leaves that run alone`() =
+        runBlocking {
+            live(1, "Oldtitle" to "first guide")
+            indexer.initialize()
+            // A run in its Remove phase, as Guide Sources calls initialize() again meanwhile.
+            val running = FtsProgress(FtsProgress.Phase.REMOVE, listOf(1L), 0, 0, 0)
+            IncrementalFts.write(sdb, running)
+
+            indexer.initialize()
+
+            assertEquals(running, IncrementalFts.read(sdb))
+            assertEquals(false, indexer.isFtsStale())
+        }
+
+    @Test
     fun `nothing to resume without a run left unfinished`() =
         runBlocking {
             assertEquals(false, indexer.resumeIncrementalIndex(noPlayback))
