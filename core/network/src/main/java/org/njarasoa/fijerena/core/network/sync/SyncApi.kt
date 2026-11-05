@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.sync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -178,16 +179,19 @@ class SyncApi(
                         token?.let { header("Authorization", "Bearer $it") }
                         headers.forEach { (name, value) -> header(name, value) }
                     }.build()
+            // Named in every error, so a log entry says which server it was (a device can be paired
+            // with any server).
+            val server = request.url.let { url -> if (url.port == HttpUrl.defaultPort(url.scheme)) url.host else "${url.host}:${url.port}" }
             val response =
                 try {
                     httpClient.newCall(request).execute()
                 } catch (e: java.io.IOException) {
-                    throw SyncApiException(0, "Sync server unreachable: ${e.message}", e)
+                    throw SyncApiException(0, "Sync server $server unreachable: ${e.message}", e)
                 }
             response.use {
                 val text = it.body.string()
                 if (!it.isSuccessful && !(acceptGone && it.code == 410)) {
-                    throw SyncApiException(it.code, "Sync server answered ${it.code}: $text")
+                    throw SyncApiException(it.code, "Sync server $server answered ${it.code}: $text")
                 }
                 // A captive portal or a proxy can answer 200 with an HTML page: that's a server we
                 // couldn't really reach, retried like one — not a crash of the sync pass. See
@@ -195,9 +199,17 @@ class SyncApi(
                 try {
                     json.decodeFromString<T>(text)
                 } catch (e: kotlinx.serialization.SerializationException) {
-                    throw SyncApiException(it.code, "Unexpected response from the sync server (HTTP ${it.code}): ${text.take(120)}", e)
+                    throw SyncApiException(
+                        it.code,
+                        "Unexpected response from the sync server $server (HTTP ${it.code}): ${text.take(120)}",
+                        e,
+                    )
                 } catch (e: IllegalArgumentException) {
-                    throw SyncApiException(it.code, "Unexpected response from the sync server (HTTP ${it.code}): ${text.take(120)}", e)
+                    throw SyncApiException(
+                        it.code,
+                        "Unexpected response from the sync server $server (HTTP ${it.code}): ${text.take(120)}",
+                        e,
+                    )
                 }
             }
         }
