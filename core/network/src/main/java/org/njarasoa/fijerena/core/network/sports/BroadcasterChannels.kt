@@ -217,8 +217,9 @@ internal object BroadcasterChannels {
 
     /**
      * Of [channels] (all [broadcaster]'s), the ones worth listing with no programme: a channel with the
-     * broadcaster's exact name or that name and a number ("ESPN 2"), and its sport channels; all of
-     * them when there are none of these.
+     * broadcaster's exact name or that name and a number ("ESPN 2"), and its sport channels; none
+     * when there are none of these. Listing all of them then put a streaming service's channels
+     * ("HULU ORIGINALS 1" to 8, for a game on Hulu) on a game none of them showed.
      */
     fun likelyChannels(
         broadcaster: Broadcaster,
@@ -226,12 +227,10 @@ internal object BroadcasterChannels {
         parsed: Map<LiveChannel, ParsedChannel>,
     ): List<LiveChannel> {
         val tokens = broadcasterTokens(broadcaster.name)
-        val likely =
-            channels.filter { channel ->
-                val words = parsed[channel]?.words ?: return@filter false
-                val numbered = words.size == tokens.size + 1 && words.startsWith(tokens, 0) && words.last().all(Char::isDigit)
-                words == tokens || numbered || words.any { it in SPORT_WORDS }
-            }
-        return likely.ifEmpty { channels }
+        return channels.filter { channel ->
+            val words = parsed[channel]?.words ?: return@filter false
+            val numbered = words.size == tokens.size + 1 && words.startsWith(tokens, 0) && words.last().all(Char::isDigit)
+            words == tokens || numbered || words.any { it in SPORT_WORDS }
+        }
     }
 }

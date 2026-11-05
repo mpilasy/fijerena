@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Sports: no more unrelated channels on a game:** a game's channels no longer list every channel that starts with a broadcaster's name. For a Bundesliga game that ESPN gives on Hulu, the sheet listed "HULU ORIGINALS 1" to 8, none of which shows the game. A broadcaster's channel is now listed only with its exact name, that name and a number ("ESPN 2"), or a sport in its name. TV and phone.
+
 ## Version: 0.9.20261105181242
 
 - **Show Key Input:** a new switch in Settings → Admin → This Device lists the last 10 keys the app received at the top right of every screen, for finding D-pad presses that seem to go missing. Each line has the time to the ms, the key's name, DOWN or UP, the repeat count and, for a press, whether the app handled it. Keys pressed in a dialog and in the player show too. Turning it on asks how long (5, 10, 30 or 60 minutes, default 10); it then turns itself off. TV only.

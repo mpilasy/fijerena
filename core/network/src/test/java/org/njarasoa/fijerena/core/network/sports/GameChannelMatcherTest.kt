@@ -567,6 +567,16 @@ class GameChannelMatcherTest {
         }
 
     @Test
+    fun `a broadcaster's channels with neither its own name nor a sport in theirs are not listed`() =
+        runTest {
+            // ESPN gives Hulu for a Bundesliga game in the US; Hulu's channels are reruns of its shows.
+            val hulu = broadcaster("Hulu", "US")
+            val game = game("2026-11-07T17:30:00Z", arsenal, chelsea, "English Premier League", hulu)
+            val channels = (1..8).map { channel(it, "US: HULU ORIGINALS $it", "hulu$it.us") }
+            assertEquals(emptyList<GameChannel>(), match(game, channels))
+        }
+
+    @Test
     fun `the guide search asks for every name form of both teams`() =
         runTest {
             val guide = FakeGuide(emptyList())
