@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261105192357
 
 - **Sports: no more games of another sport:** a game's channels no longer include a guide programme of two other teams from the same cities. For Minnesota United v San Jose Earthquakes (MLS), the sheet listed NOVA SPORT for "Minnesota Wild – San Jose Sharks", an ice hockey game. A city name now counts only right next to the other team's name ("Minnesota v San Jose"), as it already did in channel names. TV and phone.
 
