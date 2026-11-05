@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -20,7 +21,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * The profile's avatar with a small gear badge at its lower end: the avatar opens the profile menu,
+ * The profile's avatar with a small gear badge on its lower end corner, mostly outside it: the avatar opens the profile menu,
  * which has Settings (settings flow review, SF-D4). Each tab root's top bar shows it, last. A child's
  * profile menu has no Settings, so its avatar has no badge ([showSettingsBadge] false).
  */
@@ -40,7 +41,11 @@ fun ProfileSettingsAvatar(
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .size(MobileDimensions.profileSettingsBadge)
+                    // Mostly outside the avatar's corner: its letters reach the edge.
+                    .offset(
+                        x = MobileDimensions.profileSettingsBadge * BADGE_OUTSIDE_SHARE,
+                        y = MobileDimensions.profileSettingsBadge * BADGE_OUTSIDE_SHARE,
+                    ).size(MobileDimensions.profileSettingsBadge)
                     .clip(CinemaTheme.shapes.identity)
                     .background(CinemaTheme.colors.surfaceRaised),
             contentAlignment = Alignment.Center,
@@ -54,3 +59,6 @@ fun ProfileSettingsAvatar(
         }
     }
 }
+
+/** How much of the gear badge lies outside the avatar, across and down. */
+private const val BADGE_OUTSIDE_SHARE = 0.6f

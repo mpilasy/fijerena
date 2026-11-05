@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.feature.contentselection
 
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -168,10 +170,16 @@ private fun ProfileButton(
 ) {
     val switchLabel = stringResource(R.string.profile_switch_description, name)
     CinemaTooltip(label = switchLabel, below = true) {
-        // look-ok: the profile avatar as a button, not an icon; it has its own tooltip above
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(MobileDimensions.minTouchTarget).semantics { contentDescription = switchLabel },
+        // A plain touch target, not an IconButton: that clips its content to a 40 dp circle, which cut
+        // the avatar's corners and its gear badge.
+        Box(
+            modifier =
+                Modifier
+                    .size(MobileDimensions.minTouchTarget)
+                    // look-ok: the profile avatar as a button, not an icon; it has its own tooltip above
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .semantics { contentDescription = switchLabel },
+            contentAlignment = Alignment.Center,
         ) {
             ProfileSettingsAvatar(
                 name = name,

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Profile avatars show initials:** a profile's avatar now shows the first letter of each word of its name, at most 4, or the first 4 letters of a name of one word, always in lower case: "Grown-up" shows "gu", "Admin" shows "admi". Spaces and punctuation separate words. 2 or 3 letters show in one line and 4 as 2 above 2; the letters are in the Look's title font and fill the avatar to its edge. A name of one letter looks as before. The avatar is now as round as the Look's buttons: a circle in a Look with round buttons, a square in one with square buttons, a rounded square in between. The same avatar is used everywhere: the profile picker, the rail, headers, Settings → Profiles and the phone's profile menu. TV and phone.
+- **Phone: the gear badge no longer hides a letter:** the small gear on the profile avatar in each tab's header now sits on the avatar's lower corner, mostly outside it, so it covers none of the letters. The avatar there is no longer clipped to a circle. Phone.
 
 ## Version: 0.9.20261105014113
 
