@@ -1,6 +1,6 @@
 # Pausable Guide Indexing Plan
 
-**Status:** In progress (2026-11-05): IX1 and IX2 done; IX3 (walk, Chromecast) next.
+**Status:** Done 2026-11-05 (IX1–IX4).
 
 ## Why
 
@@ -85,7 +85,23 @@ programme grid doesn't use the index, so it shows the new guide right after the 
 |---|---|---|
 | IX1 | Incremental Remove / Swap / Add / Merge in batches, progress table, pause while playing, pending-source search (titles and descriptions), card text, index time without waits | Done 2026-11-05 |
 | IX2 | Resume after a kill: Add and Merge continue from the cursor; Remove falls back to a full rebuild | Done 2026-11-05 (with IX1) |
-| IX3 | Docs (FEATURES, RELEASE_NOTES), TV emulator walk with bears, Chromecast measurement | Planned |
+| IX3 | Docs (FEATURES, RELEASE_NOTES), TV emulator walk, Chromecast measurement | Done 2026-11-05 (walk with a generated 200,000-programme guide: bearstv 404 and xstream4k 513 from the PC); released 0.9.20261105231019 |
+| IX4 | Indexing also waits while another app plays sound (YouTube, a game); on a device with under 2 GB of RAM the automatic refresh runs only when the device is idle | Done 2026-11-05 |
+
+## IX4: other apps, small devices
+
+The user asked (2026-11-05) what happens when YouTube or Lemuroid is in front and a guide refresh
+starts on the Chromecast. Indexing only knew Fijerena's own player. Two changes, both decided by the
+user:
+
+- Indexing waits while anything plays: Fijerena's video, or sound from any app
+  (`AudioManager.isMusicActive()`, no permission), checked before each batch as before.
+- On a device with under 2 GB of RAM (`EpgFileManager.isLowMemory`: the Chromecast HD has 1.4 GB,
+  the Shields and the Bravia 3 GB), the automatic periodic refresh also requires the device to be
+  idle (WorkManager `setRequiresDeviceIdle`: the TV off or asleep), so its download and import never
+  run beside an app in use. WorkManager allows no backoff on an idle job, so that job has none. A
+  refresh started by hand runs at once, as before. The TV emulator (2 GB, reported 1.93 GB) counts
+  as low on memory too.
 
 ## Checks
 
