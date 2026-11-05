@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-11-05 | [Pausable guide indexing](./20261105_pausable-guide-indexing-plan.md) | A guide refresh indexes only what it changed, in batches that wait while video plays and continue after a kill; pending sources are searched by title and description | IX1, IX2 done; IX3 (walk, Chromecast) next |
 | 2026-11-04 | [Reminders page](./20261104_reminders-page-plan.md) | One page on TV and phone that lists the profile's upcoming reminders (games, guide programmes) and team rules; open, remove, stop a team's "every game", clear all | Done 2026-11-04, walked on both emulators |
 | 2026-11-03 | [One guide source per URL](./20261103_one-guide-per-url-plan.md) | A guide added for several sources is one guide source: downloaded, imported, stored and synced once, linked to the sources that use it; channel matching stays per source | Done 2026-11-04, walked on both emulators |
 | 2026-11-03 | [Nerd role, sync failures, TV reminder focus, Admin pages](./20261103_nerd-role-sync-failures-plan.md) | A Nerd role (not for a child) sees the stats and extra information that only an Admin saw; Guide Sources and Library Data show the last success plus the last failure, its reason and the failure count; the TV reminder banner takes focus; each Admin section is its own page on TV and phone | Done 2026-11-03, walked on both emulators |
