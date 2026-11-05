@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Show Key Input:** a new switch in Settings → Admin → This Device lists the last 10 keys the app received at the top right of every screen, for finding D-pad presses that seem to go missing. Each line has the time to the ms, the key's name, DOWN or UP, the repeat count and, for a press, whether the app handled it. Keys pressed in a dialog and in the player show too. Turning it on asks how long (5, 10, 30 or 60 minutes, default 10); it then turns itself off. TV only.
 - **Live sync errors name the server:** a live sync failure in Settings → About → Logs now says which sync server it tried, for example "Sync server sync.example.org unreachable: …". Before, it gave only the reason, so you could not tell which server it was. TV and phone.
 
 ## Version: 0.9.20261105044735

@@ -208,6 +208,7 @@ fun CinemaAlertDialog(
                     },
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
+                RecordDialogKeys()
                 ProvideUiScaledDensity {
                     // A safe margin above and below: a tall dialog stops short of the screen edges
                     // (the TV's overscan margin), and its body yields and scrolls.
@@ -265,6 +266,7 @@ fun CinemaAlertDialog(
                     ),
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
+                RecordDialogKeys()
                 ProvideUiScaledDensity {
                     Surface(
                         modifier = modifier.fillMaxSize(),

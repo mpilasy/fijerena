@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PanelCorner
 import org.njarasoa.fijerena.core.ui.components.PanelFill
+import org.njarasoa.fijerena.core.ui.components.RecordDialogKeys
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
@@ -309,6 +310,7 @@ private fun TrailerDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false), // look-ok: as above
     ) {
+        RecordDialogKeys()
         val focus = remember { FocusRequester() }
         LaunchedEffect(Unit) { focus.requestFocus() }
         Box(

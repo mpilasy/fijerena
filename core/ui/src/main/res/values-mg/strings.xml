@@ -828,6 +828,14 @@
     <string name="settings_watch_delay_row_title">Ampidirina ao amin\'ny Vao haingana ny fantsona aorian\'ny</string>
     <string name="settings_show_clock_title">Asehoy ny famataranandro</string>
     <string name="settings_show_clock_desc">Ny ora eo ambony ankavanan\'ny efijery rehetra. Asehon\'ny mpamaky foana izany.</string>
+    <string name="settings_key_input_title">Asehoy ny bokotra voatsindry</string>
+    <string name="settings_key_input_desc">Ireo bokotra 10 farany noraisin\'ny app, eo ambony ankavanan\'ny efijery rehetra. Maty ho azy rehefa tapitra ny fotoana nofidinao.</string>
+    <string name="settings_key_input_until">Maty amin\'ny %1$s.</string>
+    <string name="settings_key_input_duration_title">Faharetany</string>
+    <plurals name="settings_key_input_minutes">
+        <item quantity="one">%1$d minitra</item>
+        <item quantity="other">%1$d minitra</item>
+    </plurals>
     <string name="settings_language_desc">Fiteny ho an\'ny menio sy ny hafatra</string>
     <!-- M3 -->
     <!-- Phase 3 -->

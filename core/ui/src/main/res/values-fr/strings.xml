@@ -1073,6 +1073,15 @@
     <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Récents après</string>
     <string name="settings_show_clock_title">Afficher l’heure</string>
     <string name="settings_show_clock_desc">L’heure en haut à droite de chaque écran. Le lecteur l’affiche toujours.</string>
+    <string name="settings_key_input_title">Afficher les touches</string>
+    <string name="settings_key_input_desc">Les 10 dernières touches reçues par l’app, en haut à droite de chaque écran. S’arrête seul après la durée choisie.</string>
+    <string name="settings_key_input_until">S’arrête à %1$s.</string>
+    <string name="settings_key_input_duration_title">Durée</string>
+    <plurals name="settings_key_input_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="many">%1$d minutes</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->

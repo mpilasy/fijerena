@@ -42,6 +42,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.*
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ParentalList
@@ -110,6 +111,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    // Show Key Input: this device's, TV only, so read here and not through the shared view model.
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val keyInputUntil by remember { appSettings.observeKeyInputUntil() }
+        .collectAsStateWithLifecycle(initialValue = appSettings.keyInputUntil)
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
@@ -502,6 +507,15 @@ fun SettingsScreen(
                                 )
                             }
 
+                            SettingPicker.KEY_INPUT -> {
+                                KeyInputDurationPane(
+                                    onPick = { minutes ->
+                                        appSettings.keyInputUntil = System.currentTimeMillis() + minutes * MS_PER_MINUTE
+                                    },
+                                    onBack = closePicker,
+                                )
+                            }
+
                             SettingPicker.WATCH_DELAY -> {
                                 WatchDelayPickerPane(
                                     watchDelaySeconds = uiState.watchDelaySeconds,
@@ -752,6 +766,15 @@ fun SettingsScreen(
                                                                             onCheckedChange = viewModel::updateShowClock,
                                                                             label = stringResource(R.string.settings_show_clock_title),
                                                                             description = stringResource(R.string.settings_show_clock_desc),
+                                                                        )
+                                                                        KeyInputSettingsRow(
+                                                                            until = keyInputUntil,
+                                                                            onTurnOn = { openPicker(SettingPicker.KEY_INPUT) },
+                                                                            onTurnOff = { appSettings.keyInputUntil = 0L },
+                                                                            rowFocusRequester =
+                                                                                returnFocus.requesterFor(
+                                                                                    SettingPicker.KEY_INPUT.returnKey,
+                                                                                ),
                                                                         )
                                                                     }
                                                                 }
@@ -1004,6 +1027,8 @@ private const val RETURN_GUIDE_SOURCES = "guideSources"
 private fun profileReturnKey(profileId: String) = "profile:$profileId"
 
 // Rail ≈ 30 % of the width, pane ≈ 70 % (plan Part I, B).
+private const val MS_PER_MINUTE = 60_000L
+
 private const val RAIL_WEIGHT = 0.3f
 private const val PANE_WEIGHT = 0.7f
 
@@ -1074,6 +1099,7 @@ enum class SettingPicker(
     TEXT_SIZE("picker:textSize"),
     RECENT_SIZE("picker:recentSize"),
     WATCH_DELAY("picker:watchDelay"),
+    KEY_INPUT("picker:keyInput"),
     REMINDER_TIME("picker:reminderTime"),
     LANGUAGE("picker:language"),
     GUIDE_MAINTENANCE("picker:guideMaintenance"),

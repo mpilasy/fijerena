@@ -163,6 +163,8 @@ class MainActivity : ComponentActivity() {
             if (direction != null && content != null) {
                 val restored = (listOf(direction) + FOCUS_DIRECTIONS.values).distinct().any { content.requestFocus(it) }
                 if (restored) {
+                    org.njarasoa.fijerena.ui.KeyInputLog
+                        .record(event, handled = true)
                     org.njarasoa.fijerena.ui.DeadKeyDetector
                         .focusRestored(event)
                     return true
@@ -170,6 +172,8 @@ class MainActivity : ComponentActivity() {
             }
         }
         return super.dispatchKeyEvent(event).also { handled ->
+            org.njarasoa.fijerena.ui.KeyInputLog
+                .record(event, handled)
             org.njarasoa.fijerena.ui.DeadKeyDetector
                 .onKey(event, handled)
         }

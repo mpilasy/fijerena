@@ -102,6 +102,7 @@ import org.njarasoa.fijerena.feature.sports.SportsSectionScreen
 import org.njarasoa.fijerena.feature.sports.SportsTeamScreen
 import org.njarasoa.fijerena.feature.sports.TvRemindersScreen
 import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
+import org.njarasoa.fijerena.ui.components.KeyInputOverlay
 import org.njarasoa.fijerena.ui.components.LocalTvClock
 import org.njarasoa.fijerena.ui.components.TvClockOverlay
 import org.njarasoa.fijerena.ui.components.TvClockState
@@ -1307,6 +1308,8 @@ fun TvNavHost(
                         onSelect = ::selectRailItem,
                         onBrowse = ::browseSource,
                     )
+                    // Over everything: Show Key Input's keys (Admin → This Device).
+                    KeyInputOverlay(appSettings)
                     browseChoice?.let { (source, contentTypes) ->
                         BrowseSectionsDialog(
                             source = source,

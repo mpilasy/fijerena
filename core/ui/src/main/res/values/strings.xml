@@ -1111,6 +1111,14 @@
     <string name="settings_watch_delay_row_title">Add a Channel to Recent After</string>
     <string name="settings_show_clock_title">Show Clock</string>
     <string name="settings_show_clock_desc">The time at the top right of every screen. The player always shows it.</string>
+    <string name="settings_key_input_title">Show Key Input</string>
+    <string name="settings_key_input_desc">The last 10 keys the app received, at the top right of every screen. Turns itself off after the time you pick.</string>
+    <string name="settings_key_input_until">Turns off at %1$s.</string>
+    <string name="settings_key_input_duration_title">How Long</string>
+    <plurals name="settings_key_input_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
     <string name="settings_language_desc">Language for menus and messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->

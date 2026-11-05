@@ -30,8 +30,14 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             down("Add a Channel to Recent After / So a channel you only zap past isn't added / 10 s"),
             down("Reminder Time / How long before the start a reminder rings, on this device / 10 minutes before"),
             down("Show Clock / The time at the top right of every screen"),
+            down("Show Key Input / The last 10 keys the app received"),
             // The end of the section: Sources & Guide is a section of its own.
-            down("Show Clock"),
+            down("Show Key Input"),
+            // OK on the switch asks how long, focus on the default; Left closes it on its row,
+            // the switch still off.
+            center("10 minutes"),
+            left("Show Key Input"),
+            up("Show Clock"),
             up("Reminder Time"),
             // Its picker opens on the current choice; Left closes it on its row.
             center("10 minutes before"),

@@ -86,6 +86,7 @@ class AppSettings(
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
+        private const val KEY_KEY_INPUT_UNTIL = "key_input_until"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
         private const val KEY_SHOW_SPORTS = "show_sports"
@@ -962,6 +963,23 @@ class AppSettings(
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, false)
         set(value) = prefs.edit { putBoolean(KEY_SHOW_CLOCK, value) }
+
+    /**
+     * When Show Key Input ends (TV, Admin → This Device), in ms since the epoch; 0 or a time past:
+     * off. While it lasts, every key the app receives is listed over the screens. This device's:
+     * not per profile, not synced, not exported.
+     */
+    var keyInputUntil: Long
+        get() = prefs.getLong(KEY_KEY_INPUT_UNTIL, 0L)
+        set(value) = prefs.edit { putLong(KEY_KEY_INPUT_UNTIL, value) }
+
+    fun observeKeyInputUntil(): Flow<Long> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(keyInputUntil) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(keyInputUntil)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
 
     /**
      * How many minutes before the start a reminder rings on this device, one of
