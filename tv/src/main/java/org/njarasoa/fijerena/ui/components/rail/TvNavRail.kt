@@ -117,7 +117,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * NavHost in the same full-screen `Box`, so a screen's first focusable still comes first.
  *
  * @param items what the rail offers, top to bottom, sections already filtered to the source's.
- * @param profileInitial the avatar's letter for [RailItem.PROFILE].
+ * @param profileFallbackName the active profile's name for [RailItem.PROFILE] when [TvNavRailState.profileName] is not set.
  * @param onSelect called with the item picked; the nav host navigates.
  * @param browse a "Browse <source>" entry for each of the profile's sources outside the merged
  *   sections (Jellyfin, M3U; docs/plans/20261012_multi-source-search-history-plan.md → O1), drawn
@@ -127,14 +127,14 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 fun TvNavRail(
     state: TvNavRailState,
     items: List<RailItem>,
-    profileInitial: String,
+    profileFallbackName: String,
     onSelect: (RailItem) -> Unit,
     modifier: Modifier = Modifier,
     browse: List<BrowseSource> = emptyList(),
     onBrowse: (BrowseSource) -> Unit = {},
 ) {
     if (state.visible) {
-        RailOverlay(state, items, profileInitial, onSelect, browse, onBrowse, modifier)
+        RailOverlay(state, items, profileFallbackName, onSelect, browse, onBrowse, modifier)
     }
 }
 
@@ -154,7 +154,7 @@ private const val HINT_SETTLE_MS = 1_500L
 private fun RailOverlay(
     state: TvNavRailState,
     items: List<RailItem>,
-    profileInitial: String,
+    profileFallbackName: String,
     onSelect: (RailItem) -> Unit,
     browse: List<BrowseSource>,
     onBrowse: (BrowseSource) -> Unit,
@@ -298,7 +298,7 @@ private fun RailOverlay(
                     RailEntry(
                         item = item,
                         state = state,
-                        profileInitial = profileInitial,
+                        profileFallbackName = profileFallbackName,
                         openProgress = openProgress,
                         onClick = { select(item) },
                         modifier = if (item == entryItem) Modifier.focusRequester(state.entry) else Modifier,
@@ -339,13 +339,13 @@ private fun RailOverlay(
 private fun RailEntry(
     item: RailItem,
     state: TvNavRailState,
-    profileInitial: String,
+    profileFallbackName: String,
     openProgress: State<Float>,
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
     val isCurrent = item == state.current
-    val profileName = state.profileName ?: profileInitial
+    val profileName = state.profileName ?: profileFallbackName
     val label =
         when (item) {
             RailItem.PROFILE -> profileName
@@ -368,7 +368,7 @@ private fun RailEntry(
     ) {
         if (item == RailItem.PROFILE) {
             ProfileAvatar(
-                name = profileInitial,
+                name = profileName,
                 colorIndex = state.profileColorIndex,
                 size = TvDimensions.iconMedium,
                 initialRole = TextRole.Label,

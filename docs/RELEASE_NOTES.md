@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Profile avatars show initials:** a profile's avatar now shows the first letter of each word of its name, at most 4, or the first 4 letters of a name of one word, always in lower case: "Grown-up" shows "gu", "Admin" shows "admi". Spaces and punctuation separate words. 2 or 3 letters show in one line and 4 as 2 above 2; the letters are in the Look's title font and fill the avatar to its edge. A name of one letter looks as before. The avatar is now as round as the Look's buttons: a circle in a Look with round buttons, a square in one with square buttons, a rounded square in between. The same avatar is used everywhere: the profile picker, the rail, headers, Settings → Profiles and the phone's profile menu. TV and phone.
+
 ## Version: 0.9.20261105014113
 
 - **No guide refresh or catalogue sync on a full device:** when the device's storage is almost full (less than 5% free, at most 500 MB), a guide refresh or a catalogue sync does not start, as it can need a few hundred MB more while it runs. The automatic ones wait until there is space again and then start by themselves. A refresh you start says why it did not run: each guide source's card shows the failure "This device's storage is almost full. Free up space, then try again.", and Guide Sources shows "Storage almost full (… free): guide refreshes do not start until you free up space on this device." at the top while it lasts. A catalogue sync shows the same reason as its last failure. TV and phone.

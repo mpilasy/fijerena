@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -12,6 +13,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 /**
  * The one place the app's look is read from (docs/plans/20261016_design-system-plan.md). Everything
@@ -163,8 +165,12 @@ data class CinemaShapeRoles(
     val dialog: Shape,
     /** Icon buttons and badges: follow the style (decision D2) — round on Rounded, square on Sharp. */
     val control: Shape,
-    /** Avatars and colour dots: round in every style (decision D2), they identify. */
+    /** Colour dots and live badges: round in every style (decision D2), they identify. */
     val identity: Shape,
+    /** A profile's avatar: as round as the style's buttons, from a circle (pill buttons) to a square. */
+    val avatar: Shape,
+    /** [avatar]'s corner radius, as a percentage of its size: 50 is a circle, 0 a square. */
+    val avatarCornerPercent: Int,
 ) {
     companion object {
         fun from(style: UiStyle): CinemaShapeRoles =
@@ -176,7 +182,15 @@ data class CinemaShapeRoles(
                 dialog = style.shapes.shape(style.dialog.cornerRadius),
                 control = style.shapes.shape(style.shapes.chip),
                 identity = CircleShape,
+                avatar = RoundedCornerShape(avatarCornerPercent(style.shapes.button)),
+                avatarCornerPercent = avatarCornerPercent(style.shapes.button),
             )
+
+        /** The height a button's corner radius is measured against: a 20 dp corner is 42%. */
+        private const val BUTTON_REFERENCE_HEIGHT_DP = 48f
+
+        /** A button's corner [radius] as a share of a button's height, in percent, at most 50 (a circle). */
+        fun avatarCornerPercent(radius: Dp): Int = (radius.value / BUTTON_REFERENCE_HEIGHT_DP * 100).roundToInt().coerceIn(0, 50)
     }
 }
 

@@ -32,7 +32,7 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             center("Set a PIN for Settings"),
             // Up at the top of the section stays put.
             up("Set a PIN for Settings"),
-            down("A / Admin / Using on this device"),
+            down("admi / Admin / Using on this device"),
             // OK opens the profile's page in place of the rows, focus on the name's Edit button.
             // Its own page in Admin has the Admin rows too (the admin settings plan, AS-D1).
             center("Edit Name / Name / Admin"),
@@ -51,9 +51,9 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             // Down at the end of the page stays put.
             down("Content Filters"),
             // Left leaves the page, focus back on the profile's row.
-            left("A / Admin"),
-            down("G / Guest"),
-            down("K / Kid"),
+            left("admi / Admin"),
+            down("gues / Guest"),
+            down("kid / Kid"),
             // A child's page: no Admin row; its own rows after Child profile.
             center("Edit Name / Name / Kid"),
             down("Colour"),
@@ -72,7 +72,7 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             down("Delete profile"),
             down("Delete profile"),
             // Back leaves the page too, focus back on the row.
-            back("K / Kid"),
+            back("kid / Kid"),
             down("Add Profile"),
             // The end of the section: Parental Controls is a section of its own.
             down("Add Profile"),

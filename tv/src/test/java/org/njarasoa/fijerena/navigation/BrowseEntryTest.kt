@@ -41,7 +41,7 @@ class BrowseEntryTest {
             TvNavRail(
                 state = TvNavRailState(),
                 items = railItems(setOf(ContentType.LIVE_TV)),
-                profileInitial = "A",
+                profileFallbackName = "A",
                 onSelect = {},
                 browse = listOf(jellyfin),
                 onBrowse = { browsed += it },

@@ -136,7 +136,6 @@ import org.njarasoa.fijerena.core.ui.components.SectionPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.initialOf
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
@@ -1210,7 +1209,7 @@ fun ContentTypeSelectionScreen(
                         if (child && childProfile != null) {
                             // Whose Home this is, as the picker showed it; no clock, no sources line.
                             ProfileAvatar(
-                                name = initialOf(childProfile.name),
+                                name = childProfile.name,
                                 colorIndex = childProfile.colorIndex,
                                 size = TvDimensions.iconLarge,
                                 initialRole = TextRole.Title,

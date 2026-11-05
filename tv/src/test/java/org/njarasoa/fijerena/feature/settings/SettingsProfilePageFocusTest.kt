@@ -113,8 +113,8 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Admin"),
             right("Profiles"),
             center("Set a PIN for Settings"),
-            down("A / Admin"),
-            down("G / Guest"),
+            down("admi / Admin"),
+            down("gues / Guest"),
             center("Edit Name / Name / Guest"),
             down("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / Off"),
@@ -133,7 +133,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Delete profile"),
             down("Delete profile"),
             // Back closes the page onto the profile's row, in the section, not Admin's list.
-            back("G / Guest"),
+            back("gues / Guest"),
             back("Profiles"),
         )
     }
@@ -145,9 +145,9 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Admin"),
             right("Profiles"),
             // An Admin has a PIN: no reminder, the section opens on the profiles.
-            center("A / Admin / Using on this device"),
-            down("G / Guest"),
-            down("K / Kid"),
+            center("admi / Admin / Using on this device"),
+            down("gues / Guest"),
+            down("kid / Kid"),
             center("Edit Name / Name / Kid"),
             down("Colour"),
             down("PIN / Asked in Settings before sources, backups and profiles / On"),

@@ -22,7 +22,6 @@ import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import org.njarasoa.fijerena.core.ui.components.initialOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
@@ -219,14 +218,13 @@ internal fun TvSectionRail(
 
     if (source == null || !homeOnStack) HideTvNavRail()
     val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
-    val profileInitial = activeProfile?.name?.let(::initialOf).orEmpty()
     // The avatar's label and colour, as the Home header draws it ("A" alone said nothing).
     rail.profileName = activeProfile?.name
     rail.profileColorIndex = activeProfile?.colorIndex ?: 0
     TvNavRail(
         state = rail,
         items = railItems(source?.merged, child, sports),
-        profileInitial = profileInitial,
+        profileFallbackName = activeProfile?.name.orEmpty(),
         onSelect = onSelect,
         browse = if (child) emptyList() else source?.browse.orEmpty(),
         onBrowse = onBrowse,

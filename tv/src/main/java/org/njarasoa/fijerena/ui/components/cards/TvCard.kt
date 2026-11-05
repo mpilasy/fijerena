@@ -229,14 +229,14 @@ object TvCardLooks {
     }
 
     /**
-     * A profile's avatar on the picker: round (the identity shape), the style's focus scale, and a
+     * A profile's avatar on the picker: the avatar shape (as round as the style's buttons), the style's focus scale, and a
      * white ring hugging its edge on focus (F-PP-1, TV UI audit #1): drawn just outside the edge, with
      * no gap, so it reads as the avatar's own outline; white, the rows' focus colour, never blends
      * into a coloured avatar the way the accent did.
      */
     @Composable
     fun avatar(): TvCardLook {
-        val shape = CinemaTheme.shapes.identity
+        val shape = CinemaTheme.shapes.avatar
         val ring =
             Border(
                 border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth, TvFocusTokens.focusedRowOutline),
