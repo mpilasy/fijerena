@@ -577,6 +577,19 @@ class GameChannelMatcherTest {
         }
 
     @Test
+    fun `two city names count as the game only next to each other, not another sport's teams of those cities`() =
+        runTest {
+            val minnesota = team("Minnesota United FC", shortName = "Minnesota")
+            val sanJose = team("San Jose Earthquakes", shortName = "San Jose")
+            val game = game("2026-11-07T18:00:00Z", minnesota, sanJose, "MLS")
+            val channels = listOf(channel(1, "HR: NOVA SPORT", "nova.hr"), channel(2, "US: MLS 1", "mls1.us"))
+            val hockey =
+                programme("nova.hr", "Nova Sport", "Minnesota Wild – San Jose Sharks", "2026-11-07T16:20:00Z", "2026-11-07T19:00:00Z")
+            val soccer = programme("mls1.us", "MLS 1", "Minnesota v San Jose", "2026-11-07T18:00:00Z", "2026-11-07T20:00:00Z")
+            assertEquals(listOf("US: MLS 1: GUIDE"), match(game, channels, hockey, soccer).summary())
+        }
+
+    @Test
     fun `the guide search asks for every name form of both teams`() =
         runTest {
             val guide = FakeGuide(emptyList())

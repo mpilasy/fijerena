@@ -209,7 +209,7 @@ internal class GameText(
     fun isGameOnBroadcaster(p: GuideProgramme): Boolean {
         if (isReplay(p.title)) return false
         val (h, a) = hits(p)
-        if (bothTeams(h, a)) return true
+        if (bothTeams(p, h, a)) return true
         return (h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE) && !facesAnother(p.title)
     }
 
@@ -220,7 +220,7 @@ internal class GameText(
     fun isGameAnywhere(p: GuideProgramme): Boolean {
         if (isReplay(p.title)) return false
         val (h, a) = hits(p)
-        if (bothTeams(h, a)) return true
+        if (bothTeams(p, h, a)) return true
         val oneTeam = h == TeamNameForms.Hit.DISTINCTIVE || a == TeamNameForms.Hit.DISTINCTIVE
         // One team is weaker evidence: a highlights show says so in its description ("Kop 10").
         return oneTeam && hasCompetition(p) && !hasReplayWord(p.description) && !facesAnother(p.title)
@@ -272,7 +272,7 @@ internal class GameText(
         if (SportsAliases.LIVE_WORDS.any { SportsText.has(title, it) }) score += 30
         if (SportsAliases.FILLER_WORDS.any { SportsText.has(title, it) }) score -= 200
         val (h, a) = hits(p)
-        if (bothTeams(h, a)) score += 10
+        if (bothTeams(p, h, a)) score += 10
         return score
     }
 
@@ -282,10 +282,22 @@ internal class GameText(
         return home.hit(title, description) to (away?.hit(title, description) ?: TeamNameForms.Hit.NONE)
     }
 
+    /**
+     * Names of both teams in [p]; a weak name only next to the other team's, as in a channel name
+     * ([namesGame]): "Minnesota v San Jose" is the game, "Minnesota Wild – San Jose Sharks" is not.
+     */
     private fun bothTeams(
+        p: GuideProgramme,
         h: TeamNameForms.Hit,
         a: TeamNameForms.Hit,
-    ) = away != null && h != TeamNameForms.Hit.NONE && a != TeamNameForms.Hit.NONE
+    ): Boolean {
+        val away = away ?: return false
+        if (h == TeamNameForms.Hit.NONE || a == TeamNameForms.Hit.NONE) return false
+        if (h != TeamNameForms.Hit.WEAK && a != TeamNameForms.Hit.WEAK) return true
+        val title = SportsText.padded(p.title)
+        return (h != TeamNameForms.Hit.WEAK || nextTo(title, home.weak, away.all)) &&
+            (a != TeamNameForms.Hit.WEAK || nextTo(title, away.weak, home.all))
+    }
 
     private fun hasCompetition(p: GuideProgramme): Boolean {
         val texts = listOf(SportsText.padded(p.title), SportsText.padded(p.description), SportsText.padded(p.category))
