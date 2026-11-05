@@ -24,6 +24,7 @@ enum class ErrorKind(
     NETWORK(R.string.error_network),
     GUIDE_LOGIN_MISSING(R.string.error_guide_login_missing),
     GUIDE_CAME_BACK_EMPTY(R.string.epg_error_came_back_empty),
+    STORAGE_LOW(R.string.error_storage_low),
 }
 
 /**

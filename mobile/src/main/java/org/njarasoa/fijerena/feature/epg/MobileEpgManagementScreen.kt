@@ -92,6 +92,7 @@ fun MobileEpgManagementScreen(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
+    val storageLowFreeBytes by viewModel.storageLowFreeBytes.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val cardList = cards.orEmpty()
     val withoutGuide = page?.sourcesWithoutGuide.orEmpty()
@@ -151,102 +152,113 @@ fun MobileEpgManagementScreen(
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            // No guide sources: the shared empty state, centred, with the one action.
-            if (cards?.isEmpty() == true) {
-                MobileEmptyState(
-                    message = stringResource(R.string.epg_summary_no_sources),
-                    actionLabel = stringResource(R.string.epg_add_source),
-                    onAction = { showAddDialog = true },
+        Column(modifier = Modifier.padding(padding)) {
+            // Storage is almost full: no refresh starts, so say why.
+            storageLowFreeBytes?.let { free ->
+                CinemaText(
+                    text = stringResource(R.string.epg_storage_low_note, NumberUtils.formatBytes(LocalResources.current, free)),
+                    role = TextRole.Caption,
+                    tone = TextTone.Warning,
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
                 )
-                return@Box
             }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding =
-                    PaddingValues(
-                        start = CinemaSpacing.md,
-                        top = CinemaSpacing.md,
-                        end = CinemaSpacing.md,
-                        bottom =
-                            CinemaSpacing.md + LocalDockInset.current,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-            ) {
-                items(cardList, key = { it.source.id }, contentType = { "source" }) { card ->
-                    val unnamed = stringResource(R.string.epg_unnamed_source)
-                    val source = card.source
-                    val latestTime = latestProgrammeTimes[source.id] ?: 0L
-
-                    val activeProgress =
-                        if (processingState is MultiSourceState.Processing) {
-                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                        } else {
-                            null
-                        }
-
-                    // Whether the run that just finished confirmed this source's data hadn't
-                    // changed (304, or a matching content hash) — true only right after that run.
-                    val wasUnchanged =
-                        (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
-
-                    EpgSourceCard(
-                        card = card,
-                        latestProgrammeTime = latestTime,
-                        activeProgress = activeProgress,
-                        waiting = source.id in busySourceIds,
-                        waitingFor =
-                            EpgManagementViewModel
-                                .waitingFor(cardList, EpgManagementViewModel.workingOn(processingState), source.id)
-                                .joinToString { it.label.ifBlank { unnamed } },
-                        indexing =
-                            (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true,
-                        wasUnchanged = wasUnchanged,
-                        nowMs = nowMs,
-                        staleThresholdMs = viewModel.staleThresholdMs(source),
-                        refreshSummary =
-                            EpgManagementViewModel
-                                .refreshSummary(
-                                    source.enabled,
-                                    viewModel.refreshIntervalHours(source),
-                                ).asString(),
-                        onRefresh = { viewModel.refreshSource(source) },
-                        onAutoRefresh = { intervalSource = source },
-                        onEdit = { editingCard = card },
-                        onDelete = { viewModel.deleteSource(source.id) },
-                        onEnabledChange = { viewModel.setSourceEnabled(card, it) },
+            Box(modifier = Modifier.weight(1f)) {
+                // No guide sources: the shared empty state, centred, with the one action.
+                if (cards?.isEmpty() == true) {
+                    MobileEmptyState(
+                        message = stringResource(R.string.epg_summary_no_sources),
+                        actionLabel = stringResource(R.string.epg_add_source),
+                        onAction = { showAddDialog = true },
                     )
+                    return@Box
                 }
-                if (withoutGuide.isNotEmpty()) {
-                    item(key = "without-guide", contentType = "heading") {
-                        SectionHeader(
-                            title = stringResource(R.string.epg_sources_without_guide_title),
-                            modifier = Modifier.padding(top = CinemaSpacing.sm),
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding =
+                        PaddingValues(
+                            start = CinemaSpacing.md,
+                            top = CinemaSpacing.md,
+                            end = CinemaSpacing.md,
+                            bottom =
+                                CinemaSpacing.md + LocalDockInset.current,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                ) {
+                    items(cardList, key = { it.source.id }, contentType = { "source" }) { card ->
+                        val unnamed = stringResource(R.string.epg_unnamed_source)
+                        val source = card.source
+                        val latestTime = latestProgrammeTimes[source.id] ?: 0L
+
+                        val activeProgress =
+                            if (processingState is MultiSourceState.Processing) {
+                                (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                            } else {
+                                null
+                            }
+
+                        // Whether the run that just finished confirmed this source's data hadn't
+                        // changed (304, or a matching content hash) — true only right after that run.
+                        val wasUnchanged =
+                            (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
+                        EpgSourceCard(
+                            card = card,
+                            latestProgrammeTime = latestTime,
+                            activeProgress = activeProgress,
+                            waiting = source.id in busySourceIds,
+                            waitingFor =
+                                EpgManagementViewModel
+                                    .waitingFor(cardList, EpgManagementViewModel.workingOn(processingState), source.id)
+                                    .joinToString { it.label.ifBlank { unnamed } },
+                            indexing =
+                                (processingState as? MultiSourceState.Finalizing)?.indexingSourceIds?.contains(source.id) == true,
+                            wasUnchanged = wasUnchanged,
+                            nowMs = nowMs,
+                            staleThresholdMs = viewModel.staleThresholdMs(source),
+                            refreshSummary =
+                                EpgManagementViewModel
+                                    .refreshSummary(
+                                        source.enabled,
+                                        viewModel.refreshIntervalHours(source),
+                                    ).asString(),
+                            onRefresh = { viewModel.refreshSource(source) },
+                            onAutoRefresh = { intervalSource = source },
+                            onEdit = { editingCard = card },
+                            onDelete = { viewModel.deleteSource(source.id) },
+                            onEnabledChange = { viewModel.setSourceEnabled(card, it) },
                         )
                     }
-                    // Each source with no guide source, with its own Add (that source checked in Use for).
-                    items(withoutGuide, key = { "add-${it.id}" }, contentType = { "add" }) { provider ->
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            CinemaText(
-                                text = provider.name,
-                                role = TextRole.Heading,
-                                tone = TextTone.Inherit,
-                                modifier = Modifier.weight(1f),
-                            )
-                            IconAction(
-                                onClick = {
-                                    addForSource = provider.id
-                                    showAddDialog = true
-                                },
-                                icon = CinemaIcons.Add,
-                                label = stringResource(R.string.epg_add_source),
+                    if (withoutGuide.isNotEmpty()) {
+                        item(key = "without-guide", contentType = "heading") {
+                            SectionHeader(
+                                title = stringResource(R.string.epg_sources_without_guide_title),
+                                modifier = Modifier.padding(top = CinemaSpacing.sm),
                             )
                         }
+                        // Each source with no guide source, with its own Add (that source checked in Use for).
+                        items(withoutGuide, key = { "add-${it.id}" }, contentType = { "add" }) { provider ->
+                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                CinemaText(
+                                    text = provider.name,
+                                    role = TextRole.Heading,
+                                    tone = TextTone.Inherit,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconAction(
+                                    onClick = {
+                                        addForSource = provider.id
+                                        showAddDialog = true
+                                    },
+                                    icon = CinemaIcons.Add,
+                                    label = stringResource(R.string.epg_add_source),
+                                )
+                            }
+                        }
                     }
+                    // The guide data of every source, as in Settings' Sources & guide (Settings reorg, Phase 3).
+                    item { GuideMaintenanceRow(viewModel = viewModel) }
                 }
-                // The guide data of every source, as in Settings' Sources & guide (Settings reorg, Phase 3).
-                item { GuideMaintenanceRow(viewModel = viewModel) }
             }
         }
     }

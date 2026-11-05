@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -26,6 +29,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -176,6 +180,18 @@ class EpgManagementViewModel(
         combine(_taskSourceIds, RefreshQueue.queuedTaskIds, RefreshQueue.activeTaskIds) { tasks, queued, active ->
             tasks.values.flatten().toSet() + (queued + active).mapNotNull(::singleSourceIdOf)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    /**
+     * The free bytes while the device's storage is low ([StorageSpace]), else null: no refresh
+     * starts then, and the page says why. Checked every [STORAGE_CHECK_MS] while the page shows.
+     */
+    val storageLowFreeBytes: StateFlow<Long?> =
+        flow {
+            while (true) {
+                emit(StorageSpace.lowFreeBytes(context))
+                delay(STORAGE_CHECK_MS)
+            }
+        }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** A task asked for and not finished: in the queue, running, or still being launched from this page. */
     private fun isUnderway(taskId: String): Boolean =
@@ -673,6 +689,7 @@ class EpgManagementViewModel(
         ): List<EpgSourceEntity> = cards.map { it.source }.filter { it.id != self && it.id in working }
 
         private const val DAILY_HOURS = 24
+        private const val STORAGE_CHECK_MS = 30_000L
 
         /**
          * The page from every source with channels ([providers], in the Sources list's order), the

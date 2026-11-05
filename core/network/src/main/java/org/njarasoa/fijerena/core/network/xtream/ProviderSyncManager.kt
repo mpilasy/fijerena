@@ -156,6 +156,7 @@ class ProviderSyncManager private constructor(
             Constraints
                 .Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresStorageNotLow(true)
                 .build()
 
         val initialDelay = calculateDelayUntilNextSlot(appSettings.contentRefreshTime)

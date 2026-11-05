@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
@@ -711,6 +712,7 @@ class EpgFileManager private constructor(
                 _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_no_sources))
                 return@withLock
             }
+            if (blockedByLowStorage(sources)) return@withLock
 
             claimRun(sources)
             val startTime = System.currentTimeMillis()
@@ -1014,6 +1016,22 @@ class EpgFileManager private constructor(
         }
 
     /** Each guide source this run couldn't read goes to Settings → Diagnostics: its name, address and why. */
+
+    /**
+     * With storage low ([StorageSpace]) the refresh does not start: each of [sources] keeps a
+     * failure that says so, on its card and in Retry failed, and the run ends in that error.
+     */
+    private suspend fun blockedByLowStorage(sources: List<EpgSourceEntity>): Boolean {
+        val free = StorageSpace.lowFreeBytes(context) ?: return false
+        val error = StoredError(ErrorKind.STORAGE_LOW, raw = StorageSpace.rawText(free))
+        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+        sources.forEach { sourceDao.markError(it.id, error.encode()) }
+        Log.w(TAG, "Guide refresh not started: ${StorageSpace.rawText(free)}")
+        CrashLog.note("guide refresh not started: storage low", sources.joinToString("\n") { it.label.ifBlank { it.url } })
+        _state.value = MultiSourceState.Error(error.message(context, appSettings.isNerdMode))
+        return true
+    }
+
     private fun noteFailedSources(
         sources: List<EpgSourceEntity>,
         stats: List<SourceStats>,
@@ -1088,6 +1106,7 @@ class EpgFileManager private constructor(
                         _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
                         return@withLock
                     }
+                if (blockedByLowStorage(listOf(source))) return@withLock
                 claimRun(listOf(source))
                 val indexer = EpgIndexer.getInstance(context)
                 val label = source.label.ifBlank { extractLabel(source.url) }
@@ -1795,6 +1814,7 @@ class EpgFileManager private constructor(
                 Constraints
                     .Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
+                    .setRequiresStorageNotLow(true)
                     .build()
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)

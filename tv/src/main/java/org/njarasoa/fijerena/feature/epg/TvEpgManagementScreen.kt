@@ -105,6 +105,7 @@ fun TvEpgManagementScreen(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
+    val storageLowFreeBytes by viewModel.storageLowFreeBytes.collectAsStateWithLifecycle()
     // Refresh stale / Retry failed, above the groups, only while there is something to refresh.
     val refreshRow = staleSourceCount > 0 || failedSourceCount > 0
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
@@ -231,6 +232,16 @@ fun TvEpgManagementScreen(
                         modifier = Modifier.focusRequester(addFocus),
                     )
                 }
+            }
+
+            // Storage is almost full: no refresh starts, so say why.
+            storageLowFreeBytes?.let { free ->
+                CinemaText(
+                    text = stringResource(R.string.epg_storage_low_note, NumberUtils.formatBytes(LocalResources.current, free)),
+                    role = TextRole.Caption,
+                    tone = TextTone.Warning,
+                    modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale)),
+                )
             }
 
             // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).

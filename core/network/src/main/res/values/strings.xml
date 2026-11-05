@@ -18,6 +18,7 @@
     <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
     <string name="error_guide_login_missing">This guide is downloaded with the source\'s login, and this device has no password for it. Edit the source and enter the password.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_storage_low">This device\'s storage is almost full. Free up space, then try again. Automatic updates wait until then.</string>
     <string name="error_not_found">Nothing was found at this address. Check the URL.</string>
     <string name="error_server">The server ran into a problem. Please try again later.</string>
     <string name="error_invalid_playlist">This address doesn\'t lead to an M3U playlist. Check the URL.</string>

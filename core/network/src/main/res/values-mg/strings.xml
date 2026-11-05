@@ -16,6 +16,7 @@
     <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
     <string name="error_unauthorized">Tsy nety ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
     <string name="error_generic">Nisy olana. Andramo indray.</string>
+    <string name="error_storage_low">Saika feno ny toerana fitehirizana amin\'ity fitaovana ity. Manafaha toerana, dia andramo indray. Miandry hatramin\'izay ny fanavaozana mandeha ho azy.</string>
     <string name="error_not_found">Tsy nisy hita tamin\'io adiresy io. Jereo ny URL.</string>
     <string name="error_server">Nisy olana tamin\'ny mpizara. Andramo indray rehefa afaka kelikely.</string>
     <string name="error_invalid_playlist">Tsy lisitra M3U no hita amin\'io adiresy io. Jereo ny URL.</string>

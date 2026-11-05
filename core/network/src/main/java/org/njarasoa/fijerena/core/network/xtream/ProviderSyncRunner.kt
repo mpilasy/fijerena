@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.networkCause
@@ -98,6 +99,10 @@ object ProviderSyncRunner {
         provider: ProviderEntity,
         password: String,
     ): Outcome {
+        // With storage low the sync does not start; the source keeps a failure that says so.
+        StorageSpace.lowFreeBytes(context)?.let { free ->
+            return Outcome.Transient(StoredError(ErrorKind.STORAGE_LOW, catalogue = true, raw = StorageSpace.rawText(free)))
+        }
         runningCounts.update { it + (provider.id to (it[provider.id] ?: 0) + 1) }
         if (provider.lastSyncedAtMs == 0L) firstSyncIds.update { it + provider.id }
         try {

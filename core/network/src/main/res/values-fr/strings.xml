@@ -18,6 +18,7 @@
     <string name="error_saved_login_lost">Cet appareil a perdu un identifiant enregistré (son coffre de clés sécurisé a été réinitialisé). Modifiez la source et saisissez à nouveau le mot de passe.</string>
     <string name="error_guide_login_missing">Ce guide se télécharge avec l’identifiant de la source, et cet appareil n’en a pas le mot de passe. Modifiez la source et saisissez le mot de passe.</string>
     <string name="error_generic">Une erreur s’est produite. Veuillez réessayer.</string>
+    <string name="error_storage_low">Le stockage de cet appareil est presque plein. Libérez de l’espace, puis réessayez. Les mises à jour automatiques attendent jusque-là.</string>
     <string name="error_not_found">Rien n’a été trouvé à cette adresse. Vérifiez l’URL.</string>
     <string name="error_server">Le serveur a rencontré un problème. Veuillez réessayer plus tard.</string>
     <string name="error_invalid_playlist">Cette adresse ne mène pas à une playlist M3U. Vérifiez l’URL.</string>
