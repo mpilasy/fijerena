@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261105190742
 
 - **Show Key Input: old keys go:** each key in the list now goes after 30 seconds on the screen, so the list shows only recent presses and goes away when no key is pressed. TV only.
 
