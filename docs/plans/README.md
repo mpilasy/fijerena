@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-06 | [Live Sync progress and delays](./20261106_sync-progress-plan.md) | A pass shows its progress (receiving, applying, sending, with totals) on the Live Sync page; the page shows the connection state; no silent wait of up to 5 minutes after a socket failure; each pass logged | Planned 2026-11-06 |
+| 2026-11-06 | [Live Sync progress and delays](./20261106_sync-progress-plan.md) | A pass shows its progress (receiving, applying, sending, with totals) on the Live Sync page; the page shows the connection state; no silent wait of up to 5 minutes after a socket failure; each pass logged | SP1–SP2 done 2026-11-06; SP3 in progress |
 | 2026-11-06 | [Device builds in Live Sync](./20261106_device-builds-plan.md) | Each device reports its app build in an encrypted synced record; the Live Sync device list on TV and phone shows each device's version, build type and Android version | Done 2026-11-06, walked on both emulators |
 | 2026-11-05 | [Favourite tags](./20261105_favourite-tags-plan.md) | A profile tags its favourite channels, films and shows (many tags each, one list per profile across sources); the Favourites list on TV and phone filters by one tag; tags sync and export | Done 2026-11-05, walked on both emulators |
 | 2026-11-05 | [Pausable guide indexing](./20261105_pausable-guide-indexing-plan.md) | A guide refresh indexes only what it changed, in batches that wait while video plays and continue after a kill; pending sources are searched by title and description | Done 2026-11-05 (IX1–IX4) |

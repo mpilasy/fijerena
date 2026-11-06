@@ -1,6 +1,6 @@
 # Live Sync progress and delays
 
-**Status:** Planned 2026-11-06. SP1 done; SP2 in progress.
+**Status:** Planned 2026-11-06. SP1 and SP2 done; SP3 in progress.
 
 ## Goal
 
@@ -50,7 +50,7 @@ longest silent wait, and logs every pass so the next slow case can be explained.
 | Phase | Work | Status |
 |---|---|---|
 | SP1 | **Engine and server.** `SyncProgress` from `SyncEngine` through `SyncManager.Status`; the server's `remaining`; the pending count; pass and socket logs (SP-D7). Tests: progress per page with and without `remaining`, the server count, logs on a slow pass. | Done 2026-11-06 |
-| SP2 | **No silent wait.** The 60 s pull while the socket is down (SP-D6), the socket state in `Status`, Reconnect now. Tests with the fake socket factory: a failed socket pulls every 60 s and stops when it opens or in the background. | Planned |
+| SP2 | **No silent wait.** The 60 s pull while the socket is down (SP-D6), the socket state in `Status`, Reconnect now. Tests with the fake socket factory: a failed socket pulls every 60 s and stops when it opens or in the background. | Done 2026-11-06 |
 | SP3 | **Display.** The progress line and bar, and the connection state, on the Live Sync page and its card, TV and phone. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators with a Full resync on a larger account (seeded history) and with the sync server stopped and started. | Planned |
 
 Each phase is one commit on main. The server change (SP1) needs the user's server redeployed for

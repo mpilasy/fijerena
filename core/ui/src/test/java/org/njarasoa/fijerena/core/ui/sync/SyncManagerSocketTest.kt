@@ -71,7 +71,7 @@ class SyncManagerSocketTest {
     private fun failLatest() = listener.onFailure(sockets.last().first, IOException("502 from the proxy"), null)
 
     @Test
-    fun `a socket that keeps failing reconnects with a doubling delay and no sync passes`() {
+    fun `a socket that keeps failing reconnects with a doubling delay, and passes only once a minute`() {
         manager.onForeground()
         scheduler.runCurrent()
         assertEquals(1, sockets.size)
@@ -86,9 +86,57 @@ class SyncManagerSocketTest {
             assertEquals("reconnect after $expected ms", before + 1, sockets.size)
             assertEquals(failedAt + expected, sockets.last().second)
         }
-        // Only the pass the foreground asked for: reconnects don't request one (the server's head,
-        // sent when a socket opens, triggers the catch-up).
-        coVerify(exactly = 1) { engine.syncNow(any()) }
+        // The pass the foreground asked for, then one a minute while the socket is down (75 s
+        // here): reconnects don't request one (the server's head, sent when a socket opens,
+        // triggers the catch-up). F-12's pass every 5 s stays gone.
+        coVerify(exactly = 2) { engine.syncNow(any()) }
+    }
+
+    @Test
+    fun `while the socket is down a pass runs every minute, until it opens`() {
+        manager.onForeground()
+        scheduler.runCurrent()
+        failLatest()
+        advance(SyncManager.POLL_WHILE_DISCONNECTED_MS)
+        coVerify(exactly = 2) { engine.syncNow(any()) }
+        assertEquals(false, manager.status.value.connected)
+
+        // The reconnect (after 5 s) opened a socket long ago; it opens now: polling stops.
+        listener.onOpen(sockets.last().first, mockk<Response>(relaxed = true))
+        assertEquals(true, manager.status.value.connected)
+        advance(3 * SyncManager.POLL_WHILE_DISCONNECTED_MS)
+        coVerify(exactly = 2) { engine.syncNow(any()) }
+    }
+
+    @Test
+    fun `no pass every minute once the app is in the background`() {
+        manager.onForeground()
+        scheduler.runCurrent()
+        failLatest()
+        manager.onBackground()
+        scheduler.runCurrent()
+        advance(3 * SyncManager.POLL_WHILE_DISCONNECTED_MS)
+        // The foreground pass and the background flush only.
+        coVerify(exactly = 2) { engine.syncNow(any()) }
+    }
+
+    @Test
+    fun `Reconnect now opens a socket at once, without waiting`() {
+        manager.onForeground()
+        scheduler.runCurrent()
+        repeat(3) {
+            failLatest()
+            advance(60_000L)
+        }
+        val before = sockets.size
+        failLatest()
+        assertEquals(true, manager.status.value.reconnectAt != null)
+
+        manager.reconnectNow()
+        scheduler.runCurrent()
+
+        assertEquals(before + 1, sockets.size)
+        assertEquals(null, manager.status.value.reconnectAt)
     }
 
     @Test

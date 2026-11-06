@@ -82,6 +82,10 @@ class SyncManager internal constructor(
         val lastError: String? = null,
         /** How far the pass is, once it has run for [PROGRESS_AFTER_MS]; null otherwise (the sync progress plan). */
         val progress: SyncProgress? = null,
+        /** The socket to the server is open: other devices' changes arrive at once. */
+        val connected: Boolean = false,
+        /** While the socket is down in the foreground: when it tries again (wall clock); null otherwise. */
+        val reconnectAt: Long? = null,
     )
 
     private val _status = MutableStateFlow(Status())
@@ -443,6 +447,49 @@ class SyncManager internal constructor(
      */
     private var socketRetryDelayMs = INITIAL_RETRY_MS
 
+    // Guarded by socketLock: whether the socket is open, the reconnect waiting, and the pull that
+    // runs every POLL_WHILE_DISCONNECTED_MS while the socket is down (the sync progress plan, SP-D6).
+    private var socketOpen = false
+    private var reconnectJob: Job? = null
+    private var pollJob: Job? = null
+
+    private fun setConnection(
+        connected: Boolean,
+        reconnectAt: Long?,
+    ) = _status.update { it.copy(connected = connected, reconnectAt = reconnectAt) }
+
+    /**
+     * While the socket is down and the app is in the foreground, a pass every
+     * [POLL_WHILE_DISCONNECTED_MS]: without it, nothing pulled the other devices' changes until the
+     * reconnect, up to 5 minutes later. Stops once the socket opens or the app leaves.
+     */
+    private fun pollWhileDisconnected() {
+        synchronized(socketLock) {
+            if (pollJob?.isActive == true) return
+            pollJob =
+                scope.launch {
+                    while (true) {
+                        delay(POLL_WHILE_DISCONNECTED_MS)
+                        if (synchronized(socketLock) { !foreground || socketOpen }) break
+                        requestSync(0)
+                    }
+                }
+        }
+    }
+
+    /** Reconnect now (the Live Sync page's button), not after the waiting delay; a pass too. */
+    fun reconnectNow() {
+        if (!foreground || !engine.isLinked) return
+        synchronized(socketLock) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+            socketRetryDelayMs = INITIAL_RETRY_MS
+        }
+        setConnection(connected = false, reconnectAt = null)
+        openSocket()
+        requestSync(0)
+    }
+
     private fun openSocket() {
         val link = store.link ?: return
         synchronized(socketLock) {
@@ -463,6 +510,10 @@ class SyncManager internal constructor(
                 synchronized(socketLock) {
                     if (socket === webSocket) {
                         socketRetryDelayMs = INITIAL_RETRY_MS
+                        socketOpen = true
+                        pollJob?.cancel()
+                        pollJob = null
+                        setConnection(connected = true, reconnectAt = null)
                         socketJob?.cancel()
                         // A text ping, not only OkHttp's protocol pings: the server answers it
                         // without waking up and keeps its time as this device's "last seen".
@@ -512,16 +563,25 @@ class SyncManager internal constructor(
             synchronized(socketLock) {
                 if (socket !== webSocket) return
                 socket = null
+                socketOpen = false
                 socketJob?.cancel()
                 socketJob = null
                 socketRetryDelayMs.also { socketRetryDelayMs = (it * 2).coerceAtMost(MAX_RETRY_MS) }
             }
         // Revoked (4001) or refused (401): don't hammer the server.
-        if (!foreground || code == REVOKED || code == 401) return
-        scope.launch {
-            delay(wait)
-            if (foreground) openSocket()
+        if (!foreground || code == REVOKED || code == 401) {
+            setConnection(connected = false, reconnectAt = null)
+            return
         }
+        setConnection(connected = false, reconnectAt = System.currentTimeMillis() + wait)
+        synchronized(socketLock) {
+            reconnectJob =
+                scope.launch {
+                    delay(wait)
+                    if (foreground) openSocket()
+                }
+        }
+        pollWhileDisconnected()
     }
 
     private fun closeSocket() {
@@ -530,14 +590,23 @@ class SyncManager internal constructor(
             socketJob = null
             socket?.close(1000, "background")
             socket = null
+            socketOpen = false
+            reconnectJob?.cancel()
+            reconnectJob = null
+            pollJob?.cancel()
+            pollJob = null
             socketRetryDelayMs = INITIAL_RETRY_MS
         }
+        setConnection(connected = false, reconnectAt = null)
     }
 
     companion object {
         private const val TAG = "SyncManager"
         private const val PUSH_DEBOUNCE_MS = 3_000L
         private const val PROGRESS_AFTER_MS = 1_000L
+
+        /** How often a pass runs while the socket is down in the foreground (SP-D6). */
+        internal const val POLL_WHILE_DISCONNECTED_MS = 60_000L
         private const val WATCH_PUSH_INTERVAL_MS = 60_000L
         private const val PING_INTERVAL_MS = 30_000L
         private const val INITIAL_RETRY_MS = 5_000L
