@@ -184,6 +184,10 @@ data class TmdbRecommendation(
     // cast and crew of all seasons, each with their roles or jobs and episode counts.
     @SerialName("aggregate_credits")
     val aggregateCredits: TmdbCredits? = null,
+    // A show's: everyone in the main cast of any season, from its season credits
+    // (TmdbApiService.getDetailsWithCredits reads them apart); null when not read.
+    @kotlinx.serialization.Transient
+    val seasonMainCastIds: Set<String>? = null,
     // Only with `append_to_response=videos`.
     @SerialName("videos")
     val videos: TmdbVideos? = null,

@@ -110,6 +110,28 @@ class TitleCreditsTest {
     }
 
     @Test
+    fun `with the seasons' main casts, a show's regulars are those of any season, whatever their episodes`() {
+        // Law & Order: Sam Waterston in 405 episodes put the share rule's bar at 102, so Benjamin
+        // Bratt (95, main cast in seasons 5 to 9) came out a guest star.
+        fun actor(
+            id: Int,
+            episodes: Int,
+        ) = """{"id":$id,"name":"Actor $id","total_episode_count":$episodes,"roles":[{"character":"Role $id","episode_count":$episodes}]}"""
+        val show =
+            json
+                .decodeFromString<TmdbRecommendation>(
+                    """{"id":549,"name":"Law & Order","aggregate_credits":{"cast":[${actor(
+                        1,
+                        405,
+                    )},${actor(2, 95)},${actor(3, 142)},${actor(4, 2)}]}}""",
+                ).copy(seasonMainCastIds = setOf("1", "2"))
+        val credits = titleCredits(show, movie = false)
+        assertEquals(listOf("1", "2"), credits.cast.map { it.personId })
+        // 3: a recurring character in 142 episodes, never in a season's main cast.
+        assertEquals(listOf("3", "4"), credits.guests.map { it.personId })
+    }
+
+    @Test
     fun `a show without episode counts or regulars keeps one cast list`() {
         val show =
             json.decodeFromString<TmdbRecommendation>(

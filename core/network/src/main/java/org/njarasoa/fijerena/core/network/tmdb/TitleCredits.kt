@@ -110,7 +110,15 @@ fun titleCredits(
                     .take(MAX_WRITERS)
             listOf(CrewLine(CrewRole.CREATOR, creators.distinctBy { it.personId }), CrewLine(CrewRole.WRITER, writers))
         }
-    val (regulars, guests) = if (movie) cast to emptyList() else splitRegulars(cast, credits.cast, details.credits?.cast.orEmpty())
+    val (regulars, guests) =
+        when {
+            movie -> cast to emptyList()
+
+            // TMDB's own answer: in the main cast of any season (Law & Order's Bratt, Harmon, Moriarty).
+            !details.seasonMainCastIds.isNullOrEmpty() -> cast.partition { it.personId in details.seasonMainCastIds }
+
+            else -> splitRegulars(cast, credits.cast, details.credits?.cast.orEmpty())
+        }
     return TitleCredits(regulars, crew.filter { it.people.isNotEmpty() }, guests)
 }
 
@@ -118,7 +126,8 @@ fun titleCredits(
 private const val REGULAR_MIN_EPISODES = 3
 
 /**
- * A show's [cast] as its regulars and its guest stars, each in billing order. A regular is in TMDB's
+ * When the seasons' main casts can't be read ([TmdbRecommendation.seasonMainCastIds]): a show's
+ * [cast] as its regulars and its guest stars, each in billing order. A regular is in TMDB's
  * series regulars ([seriesRegulars], the latest season's), or played in at least a quarter as many
  * episodes as the actor with the most, and in [REGULAR_MIN_EPISODES] or more: a main actor who left
  * before the latest season stays a regular. Without either (no episode counts, no regulars), all are

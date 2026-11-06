@@ -19,6 +19,9 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import org.njarasoa.fijerena.core.player.diagnostics.recordFailedCalls
 import java.io.IOException
 import java.util.Locale
@@ -157,15 +160,56 @@ class TmdbApiService(
     suspend fun getDetailsWithCredits(
         movie: Boolean,
         id: Int,
-    ): TmdbRecommendation =
-        fetch(
-            if (movie) "movie/$id" else "tv/$id",
-            Language.APP,
-            mapOf(
-                "append_to_response" to if (movie) "credits,videos" else "aggregate_credits,credits,videos",
-                "include_video_language" to "${appLanguage()},en,null",
-            ),
-        ).body()
+    ): TmdbRecommendation {
+        val details: TmdbRecommendation =
+            fetch(
+                if (movie) "movie/$id" else "tv/$id",
+                Language.APP,
+                mapOf(
+                    "append_to_response" to if (movie) "credits,videos" else "aggregate_credits,credits,videos",
+                    "include_video_language" to "${appLanguage()},en,null",
+                ),
+            ).body()
+        if (movie) return details
+        return details.copy(seasonMainCastIds = seasonMainCastIds(id, details.numberOfSeasons ?: 0))
+    }
+
+    /**
+     * Everyone in the main cast of any of a show's seasons 1 to [seasons]: TMDB's season credits
+     * list the main cast apart from the guests, which the whole show's credits do not. Up to
+     * [SEASONS_PER_REQUEST] seasons per request (`append_to_response`), so Law & Order's 26 take 2.
+     * Null when it can't be read (the Cast tab then falls back on episode counts).
+     */
+    private suspend fun seasonMainCastIds(
+        id: Int,
+        seasons: Int,
+    ): Set<String>? {
+        if (seasons <= 0) return null
+        return try {
+            (1..seasons.coerceAtMost(MAX_SEASONS))
+                .chunked(SEASONS_PER_REQUEST)
+                .flatMap { chunk ->
+                    val response: JsonObject =
+                        fetch(
+                            "tv/$id",
+                            Language.NONE,
+                            mapOf("append_to_response" to chunk.joinToString(",") { "season/$it/credits" }),
+                        ).body()
+                    chunk.flatMap { season ->
+                        (response["season/$season/credits"] as? JsonObject)
+                            ?.get("cast")
+                            ?.jsonArray
+                            .orEmpty()
+                            .mapNotNull { (it as? JsonObject)?.get("id")?.jsonPrimitive?.content }
+                    }
+                }.toSet()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "TMDB season credits for show $id: ${e.message}")
+            null
+        }
+    }
 
     /** The title's trailers, teasers and clips: in the app language, English or none, as [getDetailsWithCredits]. */
     suspend fun getVideos(
@@ -319,6 +363,12 @@ class TmdbApiService(
         /** TMDB is a fast CDN-fronted API answering small JSON: a call slower than this is stuck. */
         private const val REQUEST_TIMEOUT_MS = 30_000L
         private const val TAG = "TmdbApiService"
+
+        /** TMDB's most `append_to_response` items in one request. */
+        private const val SEASONS_PER_REQUEST = 20
+
+        /** The most seasons whose main cast is read: 3 requests. */
+        private const val MAX_SEASONS = 60
         private const val ENGLISH = "en-US"
 
         @Volatile
