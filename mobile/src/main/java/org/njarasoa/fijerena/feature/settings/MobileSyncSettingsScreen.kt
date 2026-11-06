@@ -43,9 +43,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.LiveSyncProgressBar
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.liveSyncConnectionLine
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
@@ -161,6 +163,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         busy = ui.busy,
                         onSyncNow = viewModel::syncNow,
                         onResyncAll = viewModel::resyncAll,
+                        onReconnect = viewModel::reconnectNow,
                         onAddDevice = viewModel::showInvite,
                         onScan = { scanning = true },
                     )
@@ -310,6 +313,7 @@ private fun LinkedPanel(
     busy: Boolean,
     onSyncNow: () -> Unit,
     onResyncAll: () -> Unit,
+    onReconnect: () -> Unit,
     onAddDevice: () -> Unit,
     onScan: () -> Unit,
 ) {
@@ -320,6 +324,8 @@ private fun LinkedPanel(
                 role = TextRole.Heading,
                 tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Accent,
             )
+            // A pass that runs long fills a bar under the line (the sync progress plan).
+            LiveSyncProgressBar(status)
             if (LocalNerd.current && status.lastError != null) {
                 CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall)
             }
@@ -328,6 +334,9 @@ private fun LinkedPanel(
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
             )
+            liveSyncConnectionLine(status)?.let { line ->
+                CinemaText(line, role = TextRole.BodySmall, tone = if (status.connected) TextTone.Secondary else TextTone.Warning)
+            }
             // One stack of buttons of the same size; one main action (Add a device) per card (M-11).
             CinemaButtonStack(
                 buttons =
@@ -336,7 +345,13 @@ private fun LinkedPanel(
                         StackButton(stringResource(R.string.live_sync_scan_code), enabled = !busy, onClick = onScan),
                         StackButton(stringResource(R.string.live_sync_now), enabled = !status.syncing, onClick = onSyncNow),
                         StackButton(stringResource(R.string.live_sync_full_resync), enabled = !status.syncing, onClick = onResyncAll),
-                    ),
+                    ) +
+                        listOfNotNull(
+                            StackButton(stringResource(R.string.live_sync_reconnect_now), onClick = onReconnect).takeIf {
+                                status.reconnectAt !=
+                                    null
+                            },
+                        ),
                 modifier = Modifier.padding(top = CinemaSpacing.xs),
             )
         }

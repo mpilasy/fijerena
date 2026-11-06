@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Live Sync shows its progress:** a sync that takes more than a second shows how far it is ("Receiving 1,500 of 4,200", "Sending 200 of 640") with a progress bar on the Live Sync page, so a long sync no longer looks stuck. The page also says whether this device is connected to the sync server, and when it will try again, with a **Reconnect now** button. While the connection is down, the app now checks for changes every minute instead of waiting up to 5 minutes. A sync server updated to this version gives the totals; an older server still works, with counts only. TV and phone.
 - **See each device's build in Live Sync:** the devices list on the Live Sync page shows the app version each device runs, its build type and its Android version, and marks a device on an older build. Each device sends its build, encrypted like everything else, the next time it opens the app after an update; until then it shows "Build not reported yet". TV and phone.
 
 ## Version: 0.9.20261106024835

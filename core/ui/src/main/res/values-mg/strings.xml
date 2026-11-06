@@ -1174,6 +1174,14 @@
     <string name="live_sync_qr_description">Kaody fampifandraisana</string>
     <string name="live_sync_waiting">Miandry ny famakiana ny kaody…</string>
     <string name="live_sync_status_syncing">Mampifanaraka…</string>
+    <string name="live_sync_receiving_start">Mandray ny fiovana…</string>
+    <string name="live_sync_receiving">Mandray %1$s amin\'ny %2$s</string>
+    <string name="live_sync_receiving_count">Mandray… %1$s hatreto</string>
+    <string name="live_sync_sending">Mandefa %1$s amin\'ny %2$s</string>
+    <string name="live_sync_connected">Mifandray: tonga avy hatrany ny fiovana</string>
+    <string name="live_sync_connecting">Mampifandray…</string>
+    <string name="live_sync_reconnecting">Hifandray indray afaka %1$s</string>
+    <string name="live_sync_reconnect_now">Hifandray indray izao</string>
     <string name="live_sync_status_last">Nampifanarahana farany %1$s</string>
     <string name="live_sync_just_now">vao izao</string>
     <string name="time_ago_minutes">%1$d minitra lasa izay</string>

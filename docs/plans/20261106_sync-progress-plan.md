@@ -1,6 +1,6 @@
 # Live Sync progress and delays
 
-**Status:** Planned 2026-11-06. SP1 and SP2 done; SP3 in progress.
+**Status:** Planned 2026-11-06. All phases done 2026-11-06 and walked on both emulators.
 
 ## Goal
 
@@ -39,7 +39,7 @@ longest silent wait, and logs every pass so the next slow case can be explained.
 | SP-D1 | Progress state | `SyncManager.Status` gets `progress: SyncProgress?` while a pass runs: the stage (`RECEIVING`: records fetched and applied, page by page; `SENDING`), records done, and the total when known. `SyncEngine` reports it per page and per batch through `Listener.onProgress`. Applying is part of receiving (each page is applied before the next is fetched), so there is no separate stage. |
 | SP-D2 | Receive total | The server's pull response adds `remaining`: the records after this page (one `COUNT(*)` with `seq >` the page's last, only when `more`). An older server sends none (`remaining` null); the app then shows the count so far. `server/` and its tests change; the field is optional both ways. |
 | SP-D3 | Send total | The pending count is read before the first push batch (`sync_version` and the `xtream_v2.db` versions with `pending = 1`). |
-| SP-D4 | Display | On the Live Sync page, under the status line: "Receiving 1,500 of 4,200", "Sending 200 of 640", with a determinate bar when the total is known and the moving bar otherwise. The Settings card shows the same line, without the bar. A pass under 1 s shows no progress (no flash). TV and phone, the theme's progress bar. |
+| SP-D4 | Display | On the Live Sync page, under the status line: "Receiving changes…" (nothing yet), "Receiving 1,500 of 4,200", "Sending 200 of 640", with a determinate bar when the total is known and the moving bar otherwise. The status line itself carries the text, so the Settings row shows it too; the bar is on the Live Sync page only. A pass under 1 s shows no progress (no flash). TV and phone, the theme's progress bar. |
 | SP-D5 | Connection state | The Live Sync page shows the socket state under the last sync: "Connected: changes arrive at once", "Reconnecting in 2 min" (with **Reconnect now**), or "Not connected while the app is closed" as a note. A Nerd also sees the last error. |
 | SP-D6 | No silent wait | While the socket is down and the app is in the foreground, a pull runs every 60 s (the socket reconnect still doubles). So a change waits at most about a minute, not up to 5 minutes. Stops when the socket opens or the app goes to the background. |
 | SP-D7 | Logs | Each pass logs its time, its stage times, pages, records pulled, applied and pushed, and whether it was a full pull; each socket close logs its code and the next delay. In the crash and diagnostics log for a Nerd (`CrashLog.note`) when a pass takes over 10 s. |
@@ -51,7 +51,7 @@ longest silent wait, and logs every pass so the next slow case can be explained.
 |---|---|---|
 | SP1 | **Engine and server.** `SyncProgress` from `SyncEngine` through `SyncManager.Status`; the server's `remaining`; the pending count; pass and socket logs (SP-D7). Tests: progress per page with and without `remaining`, the server count, logs on a slow pass. | Done 2026-11-06 |
 | SP2 | **No silent wait.** The 60 s pull while the socket is down (SP-D6), the socket state in `Status`, Reconnect now. Tests with the fake socket factory: a failed socket pulls every 60 s and stops when it opens or in the background. | Done 2026-11-06 |
-| SP3 | **Display.** The progress line and bar, and the connection state, on the Live Sync page and its card, TV and phone. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators with a Full resync on a larger account (seeded history) and with the sync server stopped and started. | Planned |
+| SP3 | **Display.** The progress line and bar, and the connection state, on the Live Sync page and its card, TV and phone. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators with a Full resync on a larger account (seeded history) and with the sync server stopped and started. | Done 2026-11-06, walked on both emulators: connected, reconnecting with the server stopped, Reconnect now and its focus, progress recorded on a Full resync (548 records, 2 pages, with the 1 s threshold off in a test build) |
 
 Each phase is one commit on main. The server change (SP1) needs the user's server redeployed for
 the totals; without it the app still shows counts.

@@ -104,6 +104,9 @@ class SyncSettingsViewModel(
         manager.requestSync(0)
     }
 
+    /** Reconnect the sync socket now, not after its waiting delay (the sync progress plan, SP-D5). */
+    fun reconnectNow() = manager.reconnectNow()
+
     /** The device-local "Share what's playing with my sync group" switch. */
     val shareNowPlaying: StateFlow<Boolean> = publisher.isSharing
 

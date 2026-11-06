@@ -989,6 +989,14 @@
     <string name="live_sync_qr_description">Code d’appairage</string>
     <string name="live_sync_waiting">En attente du scan…</string>
     <string name="live_sync_status_syncing">Synchronisation…</string>
+    <string name="live_sync_receiving_start">Réception des changements…</string>
+    <string name="live_sync_receiving">Réception : %1$s sur %2$s</string>
+    <string name="live_sync_receiving_count">Réception… %1$s pour l’instant</string>
+    <string name="live_sync_sending">Envoi : %1$s sur %2$s</string>
+    <string name="live_sync_connected">Connecté : les changements arrivent aussitôt</string>
+    <string name="live_sync_connecting">Connexion…</string>
+    <string name="live_sync_reconnecting">Reconnexion dans %1$s</string>
+    <string name="live_sync_reconnect_now">Se reconnecter</string>
     <string name="live_sync_status_last">Dernière synchronisation %1$s</string>
     <string name="live_sync_just_now">à l’instant</string>
     <string name="time_ago_minutes">il y a %1$d min</string>

@@ -1027,6 +1027,14 @@
     <string name="live_sync_qr_description">Pairing code</string>
     <string name="live_sync_waiting">Waiting for the scan…</string>
     <string name="live_sync_status_syncing">Syncing…</string>
+    <string name="live_sync_receiving_start">Receiving changes…</string>
+    <string name="live_sync_receiving">Receiving %1$s of %2$s</string>
+    <string name="live_sync_receiving_count">Receiving… %1$s so far</string>
+    <string name="live_sync_sending">Sending %1$s of %2$s</string>
+    <string name="live_sync_connected">Connected: changes arrive at once</string>
+    <string name="live_sync_connecting">Connecting…</string>
+    <string name="live_sync_reconnecting">Reconnecting in %1$s</string>
+    <string name="live_sync_reconnect_now">Reconnect now</string>
     <string name="live_sync_status_last">Last synced %1$s</string>
     <string name="live_sync_just_now">just now</string>
     <string name="time_ago_minutes">%1$d min ago</string>

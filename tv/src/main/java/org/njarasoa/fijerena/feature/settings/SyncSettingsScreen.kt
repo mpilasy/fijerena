@@ -17,12 +17,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -39,9 +41,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
+import org.njarasoa.fijerena.core.ui.components.LiveSyncProgressBar
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.liveSyncConnectionLine
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
@@ -146,6 +150,7 @@ fun SyncSettingsScreen() {
                 status = status,
                 onSyncNow = viewModel::syncNow,
                 onResyncAll = viewModel::resyncAll,
+                onReconnect = viewModel::reconnectNow,
                 syncNowFocus = syncNowFocus,
             )
             TvSwitchRow(
@@ -321,9 +326,19 @@ private fun LinkedPanel(
     status: SyncManager.Status,
     onSyncNow: () -> Unit,
     onResyncAll: () -> Unit,
+    onReconnect: () -> Unit,
     syncNowFocus: FocusRequester,
 ) {
     val scale = LocalUiScale.current
+    // Reconnect now goes once the socket is back: focus on it moves to Sync now, never to nothing.
+    var reconnectFocused by remember { mutableStateOf(false) }
+    val reconnectShown by rememberUpdatedState(status.reconnectAt != null)
+    LaunchedEffect(status.reconnectAt == null) {
+        if (status.reconnectAt == null && reconnectFocused) {
+            reconnectFocused = false
+            syncNowFocus.requestFocusWithRetry()
+        }
+    }
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
             CinemaText(
@@ -331,6 +346,8 @@ private fun LinkedPanel(
                 role = TextRole.Heading,
                 tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Primary,
             )
+            // A pass that runs long fills a bar under the line (the sync progress plan).
+            LiveSyncProgressBar(status)
             if (LocalNerd.current && status.lastError != null) {
                 CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall, tone = TextTone.Secondary)
             }
@@ -339,6 +356,9 @@ private fun LinkedPanel(
                 role = TextRole.BodySmall,
                 tone = TextTone.Secondary,
             )
+            liveSyncConnectionLine(status)?.let { line ->
+                CinemaText(line, role = TextRole.BodySmall, tone = if (status.connected) TextTone.Secondary else TextTone.Warning)
+            }
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 CinemaSecondaryButton(
@@ -352,6 +372,14 @@ private fun LinkedPanel(
                     text = stringResource(R.string.live_sync_full_resync),
                     enabled = !status.syncing,
                 )
+                if (status.reconnectAt != null) {
+                    CinemaSecondaryButton(
+                        onClick = onReconnect,
+                        text = stringResource(R.string.live_sync_reconnect_now),
+                        // Losing focus because it left the screen keeps the flag: the effect above moves focus.
+                        modifier = Modifier.onFocusChanged { if (it.isFocused || reconnectShown) reconnectFocused = it.isFocused },
+                    )
+                }
             }
         }
     }
