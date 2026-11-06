@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-05 | [Favourite tags](./20261105_favourite-tags-plan.md) | A profile tags its favourite channels, films and shows (many tags each, one list per profile across sources); the Favourites list on TV and phone filters by one tag; tags sync and export | Planned 2026-11-05; FT1 in progress |
+| 2026-11-05 | [Favourite tags](./20261105_favourite-tags-plan.md) | A profile tags its favourite channels, films and shows (many tags each, one list per profile across sources); the Favourites list on TV and phone filters by one tag; tags sync and export | FT1 done 2026-11-05; FT2–FT3 left |
 | 2026-11-05 | [Pausable guide indexing](./20261105_pausable-guide-indexing-plan.md) | A guide refresh indexes only what it changed, in batches that wait while video plays and continue after a kill; pending sources are searched by title and description | Done 2026-11-05 (IX1–IX4) |
 | 2026-11-04 | [Reminders page](./20261104_reminders-page-plan.md) | One page on TV and phone that lists the profile's upcoming reminders (games, guide programmes) and team rules; open, remove, stop a team's "every game", clear all | Done 2026-11-04, walked on both emulators |
 | 2026-11-03 | [One guide source per URL](./20261103_one-guide-per-url-plan.md) | A guide added for several sources is one guide source: downloaded, imported, stored and synced once, linked to the sources that use it; channel matching stays per source | Done 2026-11-04, walked on both emulators |

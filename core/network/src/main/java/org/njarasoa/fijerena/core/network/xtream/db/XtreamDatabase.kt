@@ -504,7 +504,19 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        const val DB_VERSION = 30
+        /**
+         * Migration 30→31: the profile's tags on a favourite (`favorite_state.tags`, `[]` on every
+         * row). See the favourite tags plan, FT1.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigration30To31Test.
+        internal val MIGRATION_30_31 =
+            object : Migration(30, 31) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `favorite_state` ADD COLUMN `tags` TEXT NOT NULL DEFAULT '[]'")
+                }
+            }
+
+        const val DB_VERSION = 31
         private const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
@@ -583,6 +595,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 MIGRATION_27_28,
                 MIGRATION_28_29,
                 MIGRATION_29_30,
+                MIGRATION_30_31,
             )
 
         fun getInstance(context: Context): XtreamDatabase =

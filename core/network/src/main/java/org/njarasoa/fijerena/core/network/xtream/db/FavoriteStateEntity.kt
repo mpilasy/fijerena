@@ -1,7 +1,11 @@
 package org.njarasoa.fijerena.core.network.xtream.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 /** Discriminates the two things a favourite can point at. See [FavoriteStateEntity.kind]. */
 object FavoriteKind {
@@ -31,6 +35,10 @@ object FavoriteKind {
  * [tmdbId] is the film's or show's TMDB id, when the catalogue has one: a favourite whose item the
  * source dropped follows another copy with the same id (added v26, see
  * the wanted titles plan). Always null for live channels and categories.
+ *
+ * [tags] is the profile's own tags on a stream favourite, a JSON list of names such as
+ * `["News","Kids"]` (added v31, see the favourite tags plan). Always `[]` for categories. Read and
+ * write it with [decodeTags] and [encodeTags].
  */
 @Entity(
     tableName = "favorite_state",
@@ -47,4 +55,27 @@ data class FavoriteStateEntity(
     val parentCategoryId: String? = null,
     val createdAt: Long,
     val tmdbId: String? = null,
-)
+    @ColumnInfo(defaultValue = NO_TAGS)
+    val tags: String = NO_TAGS,
+) {
+    companion object {
+        const val NO_TAGS = "[]"
+
+        private val tagsSerializer = ListSerializer(String.serializer())
+
+        /** [names] as the text of [tags]. */
+        fun encodeTags(names: List<String>): String = if (names.isEmpty()) NO_TAGS else Json.encodeToString(tagsSerializer, names)
+
+        /** [tags] read back; an empty list when the text is not a JSON list of strings. */
+        fun decodeTags(text: String): List<String> =
+            if (text == NO_TAGS) {
+                emptyList()
+            } else {
+                try {
+                    Json.decodeFromString(tagsSerializer, text)
+                } catch (e: IllegalArgumentException) {
+                    emptyList()
+                }
+            }
+    }
+}

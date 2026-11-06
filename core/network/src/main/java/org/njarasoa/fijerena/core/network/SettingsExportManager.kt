@@ -72,7 +72,9 @@ class SettingsExportManager(
         // 7: added the teams and leagues the active profile follows (`followedSports`), with a
         // default, so a version 6 file restores unchanged and an older build ignores them (the
         // sports teams plan).
-        private const val EXPORT_VERSION = 7
+        // 8: added a favourite's tags, with a default, so a version 7 file restores unchanged and
+        // an older build ignores them (the favourite tags plan).
+        private const val EXPORT_VERSION = 8
 
         internal val json =
             Json {
@@ -339,6 +341,7 @@ class SettingsExportManager(
         val categoryId: String,
         val contentType: String,
         val tmdbId: String? = null,
+        val tags: List<String> = emptyList(),
     )
 
     @Serializable
@@ -507,6 +510,7 @@ class SettingsExportManager(
                                     categoryId = fav.parentCategoryId ?: "",
                                     contentType = fav.contentType,
                                     tmdbId = fav.tmdbId,
+                                    tags = FavoriteStateEntity.decodeTags(fav.tags),
                                 )
                             },
                     )
@@ -870,6 +874,7 @@ class SettingsExportManager(
                                         parentCategoryId = fav.categoryId,
                                         createdAt = now,
                                         tmdbId = fav.tmdbId,
+                                        tags = FavoriteStateEntity.encodeTags(FavoriteTags.normalise(fav.tags)),
                                     )
                                 }
                         if (newRows.isNotEmpty()) {

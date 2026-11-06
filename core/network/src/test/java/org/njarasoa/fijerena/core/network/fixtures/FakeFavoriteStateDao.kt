@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.fixtures
 
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
@@ -85,6 +86,20 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         val key = Key(providerId, profileId, itemId, contentType, kind)
         rows[key]?.let { rows[key] = it.copy(tmdbId = tmdbId) }
     }
+
+    override fun setTags(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        tags: String,
+    ) {
+        val key = Key(providerId, profileId, itemId, contentType, FavoriteKind.STREAM)
+        rows[key]?.let { rows[key] = it.copy(tags = tags) }
+    }
+
+    override fun getTagged(profileId: String): List<FavoriteStateEntity> =
+        rows.values.filter { it.profileId == profileId && it.kind == FavoriteKind.STREAM && it.tags != FavoriteStateEntity.NO_TAGS }
 
     override fun getAllOfKind(
         providerId: Long,

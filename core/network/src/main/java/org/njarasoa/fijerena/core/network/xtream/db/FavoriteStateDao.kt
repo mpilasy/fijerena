@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import org.njarasoa.fijerena.core.network.FavoriteTags
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
@@ -74,6 +75,41 @@ interface FavoriteStateDao {
         tmdbId: String,
     )
 
+    /** Sets a stream favourite's tags (an update, so live sync sends it). [tags] is the JSON text. */
+    @Query(
+        "UPDATE favorite_state SET tags = :tags WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND itemId = :itemId AND contentType = :contentType AND kind = '${FavoriteKind.STREAM}'",
+    )
+    fun setTags(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        tags: String,
+    )
+
+    /** The profile's stream favourites that have a tag, on every provider: its tags are one list. */
+    @Query(
+        "SELECT * FROM favorite_state WHERE profileId = :profileId AND kind = '${FavoriteKind.STREAM}' " +
+            "AND tags != '${FavoriteStateEntity.NO_TAGS}'",
+    )
+    fun getTagged(profileId: String): List<FavoriteStateEntity>
+
+    /** Renames the profile's tag [from] to [to] on every favourite of every provider; see [FavoriteTags.rename]. */
+    @Transaction
+    fun renameTag(
+        profileId: String,
+        from: String,
+        to: String,
+    ) = rewriteTags(this, profileId) { FavoriteTags.rename(it, from, to) }
+
+    /** Removes the profile's tag [name] from every favourite of every provider. */
+    @Transaction
+    fun deleteTag(
+        profileId: String,
+        name: String,
+    ) = rewriteTags(this, profileId) { FavoriteTags.remove(it, name) }
+
     @Query("SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId AND kind = :kind")
     fun getAllOfKind(
         providerId: Long,
@@ -108,10 +144,20 @@ interface FavoriteStateDao {
         contentType: String,
     )
 
-    /** [upsert], dropping any tombstone left by an earlier removal of the same favourite. */
+    /**
+     * [upsert], dropping any tombstone left by an earlier removal of the same favourite. A row
+     * without tags keeps the tags of the row it replaces: re-favouriting keeps them (favourite tags
+     * plan, FT-D3).
+     */
     @Transaction
     fun upsertClearingTombstone(entity: FavoriteStateEntity) {
-        upsert(entity)
+        val kept =
+            if (entity.tags == FavoriteStateEntity.NO_TAGS) {
+                get(entity.providerId, entity.profileId, entity.itemId, entity.contentType, entity.kind)?.tags
+            } else {
+                null
+            }
+        upsert(if (kept != null) entity.copy(tags = kept) else entity)
         deleteTombstone(entity.providerId, entity.profileId, SyncKind.forFavorite(entity.kind), entity.itemId, entity.contentType)
     }
 
@@ -173,4 +219,19 @@ interface FavoriteStateDao {
 
     @Query("SELECT COUNT(*) FROM favorite_state WHERE providerId = :providerId")
     fun count(providerId: Long): Int
+}
+
+/** Rewrites the tags of each tagged favourite of [profileId] that [change] changes. */
+private fun rewriteTags(
+    dao: FavoriteStateDao,
+    profileId: String,
+    change: (List<String>) -> List<String>,
+) {
+    dao.getTagged(profileId).forEach { row ->
+        val tags = FavoriteStateEntity.decodeTags(row.tags)
+        val changed = change(tags)
+        if (changed != tags) {
+            dao.setTags(row.providerId, profileId, row.itemId, row.contentType, FavoriteStateEntity.encodeTags(changed))
+        }
+    }
 }

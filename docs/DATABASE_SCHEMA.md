@@ -283,7 +283,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 30
+**Version:** 31
 
 **Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
 pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
@@ -317,7 +317,7 @@ the wanted titles plan; v27 added the ask-once answer and release data to
 and cleared their `detailFetchedAt` (and `xtream_series.episodesFetchedAt`), so the next open of
 each film or show fetches its facts once; v29 added `followed_sport` (the teams and leagues a
 profile follows), see the sports teams plan; v30 added `game_reminder` (game reminders, local
-only), see the same plan.)
+only), see the same plan; v31 added `tags` on `favorite_state`, see the favourite tags plan.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -521,6 +521,7 @@ id and `parentCategoryId` is NULL.
 | `parentCategoryId` | TEXT? | The stream's owning category; NULL for `kind = CATEGORY` |
 | `createdAt` | INTEGER | When it was favourited. `FavoriteStateDao` returns rows newest first; the favourites lists themselves are sorted by name |
 | `tmdbId` | TEXT? | The film's or show's TMDB id, when the catalogue has one (added v26): a favourite whose item the source dropped follows another copy with the same id. Always NULL for live channels and categories. Travels in the sync payload and the export |
+| `tags` | TEXT | The profile's tags on a stream favourite (added v31), a JSON list of free-text names such as `["News","Sat, Sun"]`; `[]` (the default) when it has none, and always for categories. The profile's tag list is the names in use on its favourites across every provider: there is no tag table. Re-favouriting keeps the tags. Travels in the sync payload and the export |
 
 **Index:** `(providerId, profileId, kind, contentType, createdAt)`
 

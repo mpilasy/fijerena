@@ -413,6 +413,7 @@ class SyncApplier(
                                     favorite.parentCategoryId,
                                     favorite.createdAt,
                                     favorite.tmdbId,
+                                    FavoriteStateEntity.encodeTags(favorite.tags),
                                 ),
                             ),
                         )

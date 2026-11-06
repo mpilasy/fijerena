@@ -104,6 +104,14 @@ class XtreamDatabaseMigrationTest {
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
 
+    /**
+     * Rolls a fresh database back to v30: without the favourites' `tags` column. `DROP COLUMN`
+     * needs SQLite 3.35 (Android 14, the CI emulator), never the app.
+     */
+    private fun dropFavoriteTagsColumn(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `favorite_state` DROP COLUMN `tags`")
+    }
+
     /** Rolls a fresh database back to v29: without `game_reminder` (its index goes with it). */
     private fun dropGameReminderTable(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("DROP TABLE `game_reminder`")
@@ -158,6 +166,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         val expected =
             listOf("index_xtream_streams_providerId_allowed", "index_xtream_series_providerId_allowed").associateWith {
                 indexSql(rawDb, it)
@@ -193,6 +202,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         rawDb.execSQL("DROP TABLE `watch_state`")
         rawDb.execSQL("DROP TABLE `favorite_state`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`") // v21, recreated by MIGRATION_20_21
@@ -274,6 +284,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
@@ -308,6 +319,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
         dropAllowedColumns(rawDb) // v25, added back by MIGRATION_24_25
@@ -333,6 +345,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL(
             "CREATE TABLE `sync_outbox` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
@@ -371,6 +384,7 @@ class XtreamDatabaseMigrationTest {
         dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         dropFollowedSportTable(rawDb) // v29, added back by MIGRATION_28_29
         dropGameReminderTable(rawDb) // v30, added back by MIGRATION_29_30
+        dropFavoriteTagsColumn(rawDb) // v31, added back by MIGRATION_30_31
         rawDb.execSQL(
             "CREATE INDEX `index_xtream_streams_providerId_type_categoryId_excluded` " +
                 "ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)",

@@ -122,6 +122,70 @@ class MediaRepositoryFavoritesTest {
             assertEquals(setOf("first", "queued"), favoriteDao.getAll(1L, ProfileEntity.DEFAULT_ID).map { it.itemId }.toSet())
         }
 
+    // --- Tags: the favourite tags plan, FT1. ---
+
+    @Test
+    fun `tags are set, cleaned and filter the favourites`() =
+        runBlocking {
+            repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
+            repository.addFavorite("cnn", "CNN", "cat1", ContentType.LIVE_TV)
+
+            assertTrue(repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf(" news ", "Kids", "NEWS"), existing = listOf("News")))
+            repository.awaitPendingWrites()
+
+            assertEquals(listOf("News", "Kids"), repository.getFavoriteTags("bbc", ContentType.LIVE_TV))
+            assertEquals(setOf("bbc"), repository.getFavoriteItemIdsWithTag(ContentType.LIVE_TV, "news"))
+            assertEquals(setOf("News", "Kids"), repository.getFavoriteTagsInUse(ContentType.LIVE_TV))
+            assertEquals(emptySet<String>(), repository.getFavoriteTagsInUse(ContentType.MOVIES))
+            val row = favoriteDao.get(1L, ProfileEntity.DEFAULT_ID, "bbc", ContentType.LIVE_TV, FavoriteKind.STREAM)!!
+            assertEquals("""["News","Kids"]""", row.tags)
+        }
+
+    @Test
+    fun `tags of an item that is not a favourite are not set`() {
+        assertFalse(repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News")))
+    }
+
+    @Test
+    fun `tags survive a new repository reading from the table`() =
+        runBlocking {
+            repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
+            repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News"))
+            repository.awaitPendingWrites()
+
+            val fresh =
+                MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = favoriteDao)
+
+            assertEquals(listOf("News"), fresh.getFavoriteTags("bbc", ContentType.LIVE_TV))
+        }
+
+    @Test
+    fun `the profile's tags come from every provider, and a rename reaches them all`() =
+        runBlocking {
+            val other =
+                MediaRepository(context, 2L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = favoriteDao)
+            repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
+            repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News"))
+            other.addFavorite("dune", "Dune", "cat9", ContentType.MOVIES)
+            other.setFavoriteTags("dune", ContentType.MOVIES, listOf("Weekend", "news"))
+            repository.awaitPendingWrites()
+            other.awaitPendingWrites()
+
+            assertEquals(listOf("News", "Weekend"), repository.getProfileFavoriteTags())
+
+            repository.renameFavoriteTag("news", "Headlines")
+            other.invalidateFavoriteSnapshot()
+
+            assertEquals(listOf("Headlines"), repository.getFavoriteTags("bbc", ContentType.LIVE_TV))
+            assertEquals(listOf("Weekend", "Headlines"), other.getFavoriteTags("dune", ContentType.MOVIES))
+
+            repository.deleteFavoriteTag("Headlines")
+            other.invalidateFavoriteSnapshot()
+
+            assertEquals(listOf("Weekend"), repository.getProfileFavoriteTags())
+            assertEquals(listOf("Weekend"), other.getFavoriteTags("dune", ContentType.MOVIES))
+        }
+
     @Test
     fun `a favorite survives a new repository reading from the table`() =
         runBlocking {

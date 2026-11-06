@@ -159,6 +159,8 @@ data class FavoriteItem(
     val categoryId: String,
     val contentType: String,
     val timestamp: Long = System.currentTimeMillis(),
+    /** The profile's tags on this favourite; see the favourite tags plan. */
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -183,6 +185,7 @@ private fun FavoriteItem.toEntity(
         name = itemName,
         parentCategoryId = categoryId,
         createdAt = timestamp,
+        tags = FavoriteStateEntity.encodeTags(tags),
     )
 
 /** A favourited category as a `favorite_state` row: the category id *is* the item id. */
@@ -1319,8 +1322,16 @@ class MediaRepository(
             rows
                 .asSequence()
                 .filter { it.kind == FavoriteKind.STREAM }
-                .map { FavoriteItem(it.itemId, it.name, it.parentCategoryId ?: "", it.contentType, it.createdAt) }
-                .toList()
+                .map {
+                    FavoriteItem(
+                        it.itemId,
+                        it.name,
+                        it.parentCategoryId ?: "",
+                        it.contentType,
+                        it.createdAt,
+                        FavoriteStateEntity.decodeTags(it.tags),
+                    )
+                }.toList()
         cachedFavoriteCategories =
             rows
                 .asSequence()
@@ -1379,6 +1390,79 @@ class MediaRepository(
             }
             matching
         }
+
+    /** The tags of a stream favourite of this provider; empty when it has none or is not a favourite. */
+    fun getFavoriteTags(
+        itemId: String,
+        contentType: String,
+    ): List<String> =
+        synchronized(favoriteLock) {
+            getFavoriteItems().firstOrNull { it.itemId == itemId && it.contentType == contentType }?.tags.orEmpty()
+        }
+
+    /**
+     * Sets the tags of a stream favourite of this provider, cleaned by [FavoriteTags.normalise]
+     * against [existing] (the profile's tags, so a name in another case uses the existing one).
+     * False when the item is not a favourite here (a server-kept favourite has no row to tag).
+     */
+    fun setFavoriteTags(
+        itemId: String,
+        contentType: String,
+        tags: List<String>,
+        existing: Collection<String> = emptyList(),
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteItems()
+            val index = favorites.indexOfFirst { it.itemId == itemId && it.contentType == contentType }
+            if (index < 0) return false
+            val cleaned = FavoriteTags.normalise(tags, existing)
+            cachedFavorites = favorites.toMutableList().also { it[index] = it[index].copy(tags = cleaned) }
+            writeScope.launch {
+                favoriteStateDao.setTags(providerId, profileId, itemId, contentType, FavoriteStateEntity.encodeTags(cleaned))
+            }
+            return true
+        }
+
+    /** The ids of this provider's [contentType] favourites that have [tag] (without regard to case). */
+    fun getFavoriteItemIdsWithTag(
+        contentType: String,
+        tag: String,
+    ): Set<String> =
+        synchronized(favoriteLock) {
+            getFavoriteItems()
+                .filter { fav -> fav.contentType == contentType && fav.tags.any { it.equals(tag, ignoreCase = true) } }
+                .mapTo(HashSet()) { it.itemId }
+        }
+
+    /** The tags used by this provider's [contentType] favourites. */
+    fun getFavoriteTagsInUse(contentType: String): Set<String> =
+        synchronized(favoriteLock) {
+            getFavoriteItems().filter { it.contentType == contentType }.flatMapTo(HashSet()) { it.tags }
+        }
+
+    /** The profile's tags, from its favourites on every provider, sorted; see [FavoriteTags.sorted]. */
+    suspend fun getProfileFavoriteTags(): List<String> =
+        withContext(Dispatchers.IO) {
+            FavoriteTags.sorted(favoriteStateDao.getTagged(profileId).flatMap { FavoriteStateEntity.decodeTags(it.tags) })
+        }
+
+    /**
+     * Renames the profile's tag [from] to [to] on every provider. Other providers' repositories
+     * must drop their snapshot after it ([invalidateFavoriteSnapshot]).
+     */
+    suspend fun renameFavoriteTag(
+        from: String,
+        to: String,
+    ) {
+        withContext(Dispatchers.IO) { favoriteStateDao.renameTag(profileId, from, to) }
+        invalidateFavoriteSnapshot()
+    }
+
+    /** Removes the profile's tag [name] on every provider; see [renameFavoriteTag]. */
+    suspend fun deleteFavoriteTag(name: String) {
+        withContext(Dispatchers.IO) { favoriteStateDao.deleteTag(profileId, name) }
+        invalidateFavoriteSnapshot()
+    }
 
     /** Streams only — both "Clear All Favorites" dialogs say "favorited streams". */
     fun clearFavorites() =
@@ -2557,6 +2641,15 @@ class MediaRepository(
         val timeMs = fetchTimes[key] ?: return null
         return "$timeMs ms"
     }
+
+    /** Drops the favourite snapshots; the next read refills them from `favorite_state`. */
+    fun invalidateFavoriteSnapshot() =
+        synchronized(favoriteLock) {
+            cachedFavorites = null
+            cachedFavoriteCategories = null
+            favoriteIdSet = null
+            favoriteCategoryIdSet = null
+        }
 
     /**
      * Changes received from another device rewrote this provider's favourites or history rows

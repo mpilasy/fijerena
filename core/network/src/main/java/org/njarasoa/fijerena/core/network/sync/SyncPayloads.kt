@@ -89,9 +89,12 @@ object SyncPayloads {
         val createdAt: Long,
         /** Null from a version before v26 of `xtream_v2.db`, and for channels and categories. */
         val tmdbId: String? = null,
+        /** The profile's tags on a stream favourite; empty from a version before v31 of `xtream_v2.db`. */
+        val tags: List<String> = emptyList(),
     ) {
         companion object {
-            fun of(e: FavoriteStateEntity) = Favorite(e.name, e.parentCategoryId, e.createdAt, e.tmdbId)
+            fun of(e: FavoriteStateEntity) =
+                Favorite(e.name, e.parentCategoryId, e.createdAt, e.tmdbId, FavoriteStateEntity.decodeTags(e.tags))
         }
     }
 

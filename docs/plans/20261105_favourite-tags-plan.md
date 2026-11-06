@@ -1,6 +1,6 @@
 # Favourite tags
 
-**Status:** Planned 2026-11-05. The user answered FT-Q1 to FT-Q4 on 2026-11-05 (see Answers). FT1 in progress.
+**Status:** Planned 2026-11-05. The user answered FT-Q1 to FT-Q4 on 2026-11-05 (see Answers). FT1 done (see the Progress table).
 
 ## Goal
 
@@ -49,19 +49,20 @@ only its favourites.
 | FT-D3 | Re-favouriting | `addFavorite` keeps the tags of an existing row (today `upsert` replaces the row). Removing a favourite removes its tags with it. |
 | FT-D4 | Tag names | Trimmed, 1–30 characters. A name that matches an existing tag without regard to case uses the existing tag. Tags are sorted by name in the app's locale. |
 | FT-D5 | Sync | `SyncPayloads.Favorite` gets `tags: List<String> = emptyList()`. The existing triggers already queue a change to the row. An older build ignores the field; if an older build re-favourites an item, that item's tags are lost (accepted; devices update together). |
-| FT-D6 | Export | `ExportedFavorite.tags: List<String> = emptyList()`; import sets them under the existing "Favourites" choice. Bump the export format version. |
+| FT-D6 | Export | `ExportedFavorite.tags: List<String> = emptyList()` (export format 8); import sets them on the favourites it adds, under the existing "Favourites" choice. A favourite already on the device keeps its own tags, as import already keeps existing rows. |
 | FT-D7 | Set tags | A **Tags** action in the long-press menu of a favourite (TV `FavoriteContextMenuDialog`, phone `ItemActionsDialog`), shown only when the item is a favourite. It opens a tag dialog: a check row per tag of the profile, then **New Tag** (text entry, adds and checks it). Changes save at once. Same rule as favourites for who may edit (hidden where the favourite toggle is hidden). |
 | FT-D8 | Filter (phone) | When the Favourites chip is selected and its favourites have at least one tag, a second chip row shows **All** and each tag used by the favourites of this content type. One chip selected at a time; All is the default. |
 | FT-D9 | Filter (TV) | Same items as FT-D8, as a row of `TvSectionTabs` above the Favourites list, only while the Favourites tab is open. Follows the focus contract in CONTRIBUTING.md: entry focus on the selected tag tab, Down reaches the list, Up from the list returns to the selected tab. |
 | FT-D10 | Filter state | The selected tag stays while the user stays in that browse screen; it resets to All when the screen opens again. A tag that empties (last favourite removed) falls back to All. |
 | FT-D11 | Rename and delete | Long-press a tag chip (phone) or the menu key on a tag tab (TV): **Rename** (merges into an existing tag of the same name) and **Delete** (removes the tag from every favourite of the profile, asking first). One write per row, in one transaction. |
 | FT-D12 | Words | "Tags", "New Tag", "All", "Rename Tag", "Delete Tag", "Remove the tag <name> from all favourites?" in en (Title Case, British spelling), fr and mg. |
+| FT-D13 | Server-kept favourites | A source that keeps favourites on its server (Jellyfin) has no `favorite_state` row, so its favourites cannot have tags: no Tags action for them. |
 
 ## Phases
 
 | Phase | Work | Status |
 |---|---|---|
-| FT1 | **Data.** Migration 30 → 31, entity field, DAO (`setTags`, `renameTag`, `deleteTag`, keep tags on upsert), `MediaRepository` API (`favoriteTags(profileId, contentType)`, `setFavoriteTags`, filter by tag), sync payload, export/import. Update `docs/DATABASE_SCHEMA.md`, the exported schema, and the rollback helpers in `XtreamDatabaseMigrationTest`. Unit tests: migration, keep-on-refavourite, rename merge, delete, sync round trip, export round trip. | In progress |
+| FT1 | **Data.** Migration 30 → 31, entity field, DAO (`setTags`, `renameTag`, `deleteTag`, keep tags on upsert), `MediaRepository` API (`favoriteTags(profileId, contentType)`, `setFavoriteTags`, filter by tag), sync payload, export/import. Update `docs/DATABASE_SCHEMA.md`, the exported schema, and the rollback helpers in `XtreamDatabaseMigrationTest`. Unit tests: migration, keep-on-refavourite, rename merge, delete, sync round trip, export round trip. | Done 2026-11-05: `FavoriteTags` (rules), DAO `setTags`/`getTagged`/`renameTag`/`deleteTag`, `MediaRepository` tag API; no UI yet |
 | FT2 | **Set tags.** Tag dialog in core/ui (shared state) with TV and phone builds; Tags action in both long-press menus. Strings in en/fr/mg. | Planned |
 | FT3 | **Filter.** Tag chips (phone) and tag tabs (TV) on the Favourites list; rename and delete from a tag; filter state in `CategoryViewModel`. TV focus walk. Docs: FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES. | Planned |
 
