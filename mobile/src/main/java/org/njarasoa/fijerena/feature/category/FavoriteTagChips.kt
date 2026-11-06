@@ -129,7 +129,7 @@ internal fun ManageFavoriteTagsDialog(
             cancel = DialogAction(stringResource(R.string.common_cancel)) { deleting = null },
         )
     }
-    if (loaded == null) return
+    if (loaded == null || renaming != null || deleting != null) return
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.favorite_tags_manage),

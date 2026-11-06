@@ -80,6 +80,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -298,6 +299,7 @@ fun MobileCategoryListScreen(
     val watchedIdsSet by viewModel.watchedIds.collectAsStateWithLifecycle()
     val watchedIds = remember(watchedIdsSet) { ImmutableStringSet(watchedIdsSet) }
     val favoriteIdsSet by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val selectedFavoriteTag by viewModel.selectedFavoriteTag.collectAsStateWithLifecycle()
     val favoriteIds = remember(favoriteIdsSet) { ImmutableStringSet(favoriteIdsSet) }
     val watchProgressMap by viewModel.watchProgress.collectAsStateWithLifecycle()
     val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
@@ -1125,6 +1127,7 @@ fun MobileCategoryListScreen(
                                                     libraryLoading = libraryLoading,
                                                     selectedCategoryId = displayedCategoryId,
                                                     selectedCategoryKey = displayedCategoryKey,
+                                                    selectedTag = selectedFavoriteTag,
                                                     lastPlayedItemId = state.lastPlayedItemId,
                                                     lastPlayedSource = state.lastPlayedSource,
                                                     nowPlaying = nowPlaying,
@@ -1974,6 +1977,8 @@ private fun StreamsList(
     selectedCategoryId: String?,
     /** The list's identity across sources (a category's key); per-list state is keyed on it. */
     selectedCategoryKey: String? = selectedCategoryId,
+    /** The Favourites list's tag (favourite tags plan, FT3): another tag is another list, opened at its top. */
+    selectedTag: String? = null,
     libraryLoading: Boolean = false,
     lastPlayedItemId: String? = null,
     // [lastPlayedItemId]'s source (0: any): the same id on another source isn't current (Phase 6).
@@ -2049,6 +2054,15 @@ private fun StreamsList(
 
     // A list opens at its top, never scrolled to the section's last played item (it opened mid-list,
     // Recent's newest rows out of sight); Back finds it where it was left (the saved list state).
+    // The list state keeps its first row by key, so a list that also has that row (Favourites
+    // after Recent, another tag) opened scrolled to it: a new list goes to its top once loaded.
+    val listIdentity = "$selectedCategoryKey|$selectedTag"
+    var openedList by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(listIdentity, streamsLoading, items.isNullOrEmpty()) {
+        if (streamsLoading || items.isNullOrEmpty() || openedList == listIdentity) return@LaunchedEffect
+        if (openedList != null) listState.scrollToItem(0)
+        openedList = listIdentity
+    }
     when {
         selectedCategoryId == null -> {
             MobileEmptyState(message = selectCategoryText(contentType), icon = sectionIcon(contentType))

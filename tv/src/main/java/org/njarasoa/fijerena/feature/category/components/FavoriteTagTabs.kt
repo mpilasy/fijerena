@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -66,6 +67,9 @@ internal fun FavoriteTagTabs(
         modifier =
             modifier
                 .onPreviewKeyEvent { it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown && itemsPane.enter() }
+                // Entering the row (Up from the list) lands on the selected tag, not on Manage Tags
+                // by geometry: focusProperties directly before focusGroup, as in BrowseTabs.
+                .focusProperties { onEnter = { entry.requestFocus() } }
                 .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -86,7 +90,8 @@ internal fun FavoriteTagTabs(
             onClick = onManage,
             icon = CinemaIcons.Tag,
             label = stringResource(R.string.favorite_tags_manage),
-            modifier = Modifier.focusRequester(manage),
+            // The row's end: Right stays, never up to the header's buttons.
+            modifier = Modifier.focusRequester(manage).focusProperties { right = FocusRequester.Cancel },
         )
     }
 }

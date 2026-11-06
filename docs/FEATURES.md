@@ -260,7 +260,7 @@ Listed before the source's categories (TV: as tabs at the top of the list beside
 
 A profile gives its favourite channels, films and shows tags of its own: free text, up to 30 characters, any number per favourite (docs/plans/20261105_favourite-tags-plan.md). The profile has one set of tags for all its sources; a name in another case ("news") is the same tag ("News"). A tag exists while a favourite has it.
 
-- **Set them:** hold OK or press Menu (TV), or long-press (phone), on a favourite in a list or a Home favourite row, then **Tags**. The dialog lists the profile's tags with a check box each and a **New Tag** field with **Add**; **Save** keeps the checked tags.
+- **Set them:** hold OK or press Menu (TV), or long-press (phone), on a favourite in a list or a Home favourite row, then **Tags**. The dialog lists the profile's tags with a check box each and a **New Tag** field (phone: type and tap **Add**; TV: OK opens the keyboard, and its Done adds the tag); **Save** keeps the checked tags.
 - **Filter:** on the Favourites list, a row under the tabs (TV) or under the category chips (phone) shows **All** and the tags of the section's favourites. One tag at a time; the choice lasts while the screen is open, and goes back to All when its last favourite loses the tag.
 - **Manage Tags** at the end of that row: **Rename** a tag on every favourite (into an existing name, the two become one) or **Delete** it from every favourite, after a question.
 - Removing a favourite and its Undo keeps its tags; favouriting it again later in the same session does too.

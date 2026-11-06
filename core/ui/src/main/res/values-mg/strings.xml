@@ -587,7 +587,7 @@
     </plurals>
     <string name="epg_browser_on_air_badge">MIRONGATRA</string>
     <string name="epg_browser_soon_badge">MANATONA</string>
-    <string name="epg_browser_recent_searches">Fikarohana Farany</string>
+    <string name="epg_browser_recent_searches">Fikarohana farany</string>
     <string name="epg_browser_clear_all_description">Fafao daholo</string>
     <string name="search_history_clear_confirm_title">Hofafana ve ny fikarohana farany?</string>
     <string name="search_history_clear_confirm_message">Hiala avokoa ny fikarohana farany ao amin\'ity lisitra ity.</string>
