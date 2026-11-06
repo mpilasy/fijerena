@@ -130,6 +130,8 @@ class LocalRecords(
         }
         // Each device name given here or received.
         settings.deviceNames().keys.forEach { sync.seed(SyncKind.SETTING, SyncKind.SHARED, AppSettings.deviceNameSettingKey(it), now) }
+        // Each device build reported here or received (the device builds plan).
+        settings.deviceBuilds().keys.forEach { sync.seed(SyncKind.SETTING, SyncKind.SHARED, AppSettings.deviceBuildSettingKey(it), now) }
         for (key in AppSettings.SYNCED_SETTING_KEYS) {
             if (key in AppSettings.PER_PROFILE_SETTING_KEYS) {
                 profiles.filter { settings.syncedSetting(key, it) != null }.forEach { sync.seed(SyncKind.SETTING, it, key, now) }

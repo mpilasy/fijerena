@@ -14,8 +14,10 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
 import org.njarasoa.fijerena.core.network.sports.ReminderSchedule
+import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.sync.SyncKind
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
 
 class AppSettings(
@@ -170,6 +172,18 @@ class AppSettings(
         const val DEVICE_NAME_SETTING_PREFIX = "device_name:"
 
         fun deviceNameSettingKey(deviceId: String) = DEVICE_NAME_SETTING_PREFIX + deviceId
+
+        /**
+         * The app build a live sync device runs, one shared record per device —
+         * `device_build:<deviceId>`, a [DeviceBuild] as JSON, written by that device only (the
+         * device builds plan). An older build ignores the key.
+         */
+        const val DEVICE_BUILD_SETTING_PREFIX = "device_build:"
+
+        fun deviceBuildSettingKey(deviceId: String) = DEVICE_BUILD_SETTING_PREFIX + deviceId
+
+        /** The longest [DEVICE_BUILD_SETTING_PREFIX] value kept: far above a real one, so a bad record can't fill the prefs. */
+        private const val MAX_DEVICE_BUILD_LENGTH = 1_000
 
         /** The whole-list setting key a build before per-source records synced. */
         const val LEGACY_PROFILE_SOURCES_SETTING = KEY_PROFILE_SOURCES
@@ -462,6 +476,50 @@ class AppSettings(
         SettingsSyncQueue.setting(context, deviceNameSettingKey(deviceId))
     }
 
+    /** Every device's reported build, by device id; a value that doesn't read is left out. */
+    fun deviceBuilds(): Map<String, DeviceBuild> =
+        prefs.all.entries
+            .filter { it.key.startsWith(DEVICE_BUILD_SETTING_PREFIX) }
+            .mapNotNull { (key, value) -> decodeDeviceBuild(value as? String)?.let { key.removePrefix(DEVICE_BUILD_SETTING_PREFIX) to it } }
+            .toMap()
+
+    /**
+     * Records this device's [build] for its group, only when it differs from the one recorded: a
+     * new install, an update or an Android update sends one record, a plain start none. True when
+     * it was recorded.
+     */
+    fun reportDeviceBuild(
+        deviceId: String,
+        build: DeviceBuild,
+    ): Boolean {
+        val key = deviceBuildSettingKey(deviceId)
+        if (decodeDeviceBuild(prefs.getString(key, null)) == build) return false
+        prefs.edit { putString(key, SyncPayloads.json.encodeToString(DeviceBuild.serializer(), build)) }
+        SettingsSyncQueue.setting(context, key)
+        return true
+    }
+
+    /** [deviceBuilds], now and on every change (a device reporting a new build). */
+    fun observeDeviceBuilds(): Flow<Map<String, DeviceBuild>> =
+        callbackFlow {
+            val listener =
+                SharedPreferences.OnSharedPreferenceChangeListener { _, changed ->
+                    if (changed?.startsWith(DEVICE_BUILD_SETTING_PREFIX) == true) trySend(deviceBuilds())
+                }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(deviceBuilds())
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    private fun decodeDeviceBuild(text: String?): DeviceBuild? =
+        text?.let {
+            try {
+                SyncPayloads.json.decodeFromString(DeviceBuild.serializer(), it)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
+
     /** [deviceNames] with blanks left out, now and on every change (a rename here or from another device). */
     fun observeDeviceNames(): Flow<Map<String, String>> =
         callbackFlow {
@@ -511,6 +569,10 @@ class AppSettings(
         }
         if (key.startsWith(DEVICE_NAME_SETTING_PREFIX)) {
             if (value.isString) prefs.edit { putString(key, value.content.trim().take(MAX_DEVICE_NAME_LENGTH)) }
+            return
+        }
+        if (key.startsWith(DEVICE_BUILD_SETTING_PREFIX)) {
+            if (value.isString && value.content.length <= MAX_DEVICE_BUILD_LENGTH) prefs.edit { putString(key, value.content) }
             return
         }
         if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
@@ -571,7 +633,7 @@ class AppSettings(
             val store = TmdbKeyStore(context)
             return if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null
         }
-        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX)) {
+        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX) || key.startsWith(DEVICE_BUILD_SETTING_PREFIX)) {
             return prefs.getString(key, null)?.let { kotlinx.serialization.json.JsonPrimitive(it) }
         }
         if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {

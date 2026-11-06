@@ -23,6 +23,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncApi
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
@@ -165,7 +166,10 @@ class SyncManager internal constructor(
 
     fun start() {
         // The store is encrypted prefs: read it off the main thread.
-        scope.launch { refreshStatus() }
+        scope.launch {
+            refreshStatus()
+            reportBuild()
+        }
         app.registerActivityLifecycleCallbacks(
             object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityStarted(activity: Activity) {
@@ -204,6 +208,16 @@ class SyncManager internal constructor(
         watchPlayback()
     }
 
+    /** This device's app build for its group, when linked and only on a change (the device builds plan). */
+    private fun reportBuild() {
+        val deviceId = store.link?.deviceId?.takeIf { it.isNotEmpty() } ?: return
+        try {
+            AppSettings(app).reportDeviceBuild(deviceId, DeviceBuild.current(app))
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't report this device's build", e)
+        }
+    }
+
     /**
      * Playback paused, stopped or ended: progress held back while it played goes now. The last
      * position save can land before or after this; either way it is pushed within the debounce.
@@ -220,7 +234,10 @@ class SyncManager internal constructor(
 
     /** Linked or unlinked just now (settings, or the debug receiver): reconnect accordingly. */
     fun onLinkChanged() {
-        scope.launch { refreshStatus() }
+        scope.launch {
+            refreshStatus()
+            reportBuild()
+        }
         closeSocket()
         if (foreground && engine.isLinked) {
             openSocket()

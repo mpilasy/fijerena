@@ -37,6 +37,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FirstVideoPlayer"
         android:networkSecurityConfig="@xml/network_security_config">
+        <!-- The build type, for Live Sync's device list (device builds plan). -->
+        <meta-data
+            android:name="fijerena.buildType"
+            android:value="${fijerenaBuildType}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

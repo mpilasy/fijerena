@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-06 | [Device builds in Live Sync](./20261106_device-builds-plan.md) | Each device reports its app build in an encrypted synced record; the Live Sync device list on TV and phone shows each device's version, build type and Android version | Planned 2026-11-06; open questions DB-Q1, DB-Q2 |
+| 2026-11-06 | [Device builds in Live Sync](./20261106_device-builds-plan.md) | Each device reports its app build in an encrypted synced record; the Live Sync device list on TV and phone shows each device's version, build type and Android version | DB1 done 2026-11-06; DB2 in progress |
 | 2026-11-05 | [Favourite tags](./20261105_favourite-tags-plan.md) | A profile tags its favourite channels, films and shows (many tags each, one list per profile across sources); the Favourites list on TV and phone filters by one tag; tags sync and export | Done 2026-11-05, walked on both emulators |
 | 2026-11-05 | [Pausable guide indexing](./20261105_pausable-guide-indexing-plan.md) | A guide refresh indexes only what it changed, in batches that wait while video plays and continue after a kill; pending sources are searched by title and description | Done 2026-11-05 (IX1–IX4) |
 | 2026-11-04 | [Reminders page](./20261104_reminders-page-plan.md) | One page on TV and phone that lists the profile's upcoming reminders (games, guide programmes) and team rules; open, remove, stop a team's "every game", clear all | Done 2026-11-04, walked on both emulators |

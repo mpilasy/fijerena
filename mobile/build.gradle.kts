@@ -69,7 +69,10 @@ android {
     }
 
     buildTypes {
+        // Each build type names itself in the manifest (meta-data fijerena.buildType): Live Sync
+        // shows it in the device list (device builds plan). localRelease sets its own after initWith.
         debug {
+            manifestPlaceholders["fijerenaBuildType"] = "debug"
             // Emulators are x86/x86_64; without these the debug build ran its ARM libraries
             // under binary translation there. Release stays ARM-only (every real device).
             ndk {
@@ -77,6 +80,7 @@ android {
             }
         }
         release {
+            manifestPlaceholders["fijerenaBuildType"] = "release"
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
@@ -90,6 +94,7 @@ android {
         // Perfetto still works (src/localRelease/AndroidManifest.xml).
         create("localRelease") {
             initWith(getByName("release"))
+            manifestPlaceholders["fijerenaBuildType"] = "localRelease"
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
             ndk {

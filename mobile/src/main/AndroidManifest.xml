@@ -33,6 +33,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FirstVideoPlayer">
+        <!-- The build type, for Live Sync's device list (device builds plan). -->
+        <meta-data
+            android:name="fijerena.buildType"
+            android:value="${fijerenaBuildType}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
