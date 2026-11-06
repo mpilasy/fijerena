@@ -349,6 +349,10 @@ class MediaRepository(
     private var favoriteIdSet: Set<Pair<String, String>>? = null
     private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
     private val favoriteLock = Any()
+
+    // The tags of the favourites removed this session, by (item, content type), so that the removal's
+    // Undo gets them back (favourite tags plan, FT2). Guarded by [favoriteLock].
+    private val removedFavoriteTags = LinkedHashMap<Pair<String, String>, List<String>>()
     private val watchHistoryLock = Any()
 
     // Dedicated single-thread dispatcher for prefs writes below. commit() (not apply()) blocks
@@ -390,6 +394,9 @@ class MediaRepository(
 
         /** How long Continue Watching waits for one show's episode list from the provider. */
         private const val UP_NEXT_FETCH_TIMEOUT_MS = 5_000L
+
+        /** How many removed favourites' tags [removedFavoriteTags] keeps for their Undo. */
+        private const val REMOVED_TAGS_KEPT = 50
 
         private const val KEY_WATCH_HISTORY = "watch_history_v3"
         private const val KEY_WATCH_HISTORY_V2 = "watch_history_v2"
@@ -454,6 +461,10 @@ class MediaRepository(
      * its server (Jellyfin), which the app can't write.
      */
     val supportsMarkWatched: Boolean
+        get() = !usesServerUserData
+
+    /** Whether favourites here can have tags: false when the source keeps them on its server (FT-D13). */
+    val supportsFavoriteTags: Boolean
         get() = !usesServerUserData
 
     /** Whether this provider's episodes may roll on to the next one — see ProviderCapabilities. */
@@ -1269,7 +1280,9 @@ class MediaRepository(
             val favorites = getFavoriteItems().toMutableList()
             val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
             if (!alreadyFavorite) {
-                val item = FavoriteItem(itemId, itemName, categoryId, contentType)
+                // An Undo of a removal (or favouriting it again soon after) brings its tags back.
+                val tags = removedFavoriteTags.remove(itemId to contentType).orEmpty()
+                val item = FavoriteItem(itemId, itemName, categoryId, contentType, tags = tags)
                 // No cap: it would silently evict the oldest favourite once the list filled up. Rows
                 // are unbounded — see the favorites durable storage plan.
                 favorites.add(0, item)
@@ -1286,8 +1299,13 @@ class MediaRepository(
     ): Boolean =
         synchronized(favoriteLock) {
             val favorites = getFavoriteItems().toMutableList()
+            val tags = favorites.firstOrNull { it.itemId == itemId && it.contentType == contentType }?.tags.orEmpty()
             val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
             if (removed) {
+                if (tags.isNotEmpty()) {
+                    removedFavoriteTags[itemId to contentType] = tags
+                    if (removedFavoriteTags.size > REMOVED_TAGS_KEPT) removedFavoriteTags.remove(removedFavoriteTags.keys.first())
+                }
                 cachedFavorites = favorites
                 favoriteIdSet = null
                 writeScope.launch {

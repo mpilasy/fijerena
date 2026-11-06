@@ -287,6 +287,19 @@
     <!-- Favorites -->
     <string name="favorite_add">Ajouter aux favoris</string>
     <string name="favorite_remove">Retirer des favoris</string>
+    <string name="favorite_tags">Étiquettes</string>
+    <string name="favorite_tags_title">Étiquettes de %1$s</string>
+    <string name="favorite_tags_new">Nouvelle étiquette</string>
+    <string name="favorite_tags_add">Ajouter</string>
+    <string name="favorite_tags_none">Aucune étiquette pour l’instant. Tapez un nom pour en ajouter une.</string>
+    <string name="favorite_tags_all">Toutes</string>
+    <string name="favorite_tags_manage">Gérer les étiquettes</string>
+    <string name="favorite_tags_name">Nom</string>
+    <string name="favorite_tags_rename">Renommer</string>
+    <string name="favorite_tags_rename_title">Renommer l’étiquette</string>
+    <string name="favorite_tags_delete">Supprimer</string>
+    <string name="favorite_tags_delete_title">Supprimer l’étiquette ?</string>
+    <string name="favorite_tags_delete_message">Retirer l’étiquette « %1$s » de tous les favoris ?</string>
     <string name="recent_remove">Retirer des récents</string>
     <string name="watched_mark">Marquer comme vu</string>
     <string name="watched_unmark">Marquer comme non vu</string>

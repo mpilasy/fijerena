@@ -287,6 +287,19 @@
     <!-- Favorites -->
     <string name="favorite_add">Add to Favourites</string>
     <string name="favorite_remove">Remove from Favourites</string>
+    <string name="favorite_tags">Tags</string>
+    <string name="favorite_tags_title">Tags for %1$s</string>
+    <string name="favorite_tags_new">New Tag</string>
+    <string name="favorite_tags_add">Add</string>
+    <string name="favorite_tags_none">No tags yet. Type a name to add one.</string>
+    <string name="favorite_tags_all">All</string>
+    <string name="favorite_tags_manage">Manage Tags</string>
+    <string name="favorite_tags_name">Name</string>
+    <string name="favorite_tags_rename">Rename</string>
+    <string name="favorite_tags_rename_title">Rename Tag</string>
+    <string name="favorite_tags_delete">Delete</string>
+    <string name="favorite_tags_delete_title">Delete Tag?</string>
+    <string name="favorite_tags_delete_message">Remove the tag \"%1$s\" from all favourites?</string>
     <string name="recent_remove">Remove from Recent</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>

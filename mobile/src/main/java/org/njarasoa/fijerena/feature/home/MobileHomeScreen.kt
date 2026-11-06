@@ -78,6 +78,10 @@ import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.favoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.saveFavoriteTags
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -101,6 +105,7 @@ import org.njarasoa.fijerena.feature.sports.MobileUpcomingGameCard
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CardLines
+import org.njarasoa.fijerena.ui.components.FavoriteTagsEditor
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
@@ -292,6 +297,20 @@ fun MobileHomeScreen(
     val undo = LocalCinemaSnackbar.current
     val child = remember { AppSettings(context.applicationContext).let { it.isChildProfile(it.activeProfileId) } }
     var homeMenu by remember { mutableStateOf<HomeMenu?>(null) }
+    // The favourite whose tag dialog is open (favourite tags plan, FT2).
+    var tagsTarget by remember { mutableStateOf<FavoriteTagTarget?>(null) }
+    tagsTarget?.let { target ->
+        val lists = merged
+        FavoriteTagsEditor(
+            target = target,
+            load = { lists?.favoriteTagsDraft(it) ?: FavoriteTagsDraft(emptyList(), emptySet()) },
+            onSave = { tags ->
+                lists?.let { wantedScope.launchGuarded("Home.saveFavoriteTags") { it.saveFavoriteTags(target, tags) } }
+                tagsTarget = null
+            },
+            onDismiss = { tagsTarget = null },
+        )
+    }
     homeMenu?.let { menu ->
         val lists = merged
         val done = { reloads++ }
@@ -419,6 +438,15 @@ fun MobileHomeScreen(
                         }
                     },
                     onDismiss = { homeMenu = null },
+                    onEditTags =
+                        if (lists?.supportsFavoriteTags(item.providerId) == true) {
+                            {
+                                val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
+                                tagsTarget = FavoriteTagTarget(item.providerId, item.id, menu.contentType, name)
+                            }
+                        } else {
+                            null
+                        },
                 )
             }
 

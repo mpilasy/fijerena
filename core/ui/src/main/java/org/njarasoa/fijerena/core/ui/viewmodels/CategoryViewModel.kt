@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.FavoriteTags
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -49,6 +50,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.ChartRows
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.favoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.saveFavoriteTags
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.cards
@@ -473,6 +478,14 @@ class CategoryViewModel(
 
     private val _favoriteCategoryIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteCategoryIds: StateFlow<Set<String>> = _favoriteCategoryIds.asStateFlow()
+
+    // The favourite tags plan, FT3: the tags of this section's favourites on every source, and the
+    // one the Favourites list shows (null: all). The choice lasts while this screen does (FT-D10).
+    private val _favoriteTags = MutableStateFlow<List<String>>(emptyList())
+    val favoriteTags: StateFlow<List<String>> = _favoriteTags.asStateFlow()
+
+    private val _selectedFavoriteTag = MutableStateFlow<String?>(null)
+    val selectedFavoriteTag: StateFlow<String?> = _selectedFavoriteTag.asStateFlow()
 
     private val _watchProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val watchProgress: StateFlow<Map<String, Float>> = _watchProgress.asStateFlow()
@@ -902,7 +915,8 @@ class CategoryViewModel(
                 }
 
                 FAVORITES_CATEGORY_ID -> {
-                    emitStreams(awaitMerged().favorites(contentType))
+                    val merged = awaitMerged()
+                    emitStreams(merged.favorites(contentType, updateFavoriteTags(merged)))
                     loadNowPlaying(currentStreams)
                     true
                 }
@@ -1176,7 +1190,10 @@ class CategoryViewModel(
                 repo.addFavorite(itemId, itemName, categoryId, contentType)
             }
             _favoritesVersion.value++
-            viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") { refreshPerItemData() }
+            viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") {
+                refreshPerItemData()
+                refreshFavoriteTagsLocal()
+            }
             // Local rebuild only — no network fetch needed for a local favorite change
             refreshCategoriesLocal()
         }
@@ -1610,6 +1627,86 @@ class CategoryViewModel(
      * each row on its source.
      */
     suspend fun getFavoritesSnapshot(): List<MediaItem> = awaitMerged().favorites(contentType).onSources(awaitRepository().getProviderId())
+
+    // --- Favourite tags (the favourite tags plan) ---
+
+    /** Whether a favourite of [rowSource] can have tags (0: this list's source); see FT-D13. */
+    fun supportsFavoriteTags(rowSource: Long): Boolean =
+        mergedSnapshot?.supportsFavoriteTags(rowSource) ?: (repositoryOrNull?.supportsFavoriteTags ?: false)
+
+    /** The tag dialog's start: the profile's tags, [target]'s checked. */
+    suspend fun favoriteTagsDraft(target: FavoriteTagTarget): FavoriteTagsDraft = awaitMerged().favoriteTagsDraft(target)
+
+    /** Saves [target]'s tags, then brings the tag row and a filtered Favourites list up to date. */
+    fun saveFavoriteTags(
+        target: FavoriteTagTarget,
+        tags: List<String>,
+    ) {
+        viewModelScope.launchGuarded("CategoryViewModel.saveFavoriteTags") {
+            awaitMerged().saveFavoriteTags(target, tags)
+            refreshFavoriteTagsLocal()
+        }
+    }
+
+    /** Shows only the favourites with [tag] (null: all of them) on the Favourites list. */
+    fun selectFavoriteTag(tag: String?) {
+        if (_selectedFavoriteTag.value == tag) return
+        _selectedFavoriteTag.value = tag
+        if (currentCategoryId == FAVORITES_CATEGORY_ID) loadStreams(FAVORITES_CATEGORY_ID)
+    }
+
+    /** Renames the profile's tag [from] to [to] on every source (FT-D11). */
+    fun renameFavoriteTag(
+        from: String,
+        to: String,
+    ) {
+        viewModelScope.launchGuarded("CategoryViewModel.renameFavoriteTag") {
+            awaitMerged().renameFavoriteTag(from, to)
+            if (_selectedFavoriteTag.value.equals(from, ignoreCase = true)) _selectedFavoriteTag.value = FavoriteTags.clean(to)
+            if (currentCategoryId == FAVORITES_CATEGORY_ID) loadStreams(FAVORITES_CATEGORY_ID) else refreshFavoriteTagsLocal()
+        }
+    }
+
+    /** Removes the profile's tag [name] from every favourite on every source (FT-D11). */
+    fun deleteFavoriteTag(name: String) {
+        viewModelScope.launchGuarded("CategoryViewModel.deleteFavoriteTag") {
+            awaitMerged().deleteFavoriteTag(name)
+            if (_selectedFavoriteTag.value.equals(name, ignoreCase = true)) _selectedFavoriteTag.value = null
+            if (currentCategoryId == FAVORITES_CATEGORY_ID) loadStreams(FAVORITES_CATEGORY_ID) else refreshFavoriteTagsLocal()
+        }
+    }
+
+    /** The profile's tags, for the Manage Tags dialog. */
+    suspend fun profileFavoriteTags(): List<String> = awaitMerged().profileFavoriteTags()
+
+    /**
+     * Publishes the tags of this section's favourites and returns the tag to filter by: the chosen
+     * one while a favourite still has it, else null (All, FT-D10).
+     */
+    private fun updateFavoriteTags(merged: MergedLists): String? {
+        val tags = merged.favoriteTagsInUse(contentType)
+        _favoriteTags.value = tags
+        val selected = _selectedFavoriteTag.value?.let { chosen -> tags.firstOrNull { it.equals(chosen, ignoreCase = true) } }
+        _selectedFavoriteTag.value = selected
+        return selected
+    }
+
+    /**
+     * After a tag or favourite change made here: the tag row again and, on a filtered Favourites
+     * list, the rows that lost the tag leave in place (no reload, so focus stays on the list).
+     */
+    private suspend fun refreshFavoriteTagsLocal() {
+        val merged = awaitMerged()
+        val selected = updateFavoriteTags(merged)
+        val state = _uiState.value as? UiState.Success ?: return
+        if (currentCategoryId != FAVORITES_CATEGORY_ID || state.selectedCategoryId != FAVORITES_CATEGORY_ID) return
+        val keep = merged.favorites(contentType, selected).mapTo(HashSet()) { it.providerId to it.id }
+        val kept = currentStreams.filter { (it.sourceOr(sourceId) to it.id) in keep }
+        if (kept.size != currentStreams.size) {
+            currentStreams = kept
+            _uiState.value = state.copy(streams = kept)
+        }
+    }
 
     /**
      * Live TV's last channel watched: each of the profile's sources has its own, the newest of

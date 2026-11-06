@@ -7,10 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -40,6 +42,7 @@ class FavoriteMenuDialogTest {
     private fun setMenu(
         isFavorite: Boolean = false,
         onToggleWatched: (() -> Unit)? = null,
+        onEditTags: (() -> Unit)? = null,
     ) {
         composeTestRule.setContent {
             var open by remember { mutableStateOf(true) }
@@ -62,6 +65,7 @@ class FavoriteMenuDialogTest {
                     },
                     onRemoveFromRecent = { removedFromRecent++ },
                     onToggleWatched = onToggleWatched,
+                    onEditTags = onEditTags,
                 )
             }
         }
@@ -86,6 +90,24 @@ class FavoriteMenuDialogTest {
                     .boundsInRoot.top
             }
         assertEquals(tops.sorted(), tops)
+    }
+
+    @Test
+    fun `a favourite offers Tags first, above the removals`() {
+        var tags = 0
+        setMenu(isFavorite = true, onEditTags = { tags++ })
+        composeTestRule.onNodeWithText("Tags").assertIsFocused()
+        composeTestRule.onNodeWithText("Tags").performKeyInput { pressKey(Key.DirectionCenter) }
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, tags)
+        assertEquals(1, dismissed)
+    }
+
+    @Test
+    fun `an item that is not a favourite has no Tags`() {
+        setMenu(onEditTags = {})
+        composeTestRule.onAllNodesWithText("Tags").assertCountEquals(0)
     }
 
     @Test

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import org.njarasoa.fijerena.core.network.FavoriteTags
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentCategory
 import org.njarasoa.fijerena.core.network.RecentRemoval
@@ -83,6 +84,57 @@ class MergedLists(
 
     /** Favourites of [contentType], by name as each source sorts its own. */
     suspend fun favorites(contentType: String): List<MediaItem> = mergeFavorites(each { it.getFavoritesForContentTypeSuspend(contentType) })
+
+    /** Favourites of [contentType] that have [tag] (all of them for null); see the favourite tags plan. */
+    suspend fun favorites(
+        contentType: String,
+        tag: String?,
+    ): List<MediaItem> {
+        val all = favorites(contentType)
+        if (tag == null) return all
+        val tagged = sources.associate { it.providerId to it.repo.getFavoriteItemIdsWithTag(contentType, tag) }
+        return all.filter { item -> item.id in tagged[item.providerId].orEmpty() }
+    }
+
+    /** The tags used by the favourites of [contentType] on every source, sorted. */
+    fun favoriteTagsInUse(contentType: String): List<String> =
+        FavoriteTags.sorted(sources.flatMap { it.repo.getFavoriteTagsInUse(contentType) })
+
+    /** The profile's tags, from its favourites of every kind on every source. */
+    suspend fun profileFavoriteTags(): List<String> = primary.getProfileFavoriteTags()
+
+    /** Whether [providerId]'s favourites can have tags (not where the source keeps them on its server). */
+    fun supportsFavoriteTags(providerId: Long): Boolean = repoFor(providerId).supportsFavoriteTags
+
+    /** The tags of [itemId] on [providerId]'s favourites. */
+    fun favoriteTags(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+    ): List<String> = repoFor(providerId).getFavoriteTags(itemId, contentType)
+
+    /** Sets the tags of [itemId] on [providerId]; a name in another case uses the profile's tag. */
+    suspend fun setFavoriteTags(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+        tags: List<String>,
+    ): Boolean = repoFor(providerId).setFavoriteTags(itemId, contentType, tags, existing = profileFavoriteTags())
+
+    /** Renames the profile's tag [from] to [to] on every source. */
+    suspend fun renameFavoriteTag(
+        from: String,
+        to: String,
+    ) {
+        primary.renameFavoriteTag(from, to)
+        sources.forEach { it.repo.invalidateFavoriteSnapshot() }
+    }
+
+    /** Removes the profile's tag [name] from every favourite on every source. */
+    suspend fun deleteFavoriteTag(name: String) {
+        primary.deleteFavoriteTag(name)
+        sources.forEach { it.repo.invalidateFavoriteSnapshot() }
+    }
 
     /** The Continue Watching shelf: every source's, newest first, at most [limit]. */
     suspend fun continueWatching(limit: Int = CONTINUE_WATCHING_LIMIT): List<ContinueWatchingItem> =

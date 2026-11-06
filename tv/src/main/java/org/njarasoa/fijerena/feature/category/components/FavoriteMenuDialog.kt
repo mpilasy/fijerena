@@ -32,6 +32,8 @@ fun FavoriteContextMenuDialog(
     // A show row's "Mark show watched / unwatched", worded from `target.isShowWatched`
     // (the season show watched plan Phase 3). Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
+    // Opens the favourite's tag dialog (favourite tags plan, FT-D7); shown on a favourite only.
+    onEditTags: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
     val streamTarget = target as? FavoriteMenuTarget.Stream
@@ -63,6 +65,10 @@ fun FavoriteContextMenuDialog(
                 onClick = toggle,
             )
         }
+    val tagsAction =
+        onEditTags?.takeIf { isFavorite && streamTarget != null }?.let { edit ->
+            MenuAction(CinemaIcons.Tag, stringResource(R.string.favorite_tags), onClick = edit)
+        }
     val recentAction =
         onRemoveFromRecent?.takeIf { isInRecent }?.let { remove ->
             MenuAction(CinemaIcons.Delete, stringResource(R.string.recent_remove), removal = true, onClick = remove)
@@ -72,7 +78,7 @@ fun FavoriteContextMenuDialog(
     // from Recent (the menu puts the removals last).
     TvActionMenu(
         title = itemName,
-        actions = listOfNotNull(favoriteAction, watchedAction, showWatchedAction, recentAction),
+        actions = listOfNotNull(favoriteAction, tagsAction, watchedAction, showWatchedAction, recentAction),
         onDismiss = onDismiss,
     )
 }

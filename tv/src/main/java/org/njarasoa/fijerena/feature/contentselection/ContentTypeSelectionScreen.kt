@@ -148,6 +148,11 @@ import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
 import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
 import org.njarasoa.fijerena.core.ui.home.syncSummary
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.favoriteTagsDraft
+import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
+import org.njarasoa.fijerena.core.ui.model.saveFavoriteTags
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -179,6 +184,7 @@ import org.njarasoa.fijerena.core.ui.wanted.gone
 import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
+import org.njarasoa.fijerena.feature.category.components.TvFavoriteTagsEditor
 import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
@@ -976,6 +982,20 @@ fun ContentTypeSelectionScreen(
             onDismiss = { wantedMenu = null },
         )
     }
+    // The favourite whose tag dialog is open (favourite tags plan, FT2).
+    var tagsTarget by remember { mutableStateOf<FavoriteTagTarget?>(null) }
+    tagsTarget?.let { target ->
+        val merged = mergedLists
+        TvFavoriteTagsEditor(
+            target = target,
+            load = { merged?.favoriteTagsDraft(it) ?: FavoriteTagsDraft(emptyList(), emptySet()) },
+            onSave = { tags ->
+                merged?.let { coroutineScope.launchGuarded("Home.saveFavoriteTags") { it.saveFavoriteTags(target, tags) } }
+                tagsTarget = null
+            },
+            onDismiss = { tagsTarget = null },
+        )
+    }
     cardMenu?.let { menu ->
         val merged = mergedLists
         val ref = menu.ref
@@ -1018,6 +1038,12 @@ fun ContentTypeSelectionScreen(
                 }
             },
             onDismiss = { cardMenu = null },
+            onEditTags =
+                if (merged?.supportsFavoriteTags(ref.providerId) == true) {
+                    { tagsTarget = FavoriteTagTarget(ref.providerId, ref.id, ref.contentType, menu.target.nameAndFavoriteState().first) }
+                } else {
+                    null
+                },
             onToggleWatched =
                 ref.watchedItemId?.let { watchedItemId ->
                     {

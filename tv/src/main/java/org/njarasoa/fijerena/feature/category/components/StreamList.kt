@@ -103,6 +103,7 @@ import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -298,6 +299,19 @@ internal fun StreamList(
     // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
     // stops. The target is rebuilt from the live sets so the menu shows the row's current state.
     var actionsItem by remember { mutableStateOf<MediaItem?>(null) }
+    // The favourite whose tag dialog is open (favourite tags plan, FT2).
+    var tagsTarget by remember { mutableStateOf<FavoriteTagTarget?>(null) }
+    tagsTarget?.let { target ->
+        TvFavoriteTagsEditor(
+            target = target,
+            load = categoryViewModel::favoriteTagsDraft,
+            onSave = { tags ->
+                categoryViewModel.saveFavoriteTags(target, tags)
+                tagsTarget = null
+            },
+            onDismiss = { tagsTarget = null },
+        )
+    }
     actionsItem?.let { item ->
         // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
         // the browse list's favoriteIds may not cover) the repository says.
@@ -351,6 +365,20 @@ internal fun StreamList(
                         }
                     },
                 onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
+                onEditTags =
+                    if (item.target !is BrowseTarget.CategoryRef && categoryViewModel.supportsFavoriteTags(item.providerId)) {
+                        {
+                            tagsTarget =
+                                FavoriteTagTarget(
+                                    item.providerId,
+                                    item.id,
+                                    contentType,
+                                    parseDisplayTitle(item.name).titleWithoutYear.ifBlank { item.name },
+                                )
+                        }
+                    } else {
+                        null
+                    },
             )
         }
     }

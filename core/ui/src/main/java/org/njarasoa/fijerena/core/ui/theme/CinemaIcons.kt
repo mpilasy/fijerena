@@ -69,6 +69,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
@@ -128,6 +129,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -187,6 +189,7 @@ import androidx.compose.material.icons.sharp.Refresh
 import androidx.compose.material.icons.sharp.Replay
 import androidx.compose.material.icons.sharp.Schedule
 import androidx.compose.material.icons.sharp.Search
+import androidx.compose.material.icons.sharp.Sell
 import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.SkipNext
 import androidx.compose.material.icons.sharp.SkipPrevious
@@ -557,6 +560,11 @@ object CinemaIcons {
     val Bookmark: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Bookmark, Icons.Outlined.Bookmark, Icons.Sharp.Bookmark)
+
+    /** A favourite's tags (favourite tags plan). */
+    val Tag: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Sell, Icons.Outlined.Sell, Icons.Sharp.Sell)
 
     /** A title not on the Wanted list: Add to Wanted. */
     val BookmarkBorder: ImageVector

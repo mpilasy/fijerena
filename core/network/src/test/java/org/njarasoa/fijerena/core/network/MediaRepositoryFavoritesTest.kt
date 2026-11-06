@@ -142,6 +142,21 @@ class MediaRepositoryFavoritesTest {
         }
 
     @Test
+    fun `the Undo of a removal brings the tags back`() =
+        runBlocking {
+            repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
+            repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News"))
+
+            repository.removeFavorite("bbc", ContentType.LIVE_TV)
+            repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
+            repository.awaitPendingWrites()
+
+            assertEquals(listOf("News"), repository.getFavoriteTags("bbc", ContentType.LIVE_TV))
+            val row = favoriteDao.get(1L, ProfileEntity.DEFAULT_ID, "bbc", ContentType.LIVE_TV, FavoriteKind.STREAM)!!
+            assertEquals("""["News"]""", row.tags)
+        }
+
+    @Test
     fun `tags of an item that is not a favourite are not set`() {
         assertFalse(repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News")))
     }

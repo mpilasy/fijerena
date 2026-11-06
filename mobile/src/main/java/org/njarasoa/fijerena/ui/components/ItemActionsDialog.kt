@@ -19,6 +19,8 @@ fun ItemActionsDialog(
     onToggleFavorite: (() -> Unit)?,
     onDismiss: () -> Unit,
     actions: List<MenuAction> = emptyList(),
+    // Opens the favourite's tag dialog (favourite tags plan, FT-D7); shown on a favourite only.
+    onEditTags: (() -> Unit)? = null,
 ) {
     val favorite =
         onToggleFavorite?.let { toggle ->
@@ -28,9 +30,10 @@ fun ItemActionsDialog(
                 MenuAction(CinemaIcons.Star, stringResource(R.string.favorite_add), onClick = toggle)
             }
         }
+    val tags = onEditTags?.takeIf { isFavorite }?.let { MenuAction(CinemaIcons.Tag, stringResource(R.string.favorite_tags), onClick = it) }
     CinemaActionMenu(
         title = title,
-        actions = listOfNotNull(favorite) + actions,
+        actions = listOfNotNull(favorite, tags) + actions,
         onDismiss = onDismiss,
     )
 }

@@ -180,6 +180,7 @@ import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
+import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -221,6 +222,7 @@ import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.CinemaTooltip
+import org.njarasoa.fijerena.ui.components.FavoriteTagsEditor
 import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
@@ -310,6 +312,19 @@ fun MobileCategoryListScreen(
     // A favourite its source no longer lists, opened (wanted titles plan → Favourites gone from
     // their source): with another copy, a menu moves it there; without, a message says so.
     var goneMenu by remember { mutableStateOf<Pair<MediaItem, GoneFavorite>?>(null) }
+    // The favourite whose tag dialog is open (favourite tags plan, FT2).
+    var tagsTarget by remember { mutableStateOf<FavoriteTagTarget?>(null) }
+    tagsTarget?.let { target ->
+        FavoriteTagsEditor(
+            target = target,
+            load = viewModel::favoriteTagsDraft,
+            onSave = { tags ->
+                viewModel.saveFavoriteTags(target, tags)
+                tagsTarget = null
+            },
+            onDismiss = { tagsTarget = null },
+        )
+    }
     goneMenu?.let { (item, gone) ->
         ItemActionsDialog(
             title = stringResource(R.string.favorite_gone_message, parseDisplayTitle(item.name).title.ifBlank { item.name }),
@@ -1195,6 +1210,23 @@ fun MobileCategoryListScreen(
                                                     onToggleWatched = { toggled ->
                                                         viewModel.toggleWatchedStream(toggled.id, contentType, toggled.providerId)
                                                     },
+                                                    editTagsFor = { item ->
+                                                        if (item.target !is BrowseTarget.CategoryRef &&
+                                                            viewModel.supportsFavoriteTags(item.providerId)
+                                                        ) {
+                                                            {
+                                                                tagsTarget =
+                                                                    FavoriteTagTarget(
+                                                                        item.providerId,
+                                                                        item.id,
+                                                                        contentType,
+                                                                        parseDisplayTitle(item.name).titleWithoutYear.ifBlank { item.name },
+                                                                    )
+                                                            }
+                                                        } else {
+                                                            null
+                                                        }
+                                                    },
                                                     showWatchedMark = viewModel.supportsWatchedMark,
                                                     showWatchState = viewModel::showWatchState,
                                                     onSetShowWatched = { seriesId, watched, rowSource ->
@@ -1940,6 +1972,8 @@ private fun StreamsList(
     onItemSelected: (MediaItem) -> Unit,
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    // A favourite row's Tags action in its menu (favourite tags plan, FT2); null where it has none.
+    editTagsFor: (MediaItem) -> (() -> Unit)? = { null },
     // The swipe's "Mark watched / unwatched", absent when this is false (a source that keeps
     // watched state on its server). A show row's is "Mark show watched / unwatched" for all its
     // episodes (the season show watched plan Phase 3), worded from
@@ -2328,6 +2362,7 @@ private fun StreamsList(
                         onToggleFavorite = { onToggleFavorite(item) },
                         onDismiss = { rowMenu = null },
                         actions = actions,
+                        onEditTags = editTagsFor(item),
                     )
                 }
             }

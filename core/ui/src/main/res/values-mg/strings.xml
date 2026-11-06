@@ -287,6 +287,19 @@
     <!-- Favorites -->
     <string name="favorite_add">Ampidiro amin\'ny ankafizina</string>
     <string name="favorite_remove">Esory amin\'ny ankafizina</string>
+    <string name="favorite_tags">Marika</string>
+    <string name="favorite_tags_title">Marika ho an\'i %1$s</string>
+    <string name="favorite_tags_new">Marika vaovao</string>
+    <string name="favorite_tags_add">Ampio</string>
+    <string name="favorite_tags_none">Mbola tsy misy marika. Soraty ny anarana hanampiana iray.</string>
+    <string name="favorite_tags_all">Rehetra</string>
+    <string name="favorite_tags_manage">Hikarakara ny marika</string>
+    <string name="favorite_tags_name">Anarana</string>
+    <string name="favorite_tags_rename">Hanova anarana</string>
+    <string name="favorite_tags_rename_title">Hanova ny anaran\'ny marika</string>
+    <string name="favorite_tags_delete">Fafao</string>
+    <string name="favorite_tags_delete_title">Hofafana ve ny marika?</string>
+    <string name="favorite_tags_delete_message">Esorina amin\'ny ankafizina rehetra ve ny marika \"%1$s\"?</string>
     <string name="recent_remove">Esory amin\'ny vao haingana</string>
     <string name="watched_mark">Mariho ho efa nojerena</string>
     <string name="watched_unmark">Mariho ho mbola tsy nojerena</string>
