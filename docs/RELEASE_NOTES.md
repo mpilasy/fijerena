@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261106191210
 
 - **Clear guide data shows its progress:** while a guide source's data is cleared, its card shows how far it is ("Clearing guide data: 50,000 of 302,400 programmes…") with a bar, then "Freeing space…", and "Guide data cleared" at the end; the card's stats then show zero. Before, nothing showed until it ended, which on a large guide could take minutes. The clear also goes on when you leave the page; before, leaving the page stopped it halfway. TV and phone.
 
