@@ -17,12 +17,9 @@ import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 
-/**
- * The player's Stats button is for a Nerd only, whatever the Admin flag
- * (docs/plans/20261103_nerd-role-sync-failures-plan.md, Lane G).
- */
+/** The player's Stats button is for every profile, a Nerd or not, as on the phone (user, 2026-11-06). */
 @RunWith(RobolectricTestRunner::class)
-class TvPlayerStatsNerdTest {
+class TvPlayerStatsButtonTest {
     @get:Rule
     val rule =
         androidx.compose.ui.test.junit4
@@ -65,9 +62,9 @@ class TvPlayerStatsNerdTest {
     }
 
     @Test
-    fun anotherProfileHasNoStatsButton() {
+    fun anotherProfileHasTheStatsButtonToo() {
         showControls(nerd = false)
 
-        rule.onAllNodesWithContentDescription("Stats").assertCountEquals(0)
+        rule.onAllNodesWithContentDescription("Stats").assertCountEquals(1)
     }
 }

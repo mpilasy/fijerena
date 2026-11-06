@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Stats for Nerds for everyone on TV:** the Stats button in the TV player's controls now shows for every profile, as on the phone, not only for a Nerd. On live TV without the channel panel, the controls now open on Stats.
+
 ## Version: 0.9.20261106144615
 
 - **Kids' charts on a child's Home:** a child profile now has its own Trending and Popular rows for films and shows, on Home and in the Charts list: popular films rated up to PG-13 in the Family or Animation genres, and shows of TMDB's Kids or Family genres, cut down to what the child's sources have and the parental controls allow. Other profiles keep the usual charts. Needs TMDB Charts on (Admin → Sources & Guide). TV and phone.

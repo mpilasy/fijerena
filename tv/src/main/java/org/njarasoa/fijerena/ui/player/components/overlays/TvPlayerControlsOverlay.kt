@@ -133,7 +133,7 @@ fun TvPlayerControlsOverlay(
     // left when there is no logo.
     waiting: Boolean = false,
     hideTopBars: Boolean = false,
-    // The resolution/codec line and Stats are for a Nerd only (AppSettings.isNerdMode, via PlayerScreenState).
+    // The resolution/codec line is for a Nerd only (AppSettings.isNerdMode, via PlayerScreenState).
     isNerd: Boolean = false,
     // Live TV in full screen: opens the channel panel (LT4). Null (VOD, the standalone route)
     // leaves the Channels button out.
@@ -227,18 +227,14 @@ fun TvPlayerControlsOverlay(
     // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
     // implicit first child — whichever button happens to be first for this stream. Live opens on
     // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
-    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats (Nerd),
-    // else Guide — never on Favourite or a track picker. With none of them it leaves focus
-    // where it is (the player), where OK does no harm.
+    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats, which
+    // every profile has — never on Favourite or a track picker.
     val channelsFocusRequester = remember { FocusRequester() }
-    val guideFocusRequester = remember { FocusRequester() }
     val statsFocusRequester = remember { FocusRequester() }
     val safeIconFocusRequester =
         when {
             onShowChannels != null -> channelsFocusRequester
-            isNerd -> statsFocusRequester
-            onShowGuide != null -> guideFocusRequester
-            else -> null
+            else -> statsFocusRequester
         }
 
     // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
@@ -252,7 +248,7 @@ fun TvPlayerControlsOverlay(
         val opener = pickerOpener
         if (!pickerOpen && opener != null) {
             pickerOpener = null
-            opener.requestFocusWithRetry(fallback = safeIconFocusRequester ?: iconRowFocusRequester)
+            opener.requestFocusWithRetry(fallback = safeIconFocusRequester)
         }
     }
 
@@ -268,7 +264,7 @@ fun TvPlayerControlsOverlay(
     // track buttons can come and go under focus, so focus goes back to Channels on each zap.
     LaunchedEffect(showFullControls, isLive, canFocusPlayPause, metadata.streamUrl.takeIf { isLive }) {
         if (showFullControls && !reachedPlayPauseFocus) {
-            val requester = (if (isLive) safeIconFocusRequester else controlsFocusRequester) ?: return@LaunchedEffect
+            val requester = if (isLive) safeIconFocusRequester else controlsFocusRequester
             // requestFocus() fails (returns false) if its target isn't composed/laid out yet: the
             // row composes with the controls, so one frame's delay wasn't always enough, and a
             // single fixed retry left focus wherever it was before the OSD opened — a following
@@ -716,7 +712,6 @@ fun TvPlayerControlsOverlay(
                                 icon = CinemaIcons.DateRange,
                                 label = stringResource(R.string.player_osd_guide),
                                 onClick = onShowGuide,
-                                modifier = Modifier.focusRequester(guideFocusRequester),
                             )
                         }
 
@@ -798,15 +793,13 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // Stats: a diagnostic, so for a Nerd only.
-                        if (isNerd) {
-                            OsdButton(
-                                icon = CinemaIcons.BarChart,
-                                label = stringResource(R.string.player_stats),
-                                onClick = onShowStats,
-                                modifier = Modifier.focusRequester(statsFocusRequester),
-                            )
-                        }
+                        // Stats: for every profile, as on the phone (user, 2026-11-06).
+                        OsdButton(
+                            icon = CinemaIcons.BarChart,
+                            label = stringResource(R.string.player_stats),
+                            onClick = onShowStats,
+                            modifier = Modifier.focusRequester(statsFocusRequester),
+                        )
                     }
                 }
             }

@@ -4,7 +4,7 @@
 # banner to hide. Focus is on the player root, which has no text, so there is no @start.
 # The OSD is one row of labelled buttons: Channels, Guide (GD5, when the source has a guide —
 # iptv's is indexed), Add to Favourites (Remove from Favourites when it is one),
-# Subtitles / Audio / Quality when the stream has them, Stats (Nerd). Up/Down with it up
+# Subtitles / Audio / Quality when the stream has them, Stats. Up/Down with it up
 # zap, deliberately not walked (they change the channel).
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # OK opens the OSD with focus on Channels (not on Favorite: a stray second OK must not favourite).
