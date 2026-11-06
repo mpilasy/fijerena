@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -48,7 +49,9 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
+import org.njarasoa.fijerena.core.ui.sync.DeviceBuildLine
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.sync.isOlderBuild
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -82,6 +85,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val stopStates by viewModel.stopStates.collectAsStateWithLifecycle()
     var scanning by remember { mutableStateOf(false) }
@@ -161,7 +165,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         onScan = { scanning = true },
                     )
                     ShareNowPlayingRow(shareNowPlaying, viewModel::setShareNowPlaying)
-                    DevicesPanel(ui.devices, nowPlaying, stopStates, onStop = {
+                    DevicesPanel(ui.devices, nowPlaying, deviceBuilds, stopStates, onStop = {
                         confirmStop = it
                     }, onRename = { renaming = it }, onRemove = {
                         confirmRemove =
@@ -343,12 +347,15 @@ private fun LinkedPanel(
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
+    /** Each device's reported build, by device id (the device builds plan). */
+    builds: Map<String, DeviceBuild>,
     stopStates: Map<String, SyncSettingsViewModel.StopState>,
     onStop: (SyncWire.Device) -> Unit,
     onRename: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val active = devices?.filterNot { it.revoked } ?: return
+    val listedBuilds = active.mapNotNull { builds[it.id] }
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
             CinemaText(stringResource(R.string.live_sync_devices_title), role = TextRole.Heading, tone = TextTone.Primary)
@@ -370,6 +377,7 @@ private fun DevicesPanel(
                                 tone = TextTone.Secondary,
                             )
                         }
+                        DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
                         nowPlaying[device.id]?.let {
                             CinemaText(nowPlayingLine(it), role = TextRole.BodySmall, tone = TextTone.Accent)
                         }

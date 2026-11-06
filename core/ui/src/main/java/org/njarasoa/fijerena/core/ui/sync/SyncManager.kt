@@ -214,6 +214,7 @@ class SyncManager internal constructor(
         try {
             AppSettings(app).reportDeviceBuild(deviceId, DeviceBuild.current(app))
         } catch (e: Exception) {
+            // cancellation-ok: plain code with no suspension point
             Log.w(TAG, "Couldn't report this device's build", e)
         }
     }

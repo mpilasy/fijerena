@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.PinRequests
@@ -75,6 +76,16 @@ class SyncSettingsViewModel(
         AppSettings(app)
             .observeDeviceNames()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * Each device's reported build, by device id (the device builds plan); this device's own read
+     * from its package, so it shows before its record is first written.
+     */
+    val deviceBuilds: StateFlow<Map<String, DeviceBuild>> =
+        combine(AppSettings(app).observeDeviceBuilds(), ui) { builds, current ->
+            val me = current.devices?.firstOrNull { it.current }?.id
+            if (me == null) builds else builds + (me to DeviceBuild.current(app))
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private fun Ui.named(names: Map<String, String>) = copy(devices = devices?.map { d -> names[d.id]?.let { d.copy(name = it) } ?: d })
 

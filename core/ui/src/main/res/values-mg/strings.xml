@@ -1188,6 +1188,8 @@
     <string name="live_sync_scan_code">Vakio kaody</string>
     <string name="live_sync_devices_title">Fitaovana</string>
     <string name="live_sync_device_this">Ity fitaovana ity</string>
+    <string name="live_sync_device_build_unknown">Mbola tsy nambara ny dika</string>
+    <string name="live_sync_device_build_older">Dika taloha</string>
     <string name="live_sync_device_last_seen">Hita farany %1$s</string>
     <string name="live_sync_device_remove">Esory</string>
     <string name="live_sync_device_rename">Hanova anarana</string>

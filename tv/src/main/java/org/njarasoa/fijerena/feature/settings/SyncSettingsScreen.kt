@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -44,7 +45,9 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
+import org.njarasoa.fijerena.core.ui.sync.DeviceBuildLine
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.sync.isOlderBuild
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -81,6 +84,7 @@ fun SyncSettingsScreen() {
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
@@ -155,7 +159,10 @@ fun SyncSettingsScreen() {
             // left-aligned Leave button's beam, so plain focus search skipped it for the share switch.
             val lastActionFocus = remember { FocusRequester() }
             val hasDevices = ui.devices.orEmpty().any { !it.revoked }
-            DevicesPanel(ui.devices, nowPlaying, lastActionFocus, onRename = { renaming = it }, onRemove = { confirmRemove = it })
+            DevicesPanel(ui.devices, nowPlaying, deviceBuilds, lastActionFocus, onRename = { renaming = it }, onRemove = {
+                confirmRemove =
+                    it
+            })
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             CinemaText(
                 stringResource(R.string.provider_section_danger_zone),
@@ -354,6 +361,8 @@ private fun LinkedPanel(
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
+    /** Each device's reported build, by device id (the device builds plan). */
+    builds: Map<String, DeviceBuild>,
     /** On the last row's last button: Up from Leave below lands there. */
     lastActionFocus: FocusRequester,
     onRename: (SyncWire.Device) -> Unit,
@@ -361,6 +370,7 @@ private fun DevicesPanel(
 ) {
     val scale = LocalUiScale.current
     val active = devices?.filterNot { it.revoked } ?: return
+    val listedBuilds = active.mapNotNull { builds[it.id] }
     val last = active.lastOrNull()
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
@@ -387,6 +397,7 @@ private fun DevicesPanel(
                                 tone = TextTone.Secondary,
                             )
                         }
+                        DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
                         nowPlaying[device.id]?.let {
                             CinemaText(
                                 nowPlayingLine(it),
