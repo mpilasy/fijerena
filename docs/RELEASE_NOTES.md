@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261106024835
 
 - **Tags on favourites:** give a favourite channel, film or show one or more tags of your own, such as "News" or "Weekend". Hold OK (TV) or long-press (phone) on a favourite and choose **Tags**: check the profile's tags or type a new one. The Favourites list then shows the tags under its tabs: choose one to see only its favourites, or **All**. **Manage Tags** at the end of that row renames or deletes a tag on every favourite. A profile has one set of tags for all its sources. Tags sync to the profile's other devices and go into the settings export. Favourites of a Jellyfin source, which Jellyfin keeps, cannot have tags. TV and phone.
 
