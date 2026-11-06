@@ -485,10 +485,28 @@ class EpgManagementViewModel(
         viewModelScope.launchGuarded("EpgManagementViewModel.deleteSource") {
             withContext(Dispatchers.IO) {
                 settingsDb().epgSourceDao().deleteGuide(id)
-                // Also delete its transient data from the index (manual cascade)
-                indexDb().epgIndexDao().deleteBySourceId(id)
+                // Also delete its data from the index (manual cascade), and give the space back.
+                indexer.clearSource(id)
                 refreshDbStats()
             }
+        }
+    }
+
+    /**
+     * Deletes guide source [id]'s channels and programmes from the guide index and gives the space
+     * back, but keeps the guide source: a guide source that is off keeps its data until this. Its
+     * next refresh imports it again in full.
+     */
+    fun clearSourceData(id: Long) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.clearSourceData") {
+            withContext(Dispatchers.IO) {
+                indexer.clearSource(id)
+                settingsDb().epgSourceDao().forgetIngest(id)
+                refreshDbStats()
+            }
+            // The card's "Listings until" is read again.
+            _dbGeneration.value++
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_source_data_cleared))
         }
     }
 

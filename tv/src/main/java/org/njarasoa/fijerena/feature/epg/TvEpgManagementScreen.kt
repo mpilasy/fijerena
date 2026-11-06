@@ -125,6 +125,7 @@ fun TvEpgManagementScreen(
     var addForSource by remember { mutableStateOf<Long?>(null) }
     var editingCard by remember { mutableStateOf<EpgManagementViewModel.GuideCard?>(null) }
     var deletingCard by remember { mutableStateOf<EpgManagementViewModel.GuideCard?>(null) }
+    var clearingCard by remember { mutableStateOf<EpgManagementViewModel.GuideCard?>(null) }
 
     val scale = LocalUiScale.current
     val listState = rememberLazyListState()
@@ -387,6 +388,14 @@ fun TvEpgManagementScreen(
                                                 Modifier
                                             },
                                     )
+                                    // A guide source that is off keeps its data; this frees its space.
+                                    if (!source.enabled) {
+                                        TvIconAction(
+                                            onClick = { clearingCard = card },
+                                            icon = CinemaIcons.ClearData,
+                                            label = stringResource(R.string.epg_clear_source_data_button),
+                                        )
+                                    }
                                     TvIconAction(
                                         onClick = { deletingCard = card },
                                         icon = CinemaIcons.Delete,
@@ -667,6 +676,25 @@ fun TvEpgManagementScreen(
             forSources = guideProviders,
             initialFor = card.usedBy.mapTo(HashSet()) { it.id },
             ownGuideOf = card.ownGuideOf,
+        )
+    }
+
+    clearingCard?.let { card ->
+        CinemaAlertDialog(
+            onDismissRequest = { clearingCard = null },
+            danger =
+                DialogAction(stringResource(R.string.epg_clear_source_data_button)) {
+                    viewModel.clearSourceData(card.source.id)
+                    clearingCard = null
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { clearingCard = null },
+            title = stringResource(R.string.epg_clear_source_data_title),
+            text = {
+                CinemaText(
+                    stringResource(R.string.epg_clear_source_data_message, card.source.label.ifBlank { card.source.url }),
+                    tone = TextTone.Secondary,
+                )
+            },
         )
     }
 

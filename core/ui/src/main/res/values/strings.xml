@@ -279,6 +279,10 @@
     <string name="epg_cellular_confirm_title">Use Mobile Data?</string>
     <string name="epg_cellular_confirm_message">You are on mobile data. A guide refresh can download a lot of data.</string>
     <string name="epg_delete_source_confirm_message">Delete \"%1$s\"? Its guide data will be deleted.</string>
+    <string name="epg_clear_source_data_button">Clear guide data</string>
+    <string name="epg_clear_source_data_title">Clear Guide Data?</string>
+    <string name="epg_clear_source_data_message">Clear the guide data of \"%1$s\"? This frees its space on this device. The guide source stays: when you turn it on again, its next refresh downloads the guide again.</string>
+    <string name="epg_source_data_cleared">Guide data cleared</string>
 
     <!-- Category -->
     <string name="category_select_category">Select a category</string>

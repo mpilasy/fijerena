@@ -288,6 +288,13 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
     suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
 
+    /** Deletes up to [limit] of [sourceId]'s programmes; returns how many. See `EpgIndexer.clearSource`. */
+    @Query("DELETE FROM epg_programme WHERE id IN (SELECT id FROM epg_programme WHERE source_id = :sourceId LIMIT :limit)")
+    suspend fun deleteProgrammesOfSourceBatch(
+        sourceId: Long,
+        limit: Int,
+    ): Int
+
     /**
      * [sourceId]'s programmes that run past the next start on their channel end there instead —
      * guides list a live event until a fixed cut-off on top of the normal schedule (panel-a: 27 h NFL

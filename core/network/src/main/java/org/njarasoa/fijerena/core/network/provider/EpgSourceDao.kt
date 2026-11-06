@@ -206,6 +206,23 @@ interface EpgSourceDao {
     suspend fun forgetValidators(id: Long)
 
     /**
+     * The source's guide data was cleared: it shows as never refreshed, and its next refresh
+     * downloads and imports it again (no validators or content hash). Only local columns change,
+     * so nothing is synced.
+     */
+    @Query(
+        """
+        UPDATE epg_source SET last_ingested_at_ms = 0, last_error = NULL, last_channels = 0, last_programmes = 0,
+            last_download_bytes = 0, last_ingestion_duration_ms = 0, last_download_duration_ms = 0,
+            last_index_duration_ms = 0, last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL,
+            last_failed_at_ms = NULL, failures_since_success = 0, file_utc_offset_minutes = NULL,
+            applied_utc_offset_minutes = NULL
+        WHERE id = :id
+        """,
+    )
+    suspend fun forgetIngest(id: Long)
+
+    /**
      * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the
      * timestamp and clear any prior error, but leave the channel/programme counts and validators
      * as they were. Reusing [markIngested] here would zero the counts, making a genuinely

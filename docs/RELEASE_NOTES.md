@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Clear a guide source's data:** a guide source that is turned off keeps its guide data, which can be large (1.1 GB on a Chromecast HD). Its card now has **Clear guide data**, which deletes that data and frees the space on this device. The guide source stays: turn it on again and its next refresh downloads the whole guide again. Deleting a guide source now also frees its space at once; before, the space came back only at the next guide import. TV and phone.
+
 ## Version: 0.9.20261106152527
 
 - **Stats for Nerds for everyone on TV:** the Stats button in the TV player's controls now shows for every profile, as on the phone, not only for a Nerd. On live TV without the channel panel, the controls now open on Stats.

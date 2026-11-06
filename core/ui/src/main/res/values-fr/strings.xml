@@ -279,6 +279,10 @@
     <string name="epg_cellular_confirm_title">Utiliser les données mobiles ?</string>
     <string name="epg_cellular_confirm_message">Vous êtes sur les données mobiles. Actualiser le guide peut télécharger beaucoup de données.</string>
     <string name="epg_delete_source_confirm_message">Supprimer « %1$s » ? Ses données de guide seront effacées.</string>
+    <string name="epg_clear_source_data_button">Effacer les données du guide</string>
+    <string name="epg_clear_source_data_title">Effacer les données du guide ?</string>
+    <string name="epg_clear_source_data_message">Effacer les données du guide de « %1$s » ? Cela libère leur espace sur cet appareil. La source de guide reste : quand vous la réactivez, sa prochaine actualisation télécharge à nouveau le guide.</string>
+    <string name="epg_source_data_cleared">Données du guide effacées</string>
 
     <!-- Category -->
     <string name="category_select_category">Sélectionner une catégorie</string>

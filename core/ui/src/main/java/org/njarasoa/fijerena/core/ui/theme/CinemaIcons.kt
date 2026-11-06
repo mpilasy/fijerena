@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.CheckBox
 import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircleOutline
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -94,6 +95,7 @@ import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CheckCircleOutline
+import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -154,6 +156,7 @@ import androidx.compose.material.icons.sharp.CheckBox
 import androidx.compose.material.icons.sharp.CheckBoxOutlineBlank
 import androidx.compose.material.icons.sharp.CheckCircle
 import androidx.compose.material.icons.sharp.CheckCircleOutline
+import androidx.compose.material.icons.sharp.CleaningServices
 import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material.icons.sharp.CloudOff
 import androidx.compose.material.icons.sharp.ContentCopy
@@ -522,6 +525,12 @@ object CinemaIcons {
         @Composable @ReadOnlyComposable
         get() =
             pick(Icons.Rounded.DeleteForever, Icons.Outlined.DeleteForever, Icons.Sharp.DeleteForever)
+
+    /** Clear a guide source's data (the guide sources page). */
+    val ClearData: ImageVector
+        @Composable @ReadOnlyComposable
+        get() =
+            pick(Icons.Rounded.CleaningServices, Icons.Outlined.CleaningServices, Icons.Sharp.CleaningServices)
 
     val DateRange: ImageVector
         @Composable @ReadOnlyComposable

@@ -228,6 +228,7 @@ fun MobileEpgManagementScreen(
                             onAutoRefresh = { intervalSource = source },
                             onEdit = { editingCard = card },
                             onDelete = { viewModel.deleteSource(source.id) },
+                            onClearData = { viewModel.clearSourceData(source.id) },
                             onEnabledChange = { viewModel.setSourceEnabled(card, it) },
                         )
                     }
@@ -367,10 +368,12 @@ private fun EpgSourceCard(
     onAutoRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onClearData: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
 ) {
     val source = card.source
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
 
     GlassPanel {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
@@ -578,7 +581,8 @@ private fun EpgSourceCard(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            // The card's actions, in the same order and tones as on TV: Refresh, Edit, Auto Refresh, Delete.
+            // The card's actions, in the same order and tones as on TV: Refresh, Edit, Auto Refresh,
+            // Clear guide data (only when off), Delete.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
@@ -595,6 +599,14 @@ private fun EpgSourceCard(
                     icon = CinemaIcons.Schedule,
                     label = stringResource(R.string.epg_auto_refresh_title),
                 )
+                // A guide source that is off keeps its data; this frees its space.
+                if (!source.enabled) {
+                    IconAction(
+                        onClick = { showClearConfirm = true },
+                        icon = CinemaIcons.ClearData,
+                        label = stringResource(R.string.epg_clear_source_data_button),
+                    )
+                }
                 IconAction(
                     onClick = { showDeleteConfirm = true },
                     icon = CinemaIcons.Delete,
@@ -603,6 +615,26 @@ private fun EpgSourceCard(
                 )
             }
         }
+    }
+
+    if (showClearConfirm) {
+        CinemaAlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            danger =
+                DialogAction(stringResource(R.string.epg_clear_source_data_button)) {
+                    onClearData()
+                    showClearConfirm = false
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { showClearConfirm = false },
+            title = stringResource(R.string.epg_clear_source_data_title),
+            text = {
+                CinemaText(
+                    stringResource(R.string.epg_clear_source_data_message, source.label.ifBlank { source.url }),
+                    role = TextRole.Body,
+                    tone = TextTone.Inherit,
+                )
+            },
+        )
     }
 
     if (showDeleteConfirm) {

@@ -279,6 +279,10 @@
     <string name="epg_cellular_confirm_title">Hampiasa angona finday ve?</string>
     <string name="epg_cellular_confirm_message">Angona finday no ampiasainao izao. Mety haka angona be ny fanavaozana ny fandaharana.</string>
     <string name="epg_delete_source_confirm_message">Hofafana ve i \"%1$s\"? Hofafana ny angon\'ny fandaharana avy aminy.</string>
+    <string name="epg_clear_source_data_button">Fafao ny angon\'ny fandaharana</string>
+    <string name="epg_clear_source_data_title">Hofafana ve ny angon\'ny fandaharana?</string>
+    <string name="epg_clear_source_data_message">Hofafana ve ny angon\'ny fandaharana avy amin\'i \"%1$s\"? Manafaka ny toerana misy azy amin\'ity fitaovana ity izany. Mijanona ny loharanon\'ny fitarihana: rehefa alefanao indray izy, dia haka ny fandaharana indray ny fanavaozana manaraka.</string>
+    <string name="epg_source_data_cleared">Voafafa ny angon\'ny fandaharana</string>
 
     <!-- Category -->
     <string name="category_select_category">Misafidiana sokajy</string>

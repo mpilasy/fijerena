@@ -551,6 +551,8 @@ class AutoXmltvSourcesTest {
 
         override suspend fun forgetValidators(id: Long) = error("unused")
 
+        override suspend fun forgetIngest(id: Long) = error("unused")
+
         override suspend fun markUnchanged(
             id: Long,
             timestamp: Long,

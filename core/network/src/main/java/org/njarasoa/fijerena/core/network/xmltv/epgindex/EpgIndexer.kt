@@ -85,6 +85,9 @@ class EpgIndexer private constructor(
         /** Free pages moved per `incremental_vacuum` batch — about 2 MB at this DB's page size. */
         private const val VACUUM_CHUNK_PAGES = 2000
 
+        /** Programmes per delete in [clearSource]. */
+        private const val CLEAR_BATCH_ROWS = 5000
+
         private fun getBatchSize(context: Context): Int {
             val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
             return if (isTv) BATCH_SIZE_TV else BATCH_SIZE_MOBILE
@@ -1090,6 +1093,35 @@ class EpgIndexer private constructor(
                 throw e
             } catch (e: Exception) {
                 0
+            }
+        }
+
+    /**
+     * Deletes all of guide source [sourceId]'s channels and programmes, and gives the freed space
+     * back to the device. The programmes go in batches: one delete of a guide of a million rows
+     * (the search index follows each row through its triggers) would need room for all of it in
+     * the write-ahead log, on a device that has little room left (a Chromecast HD).
+     */
+    suspend fun clearSource(sourceId: Long) =
+        withContext(Dispatchers.IO) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            writeMutex.withLock {
+                while (dao.deleteProgrammesOfSourceBatch(sourceId, CLEAR_BATCH_ROWS) > 0) Unit
+                dao.deleteChannelsBySourceId(sourceId)
+                val channelCount = dao.getChannelCount()
+                val programmeCount = dao.getProgrammeCount()
+                // The totals Guide Data Maintenance shows, also after a restart.
+                dao.getMetadata()?.let { dao.insertMetadata(it.copy(channelCount = channelCount, programmeCount = programmeCount)) }
+                if (_state.value is EpgIndexState.Indexed) {
+                    _state.value =
+                        if (programmeCount > 0) {
+                            EpgIndexState.Indexed(channelCount, programmeCount, System.currentTimeMillis())
+                        } else {
+                            EpgIndexState.NotIndexed
+                        }
+                }
+                incrementalVacuumLocked()
             }
         }
 
