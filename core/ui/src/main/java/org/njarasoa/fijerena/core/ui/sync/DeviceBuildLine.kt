@@ -23,7 +23,11 @@ fun DeviceBuildLine(
         return
     }
     val parts =
-        listOfNotNull(build.versionName, build.buildType.ifEmpty { null }, build.androidRelease.ifEmpty { null }?.let { "Android $it" })
+        listOfNotNull(
+            build.versionName,
+            build.buildType.ifEmpty { null },
+            build.androidRelease.ifEmpty { null }?.let { "Android\u00A0$it" },
+        )
     CinemaText(parts.joinToString(" · "), role = TextRole.BodySmall, tone = TextTone.Secondary)
     if (older) CinemaText(stringResource(R.string.live_sync_device_build_older), role = TextRole.BodySmall, tone = TextTone.Warning)
 }

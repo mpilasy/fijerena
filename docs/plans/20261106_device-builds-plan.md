@@ -1,6 +1,6 @@
 # Device builds in Live Sync
 
-**Status:** Planned 2026-11-06. The user answered DB-Q1 and DB-Q2 on 2026-11-06 (see Answers). DB1 and DB2 done 2026-11-06; records synced both ways on the emulators; the Live Sync page itself not yet seen (it asks the Admin PIN).
+**Status:** Planned 2026-11-06. The user answered DB-Q1 and DB-Q2 on 2026-11-06 (see Answers). All phases done 2026-11-06 and walked on both emulators.
 
 ## Goal
 
@@ -59,7 +59,7 @@ TV and phone shows it under each device's name, for example "0.9.20261106024835 
 | Phase | Work | Status |
 |---|---|---|
 | DB1 | **Data and sync.** `DeviceBuild` (read from the package and the manifest's `fijerena.buildType`), the `device_build:<deviceId>` setting in `AppSettings` (report on a change, apply, send, observe), seeding on link, the report from `SyncManager`. Tests: write only on change, apply, a later field ignored, a bad or huge value left out. | Done 2026-11-06 |
-| DB2 | **Display.** The build line under each device on TV and phone, the "not reported" text and the DB-Q2 mark. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators: each emulator sees the other's build after both are opened. | Done 2026-11-06: both emulators hold both builds (`debug`, versionCode 87); the page itself not yet seen |
+| DB2 | **Display.** The build line under each device on TV and phone, the "not reported" text and the DB-Q2 mark. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators: each emulator sees the other's build after both are opened. | Done 2026-11-06, walked on both emulators: both hold both builds (`debug`, versionCode 87); the list shows them on TV and phone ("Android 16" kept on one line) |
 
 Each phase is one commit on main.
 
