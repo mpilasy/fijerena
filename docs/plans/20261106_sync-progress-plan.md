@@ -53,10 +53,11 @@ longest silent wait, and logs every pass so the next slow case can be explained.
 | SP2 | **No silent wait.** The 60 s pull while the socket is down (SP-D6), the socket state in `Status`, Reconnect now. Tests with the fake socket factory: a failed socket pulls every 60 s and stops when it opens or in the background. | Done 2026-11-06 |
 | SP3 | **Display.** The progress line and bar, and the connection state, on the Live Sync page and its card, TV and phone. Docs: FEATURES (Live Sync), RELEASE_NOTES. Checked on both emulators with a Full resync on a larger account (seeded history) and with the sync server stopped and started. | Done 2026-11-06, walked on both emulators: connected, reconnecting with the server stopped, Reconnect now and its focus, progress recorded on a Full resync (548 records, 2 pages, with the 1 s threshold off in a test build) |
 
+| SP4 | **Download ahead** (user, 2026-11-06: "why does the wait need to be synchronous?"). The next page downloads while the current one is applied (`supervisorScope` + `async` in `SyncEngine.pull`). Pages still apply in order, and the cursor is still saved after each applied page (F-09); a failed download fails the pass only when awaited, after the page before it was saved. Test: page 2 is fetched before page 1 is applied. | Done 2026-11-06 |
 Each phase is one commit on main. The server change (SP1) needs the user's server redeployed for
 the totals; without it the app still shows counts.
 
 ## Not in scope
 
 - Background sync while the app is closed (by design, sync runs in the foreground only).
-- Making the apply faster; SP-D7's logs first say where the time goes.
+- Making the apply itself faster; SP-D7's logs first say where the time goes. (Downloading ahead, SP4, overlaps the network with it.)

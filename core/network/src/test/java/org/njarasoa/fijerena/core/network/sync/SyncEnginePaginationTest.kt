@@ -126,6 +126,32 @@ class SyncEnginePaginationTest {
         }
 
     @Test
+    fun `the next page downloads while this one is applied, and pages still apply in order`() =
+        runBlocking {
+            val events = mutableListOf<String>()
+            coEvery { api.pull(any(), any(), 0L, any()) } answers {
+                events += "pull 0"
+                SyncWire.PullResponse(head = 3, more = true, records = listOf(wire("a", 1), wire("b", 2)))
+            }
+            coEvery { api.pull(any(), any(), 2L, any()) } answers {
+                events += "pull 2"
+                SyncWire.PullResponse(head = 3, more = false, records = listOf(wire("c", 3)))
+            }
+            coEvery { anyConstructed<SyncApplier>().apply(any()) } coAnswers {
+                // Long enough for the download started before this apply to land first.
+                kotlinx.coroutines.delay(50)
+                val batch = firstArg<List<SyncRecord>>()
+                events += "apply " + batch.joinToString(",") { it.key.itemId }
+                SyncApplier.Result(batch.size, 0, emptyList(), emptySet(), emptySet(), false)
+            }
+
+            engine().syncNow()
+
+            assertEquals(listOf("pull 0", "pull 2", "apply a,b", "apply c"), events)
+            assertEquals(3L, cursor)
+        }
+
+    @Test
     fun `without a remaining count from an older server, progress has no total`() =
         runBlocking {
             coEvery { api.pull(any(), any(), 0L, any()) } returns

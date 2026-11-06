@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -138,48 +140,58 @@ class SyncEngine(
         var received = 0
         var pages = 0
         listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, 0, null))
-        while (true) {
-            val page = api.pull(link.serverUrl, link.deviceToken, store.cursor)
-            if (page.resync) {
-                // Tombstones this device never saw are gone from the server: start over from 0.
-                // Everything is re-applied against local versions, so only real changes land.
-                Log.i(TAG, "Cursor ${store.cursor} is past the server's tombstone horizon; pulling everything")
-                store.cursor = 0
-                continue
-            }
-            val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
-            // Records waiting for a provider or profile get another go when a page brings one, and
-            // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and
-            // applied again per page made a full resync of a large account many times slower.
-            val retryWaiting =
-                waiting.isNotEmpty() &&
-                    (!page.more || decodedPage.any { it.key.kind == SyncKind.PROVIDER || it.key.kind == SyncKind.PROFILE })
-            val result =
-                applier.apply(
-                    if (retryWaiting) waiting.mapNotNull { SyncCodec.decode(it, crypto) } + decodedPage else decodedPage,
+        // The next page downloads while this one is applied (the sync progress plan): pages still
+        // apply in order and the cursor is still saved after each applied page, so a crash resumes
+        // where it did. supervisorScope: a failed download fails the pass only when it is awaited,
+        // after the page before it was applied and saved — never in the middle of that page.
+        supervisorScope {
+            var next = async { api.pull(link.serverUrl, link.deviceToken, store.cursor) }
+            while (true) {
+                val page = next.await()
+                if (page.resync) {
+                    // Tombstones this device never saw are gone from the server: start over from 0.
+                    // Everything is re-applied against local versions, so only real changes land.
+                    Log.i(TAG, "Cursor ${store.cursor} is past the server's tombstone horizon; pulling everything")
+                    store.cursor = 0
+                    next = async { api.pull(link.serverUrl, link.deviceToken, 0L) }
+                    continue
+                }
+                val pageCursor = page.records.lastOrNull()?.seq ?: store.cursor
+                if (page.more) next = async { api.pull(link.serverUrl, link.deviceToken, pageCursor) }
+                val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
+                // Records waiting for a provider or profile get another go when a page brings one, and
+                // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and
+                // applied again per page made a full resync of a large account many times slower.
+                val retryWaiting =
+                    waiting.isNotEmpty() &&
+                        (!page.more || decodedPage.any { it.key.kind == SyncKind.PROVIDER || it.key.kind == SyncKind.PROFILE })
+                val result =
+                    applier.apply(
+                        if (retryWaiting) waiting.mapNotNull { SyncCodec.decode(it, crypto) } + decodedPage else decodedPage,
+                    )
+                applied += result.applied
+                activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
+                providerDeleted = providerDeleted || result.providerDeleted
+                if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
+                if (result.providerChangedIds.isNotEmpty()) listener?.onProvidersChanged(result.providerChangedIds)
+                if (result.wantedChanged) listener?.onWantedChanged()
+                val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
+                val deferredNow = (if (retryWaiting) waiting + page.records else page.records).filter { it.key in deferredKeys }
+                waiting = (if (retryWaiting) deferredNow else waiting + deferredNow).takeLast(MAX_DEFERRED)
+                // Together, every page: saving only the cursor here (and the waiting records after
+                // the loop) would lose the records this page deferred whenever a later page failed — the
+                // cursor would already have moved past them, so nothing would ever fetch them again. See
+                // the rock solid stability resilience plan → F-09.
+                store.savePullProgress(
+                    cursor = pageCursor,
+                    deferred = waiting.map { json.encodeToString(it) }.toSet(),
                 )
-            applied += result.applied
-            activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
-            providerDeleted = providerDeleted || result.providerDeleted
-            if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
-            if (result.providerChangedIds.isNotEmpty()) listener?.onProvidersChanged(result.providerChangedIds)
-            if (result.wantedChanged) listener?.onWantedChanged()
-            val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
-            val deferredNow = (if (retryWaiting) waiting + page.records else page.records).filter { it.key in deferredKeys }
-            waiting = (if (retryWaiting) deferredNow else waiting + deferredNow).takeLast(MAX_DEFERRED)
-            // Together, every page: saving only the cursor here (and the waiting records after
-            // the loop) would lose the records this page deferred whenever a later page failed — the
-            // cursor would already have moved past them, so nothing would ever fetch them again. See
-            // the rock solid stability resilience plan → F-09.
-            store.savePullProgress(
-                cursor = page.records.lastOrNull()?.seq ?: store.cursor,
-                deferred = waiting.map { json.encodeToString(it) }.toSet(),
-            )
-            received += page.records.size
-            pages++
-            val total = page.remaining?.let { (received + it).toInt() }
-            listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, received, total))
-            if (!page.more) break
+                received += page.records.size
+                pages++
+                val total = page.remaining?.let { (received + it).toInt() }
+                listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, received, total))
+                if (!page.more) break
+            }
         }
         if (activeProfileDeleted) listener?.onActiveProfileDeleted()
         if (providerDeleted) listener?.onProviderDeleted()
