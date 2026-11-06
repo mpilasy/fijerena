@@ -1107,7 +1107,9 @@ class EpgIndexer private constructor(
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
             writeMutex.withLock {
-                while (dao.deleteProgrammesOfSourceBatch(sourceId, CLEAR_BATCH_ROWS) > 0) Unit
+                do {
+                    val deleted = dao.deleteProgrammesOfSourceBatch(sourceId, CLEAR_BATCH_ROWS)
+                } while (deleted > 0)
                 dao.deleteChannelsBySourceId(sourceId)
                 val channelCount = dao.getChannelCount()
                 val programmeCount = dao.getProgrammeCount()
