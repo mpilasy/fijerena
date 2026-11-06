@@ -422,9 +422,9 @@ fun ContentTypeSelectionScreen(
         snapshotFlow { liveRowLoaded }.first { it }
         val loaded =
             listOf(ContentType.MOVIES, ContentType.TV_SHOWS)
-                .filter { showCharts && !child && it in supportedContentTypes }
+                .filter { showCharts && it in supportedContentTypes }
                 .flatMap { type -> withContext(Dispatchers.IO) { ChartRows.load(context.applicationContext, merged, type) } }
-                .associate { it.chart to it.items }
+                .associate { it.chart.homeRow to it.items }
         // Rows the same after a flip (no title more): focus never left the switch.
         if (loaded != chartItems) chartItems = loaded else chartSwitchFlipped = null
         chartsLoaded = true
@@ -513,7 +513,7 @@ fun ContentTypeSelectionScreen(
     val chartShows: (HomeShelf) -> Boolean = { shelf -> shelf.chart in chartItems }
     val chartSwitchFocus = remember { chartShelves.associateWith { FocusRequester() } }
     // The row's items before its first card: a Trending row's switch.
-    val itemsBeforeCards: (HomeShelf) -> Int = { shelf -> if (shelf.chart?.canShowMissing == true) 1 else 0 }
+    val itemsBeforeCards: (HomeShelf) -> Int = { shelf -> if (shelf.chart?.canShowMissing == true && !child) 1 else 0 }
     // After a flip the row's cards change behind its switch: the switch keeps focus, in view.
     LaunchedEffect(chartItems) {
         val shelf = chartSwitchFlipped ?: return@LaunchedEffect
@@ -1182,8 +1182,9 @@ fun ContentTypeSelectionScreen(
                         .then(artOnFocus(item.thumbnailUrl, true))
                 },
                 sourceNames = sourceNames,
+                // Not a child's: its charts are the kids' ones, which have no switch.
                 leading =
-                    if (chart.canShowMissing) {
+                    if (chart.canShowMissing && !child) {
                         { switchModifier ->
                             TvMissingTitlesSwitch(
                                 on = chartsShowMissing,

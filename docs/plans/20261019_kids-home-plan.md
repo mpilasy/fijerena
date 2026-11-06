@@ -41,6 +41,9 @@ from Settings without switching to the child's profile.
   child's filters allow, so More Like This returns on film and show pages, filtered the same way
   (`RelatedTitles.forChild` in `relatedInSources`): no title no source has, none the parental rules
   hide; categories were filtered by the catalogue queries. Phone too (it showed it unfiltered).
+- **K-D10 Kids' charts** (user, 2026-11-06): a child's Home shows kids' Trending and Popular rows
+  for films and shows, filtered the same way as K-D9; each card opens the title's page (K-D2). See
+  [Kids' charts](./20261106_kids-charts-plan.md).
 
 ## Today, for a child profile
 

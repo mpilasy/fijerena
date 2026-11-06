@@ -55,6 +55,17 @@ internal val HomeShelf.chart: TmdbChart?
             else -> null
         }
 
+/** The chart whose row shows this chart's titles: a child's chart takes its adult chart's row. */
+internal val TmdbChart.homeRow: TmdbChart
+    get() =
+        when (this) {
+            TmdbChart.KIDS_TRENDING_MOVIES -> TmdbChart.TRENDING_MOVIES
+            TmdbChart.KIDS_TRENDING_SHOWS -> TmdbChart.TRENDING_SHOWS
+            TmdbChart.KIDS_POPULAR_MOVIES -> TmdbChart.POPULAR_MOVIES
+            TmdbChart.KIDS_POPULAR_SHOWS -> TmdbChart.POPULAR_SHOWS
+            else -> this
+        }
+
 /** The section of a Wishlist row; null for the other rows. */
 internal val HomeShelf.wantedContentType: String?
     get() =

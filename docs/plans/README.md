@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-11-06 | [Kids' charts](./20261106_kids-charts-plan.md) | A child profile's Home and Charts list show kids' versions of TMDB's Trending and Popular (Popular films up to PG-13, shows of the Kids or Family genre), cut down to the child's sources and rules, TV and phone | Done 2026-11-06, walked on both emulators |
 | 2026-11-06 | [Live Sync progress and delays](./20261106_sync-progress-plan.md) | A pass shows its progress (receiving, applying, sending, with totals) on the Live Sync page; the page shows the connection state; no silent wait of up to 5 minutes after a socket failure; each pass logged | Done 2026-11-06, walked on both emulators |
 | 2026-11-06 | [Device builds in Live Sync](./20261106_device-builds-plan.md) | Each device reports its app build in an encrypted synced record; the Live Sync device list on TV and phone shows each device's version, build type and Android version | Done 2026-11-06, walked on both emulators |
 | 2026-11-05 | [Favourite tags](./20261105_favourite-tags-plan.md) | A profile tags its favourite channels, films and shows (many tags each, one list per profile across sources); the Favourites list on TV and phone filters by one tag; tags sync and export | Done 2026-11-05, walked on both emulators |

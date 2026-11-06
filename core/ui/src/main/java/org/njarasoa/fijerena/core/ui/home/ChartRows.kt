@@ -24,7 +24,9 @@ import org.njarasoa.fijerena.core.ui.history.MergedLists
 /**
  * The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md): each chart of a section cut down
  * to the titles the profile's Xtream sources have, each card on its own source. Nothing when the
- * Admin switch is off, without a TMDB key, or for a child (CH-D6); a chart with no match has no row.
+ * Admin switch is off or without a TMDB key; a chart with no match has no row. A child profile gets
+ * the kids' charts instead (`TmdbChart.forKids`, the kids' charts plan), cut down to what the
+ * child may see.
  *
  * The rows are kept per chart, profile and sources until the next catalogue sync, so going back to
  * Home costs nothing; the chart pages themselves are kept a day ([TmdbChartPages]).
@@ -67,13 +69,9 @@ object ChartRows {
         refreshCount.value++
     }
 
-    /** Whether chart rows may show at all on this device for the profile in use. */
-    fun enabled(context: Context): Boolean {
-        val settings = AppSettings(context.applicationContext)
-        return settings.showTmdbCharts &&
-            !settings.isChildProfile(settings.activeProfileId) &&
-            TmdbApiService.getInstance(context).hasApiKey()
-    }
+    /** Whether chart rows may show at all on this device. */
+    fun enabled(context: Context): Boolean =
+        AppSettings(context.applicationContext).showTmdbCharts && TmdbApiService.getInstance(context).hasApiKey()
 
     /**
      * [contentType]'s chart rows that have a title, in [TmdbChart.of]'s order. A Trending row shows
@@ -85,8 +83,9 @@ object ChartRows {
         contentType: String,
     ): List<Row> {
         if (!enabled(context)) return emptyList()
+        val settings = AppSettings(context.applicationContext)
         return TmdbChart
-            .of(contentType)
+            .of(contentType, kids = settings.isChildProfile(settings.activeProfileId))
             .map { Row(it, row(context, merged, it), showsMissing = showsMissing(context, it)) }
             .filter { it.items.isNotEmpty() || it.chart.canShowMissing }
     }
@@ -125,10 +124,16 @@ object ChartRows {
                 showsMissing = showsMissing(context, chart),
             )
         synchronized(kept) { kept[key] }?.let { return it }
+        // A child's: the categories are filtered already (the catalogue queries leave out the
+        // child's hidden ones); the hidden titles of the parental rules are not, as on Search.
+        val settings = AppSettings(context.applicationContext)
+        val rules = if (settings.isChildProfile(key.profileId)) settings.parentalRules() else null
         val sources =
             merged.inProfileOrder.map { source ->
                 suspend { titles: List<TmdbRecommendation> ->
-                    source.repo.findTmdbTitles(titles, chart.contentType).map { it?.copy(providerId = source.providerId) }
+                    source.repo.findTmdbTitles(titles, chart.contentType).map { item ->
+                        item?.takeUnless { rules?.hidesTitle(it.name) == true }?.copy(providerId = source.providerId)
+                    }
                 }
             }
         val pages = TmdbChartPages.getInstance(context)
@@ -153,14 +158,14 @@ object ChartRows {
         return row
     }
 
-    /** The row's title. */
+    /** The row's title; a kids' chart has the same, as a child sees no other. */
     @StringRes
     fun titleRes(chart: TmdbChart): Int =
         when (chart) {
-            TmdbChart.TRENDING_MOVIES -> R.string.chart_trending_movies
-            TmdbChart.TRENDING_SHOWS -> R.string.chart_trending_shows
-            TmdbChart.POPULAR_MOVIES -> R.string.chart_popular_movies
-            TmdbChart.POPULAR_SHOWS -> R.string.chart_popular_shows
+            TmdbChart.TRENDING_MOVIES, TmdbChart.KIDS_TRENDING_MOVIES -> R.string.chart_trending_movies
+            TmdbChart.TRENDING_SHOWS, TmdbChart.KIDS_TRENDING_SHOWS -> R.string.chart_trending_shows
+            TmdbChart.POPULAR_MOVIES, TmdbChart.KIDS_POPULAR_MOVIES -> R.string.chart_popular_movies
+            TmdbChart.POPULAR_SHOWS, TmdbChart.KIDS_POPULAR_SHOWS -> R.string.chart_popular_shows
             TmdbChart.TOP_RATED_MOVIES -> R.string.chart_top_rated_movies
             TmdbChart.TOP_RATED_SHOWS -> R.string.chart_top_rated_shows
         }

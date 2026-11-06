@@ -20,6 +20,10 @@ enum class TmdbChart(
     val path: String,
     val contentType: String,
     private val parametersOf: () -> Map<String, String> = { emptyMap() },
+    /** A child profile's chart (the kids' charts plan): a child sees these, and no other. */
+    val forKids: Boolean = false,
+    /** Which of a page's titles the chart keeps: a Trending call has no filter of its own. */
+    val keeps: (TmdbRecommendation) -> Boolean = { true },
 ) {
     TRENDING_MOVIES("trending/movie/week", ContentType.MOVIES),
     TRENDING_SHOWS("trending/tv/week", ContentType.TV_SHOWS),
@@ -38,8 +42,7 @@ enum class TmdbChart(
                 mapOf(
                     "air_date.gte" to yearAgo(),
                     "first_air_date.gte" to LocalDate.now().minusYears(5).toString(),
-                    // News, Reality, Soap, Talk.
-                    "without_genres" to "10763|10764|10766|10767",
+                    "without_genres" to NOT_SHOWS,
                 )
         },
     ),
@@ -50,9 +53,48 @@ enum class TmdbChart(
     // thousands of votes its average starts high (user, 2026-10-29).
     TOP_RATED_MOVIES("discover/movie", ContentType.MOVIES, { topRated(minVotes = 5000, releasedBefore = "primary_release_date.lte") }),
     TOP_RATED_SHOWS("discover/tv", ContentType.TV_SHOWS, { topRated(minVotes = 2000, releasedBefore = "first_air_date.lte") }),
+
+    // A child's charts (user, 2026-11-06: Trending and Popular, Popular films up to PG-13). Trending has no
+    // age rating, so its films are the Family genre only: Animation alone also holds adult anime.
+    // Its shows are the Kids genre, or Family and Animation together: Animation alone holds adult
+    // cartoons (Family Guy), and Family alone holds sitcoms.
+    KIDS_TRENDING_MOVIES("trending/movie/week", ContentType.MOVIES, forKids = true, keeps = { FAMILY in it.genreIds }),
+    KIDS_TRENDING_SHOWS(
+        "trending/tv/week",
+        ContentType.TV_SHOWS,
+        forKids = true,
+        keeps = { KIDS in it.genreIds || (FAMILY in it.genreIds && ANIMATION in it.genreIds) },
+    ),
+
+    // Popular asks TMDB for the US rating PG-13 at most, in Animation or Family. A show has no
+    // rating filter: the Kids or Family genre (Family also brings sitcoms such as Frasier; user,
+    // 2026-11-06: that is OK), without news, reality, soap or talk shows, as the adult Popular
+    // (Family brought Dancing with the Stars).
+    KIDS_POPULAR_MOVIES(
+        "discover/movie",
+        ContentType.MOVIES,
+        {
+            popular(minVotes = 200) +
+                mapOf(
+                    "with_genres" to "$ANIMATION|$FAMILY",
+                    "certification_country" to "US",
+                    "certification.lte" to "PG-13",
+                )
+        },
+        forKids = true,
+    ),
+    KIDS_POPULAR_SHOWS(
+        "discover/tv",
+        ContentType.TV_SHOWS,
+        { popular(minVotes = 50) + mapOf("with_genres" to "$KIDS|$FAMILY", "without_genres" to NOT_SHOWS) },
+        forKids = true,
+    ),
     ;
 
-    /** Whether its row can also show the titles no source has (user, 2026-10-29): Trending only. */
+    /**
+     * Whether its row can also show the titles no source has (user, 2026-10-29): Trending only, not
+     * a child's (a TMDB-only card opens the Wishlist, which a child has not).
+     */
     val canShowMissing: Boolean get() = this == TRENDING_MOVIES || this == TRENDING_SHOWS
 
     /** The call's parameters, page aside (a Top Rated chart's date limit moves with the day). */
@@ -62,10 +104,21 @@ enum class TmdbChart(
     val request: String get() = path + parameters.toSortedMap().entries.joinToString("") { "&${it.key}=${it.value}" }
 
     companion object {
-        /** [contentType]'s charts, in the order their rows show. */
-        fun of(contentType: String): List<TmdbChart> = entries.filter { it.contentType == contentType }
+        /** [contentType]'s charts, in the order their rows show; a child's ([kids]) or the others. */
+        fun of(
+            contentType: String,
+            kids: Boolean = false,
+        ): List<TmdbChart> = entries.filter { it.contentType == contentType && it.forKids == kids }
     }
 }
+
+// TMDB's genre ids.
+private const val ANIMATION = 16
+private const val FAMILY = 10751
+private const val KIDS = 10762
+
+// News, Reality, Soap, Talk: left out of the Popular shows.
+private const val NOT_SHOWS = "10763|10764|10766|10767"
 
 private fun popular(minVotes: Int) = mapOf("sort_by" to "popularity.desc", "vote_count.gte" to minVotes.toString())
 
@@ -133,7 +186,7 @@ class TmdbChartPages(
             stored.pages[page]?.let { return@withLock it }
             val response = fetchPage(chart, page)
             if (page > response.totalPages) return@withLock null
-            val fetched = TmdbChartPage(response.results, response.totalPages)
+            val fetched = TmdbChartPage(response.results.filter(chart.keeps), response.totalPages)
             val updated = stored.copy(pages = stored.pages + (page to fetched))
             memory[chart] = updated
             write(chart, updated)

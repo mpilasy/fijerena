@@ -237,7 +237,7 @@ fun MobileHomeScreen(
     }
     // The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md, Phase 4): read apart from the
     // other rows, as they may ask TMDB, and again when the Admin switch or the Trending rows' switch
-    // (follow-up F3: the titles no source has) changes. None for a child.
+    // (follow-up F3: the titles no source has) changes. A child gets the kids' charts.
     val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
         .collectAsStateWithLifecycle(initialValue = false)
     val chartsShowMissing by remember {

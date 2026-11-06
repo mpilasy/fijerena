@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import java.io.File
@@ -182,6 +183,57 @@ class TmdbChartTest {
                 "&vote_count.gte=200&without_genres=10763|10764|10766|10767",
             TmdbChart.POPULAR_SHOWS.request,
         )
+    }
+
+    @Test
+    fun `a child's charts are apart from the others, Trending and Popular`() {
+        assertEquals(
+            listOf(TmdbChart.TRENDING_MOVIES, TmdbChart.POPULAR_MOVIES, TmdbChart.TOP_RATED_MOVIES),
+            TmdbChart.of(ContentType.MOVIES),
+        )
+        assertEquals(listOf(TmdbChart.KIDS_TRENDING_MOVIES, TmdbChart.KIDS_POPULAR_MOVIES), TmdbChart.of(ContentType.MOVIES, kids = true))
+        assertEquals(listOf(TmdbChart.KIDS_TRENDING_SHOWS, TmdbChart.KIDS_POPULAR_SHOWS), TmdbChart.of(ContentType.TV_SHOWS, kids = true))
+    }
+
+    @Test
+    fun `a child's Popular asks for films up to PG-13 in Animation or Family, and shows of the Kids or Family genre`() {
+        assertEquals(
+            "discover/movie&certification.lte=PG-13&certification_country=US&sort_by=popularity.desc" +
+                "&vote_count.gte=200&with_genres=16|10751",
+            TmdbChart.KIDS_POPULAR_MOVIES.request,
+        )
+        assertEquals(
+            "discover/tv&sort_by=popularity.desc&vote_count.gte=50&with_genres=10762|10751&without_genres=10763|10764|10766|10767",
+            TmdbChart.KIDS_POPULAR_SHOWS.request,
+        )
+    }
+
+    @Test
+    fun `a child's Trending keeps Family films, and Kids or animated Family shows`() =
+        runTest {
+            val titles =
+                listOf(
+                    TmdbRecommendation(id = 1, title = "Family film", genreIds = listOf(10751, 12)),
+                    TmdbRecommendation(id = 2, title = "Anime", genreIds = listOf(16, 28)),
+                    TmdbRecommendation(id = 3, title = "Kids show", genreIds = listOf(10762)),
+                    TmdbRecommendation(id = 4, title = "Cartoon", genreIds = listOf(16, 10751)),
+                    TmdbRecommendation(id = 5, title = "Sitcom", genreIds = listOf(10751, 35)),
+                    TmdbRecommendation(id = 6, title = "No genre"),
+                )
+            val pages = TmdbChartPages(dir, { _, _ -> TmdbRecommendationsResponse(results = titles, totalPages = 1) }, now = { now })
+            assertEquals(
+                listOf("Family film", "Cartoon", "Sitcom"),
+                pages.page(TmdbChart.KIDS_TRENDING_MOVIES, 1)?.titles?.map { it.title },
+            )
+            assertEquals(listOf("Kids show", "Cartoon"), pages.page(TmdbChart.KIDS_TRENDING_SHOWS, 1)?.titles?.map { it.title })
+            assertEquals(6, pages.page(TmdbChart.TRENDING_MOVIES, 1)?.titles?.size)
+        }
+
+    @Test
+    fun `a list result reads its genre ids`() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val title = json.decodeFromString<TmdbRecommendation>("""{"id":7,"title":"Coco","genre_ids":[16,10751]}""")
+        assertEquals(listOf(16, 10751), title.genreIds)
     }
 
     private companion object {

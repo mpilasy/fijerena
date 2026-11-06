@@ -78,6 +78,7 @@ pages as it needs to fill a row.
   too (Jellyfin items carry a TMDB id; more work).
 - **CH-D6 Profiles (decided, user 2026-10-29: a):** (a) every profile but a child, whose Home stays the walled garden of the
   kids' Home plan; (b) admins only.
+  Since 2026-11-06 a child gets kids' charts instead ([Kids' charts](./20261106_kids-charts-plan.md)).
 
 ## Follow-up (user, 2026-10-29)
 

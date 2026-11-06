@@ -161,6 +161,9 @@ data class TmdbRecommendation(
     // franchise. Null for every other use of this shape (recommendations, similar, TV).
     @SerialName("belongs_to_collection")
     val belongsToCollection: TmdbCollectionRef? = null,
+    // On a list result (a chart page): TMDB's genre ids. A details response has [genres] instead.
+    @SerialName("genre_ids")
+    val genreIds: List<Int> = emptyList(),
     // Only on a `search/multi` result: `movie`, `tv` or `person`.
     @SerialName("media_type")
     val mediaType: String? = null,

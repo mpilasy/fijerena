@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Kids' charts on a child's Home:** a child profile now has its own Trending and Popular rows for films and shows, on Home and in the Charts list: popular films rated up to PG-13 in the Family or Animation genres, and shows of TMDB's Kids or Family genres, cut down to what the child's sources have and the parental controls allow. Other profiles keep the usual charts. Needs TMDB Charts on (Admin → Sources & Guide). TV and phone.
+
 ## Version: 0.9.20261106050948
 
 - **Live Sync shows its progress:** a sync that takes more than a second shows how far it is ("Receiving 1,500 of 4,200", "Sending 200 of 640") with a progress bar on the Live Sync page, so a long sync no longer looks stuck. The page also says whether this device is connected to the sync server, and when it will try again, with a **Reconnect now** button. While the connection is down, the app now checks for changes every minute instead of waiting up to 5 minutes. A large sync is also faster: the app downloads the next part while it saves the current one. A sync server updated to this version gives the totals; an older server still works, with counts only. TV and phone.
