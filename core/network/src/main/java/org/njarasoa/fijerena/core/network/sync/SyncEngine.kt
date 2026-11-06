@@ -43,6 +43,9 @@ class SyncEngine(
 
         /** A Wanted title was added, changed or removed on another device. */
         fun onWantedChanged() {}
+
+        /** How far the pass is: after each page received and applied, and each batch sent. */
+        fun onProgress(progress: SyncProgress) {}
     }
 
     data class Outcome(
@@ -61,6 +64,8 @@ class SyncEngine(
         mutex.withLock {
             val link = store.link ?: return@withLock null
             val crypto = AccountKeyCrypto(link.accountKey)
+            val startedAt = System.currentTimeMillis()
+            val fullPull = store.cursor == 0L || store.knownKinds?.containsAll(SyncKind.KEPT) != true
             if (store.knownKinds?.containsAll(SyncKind.KEPT) != true) {
                 // An older build skipped the kinds it didn't know and moved past them: get them now.
                 // Everything is applied against local versions, so only real changes land.
@@ -73,9 +78,11 @@ class SyncEngine(
                     LocalRecords(context).seedEverything()
                     store.seeded = true
                 }
-                val pushed = push(link, crypto)
+                val pullDoneAt = System.currentTimeMillis()
+                val pushed = push(link, crypto, listener)
                 store.lastSyncAt = System.currentTimeMillis()
                 store.lastError = null
+                logPass(startedAt, pullDoneAt, fullPull, pull, pushed)
                 Outcome(pull.applied, pushed, pull.deferred, pull.activeProfileDeleted)
             } catch (e: SyncApiException) {
                 store.lastError = e.message?.let(Redact::text)
@@ -94,7 +101,29 @@ class SyncEngine(
         val applied: Int,
         val deferred: Int,
         val activeProfileDeleted: Boolean,
+        val received: Int = 0,
+        val pages: Int = 0,
     )
+
+    /**
+     * Every pass's times and counts in the log; a pass over [SLOW_PASS_MS] in the diagnostics log
+     * too, so a slow sync can be explained afterwards (the sync progress plan, SP-D7).
+     */
+    private fun logPass(
+        startedAt: Long,
+        pullDoneAt: Long,
+        fullPull: Boolean,
+        pull: PullOutcome,
+        pushed: Int,
+    ) {
+        val total = System.currentTimeMillis() - startedAt
+        val line =
+            "Pass ${total}ms (pull ${pullDoneAt - startedAt}ms, push ${total - (pullDoneAt - startedAt)}ms): " +
+                "${pull.pages} pages, received ${pull.received}, applied ${pull.applied}, pushed $pushed" +
+                if (fullPull) ", full pull" else ""
+        if (pull.received + pushed > 0 || total >= SLOW_PASS_MS) Log.i(TAG, line)
+        if (total >= SLOW_PASS_MS) CrashLog.note("slow live sync", line)
+    }
 
     private suspend fun pull(
         link: SyncAccountStore.Link,
@@ -106,6 +135,9 @@ class SyncEngine(
         var activeProfileDeleted = false
         var providerDeleted = false
         var waiting = store.deferred.mapNotNull { runCatching { json.decodeFromString<SyncWire.Record>(it) }.getOrNull() }
+        var received = 0
+        var pages = 0
+        listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, 0, null))
         while (true) {
             val page = api.pull(link.serverUrl, link.deviceToken, store.cursor)
             if (page.resync) {
@@ -143,16 +175,21 @@ class SyncEngine(
                 cursor = page.records.lastOrNull()?.seq ?: store.cursor,
                 deferred = waiting.map { json.encodeToString(it) }.toSet(),
             )
+            received += page.records.size
+            pages++
+            val total = page.remaining?.let { (received + it).toInt() }
+            listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, received, total))
             if (!page.more) break
         }
         if (activeProfileDeleted) listener?.onActiveProfileDeleted()
         if (providerDeleted) listener?.onProviderDeleted()
-        return PullOutcome(applied, waiting.size, activeProfileDeleted)
+        return PullOutcome(applied, waiting.size, activeProfileDeleted, received, pages)
     }
 
     private suspend fun push(
         link: SyncAccountStore.Link,
         crypto: SyncCrypto,
+        listener: Listener?,
     ): Int {
         val local = LocalRecords(context)
         val clock = SettingsDatabase.getInstance(context).settingsSyncDao()
@@ -160,6 +197,9 @@ class SyncEngine(
         // Volatile records (now playing) have no version row: they ride with the first batch,
         // stamped now — a handful at most, well inside the server's 500-record batch limit.
         var volatile = VolatileRecords.outbox.take { clock.nextClock() }
+        val toSend = local.pendingCount() + volatile.size
+        var sent = 0
+        if (toSend > 0) listener?.onProgress(SyncProgress(SyncProgress.Stage.SENDING, 0, toSend))
         while (true) {
             val outgoing = volatile + local.pending(PUSH_BATCH)
             volatile = emptyList()
@@ -187,6 +227,9 @@ class SyncEngine(
                 local.markAllSent(sendable.map { it.first })
                 pushed += response.accepted
             }
+            sent += outgoing.size
+            // A change made while sending adds to the total, never past it.
+            listener?.onProgress(SyncProgress(SyncProgress.Stage.SENDING, sent, maxOf(toSend, sent)))
             if (outgoing.size < PUSH_BATCH) break
         }
         return pushed
@@ -195,6 +238,9 @@ class SyncEngine(
     private companion object {
         const val TAG = "SyncEngine"
         const val PUSH_BATCH = 200
+
+        /** A pass this long goes into the diagnostics log too (SP-D7). */
+        const val SLOW_PASS_MS = 10_000L
         const val MAX_DEFERRED = 1000
 
         /** The server's `MAX_PAYLOAD` (server/src/account.ts). */

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.Response
@@ -28,6 +29,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncApi
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
+import org.njarasoa.fijerena.core.network.sync.SyncProgress
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -78,6 +80,8 @@ class SyncManager internal constructor(
         val syncing: Boolean = false,
         val lastSyncAt: Long = 0,
         val lastError: String? = null,
+        /** How far the pass is, once it has run for [PROGRESS_AFTER_MS]; null otherwise (the sync progress plan). */
+        val progress: SyncProgress? = null,
     )
 
     private val _status = MutableStateFlow(Status())
@@ -85,7 +89,32 @@ class SyncManager internal constructor(
 
     private fun refreshStatus(syncing: Boolean = false) {
         val link = store.link
-        _status.value = Status(link != null, link?.serverUrl, syncing, store.lastSyncAt, store.lastError?.let(Redact::text))
+        _status.update {
+            it.copy(
+                linked = link != null,
+                serverUrl = link?.serverUrl,
+                syncing = syncing,
+                lastSyncAt = store.lastSyncAt,
+                lastError = store.lastError?.let(Redact::text),
+                progress = if (syncing) it.progress else null,
+            )
+        }
+    }
+
+    // The running pass's start and its latest progress: shown only once the pass has run for
+    // PROGRESS_AFTER_MS, so a quick pass never flashes a bar.
+    @Volatile private var passStartedAt = 0L
+
+    @Volatile private var latestProgress: SyncProgress? = null
+
+    private fun onProgress(progress: SyncProgress) {
+        latestProgress = progress
+        if (System.currentTimeMillis() - passStartedAt >= PROGRESS_AFTER_MS) publishProgress()
+    }
+
+    private fun publishProgress() {
+        val progress = latestProgress ?: return
+        _status.update { if (it.syncing) it.copy(progress = progress) else it }
     }
 
     @Volatile private var foreground = false
@@ -111,6 +140,8 @@ class SyncManager internal constructor(
                 // A favourite received from another device may be one whose item is gone here.
                 scope.launch { WantedTitles.getInstance(app).refresh() }
             }
+
+            override fun onProgress(progress: SyncProgress) = this@SyncManager.onProgress(progress)
 
             override fun onWantedChanged() {
                 scope.launch { WantedTitles.getInstance(app).refresh() }
@@ -304,7 +335,14 @@ class SyncManager internal constructor(
     }
 
     private suspend fun runSync() {
+        passStartedAt = System.currentTimeMillis()
+        latestProgress = null
         refreshStatus(syncing = true)
+        val showProgress =
+            scope.launch {
+                delay(PROGRESS_AFTER_MS)
+                publishProgress()
+            }
         try {
             val outcome = engine.syncNow(listener) ?: return
             retryDelayMs = INITIAL_RETRY_MS
@@ -333,6 +371,7 @@ class SyncManager internal constructor(
             store.lastError = Redact.text("${e.javaClass.simpleName}: ${e.message}")
             retryLater()
         } finally {
+            showProgress.cancel()
             refreshStatus()
         }
     }
@@ -498,6 +537,7 @@ class SyncManager internal constructor(
     companion object {
         private const val TAG = "SyncManager"
         private const val PUSH_DEBOUNCE_MS = 3_000L
+        private const val PROGRESS_AFTER_MS = 1_000L
         private const val WATCH_PUSH_INTERVAL_MS = 60_000L
         private const val PING_INTERVAL_MS = 30_000L
         private const val INITIAL_RETRY_MS = 5_000L

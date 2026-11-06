@@ -55,6 +55,10 @@ class LocalRecords(
      * item vanished without a tombstone, it belongs to a Jellyfin provider, or it is a per-profile
      * Jellyfin login an older build queued) are cleared here.
      */
+
+    /** How many records wait to be pushed, in both databases. */
+    suspend fun pendingCount(): Int = sync.countPending() + xtreamDb.syncVersionDao().countPending()
+
     suspend fun pending(limit: Int): List<Outgoing> {
         val out = mutableListOf<Outgoing>()
         for (version in sync.getPending(limit)) {

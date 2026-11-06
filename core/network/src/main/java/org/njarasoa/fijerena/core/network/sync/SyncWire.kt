@@ -67,6 +67,8 @@ object SyncWire {
         val more: Boolean = false,
         val records: List<Record> = emptyList(),
         val resync: Boolean = false,
+        /** Records after this page; null from a server before the sync progress plan. */
+        val remaining: Long? = null,
     )
 
     @Serializable

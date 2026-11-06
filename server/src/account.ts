@@ -291,9 +291,16 @@ export class Account extends DurableObject<Env> {
       )
       .toArray();
     const page = rows.slice(0, limit);
+    const more = rows.length > limit;
+    // How many records are after this page, so a device can show "Receiving 500 of 4,200". A
+    // device that doesn't know the field ignores it (the sync progress plan, SP-D2).
+    const remaining = more
+      ? this.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM records WHERE seq > ?", page[page.length - 1].seq).one().n
+      : 0;
     return json({
       head: this.head(),
-      more: rows.length > limit,
+      more,
+      remaining,
       records: page.map((r) => ({
         key: r.key,
         providerTag: r.provider_tag,

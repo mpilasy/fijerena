@@ -9,6 +9,10 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 /** Reads of [SyncVersionEntity]; local changes are written by [XtreamSyncTriggers]. */
 @Dao
 interface SyncVersionDao {
+    /** How many versions wait to be pushed: the total a push shows (the sync progress plan). */
+    @Query("SELECT COUNT(*) FROM sync_version WHERE pending = 1")
+    suspend fun countPending(): Int
+
     /** Local changes not yet sent, oldest first — the order the sync client sends them in. */
     @Query("SELECT * FROM sync_version WHERE pending = 1 ORDER BY hlc ASC LIMIT :limit")
     suspend fun getPending(limit: Int): List<SyncVersionEntity>

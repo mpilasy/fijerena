@@ -88,6 +88,7 @@ class SyncEnginePaginationTest {
         }
         mockkConstructor(LocalRecords::class)
         coEvery { anyConstructed<LocalRecords>().pending(any()) } returns emptyList()
+        coEvery { anyConstructed<LocalRecords>().pendingCount() } returns 0
         coEvery { anyConstructed<LocalRecords>().markAllSent(any()) } coAnswers {
             firstArg<List<LocalRecords.Outgoing>>().forEach { it.markSent() }
         }
@@ -99,6 +100,48 @@ class SyncEnginePaginationTest {
     }
 
     private fun engine() = SyncEngine(mockk<Context>(relaxed = true), api, store)
+
+    @Test
+    fun `progress counts the records received against the server's remaining count`() =
+        runBlocking {
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 3, more = true, records = listOf(wire("a", 1), wire("b", 2)), remaining = 1)
+            coEvery { api.pull(any(), any(), 2L, any()) } returns
+                SyncWire.PullResponse(head = 3, more = false, records = listOf(wire("c", 3)), remaining = 0)
+            val seen = mutableListOf<SyncProgress>()
+
+            engine().syncNow(
+                object : SyncEngine.Listener {
+                    override fun onProgress(progress: SyncProgress) {
+                        seen += progress
+                    }
+                },
+            )
+
+            val receiving = SyncProgress.Stage.RECEIVING
+            assertEquals(
+                listOf(SyncProgress(receiving, 0, null), SyncProgress(receiving, 2, 3), SyncProgress(receiving, 3, 3)),
+                seen,
+            )
+        }
+
+    @Test
+    fun `without a remaining count from an older server, progress has no total`() =
+        runBlocking {
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 2, more = false, records = listOf(wire("a", 1), wire("b", 2)))
+            val seen = mutableListOf<SyncProgress>()
+
+            engine().syncNow(
+                object : SyncEngine.Listener {
+                    override fun onProgress(progress: SyncProgress) {
+                        seen += progress
+                    }
+                },
+            )
+
+            assertEquals(SyncProgress(SyncProgress.Stage.RECEIVING, 2, null), seen.last())
+        }
 
     @Test
     fun `records deferred on an earlier page survive a later page failing`() =

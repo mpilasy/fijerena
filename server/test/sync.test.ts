@@ -39,9 +39,11 @@ describe("sync server", () => {
     const first = await server.request("GET", "/changes?since=0&limit=2", { token: deviceToken });
     expect(first.body.records.map((r: { key: string }) => r.key)).toEqual(["a", "b"]);
     expect(first.body.more).toBe(true);
+    expect(first.body.remaining).toBe(1);
     const rest = await server.request("GET", `/changes?since=${first.body.records[1].seq}&limit=2`, { token: deviceToken });
     expect(rest.body.records.map((r: { key: string }) => r.key)).toEqual(["c"]);
     expect(rest.body.more).toBe(false);
+    expect(rest.body.remaining).toBe(0);
     expect(rest.body.records[0]).toMatchObject({ updatedAt: 12, deleted: false, payload: "cipher-c-12" });
   });
 

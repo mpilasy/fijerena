@@ -77,6 +77,10 @@ interface SettingsSyncDao {
     @Query("SELECT EXISTS(SELECT 1 FROM sync_version WHERE pending = 1)")
     suspend fun hasPending(): Boolean
 
+    /** How many versions wait to be pushed: the total a push shows (the sync progress plan). */
+    @Query("SELECT COUNT(*) FROM sync_version WHERE pending = 1")
+    suspend fun countPending(): Int
+
     /** Linking to a server: it has seen nothing from here yet. */
     @Query("UPDATE sync_version SET pending = 1")
     suspend fun markAllPending()
