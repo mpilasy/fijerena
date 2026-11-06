@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261106004558
 
 - **Show Cast and Guest Stars sorted right on long shows:** a show's Cast tab now puts in Show Cast everyone who was in the main cast of any season, as TMDB lists it for each season. Before, it judged by episode counts against the actor with the most, which on a long show with a changing cast, such as Law & Order (Sam Waterston, 405 episodes), put real regulars such as Benjamin Bratt, Angie Harmon and Jill Hennessy under Guest Stars. A long-running recurring character, such as Law & Order's medical examiner, stays a guest star. Opening a show reads a little more from TMDB the first time: one more request per 20 seasons. TV and phone.
 
