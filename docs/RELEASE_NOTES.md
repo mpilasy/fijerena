@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Tags on favourites:** give a favourite channel, film or show one or more tags of your own, such as "News" or "Weekend". Hold OK (TV) or long-press (phone) on a favourite and choose **Tags**: check the profile's tags or type a new one. The Favourites list then shows the tags under its tabs: choose one to see only its favourites, or **All**. **Manage Tags** at the end of that row renames or deletes a tag on every favourite. A profile has one set of tags for all its sources. Tags sync to the profile's other devices and go into the settings export. Favourites of a Jellyfin source, which Jellyfin keeps, cannot have tags. TV and phone.
+
 ## Version: 0.9.20261106004558
 
 - **Show Cast and Guest Stars sorted right on long shows:** a show's Cast tab now puts in Show Cast everyone who was in the main cast of any season, as TMDB lists it for each season. Before, it judged by episode counts against the actor with the most, which on a long show with a changing cast, such as Law & Order (Sam Waterston, 405 episodes), put real regulars such as Benjamin Bratt, Angie Harmon and Jill Hennessy under Guest Stars. A long-running recurring character, such as Law & Order's medical examiner, stays a guest star. Opening a show reads a little more from TMDB the first time: one more request per 20 seasons. TV and phone.

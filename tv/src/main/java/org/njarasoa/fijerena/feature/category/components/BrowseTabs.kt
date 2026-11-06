@@ -35,6 +35,8 @@ internal fun BrowseTabs(
     categoriesPane: PaneFocusState,
     itemsPane: PaneFocusState,
     modifier: Modifier = Modifier,
+    // A row under the tabs (the Favourites list's tags, favourite tags plan FT3): Down goes there first.
+    below: FocusRequester? = null,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.key == selectedKey }
     val entry = remember { FocusRequester() }
@@ -49,7 +51,7 @@ internal fun BrowseTabs(
         modifier =
             modifier
                 // An empty list has no row to enter: Compose then finds its button.
-                .onPreviewKeyEvent { it.isKeyDown(Key.DirectionDown) && itemsPane.enter() }
+                .onPreviewKeyEvent { it.isKeyDown(Key.DirectionDown) && (below?.requestFocus() ?: itemsPane.enter()) }
                 // Entering the row lands on the selected tab, not the one nearest by geometry, as in
                 // the Live TV panel: focusProperties directly before focusGroup, as Modifier.tvPane does.
                 .focusProperties { onEnter = { if (selectedIndex >= 0) entry.requestFocus() } }

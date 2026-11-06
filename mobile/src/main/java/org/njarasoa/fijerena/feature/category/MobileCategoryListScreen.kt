@@ -1761,6 +1761,29 @@ private fun CategoryChipRow(
                 )
             }
         }
+        // The Favourites list's tag filter, while a favourite has a tag (favourite tags plan, FT3).
+        if (selectedCategoryKey == CategoryViewModel.FAVORITES_CATEGORY_ID) {
+            val tags by categoryViewModel.favoriteTags.collectAsStateWithLifecycle()
+            val selectedTag by categoryViewModel.selectedFavoriteTag.collectAsStateWithLifecycle()
+            var managing by remember { mutableStateOf(false) }
+            if (managing) {
+                ManageFavoriteTagsDialog(
+                    load = categoryViewModel::profileFavoriteTags,
+                    onRename = categoryViewModel::renameFavoriteTag,
+                    onDelete = categoryViewModel::deleteFavoriteTag,
+                    onDismiss = { managing = false },
+                )
+            }
+            if (tags.isNotEmpty()) {
+                FavoriteTagChipRow(
+                    tags = tags,
+                    selected = selectedTag,
+                    onSelect = categoryViewModel::selectFavoriteTag,
+                    onManage = { managing = true },
+                    colors = chipColors,
+                )
+            }
+        }
     }
 }
 

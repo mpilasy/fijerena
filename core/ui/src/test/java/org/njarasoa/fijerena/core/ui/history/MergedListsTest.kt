@@ -67,6 +67,26 @@ class MergedListsTest {
     }
 
     @Test
+    fun `a tag keeps each source's favourites that have it, and the tags are one sorted list`() {
+        val a = repo(A)
+        val b = repo(B)
+        coEvery { a.getFavoritesForContentTypeSuspend(ContentType.LIVE_TV) } returns listOf(row("x", A, 0, "BBC"), row("y", A, 0, "CNN"))
+        coEvery { b.getFavoritesForContentTypeSuspend(ContentType.LIVE_TV) } returns listOf(row("x", B, 0, "Arte"))
+        every { a.getFavoriteItemIdsWithTag(ContentType.LIVE_TV, "News") } returns setOf("y")
+        every { b.getFavoriteItemIdsWithTag(ContentType.LIVE_TV, "News") } returns setOf("x")
+        every { a.getFavoriteTagsInUse(ContentType.LIVE_TV) } returns setOf("News", "kids")
+        every { b.getFavoriteTagsInUse(ContentType.LIVE_TV) } returns setOf("news", "Arts")
+        val merged = lists(a, b)
+
+        val tagged = runBlocking { merged.favorites(ContentType.LIVE_TV, "News") }
+
+        assertEquals(listOf(B to "x", A to "y"), tagged.map { it.providerId to it.id })
+        assertEquals(3, runBlocking { merged.favorites(ContentType.LIVE_TV, null) }.size)
+        assertEquals(3, merged.favoriteTagsInUse(ContentType.LIVE_TV).size)
+        assertEquals("Arts", merged.favoriteTagsInUse(ContentType.LIVE_TV).first())
+    }
+
+    @Test
     fun `one source's recent is shown as it comes`() {
         val a = repo(A)
         val ownOrder = listOf(row("x", A, 1), row("y", A, 99))

@@ -138,6 +138,19 @@ internal fun TwoColumnLayout(
     val tabs = remember(categories, pickedCategory) { listOfNotNull(pickedCategory) + categories.partitionVirtual().first }
     // While a tab has focus, a list that opens under it does not take focus: focus selects the tabs.
     var tabsFocused by remember { mutableStateOf(false) }
+    // The Favourites list's tag filter and its Manage Tags (favourite tags plan, FT3).
+    val favoriteTags by categoryViewModel.favoriteTags.collectAsStateWithLifecycle()
+    val selectedFavoriteTag by categoryViewModel.selectedFavoriteTag.collectAsStateWithLifecycle()
+    val tagTabsEntry = remember { FocusRequester() }
+    var managingTags by remember { mutableStateOf(false) }
+    if (managingTags) {
+        TvManageFavoriteTagsDialog(
+            load = categoryViewModel::profileFavoriteTags,
+            onRename = categoryViewModel::renameFavoriteTag,
+            onDelete = categoryViewModel::deleteFavoriteTag,
+            onDismiss = { managingTags = false },
+        )
+    }
 
     // Back from the TV Guide lands on the header button that opened it. Runs once the
     // screen is RESUMED, after CategoryList's and StreamList's own focus effects, so it has the
@@ -377,14 +390,31 @@ internal fun TwoColumnLayout(
                             null
                         } else {
                             {
-                                BrowseTabs(
-                                    tabs = tabs,
-                                    selectedKey = selectedCategoryKey,
-                                    onTabSelected = { onCategorySelected(it.id, it.providerId) },
-                                    categoriesPane = categoriesPane,
-                                    itemsPane = itemsPane,
-                                    modifier = Modifier.fillMaxWidth().onFocusChanged { tabsFocused = it.hasFocus },
-                                )
+                                // The Favourites list's tags under the tabs (favourite tags plan, FT3).
+                                val showTags = selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID && favoriteTags.isNotEmpty()
+                                Column(modifier = Modifier.fillMaxWidth().onFocusChanged { tabsFocused = it.hasFocus }) {
+                                    BrowseTabs(
+                                        tabs = tabs,
+                                        selectedKey = selectedCategoryKey,
+                                        onTabSelected = { onCategorySelected(it.id, it.providerId) },
+                                        categoriesPane = categoriesPane,
+                                        itemsPane = itemsPane,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        below = if (showTags) tagTabsEntry else null,
+                                    )
+                                    if (showTags) {
+                                        FavoriteTagTabs(
+                                            tags = favoriteTags,
+                                            selected = selectedFavoriteTag,
+                                            onSelect = categoryViewModel::selectFavoriteTag,
+                                            onManage = { managingTags = true },
+                                            entry = tagTabsEntry,
+                                            categoriesPane = categoriesPane,
+                                            itemsPane = itemsPane,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
                             }
                         },
                     modifier =
