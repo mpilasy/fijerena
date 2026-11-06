@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Clear guide data shows its progress:** while a guide source's data is cleared, its card shows how far it is ("Clearing guide data: 50,000 of 302,400 programmes…") with a bar, then "Freeing space…", and "Guide data cleared" at the end; the card's stats then show zero. Before, nothing showed until it ended, which on a large guide could take minutes. The clear also goes on when you leave the page; before, leaving the page stopped it halfway. TV and phone.
+
 ## Version: 0.9.20261106183140
 
 - **Clear a guide source's data:** a guide source that is turned off keeps its guide data, which can be large (1.1 GB on a Chromecast HD). Its card now has **Clear guide data**, which deletes that data and frees the space on this device. The guide source stays: turn it on again and its next refresh downloads the whole guide again. Deleting a guide source now also frees its space at once; before, the space came back only at the next guide import. TV and phone.

@@ -498,17 +498,18 @@ class EpgManagementViewModel(
      * next refresh imports it again in full.
      */
     fun clearSourceData(id: Long) {
-        viewModelScope.launchGuarded("EpgManagementViewModel.clearSourceData") {
-            withContext(Dispatchers.IO) {
-                indexer.clearSource(id)
-                settingsDb().epgSourceDao().forgetIngest(id)
+        val started =
+            epgFileManager.launchClearSource(id) {
+                // The card's stats and "Listings until" are read again.
+                _dbGeneration.value++
                 refreshDbStats()
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_source_data_cleared))
             }
-            // The card's "Listings until" is read again.
-            _dbGeneration.value++
-            _userMessage.tryEmit(UiText.StringResource(R.string.epg_source_data_cleared))
-        }
+        if (!started) _userMessage.tryEmit(UiText.StringResource(R.string.epg_clear_already_running))
     }
+
+    /** The guide sources being cleared, with how far each is (`EpgFileManager.clearing`). */
+    val clearing = epgFileManager.clearing
 
     /** Refreshes the stale guide sources of every group (GS-D3). */
     fun refreshStale() {

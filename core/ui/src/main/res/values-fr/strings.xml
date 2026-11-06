@@ -283,6 +283,10 @@
     <string name="epg_clear_source_data_title">Effacer les données du guide ?</string>
     <string name="epg_clear_source_data_message">Effacer les données du guide de « %1$s » ? Cela libère leur espace sur cet appareil. La source de guide reste : quand vous la réactivez, sa prochaine actualisation télécharge à nouveau le guide.</string>
     <string name="epg_source_data_cleared">Données du guide effacées</string>
+    <string name="epg_clear_already_running">Effacement déjà en cours pour cette source de guide</string>
+    <string name="epg_phase_clearing">Effacement des données du guide</string>
+    <string name="epg_phase_clearing_count">Effacement des données du guide : %1$s programmes sur %2$s</string>
+    <string name="epg_phase_freeing_space">Libération de l’espace</string>
 
     <!-- Category -->
     <string name="category_select_category">Sélectionner une catégorie</string>

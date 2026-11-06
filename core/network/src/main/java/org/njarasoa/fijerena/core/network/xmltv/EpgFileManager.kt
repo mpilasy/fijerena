@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -1351,6 +1352,52 @@ class EpgFileManager private constructor(
      * Cancel all processing, then clear all EPG data.
      * Runs entirely on this manager's scope (survives ViewModel destruction).
      */
+    private val _clearing = MutableStateFlow<Map<Long, EpgIndexer.ClearProgress>>(emptyMap())
+
+    /** The guide sources whose data is being cleared ([launchClearSource]), with how far each is. */
+    val clearing: StateFlow<Map<Long, EpgIndexer.ClearProgress>> = _clearing.asStateFlow()
+
+    /**
+     * Clears guide source [sourceId]'s data (Clear guide data on its card): its channels and
+     * programmes, and its import state, so its next refresh imports it again in full. Runs in this
+     * manager's scope, so leaving the page does not stop it, and after any refresh that is running
+     * ([ingestMutex]). False, and nothing starts, when it is being cleared already.
+     */
+    fun launchClearSource(
+        sourceId: Long,
+        onComplete: suspend () -> Unit,
+    ): Boolean {
+        var started = false
+        _clearing.update { now ->
+            if (sourceId in now) {
+                now
+            } else {
+                started = true
+                now + (sourceId to EpgIndexer.ClearProgress.Deleting(0, 0))
+            }
+        }
+        if (!started) return false
+        scope.launch {
+            try {
+                ingestMutex.withLock {
+                    EpgIndexer.getInstance(context).clearSource(sourceId) { progress ->
+                        _clearing.update { it + (sourceId to progress) }
+                    }
+                    SettingsDatabase.getInstance(context).epgSourceDao().forgetIngest(sourceId)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Clear source $sourceId failed: ${e.message}", e)
+                CrashLog.record("Clear guide data failed", e)
+            } finally {
+                _clearing.update { it - sourceId }
+                onComplete()
+            }
+        }
+        return true
+    }
+
     fun launchClearAllData(onComplete: (suspend () -> Unit)? = null) {
         processJob?.cancel()
         processJob = null

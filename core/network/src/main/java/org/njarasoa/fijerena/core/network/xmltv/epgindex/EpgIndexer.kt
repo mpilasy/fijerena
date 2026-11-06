@@ -1100,32 +1100,53 @@ class EpgIndexer private constructor(
      * Deletes all of guide source [sourceId]'s channels and programmes, and gives the freed space
      * back to the device. The programmes go in batches: one delete of a guide of a million rows
      * (the search index follows each row through its triggers) would need room for all of it in
-     * the write-ahead log, on a device that has little room left (a Chromecast HD).
+     * the write-ahead log, on a device that has little room left (a Chromecast HD). [onProgress]
+     * gets the programmes deleted so far after each batch, then [ClearProgress.FreeingSpace].
      */
-    suspend fun clearSource(sourceId: Long) =
-        withContext(Dispatchers.IO) {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-            writeMutex.withLock {
-                do {
-                    val deleted = dao.deleteProgrammesOfSourceBatch(sourceId, CLEAR_BATCH_ROWS)
-                } while (deleted > 0)
-                dao.deleteChannelsBySourceId(sourceId)
-                val channelCount = dao.getChannelCount()
-                val programmeCount = dao.getProgrammeCount()
-                // The totals Guide Data Maintenance shows, also after a restart.
-                dao.getMetadata()?.let { dao.insertMetadata(it.copy(channelCount = channelCount, programmeCount = programmeCount)) }
-                if (_state.value is EpgIndexState.Indexed) {
-                    _state.value =
-                        if (programmeCount > 0) {
-                            EpgIndexState.Indexed(channelCount, programmeCount, System.currentTimeMillis())
-                        } else {
-                            EpgIndexState.NotIndexed
-                        }
-                }
-                incrementalVacuumLocked()
+    suspend fun clearSource(
+        sourceId: Long,
+        onProgress: (ClearProgress) -> Unit = {},
+    ) = withContext(Dispatchers.IO) {
+        val db = EpgIndexDatabase.getInstance(context)
+        val dao = db.epgIndexDao()
+        writeMutex.withLock {
+            val total = dao.countProgrammesOfSource(sourceId)
+            var done = 0
+            onProgress(ClearProgress.Deleting(done, total))
+            do {
+                val deleted = dao.deleteProgrammesOfSourceBatch(sourceId, CLEAR_BATCH_ROWS)
+                done += deleted
+                onProgress(ClearProgress.Deleting(done, total))
+            } while (deleted > 0)
+            dao.deleteChannelsBySourceId(sourceId)
+            val channelCount = dao.getChannelCount()
+            val programmeCount = dao.getProgrammeCount()
+            // The totals Guide Data Maintenance shows, also after a restart.
+            dao.getMetadata()?.let { dao.insertMetadata(it.copy(channelCount = channelCount, programmeCount = programmeCount)) }
+            if (_state.value is EpgIndexState.Indexed) {
+                _state.value =
+                    if (programmeCount > 0) {
+                        EpgIndexState.Indexed(channelCount, programmeCount, System.currentTimeMillis())
+                    } else {
+                        EpgIndexState.NotIndexed
+                    }
             }
+            onProgress(ClearProgress.FreeingSpace)
+            incrementalVacuumLocked()
         }
+    }
+
+    /** How far [clearSource] is. */
+    sealed interface ClearProgress {
+        /** [done] of the guide source's [total] programmes deleted; total 0 before the count. */
+        data class Deleting(
+            val done: Int,
+            val total: Int,
+        ) : ClearProgress
+
+        /** The rows are gone; the space goes back to the device. */
+        data object FreeingSpace : ClearProgress
+    }
 
     suspend fun purgeOldProgrammes(cutoffEpoch: Long): Int =
         withContext(Dispatchers.IO) {

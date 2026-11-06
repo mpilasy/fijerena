@@ -41,6 +41,8 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.epg.guideClearFraction
+import org.njarasoa.fijerena.core.ui.epg.guideClearText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -103,6 +105,7 @@ fun TvEpgManagementScreen(
     val page by viewModel.page.collectAsStateWithLifecycle(initialValue = null)
     val cards = page?.cards
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
+    val clearing by viewModel.clearing.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
@@ -404,6 +407,22 @@ fun TvEpgManagementScreen(
                                     )
                                 }
 
+                                // Clear guide data is running on this guide source.
+                                clearing[source.id]?.let { clearProgress ->
+                                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
+                                        CinemaText(
+                                            text = guideClearText(clearProgress),
+                                            role = TextRole.Caption,
+                                            tone = TextTone.Secondary,
+                                        )
+                                        val fraction = guideClearFraction(clearProgress)
+                                        CinemaProgressBar(
+                                            progress = fraction?.let { { it } },
+                                            modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
+                                        )
+                                    }
+                                }
                                 // Indexing, or a refresh was asked for and has not reached this guide source yet.
                                 if (activeProgress == null && (indexing || source.id in busySourceIds)) {
                                     // The guide sources a refresh is working on now, named on a waiting card.

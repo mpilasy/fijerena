@@ -288,6 +288,9 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
     suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
 
+    @Query("SELECT COUNT(*) FROM epg_programme WHERE source_id = :sourceId")
+    suspend fun countProgrammesOfSource(sourceId: Long): Int
+
     /** Deletes up to [limit] of [sourceId]'s programmes; returns how many. See `EpgIndexer.clearSource`. */
     @Query("DELETE FROM epg_programme WHERE id IN (SELECT id FROM epg_programme WHERE source_id = :sourceId LIMIT :limit)")
     suspend fun deleteProgrammesOfSourceBatch(

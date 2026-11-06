@@ -283,6 +283,10 @@
     <string name="epg_clear_source_data_title">Clear Guide Data?</string>
     <string name="epg_clear_source_data_message">Clear the guide data of \"%1$s\"? This frees its space on this device. The guide source stays: when you turn it on again, its next refresh downloads the guide again.</string>
     <string name="epg_source_data_cleared">Guide data cleared</string>
+    <string name="epg_clear_already_running">Already clearing this guide source</string>
+    <string name="epg_phase_clearing">Clearing guide data</string>
+    <string name="epg_phase_clearing_count">Clearing guide data: %1$s of %2$s programmes</string>
+    <string name="epg_phase_freeing_space">Freeing space</string>
 
     <!-- Category -->
     <string name="category_select_category">Select a category</string>

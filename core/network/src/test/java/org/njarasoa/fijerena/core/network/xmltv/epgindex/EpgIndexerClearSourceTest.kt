@@ -69,12 +69,17 @@ class EpgIndexerClearSourceTest {
                 ),
             )
 
-            EpgIndexer.getInstance(context).clearSource(1)
+            val progress = mutableListOf<EpgIndexer.ClearProgress>()
+            EpgIndexer.getInstance(context).clearSource(1) { progress += it }
 
             assertEquals(listOf(2L), index.epgIndexDao().getIndexedSourceIds())
             assertEquals(2, index.epgIndexDao().getProgrammeCount())
             assertEquals(1, index.epgIndexDao().getChannelCount())
             assertEquals(2, index.epgIndexDao().getMetadata()?.programmeCount)
+            // The card counts up to the source's programmes, then frees the space.
+            assertEquals(EpgIndexer.ClearProgress.Deleting(0, 2), progress.first())
+            assertEquals(EpgIndexer.ClearProgress.Deleting(2, 2), progress[progress.size - 2])
+            assertEquals(EpgIndexer.ClearProgress.FreeingSpace, progress.last())
         }
 
     @Test

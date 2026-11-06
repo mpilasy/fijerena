@@ -283,6 +283,10 @@
     <string name="epg_clear_source_data_title">Hofafana ve ny angon\'ny fandaharana?</string>
     <string name="epg_clear_source_data_message">Hofafana ve ny angon\'ny fandaharana avy amin\'i \"%1$s\"? Manafaka ny toerana misy azy amin\'ity fitaovana ity izany. Mijanona ny loharanon\'ny fitarihana: rehefa alefanao indray izy, dia haka ny fandaharana indray ny fanavaozana manaraka.</string>
     <string name="epg_source_data_cleared">Voafafa ny angon\'ny fandaharana</string>
+    <string name="epg_clear_already_running">Efa mamafa ity loharanon\'ny fitarihana ity</string>
+    <string name="epg_phase_clearing">Mamafa ny angon\'ny fandaharana</string>
+    <string name="epg_phase_clearing_count">Mamafa ny angon\'ny fandaharana: %1$s amin\'ny %2$s</string>
+    <string name="epg_phase_freeing_space">Manafaka toerana</string>
 
     <!-- Category -->
     <string name="category_select_category">Misafidiana sokajy</string>

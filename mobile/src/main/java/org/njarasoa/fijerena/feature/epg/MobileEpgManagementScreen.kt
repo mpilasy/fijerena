@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
@@ -41,6 +42,8 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.SectionHeader
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.epg.guideClearFraction
+import org.njarasoa.fijerena.core.ui.epg.guideClearText
 import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -89,6 +92,7 @@ fun MobileEpgManagementScreen(
     val page by viewModel.page.collectAsStateWithLifecycle(initialValue = null)
     val cards = page?.cards
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
+    val clearing by viewModel.clearing.collectAsStateWithLifecycle()
     val busySourceIds by viewModel.busySourceIds.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val cellularDialog by viewModel.cellularDialog.collectAsStateWithLifecycle()
@@ -229,6 +233,7 @@ fun MobileEpgManagementScreen(
                             onEdit = { editingCard = card },
                             onDelete = { viewModel.deleteSource(source.id) },
                             onClearData = { viewModel.clearSourceData(source.id) },
+                            clearProgress = clearing[source.id],
                             onEnabledChange = { viewModel.setSourceEnabled(card, it) },
                         )
                     }
@@ -369,6 +374,8 @@ private fun EpgSourceCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onClearData: () -> Unit,
+    /** How far Clear guide data is on this guide source; null when it is not being cleared. */
+    clearProgress: EpgIndexer.ClearProgress?,
     onEnabledChange: (Boolean) -> Unit,
 ) {
     val source = card.source
@@ -439,6 +446,17 @@ private fun EpgSourceCard(
                 }
             }
 
+            if (clearProgress != null) {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
+                    CinemaText(text = guideClearText(clearProgress), role = TextRole.Caption, tone = TextTone.Accent)
+                    val fraction = guideClearFraction(clearProgress)
+                    CinemaProgressBar(
+                        progress = fraction?.let { { it } },
+                        modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
+                    )
+                }
+            }
             if (activeProgress == null && (indexing || waiting)) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
