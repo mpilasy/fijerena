@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261106152527
 
 - **Stats for Nerds for everyone on TV:** the Stats button in the TV player's controls now shows for every profile, as on the phone, not only for a Nerd. On live TV without the channel panel, the controls now open on Stats.
 
