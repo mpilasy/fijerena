@@ -32,3 +32,4 @@ local.properties
 
 # Wake-on-LAN MAC addresses for scripts/deploy-tv-ip.sh
 /scripts/wake-macs.local
+/scripts/deploy-targets.local

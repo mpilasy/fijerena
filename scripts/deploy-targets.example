@@ -1,0 +1,11 @@
+# Devices for scripts/deploy-all.sh: copy this file to scripts/deploy-targets.local (not in git)
+# and put your own devices in it, one per line:
+#   <app: tv | phone> <variant: debug | localRelease> <target>
+# A target is a network TV's <ip>[:port] (port 5555 when left out), a USB serial, emulator:tv or
+# emulator:phone. localRelease is the release code signed with the debug key: it installs over a
+# debug build and keeps the data, but cannot be backed up with run-as.
+tv    debug         192.168.1.21
+tv    localRelease  192.168.1.20
+phone localRelease  0123456789AB
+tv    debug         emulator:tv
+phone debug         emulator:phone
