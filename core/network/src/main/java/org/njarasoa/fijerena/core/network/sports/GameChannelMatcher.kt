@@ -18,10 +18,11 @@ data class LiveChannel(
     val hidden: Boolean = false,
 ) {
     companion object {
-        /** A live stream row of `xtream_streams`; [hidden] as the guide search decides it. */
+        /** A live stream row of `xtream_streams`; [hidden] as the guide search decides it. Without its logo when not [withIcon]. */
         fun of(
             stream: XtreamStreamEntity,
             hidden: Boolean = stream.excluded,
+            withIcon: Boolean = true,
         ): LiveChannel =
             LiveChannel(
                 providerId = stream.providerId,
@@ -29,7 +30,7 @@ data class LiveChannel(
                 name = stream.name,
                 epgChannelId = stream.epgChannelId,
                 categoryId = stream.categoryId,
-                iconUrl = stream.streamIcon,
+                iconUrl = stream.streamIcon.takeIf { withIcon },
                 hidden = hidden,
             )
     }
@@ -134,6 +135,11 @@ class GameChannelMatcher(
             prepared?.takeIf { it.channels === channels } ?: synchronized(this) {
                 prepared?.takeIf { it.channels === channels } ?: Prepared(channels).also { prepared = it }
             }
+
+        /** Drops what was built from the last channel list; see [SportsChannels.drop]. */
+        internal fun drop() {
+            prepared = null
+        }
 
         /** The same channel name in two categories or sources: one key. */
         private fun nameKey(name: String): String = name.trim().replace(SPACES, " ").lowercase()

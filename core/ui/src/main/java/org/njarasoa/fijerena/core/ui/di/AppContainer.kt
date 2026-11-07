@@ -14,7 +14,10 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sports.SportsChannels
+import org.njarasoa.fijerena.core.network.tmdb.TmdbPeople
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
+import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
@@ -258,6 +261,19 @@ class AppContainer(
      */
     fun trimMemory() {
         MediaProviderFactory.trimMemory()
+        dropGuideAndSportsCaches()
+        scope.launch { TmdbPeople.instanceOrNull()?.dropMemory() }
+    }
+
+    /**
+     * Drops the lookups of the guide and the sports pages: tens of MB each for a large source, and
+     * no screen of a film uses them. Each builds again when a screen needs it. Called by
+     * [trimMemory] and when a film or an episode starts (see FijerenaApplication).
+     */
+    fun dropGuideAndSportsCaches() {
+        EpgChannelMatcher.clearCache()
+        SportsChannels.drop()
+        scope.launch { mutex.withLock { mediaRepositories.values.forEach { it.dropGuideChannelMaps() } } }
     }
 
     companion object {

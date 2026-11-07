@@ -58,7 +58,7 @@ class XmltvEpgService(
     private val parsedEpgCache = parsedCaches.computeIfAbsent(providerId) { newParsedCache() }
 
     // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
-    private var cachedChannelMaps: ChannelMatchMaps? = null
+    @Volatile private var cachedChannelMaps: ChannelMatchMaps? = null
 
     // A miss is cached too, briefly: whenever the maps come out empty — no enabled source for this
     // provider, or no indexed channel belonging to one — every call would redo the query, and
@@ -383,6 +383,14 @@ class XmltvEpgService(
                 emptyMap()
             }
         }
+
+    /**
+     * Drops the channel match maps (8-25 MB for a large guide), and nothing else: the next lookup
+     * builds them again. Called when the app goes to the background and when a film starts.
+     */
+    fun dropChannelMaps() {
+        cachedChannelMaps = null
+    }
 
     fun clearCache() {
         synchronized(parsedEpgCache) { parsedEpgCache.clear() }

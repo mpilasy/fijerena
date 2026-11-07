@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelMatcher
 import org.njarasoa.fijerena.core.network.sports.ReminderChannelFinder
+import org.njarasoa.fijerena.core.network.sports.SportsChannels
 import org.njarasoa.fijerena.core.network.sports.SportsData
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
@@ -424,6 +425,6 @@ class AppSportsPageData(
         withContext(Dispatchers.IO) {
             val channels = ReminderChannelFinder.liveChannels(context)
             val matcher = GameChannelMatcher(EpgGuideLookup.load(context))
-            GameMatcher { game -> matcher.match(game, channels) }
+            GameMatcher { game -> SportsChannels.withIcons(context, matcher.match(game, channels)) }
         }
 }

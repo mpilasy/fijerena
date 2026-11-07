@@ -329,9 +329,11 @@ class MediaRepository(
             encodeDefaults = true
         }
 
-    private val xmltvEpgService: XmltvEpgService by lazy {
-        XmltvEpgService(context, providerId)
-    }
+    private val xmltvEpgServiceLazy =
+        lazy {
+            XmltvEpgService(context, providerId)
+        }
+    private val xmltvEpgService: XmltvEpgService by xmltvEpgServiceLazy
 
     private val payloadSizes = ConcurrentHashMap<String, Long>()
     private val fetchTimes = ConcurrentHashMap<String, Long>()
@@ -999,6 +1001,11 @@ class MediaRepository(
 
     fun clearXmltvCache() {
         xmltvEpgService.clearCache()
+    }
+
+    /** Drops the guide's channel match maps, if they were built; see [XmltvEpgService.dropChannelMaps]. */
+    fun dropGuideChannelMaps() {
+        if (xmltvEpgServiceLazy.isInitialized()) xmltvEpgService.dropChannelMaps()
     }
 
     /** Item id → the guide channel (xmltv id) the guide grid shows for it; empty when there is no index. */

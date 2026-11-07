@@ -17,7 +17,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
  * catalogue. The list is read again only when its [Key] changes (another profile, a source added,
  * removed or synced, a live category hidden or shown, a channel excluded). The same list object is
  * returned while the key holds, so [GameChannelMatcher] keeps what it built from it (folded names,
- * a word index) across the sports screens, Home and the reminders.
+ * a word index) across the sports screens, Home and the reminders. The channels are kept without
+ * their logos, which only the few channels of a game need ([withIcons]).
  */
 object SportsChannels {
     /** What the list depends on: cheap to read, unlike the list itself. */
@@ -62,9 +63,42 @@ object SportsChannels {
                     },
                 )
             kept?.takeIf { it.key == key }?.channels ?: lock.withLock {
-                kept?.takeIf { it.key == key }?.channels ?: read(db, providers.map { it.id }, hidden).also { kept = Kept(key, it) }
+                kept?.takeIf { it.key == key }?.channels ?: read(db, providers.map { it.id }, hidden).also {
+                    // What the matcher built from the old list goes too: two lists of every channel
+                    // would be kept until the next match.
+                    GameChannelMatcher.drop()
+                    kept = Kept(key, it)
+                }
             }
         }
+
+    /** [channels] with the logos of their streams, read for these channels only. */
+    suspend fun withIcons(
+        context: Context,
+        channels: List<GameChannel>,
+    ): List<GameChannel> {
+        if (channels.isEmpty()) return channels
+        val dao = XtreamDatabase.getInstance(context.applicationContext).streamDao()
+        val icons =
+            withContext(Dispatchers.IO) {
+                channels.groupBy { it.stream.providerId }.mapValues { (providerId, list) ->
+                    dao.getIconsByIds(providerId, XtreamStreamEntity.TYPE_LIVE, list.map { it.stream.streamId }.distinct())
+                }
+            }
+        return channels.map { channel ->
+            icons[channel.stream.providerId]?.get(channel.stream.streamId)?.let { channel.copy(stream = channel.stream.copy(iconUrl = it)) }
+                ?: channel
+        }
+    }
+
+    /**
+     * Drops the list (and what the matcher built from it): 40-70 MB for a large source. The next
+     * match reads it again. Called when the app goes to the background and when a film starts.
+     */
+    fun drop() {
+        kept = null
+        GameChannelMatcher.drop()
+    }
 
     private fun read(
         db: XtreamDatabase,
@@ -74,7 +108,7 @@ object SportsChannels {
         providerIds.flatMap { providerId ->
             val hiddenCategories = hidden[providerId].orEmpty()
             db.streamDao().getAllStreamsIncludingExcluded(providerId, XtreamStreamEntity.TYPE_LIVE).map {
-                LiveChannel.of(it, hidden = it.excluded || it.categoryId in hiddenCategories)
+                LiveChannel.of(it, hidden = it.excluded || it.categoryId in hiddenCategories, withIcon = false)
             }
         }
 }

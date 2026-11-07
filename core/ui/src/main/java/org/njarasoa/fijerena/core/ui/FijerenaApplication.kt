@@ -20,6 +20,9 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.svg.SvgDecoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -201,6 +204,19 @@ class FijerenaApplication :
                     .onAppStart()
             }
         }
+        // A film or an episode uses neither the guide nor the sports pages: their lookups (tens of MB
+        // for a large source) go when one starts, and build again when a screen needs them. A 1.4 GB
+        // Chromecast froze with them kept for hours.
+        startupScope.launch {
+            StreamingPlaybackService.nowPlaying
+                .map { playing -> playing?.takeUnless { it.isLive }?.sessionId }
+                .distinctUntilChanged()
+                .filterNotNull()
+                .collect {
+                    Log.i("FijerenaApplication", "Film started: dropping the guide and sports lookups")
+                    AppContainer.getInstance(this@FijerenaApplication).dropGuideAndSportsCaches()
+                }
+        }
         // Its own coroutine, so it is done before the first film starts: the player service checks
         // FFmpeg on the main thread, and the first check loads the native library from disk. See
         // the next level rock solid resilience plan → R-28.
@@ -245,7 +261,7 @@ class FijerenaApplication :
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            Log.i("FijerenaApplication", "onTrimMemory(level=$level): clearing image and provider caches")
+            Log.i("FijerenaApplication", "onTrimMemory(level=$level): clearing image, provider, guide and sports caches")
             SingletonImageLoader.get(this).memoryCache?.clear()
             AppContainer.getInstance(this).trimMemory()
         }

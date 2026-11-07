@@ -89,6 +89,11 @@ class TmdbPeople(
         }
     }
 
+    /** Drops the people kept in memory, and keeps the files: the next actor page reads its file. */
+    suspend fun dropMemory() {
+        lock.withLock { memory.clear() }
+    }
+
     /** Forgets every person read (Admin → Refresh Charts): the next actor page reads TMDB again. */
     suspend fun clear() {
         lock.withLock {
@@ -137,6 +142,10 @@ class TmdbPeople(
         private var instance: TmdbPeople? = null
 
         /** The device's people, in the app's cache directory, read with the app's TMDB key. */
+
+        /** The people of the process, null when no actor page has been opened. */
+        fun instanceOrNull(): TmdbPeople? = instance
+
         fun getInstance(context: Context): TmdbPeople =
             instance ?: synchronized(this) {
                 instance ?: run {

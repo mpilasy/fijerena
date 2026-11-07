@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Less memory on small devices:** the app keeps less in memory, which on a 1.4 GB Chromecast made it freeze during a catalogue refresh after hours of use. When a film or an episode starts, and when the app goes to the background, it now lets go of what only the guide and the sports pages use (each tens of MB on a large source); they build again, in a second or two, the next time a screen needs them. The sports pages also keep the channels without their logos, and read the logos of a game's channels only. TV and phone.
+- **Live Sync log shows where a slow pass went:** each pass's log line now splits the pull time into waiting for the server, decrypting and writing to the database.
+
 ## Version: 0.9.20261106191210
 
 - **Clear guide data shows its progress:** while a guide source's data is cleared, its card shows how far it is ("Clearing guide data: 50,000 of 302,400 programmes…") with a bar, then "Freeing space…", and "Guide data cleared" at the end; the card's stats then show zero. Before, nothing showed until it ended, which on a large guide could take minutes. The clear also goes on when you leave the page; before, leaving the page stopped it halfway. TV and phone.
