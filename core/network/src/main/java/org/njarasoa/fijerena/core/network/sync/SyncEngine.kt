@@ -105,6 +105,10 @@ class SyncEngine(
         val activeProfileDeleted: Boolean,
         val received: Int = 0,
         val pages: Int = 0,
+        // Where the pull time went: waiting for the server, decrypting, writing to the database.
+        val waitMs: Long = 0,
+        val decodeMs: Long = 0,
+        val applyMs: Long = 0,
     )
 
     /**
@@ -120,7 +124,8 @@ class SyncEngine(
     ) {
         val total = System.currentTimeMillis() - startedAt
         val line =
-            "Pass ${total}ms (pull ${pullDoneAt - startedAt}ms, push ${total - (pullDoneAt - startedAt)}ms): " +
+            "Pass ${total}ms (pull ${pullDoneAt - startedAt}ms [wait ${pull.waitMs}, decode ${pull.decodeMs}, " +
+                "apply ${pull.applyMs}], push ${total - (pullDoneAt - startedAt)}ms): " +
                 "${pull.pages} pages, received ${pull.received}, applied ${pull.applied}, pushed $pushed" +
                 if (fullPull) ", full pull" else ""
         if (pull.received + pushed > 0 || total >= SLOW_PASS_MS) Log.i(TAG, line)
@@ -139,6 +144,9 @@ class SyncEngine(
         var waiting = store.deferred.mapNotNull { runCatching { json.decodeFromString<SyncWire.Record>(it) }.getOrNull() }
         var received = 0
         var pages = 0
+        var waitMs = 0L
+        var decodeMs = 0L
+        var applyMs = 0L
         listener?.onProgress(SyncProgress(SyncProgress.Stage.RECEIVING, 0, null))
         // The next page downloads while this one is applied (the sync progress plan): pages still
         // apply in order and the cursor is still saved after each applied page, so a crash resumes
@@ -147,7 +155,9 @@ class SyncEngine(
         supervisorScope {
             var next = async { api.pull(link.serverUrl, link.deviceToken, store.cursor) }
             while (true) {
+                val waitStart = System.currentTimeMillis()
                 val page = next.await()
+                waitMs += System.currentTimeMillis() - waitStart
                 if (page.resync) {
                     // Tombstones this device never saw are gone from the server: start over from 0.
                     // Everything is re-applied against local versions, so only real changes land.
@@ -158,17 +168,21 @@ class SyncEngine(
                 }
                 val pageCursor = page.records.lastOrNull()?.seq ?: store.cursor
                 if (page.more) next = async { api.pull(link.serverUrl, link.deviceToken, pageCursor) }
+                val decodeStart = System.currentTimeMillis()
                 val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
+                decodeMs += System.currentTimeMillis() - decodeStart
                 // Records waiting for a provider or profile get another go when a page brings one, and
                 // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and
                 // applied again per page made a full resync of a large account many times slower.
                 val retryWaiting =
                     waiting.isNotEmpty() &&
                         (!page.more || decodedPage.any { it.key.kind == SyncKind.PROVIDER || it.key.kind == SyncKind.PROFILE })
+                val applyStart = System.currentTimeMillis()
                 val result =
                     applier.apply(
                         if (retryWaiting) waiting.mapNotNull { SyncCodec.decode(it, crypto) } + decodedPage else decodedPage,
                     )
+                applyMs += System.currentTimeMillis() - applyStart
                 applied += result.applied
                 activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
                 providerDeleted = providerDeleted || result.providerDeleted
@@ -195,7 +209,7 @@ class SyncEngine(
         }
         if (activeProfileDeleted) listener?.onActiveProfileDeleted()
         if (providerDeleted) listener?.onProviderDeleted()
-        return PullOutcome(applied, waiting.size, activeProfileDeleted, received, pages)
+        return PullOutcome(applied, waiting.size, activeProfileDeleted, received, pages, waitMs, decodeMs, applyMs)
     }
 
     private suspend fun push(
