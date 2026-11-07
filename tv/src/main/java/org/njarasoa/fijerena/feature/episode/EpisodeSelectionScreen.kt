@@ -635,8 +635,14 @@ internal fun EpisodeListContent(
     // Kept while its Play has focus: focusing it scrolls the list to the header's own place, which
     // can bring the hero back on screen, and hiding the line then took the focused button away —
     // focus was lost and the D-pad dead (seen with one season: Up from the first episode).
+    // Shown only once the header is pinned (the first visible item is below it): a pinned header
+    // sits over the list, so the line's height moves nothing. Shown as soon as the hero left, the
+    // header grew in the list's flow, moved the focused card, and the scroll that put the card back
+    // brought the hero back: the screen shook without end on the card whose scroll stop sat there.
     var compactPlayFocused by remember { mutableStateOf(false) }
-    val compactHeaderShown by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || compactPlayFocused } }
+    val compactHeaderShown by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > EPISODES_HEADER_ITEM_INDEX || compactPlayFocused }
+    }
     val compactPlayFocusRequester = remember { FocusRequester() }
     val scrollToTabRow: () -> Unit = {
         backScope.launch {
@@ -2538,6 +2544,9 @@ private fun LoadingScreen() {
 
 /** The section tab row's index in the episode list: right after the hero. */
 private const val TABS_ITEM_INDEX = 1
+
+/** The pinned episodes header's index in the episode list: right after the section tab row. */
+private const val EPISODES_HEADER_ITEM_INDEX = 2
 
 // Keys for the controls that navigate away from series details — see rememberNavReturnFocus.
 private const val RETURN_CATEGORY = "category"

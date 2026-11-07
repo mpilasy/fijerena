@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Episode list no longer shakes:** on TV, the episode list shook without end when one episode had focus, for example the second episode in Black Doves. The line with the show, the season and Play next appeared and went away at the point where the list stopped for that episode. That line now shows only when the season tabs are pinned at the top of the screen, where it cannot move the list. In a short season, where the list cannot scroll that far, the line does not show.
+
 ## Version: 0.9.20261107045753
 
 - **Less memory on small devices:** the app keeps less in memory, which on a 1.4 GB Chromecast made it freeze during a catalogue refresh after hours of use. When a film or an episode starts, and when the app goes to the background, it now lets go of what only the guide and the sports pages use (each tens of MB on a large source); they build again, in a second or two, the next time a screen needs them. The sports pages also keep the channels without their logos, and read the logos of a game's channels only. TV and phone.

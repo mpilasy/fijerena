@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -141,7 +142,9 @@ class EpisodeSelectionScreenTest {
         // Bug behavior: season silently reset to 1, so neither of these would be on screen.
         val continueWatchingLabel = context.getString(R.string.series_continue_watching_badge)
         composeTestRule.onNodeWithText(continueWatchingLabel).assertExists()
-        composeTestRule.onNodeWithText("S2 Episode 2").assertExists()
+        // The card, not any text: the hero's Next up names the same episode, and the hero can
+        // still be composed above the list.
+        composeTestRule.onNodeWithTag("episode_s2e2").assertTextContains("S2 Episode 2")
     }
 
     /**
