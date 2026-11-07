@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261107045753
 
 - **Less memory on small devices:** the app keeps less in memory, which on a 1.4 GB Chromecast made it freeze during a catalogue refresh after hours of use. When a film or an episode starts, and when the app goes to the background, it now lets go of what only the guide and the sports pages use (each tens of MB on a large source); they build again, in a second or two, the next time a screen needs them. The sports pages also keep the channels without their logos, and read the logos of a game's channels only. TV and phone.
 - **Live Sync log shows where a slow pass went:** each pass's log line now splits the pull time into waiting for the server, decrypting and writing to the database.
