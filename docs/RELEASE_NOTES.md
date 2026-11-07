@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261107205303
 
 - **Episode list no longer shakes:** on TV, the episode list shook without end when one episode had focus, for example the second episode in Black Doves. The line with the show, the season and Play next appeared and went away at the point where the list stopped for that episode. That line now shows only when the season tabs are pinned at the top of the screen, where it cannot move the list. In a short season, where the list cannot scroll that far, the line does not show.
 
