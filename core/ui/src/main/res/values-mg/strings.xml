@@ -311,8 +311,8 @@
     <string name="recent_remove">Esory amin\'ny vao haingana</string>
     <string name="watched_mark">Mariho ho efa nojerena</string>
     <string name="watched_unmark">Mariho ho mbola tsy nojerena</string>
-    <string name="watched_mark_season">Mariho ho efa nojerena ny vanim-potoana</string>
-    <string name="watched_unmark_season">Mariho ho mbola tsy nojerena ny vanim-potoana</string>
+    <string name="watched_mark_season">Mariho ho efa nojerena ny andiany</string>
+    <string name="watched_unmark_season">Mariho ho mbola tsy nojerena ny andiany</string>
     <string name="watched_mark_show">Mariho ho efa nojerena ny andian-tantara</string>
     <string name="watched_unmark_show">Mariho ho mbola tsy nojerena ny andian-tantara</string>
     <string name="watched_mark_many_failed">Tsy nety ny fanovana ny marika efa nojerena</string>
@@ -500,11 +500,11 @@
 
     <!-- Episode Selection -->
     <string name="series_refresh_info">Havaozy ny antsipirian\'ny andian-tantara</string>
-    <string name="series_season_name_format">Vanim-potoana %1$d</string>
+    <string name="series_season_name_format">Andiany %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
     <plurals name="series_season_count">
-        <item quantity="one">Vanim-potoana %1$d</item>
-        <item quantity="other">Vanim-potoana %1$d</item>
+        <item quantity="one">Andiany %1$d</item>
+        <item quantity="other">Andiany %1$d</item>
     </plurals>
     <plurals name="series_total_episodes_format">
         <item quantity="one">Fizarana %1$d</item>
@@ -516,7 +516,7 @@
     <string name="series_loading_episodes">Maka ny fizarana…</string>
     <string name="series_error_loading">Tsy nety ny fakana ny fizarana</string>
     <string name="series_back_to_list">Hiverina amin\'ny Andian-tantara</string>
-    <string name="series_season_label">Vanim-potoana %1$d</string>
+    <string name="series_season_label">Andiany %1$d</string>
     <string name="series_episode_label">Fizarana %1$d</string>
     <string name="series_continue_watching_badge">Tohizo ny fijerena</string>
     <string name="series_present">mitohy</string>
@@ -1708,7 +1708,7 @@
     <!-- New episode alerts -->
     <string name="new_episodes_row_title">Fizarana vaovao</string>
     <string name="new_episodes_badge">Vaovao</string>
-    <string name="new_episodes_new_season">Vanim-potoana vaovao</string>
+    <string name="new_episodes_new_season">Andiany vaovao</string>
     <string name="new_episodes_code">S%1$02dE%2$02d</string>
     <plurals name="new_episodes_count">
         <item quantity="one">Fizarana vaovao %1$d</item>
