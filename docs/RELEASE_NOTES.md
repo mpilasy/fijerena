@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **TV list fixes:** a long category name now takes a second line instead of being cut. The New mark on an episode follows its title, so every title starts in the same place. A focused recent search is filled like every other chip, and a focused Search section title no longer loses its first letter. A channel's badges in the TV Guide are no longer cut off.
+- **Malagasy:** screen readers now read the phone's sheet labels in Malagasy.
+
 ## Version: 0.9.20261109201957
 
 - **Phone player lists open at your choice:** the Audio, Subtitles and Quality dialogs now scroll to the selected row when they open. On a phone in landscape, a selected row below the visible part looked as if it was not in the list.

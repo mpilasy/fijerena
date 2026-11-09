@@ -1,6 +1,6 @@
 # Send to TV
 
-**Status:** Done 2026-11-09, on local main, not pushed. The walk was stopped early by the user and then rechecked: A14 and A15 are partly tested and A16 (Malagasy) is not tested. The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09, released in v0.9.20261109201957. The walk was stopped early by the user and then rechecked: A14 and A15 are partly tested and A16 (Malagasy) is not tested. The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 

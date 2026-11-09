@@ -1,6 +1,6 @@
 # Night Audio
 
-**Status:** Done 2026-11-09 on the emulators, on local main, not pushed. The check by ear and with passthrough on a Shield was skipped for now by the user (2026-11-09). The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09 on the emulators, released in v0.9.20261109201957. The check by ear and with passthrough on a Shield was skipped for now by the user (2026-11-09). The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 

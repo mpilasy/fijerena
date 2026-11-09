@@ -1,6 +1,6 @@
 # Indigo: a packaged UI theme
 
-**Status:** Done 2026-11-09, on local main, not pushed. The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09, released in v0.9.20261109201957. The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
