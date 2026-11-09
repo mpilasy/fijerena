@@ -1019,7 +1019,8 @@ internal fun NewEpisodesRow(
             providerId = show.item.providerId,
             onLongClick = { onMenu(show) },
             titleBadges = false,
-            rating = show.item.metadata.rating,
+            // No rating: what is new takes the line, on two lines ("Fizarana vaovao 2" fills a card).
+            subtitleLines = 2,
             badge = { NewEpisodesBadge(show.item) },
         ) { onOpen(show) }
     }

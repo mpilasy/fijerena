@@ -3,19 +3,23 @@ package org.njarasoa.fijerena.feature.home
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.xtream.db.NewEpisodeEntity
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.newepisodes.LocalNewEpisodes
 import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodeShow
 import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesState
@@ -58,6 +62,27 @@ class NewEpisodesRowTest {
         composeTestRule.onNodeWithText("3 new episodes").assertIsDisplayed()
         composeTestRule.onNodeWithText("New season").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("New").assertCountEquals(3)
+    }
+
+    @Test
+    fun `the title keeps its room beside the New badge and the source`() {
+        val shows = listOf(show("1", 2, 5))
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalNerd provides true, LocalNewEpisodes provides NewEpisodesState(shows)) {
+                NewEpisodesRow(shows, mapOf(1L to "BEARS"), onOpen = {}, onMenu = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("Show 1").assertWidthIsAtLeast(30.dp)
+    }
+
+    @Test
+    fun `the second line has no rating beside it`() {
+        val rated = show("1", 2, 5).let { it.copy(item = it.item.copy(metadata = MediaMetadata(rating = "7.7"))) }
+        setRow(rated)
+
+        composeTestRule.onNodeWithText("S02E05").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("7.7", substring = true).assertCountEquals(0)
     }
 
     @Test

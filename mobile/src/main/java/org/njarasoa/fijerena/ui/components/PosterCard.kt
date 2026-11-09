@@ -59,7 +59,7 @@ fun PosterCard(
     // Out of 10; shown on the second line when above 0.
     rating: String? = null,
     subtitleLines: Int = 1,
-    // After the title, before the source: a show's New badge.
+    // On the art, at its top start: a show's New badge. A card's title line has no room for it.
     badge: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -79,6 +79,9 @@ fun PosterCard(
                     modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs),
                 )
             }
+            if (badge != null) {
+                Box(Modifier.align(Alignment.TopStart).padding(Spacing.xxs)) { badge() }
+            }
         }
         // Two lines for the title, as on a store's poster rows: a narrow card cuts long names early.
         CardLines(
@@ -92,7 +95,6 @@ fun PosterCard(
             rating = rating,
             titleLines = 2,
             subtitleLines = subtitleLines,
-            badge = badge,
         )
     }
 }
@@ -116,8 +118,6 @@ internal fun CardLines(
     rating: String? = null,
     titleLines: Int = 1,
     subtitleLines: Int = 1,
-    // After the title, before the source: a show's New badge.
-    badge: (@Composable () -> Unit)? = null,
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
@@ -131,7 +131,6 @@ internal fun CardLines(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            badge?.invoke()
             // The source (Nerd) ends the title line, as on the list rows and TV's cards.
             sourceName?.let { SourceBadge(it, providerId = providerId) }
         }
