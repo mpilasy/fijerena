@@ -1702,4 +1702,12 @@
     <string name="size_gigabytes">%1$s&#160;GB</string>
     <string name="theme_indigo">Indigo</string>
     <string name="ui_style_dial">Dial</string>
+
+    <!-- Night Audio -->
+    <string name="night_audio_title">Night Audio</string>
+    <string name="night_audio_summary">Quieter loud sounds, clearer speech</string>
+    <string name="night_audio_passthrough_note">Surround sound is decoded on this device while Night Audio is on</string>
+    <string name="player_stats_output">Output</string>
+    <string name="player_stats_output_pcm">PCM</string>
+    <string name="player_stats_output_passthrough_format">passthrough %1$s</string>
 </resources>

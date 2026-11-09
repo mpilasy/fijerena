@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
@@ -19,6 +20,8 @@ import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioCapabilities
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.util.EventLogger
@@ -229,6 +232,10 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _newStreamStarting = MutableStateFlow(true)
     val newStreamStarting: StateFlow<Boolean> = _newStreamStarting.asStateFlow()
 
+    // The encoding of the audio output now, for Stats: PCM or a bitstream. Null before the first track.
+    private val _audioOutputEncoding = MutableStateFlow<Int?>(null)
+    val audioOutputEncoding: StateFlow<Int?> = _audioOutputEncoding.asStateFlow()
+
     private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
 
@@ -309,6 +316,8 @@ class StreamingPlaybackService : MediaSessionService() {
     internal fun performSeamlessRecycle(
         metadata: PlayerMetadata,
         currentPos: Long,
+        playWhenReady: Boolean = true,
+        releaseDecoders: Boolean = false,
     ) {
         val player =
             mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
@@ -341,11 +350,18 @@ class StreamingPlaybackService : MediaSessionService() {
                 return
             }
 
+        if (releaseDecoders) {
+            // The new source keeps the old decoder otherwise, and a decoder that passes a bitstream
+            // through would go on doing it. The closed stream's socket closes now (Xtream counts it).
+            player.stop()
+            NetworkModule.streamCalls.cancelAll()
+        }
+
         // setMediaSource(source, resetPosition=false) keeps the current frame on screen
         // while the new source prepares in the background.
         player.setMediaSource(mediaSource, false)
         player.prepare()
-        player.playWhenReady = true
+        player.playWhenReady = playWhenReady
     }
 
     // In the app's language, not the device's: the error messages are built here. A language
@@ -634,6 +650,11 @@ class StreamingPlaybackService : MediaSessionService() {
                         }
                     }
 
+                    // A paused film re-prepared for Night Audio ends its recycle paused, not playing.
+                    if (newState is PlaybackState.Paused && isRecycling) {
+                        setRecycling(false)
+                    }
+
                     // Suppress any non-final state during a silent recycle to keep it seamless.
                     // The player can pass through Buffering/Paused/Idle with not-yet-valid
                     // (e.g. negative) position data while the new source's timeline resolves;
@@ -745,6 +766,13 @@ class StreamingPlaybackService : MediaSessionService() {
                 ) {
                     if (!wasCanceled) bufferingTracker.onLoadError(loadErrorLabel(error))
                 }
+
+                override fun onAudioTrackInitialized(
+                    eventTime: AnalyticsListener.EventTime,
+                    audioTrackConfig: AudioSink.AudioTrackConfig,
+                ) {
+                    _audioOutputEncoding.value = audioTrackConfig.encoding
+                }
             },
         )
         // Debug builds log every track's codecs string, format support and chosen decoder
@@ -773,8 +801,43 @@ class StreamingPlaybackService : MediaSessionService() {
 
     /** Night Audio on or off, without a player rebuild. The setting decides: see [observeNightAudioSetting]. */
     fun setNightAudio(on: Boolean) {
-        nightAudioProcessor.setEnabled(on)
+        if (nightAudioProcessor.isEnabled != on) {
+            nightAudioProcessor.setEnabled(on)
+            reprepareIfBitstream()
+        }
     }
+
+    /**
+     * Audio the output takes as a bitstream cannot go through the processor (NA-D5). A switch during
+     * it re-prepares the stream at its position, through the silent recycle path, so it does not
+     * count as a stall, a retry or a new Recent entry. PCM output needs no re-prepare: the
+     * processor's fade does all of it.
+     */
+    private fun reprepareIfBitstream() {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+        val format = player?.audioFormat
+        val running = player?.playbackState == Player.STATE_READY || player?.playbackState == Player.STATE_BUFFERING
+        if (player != null && format != null && running && outputTakesBitstream(player, format)) {
+            Log.i(TAG, "Night Audio changed during a bitstream: re-preparing at ${player.currentPosition}.")
+            performSeamlessRecycle(
+                metadata = _currentMetadata.value,
+                currentPos = player.currentPosition,
+                playWhenReady = player.playWhenReady,
+                releaseDecoders = true,
+            )
+            healthMonitor?.reset()
+        }
+    }
+
+    /** Whether the audio output takes [format] as a bitstream. Main thread: it does not touch the sink. */
+    internal fun outputTakesBitstream(
+        player: androidx.media3.exoplayer.ExoPlayer,
+        format: Format,
+    ): Boolean =
+        format.sampleMimeType != MimeTypes.AUDIO_RAW &&
+            AudioCapabilities
+                .getCapabilities(this, player.audioAttributes, null)
+                .isPassthroughPlaybackSupported(format, player.audioAttributes)
 
     /** The compressor's gain now, in dB, for Stats; null while Night Audio is off. */
     fun nightAudioGainDb(): Float? = nightAudioProcessor.gainDb.takeIf { nightAudioProcessor.isEnabled }
@@ -822,6 +885,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _bandwidthEstimate.value = 0L
         _qualitySwitchCount.value = 0
         analyticsListener?.reset()
+        _audioOutputEncoding.value = null
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         // A new playback: a remote Stop sent for the previous one must never stop this one.
         playSessionId.value = UUID.randomUUID().toString()

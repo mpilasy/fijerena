@@ -37,6 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
+import org.njarasoa.fijerena.core.player.audio.audioOutputLabel
+import org.njarasoa.fijerena.core.player.audio.nightAudioGainLabel
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.formatBitrate
@@ -83,6 +85,8 @@ fun MobileStatsOverlay(
     val stereoText = stringResource(R.string.audio_channel_stereo)
     val channels51Text = stringResource(R.string.audio_channel_5_1)
     val channels71Text = stringResource(R.string.audio_channel_7_1)
+    val pcmOutputText = stringResource(R.string.player_stats_output_pcm)
+    val passthroughOutputFormat = stringResource(R.string.player_stats_output_passthrough_format)
     val liveTypeText = stringResource(R.string.player_stream_type_live)
     val vodTypeText = stringResource(R.string.player_stream_type_vod)
     val healthyText = stringResource(R.string.player_stats_health_healthy)
@@ -98,6 +102,8 @@ fun MobileStatsOverlay(
     var audioSampleRate by remember { mutableStateOf(naText) }
     var audioChannels by remember { mutableStateOf(naText) }
     var audioBitrate by remember { mutableStateOf(naText) }
+    var audioOutput by remember { mutableStateOf(naText) }
+    var nightAudioGain by remember { mutableStateOf<String?>(null) }
 
     var position by remember { mutableStateOf(0L) }
     var bufferedPosition by remember { mutableStateOf(0L) }
@@ -159,6 +165,13 @@ fun MobileStatsOverlay(
         var currentAudioBitrate = 0
 
         while (true) {
+            StreamingPlaybackService.getInstance()?.let { service ->
+                val newOutput =
+                    service.audioOutputEncoding.value?.let { audioOutputLabel(it, pcmOutputText, passthroughOutputFormat) } ?: naText
+                if (newOutput != audioOutput) audioOutput = newOutput
+                val newGain = service.nightAudioGainDb()?.let(::nightAudioGainLabel)
+                if (newGain != nightAudioGain) nightAudioGain = newGain
+            }
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
                 bufferedPosition = p.bufferedPosition
 
@@ -393,6 +406,8 @@ fun MobileStatsOverlay(
                 StatRow(stringResource(R.string.player_stats_sample_rate), audioSampleRate)
                 StatRow(stringResource(R.string.player_stats_channels), audioChannels)
                 StatRow(stringResource(R.string.player_stats_bitrate), audioBitrate)
+                StatRow(stringResource(R.string.player_stats_output), audioOutput)
+                nightAudioGain?.let { StatRow(stringResource(R.string.night_audio_title), it) }
 
                 SectionHeader(stringResource(R.string.player_stats_network))
                 StatRow(stringResource(R.string.device_info_connection), connection?.let { stringResource(it) } ?: naText)

@@ -21,10 +21,14 @@ class NightAudioRenderersFactory(
         enableFloatOutput: Boolean,
         enableAudioOutputPlaybackParams: Boolean,
     ): AudioSink =
-        DefaultAudioSink
-            .Builder(context)
-            .setEnableFloatOutput(enableFloatOutput)
-            .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-            .setAudioProcessors(arrayOf(processor))
-            .build()
+        NightAudioSink(
+            sink =
+                DefaultAudioSink
+                    .Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                    .setAudioProcessors(arrayOf(processor))
+                    .build(),
+            decodeToPcm = { processor.isEnabled },
+        )
 }

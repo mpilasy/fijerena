@@ -38,6 +38,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
+import org.njarasoa.fijerena.core.player.audio.audioOutputLabel
+import org.njarasoa.fijerena.core.player.audio.nightAudioGainLabel
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.formatBitrate
@@ -72,6 +74,8 @@ data class StatsSnapshot(
     val audioSampleRate: String,
     val audioChannels: String,
     val audioBitrate: String,
+    val audioOutput: String,
+    val nightAudioGain: String?,
     val position: Long,
     val bufferedPosition: Long,
     val droppedFrames: Long,
@@ -98,6 +102,8 @@ fun TvStatsOverlay(
     val connection = rememberConnectionLabel()
     val unknownText = stringResource(R.string.player_error_unknown)
     val vodTypeText = stringResource(R.string.player_stream_type_vod)
+    val pcmOutputText = stringResource(R.string.player_stats_output_pcm)
+    val passthroughOutputFormat = stringResource(R.string.player_stats_output_passthrough_format)
     val healthyText = stringResource(R.string.player_stats_health_healthy)
     val degradedFormat = stringResource(R.string.player_stats_health_degraded_format)
     val unstableFormat = stringResource(R.string.player_stats_health_unstable_format)
@@ -113,6 +119,8 @@ fun TvStatsOverlay(
                 audioSampleRate = naText,
                 audioChannels = naText,
                 audioBitrate = naText,
+                audioOutput = naText,
+                nightAudioGain = null,
                 position = 0L,
                 bufferedPosition = 0L,
                 droppedFrames = 0L,
@@ -316,6 +324,11 @@ fun TvStatsOverlay(
                     audioSampleRate = curAudioSampleRate,
                     audioChannels = curAudioChannels,
                     audioBitrate = curAudioBitrate,
+                    audioOutput =
+                        StreamingPlaybackService.getInstance()?.audioOutputEncoding?.value?.let {
+                            audioOutputLabel(it, pcmOutputText, passthroughOutputFormat)
+                        } ?: naText,
+                    nightAudioGain = StreamingPlaybackService.getInstance()?.nightAudioGainDb()?.let(::nightAudioGainLabel),
                     position = curPosition,
                     bufferedPosition = curBufferedPosition,
                     droppedFrames = curDroppedFrames,
@@ -416,6 +429,8 @@ fun TvStatsOverlay(
                             CompactStatRow(stringResource(R.string.player_stats_rate), stats.audioSampleRate)
                             CompactStatRow(stringResource(R.string.player_stats_ch), stats.audioChannels)
                             CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.audioBitrate)
+                            CompactStatRow(stringResource(R.string.player_stats_output), stats.audioOutput)
+                            stats.nightAudioGain?.let { CompactStatRow(stringResource(R.string.night_audio_title), it) }
 
                             SectionHeader(stringResource(R.string.player_stats_network))
                             CompactStatRow(
