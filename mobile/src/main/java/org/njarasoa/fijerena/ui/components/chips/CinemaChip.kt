@@ -12,6 +12,7 @@ import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SelectableChipElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.njarasoa.fijerena.core.ui.components.ProvideChipLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
@@ -37,7 +38,7 @@ fun CinemaFilterChip(
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = label,
+        label = { ProvideChipLabel(label) },
         modifier = modifier,
         enabled = enabled,
         leadingIcon = leadingIcon,
@@ -66,7 +67,7 @@ fun CinemaAssistChip(
 ) {
     AssistChip(
         onClick = onClick,
-        label = label,
+        label = { ProvideChipLabel(label) },
         modifier = modifier,
         enabled = enabled,
         leadingIcon = leadingIcon,

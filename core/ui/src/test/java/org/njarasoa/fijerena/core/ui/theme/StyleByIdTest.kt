@@ -7,6 +7,7 @@ class StyleByIdTest {
     @Test
     fun `a Look is found by its id`() {
         assertEquals(CinemaStyle, styleById("cinema"))
+        assertEquals(DialStyle, styleById("dial"))
     }
 
     @Test

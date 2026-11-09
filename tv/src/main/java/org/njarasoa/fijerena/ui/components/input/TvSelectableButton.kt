@@ -16,6 +16,7 @@ import androidx.tv.material3.SelectableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.ProvideChipLabel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -110,13 +111,16 @@ fun TvSelectableButton(
             CompositionLocalProvider(
                 androidx.compose.material3.LocalContentColor provides androidx.tv.material3.LocalContentColor.current,
             ) {
-                CinemaText(
-                    text = text,
-                    role = if (tab) TvInputDefaults.tabLabelRole else TvInputDefaults.chipLabelRole,
-                    tone = TextTone.Inherit,
-                    emphasis = selected,
-                    textAlign = TextAlign.Center,
-                )
+                // A tab's role is not a label, so only a chip takes the Look's chip label style.
+                ProvideChipLabel {
+                    CinemaText(
+                        text = text,
+                        role = if (tab) TvInputDefaults.tabLabelRole else TvInputDefaults.chipLabelRole,
+                        tone = TextTone.Inherit,
+                        emphasis = selected,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

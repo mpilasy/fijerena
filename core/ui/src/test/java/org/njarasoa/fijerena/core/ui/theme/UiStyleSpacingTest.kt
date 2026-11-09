@@ -10,6 +10,7 @@ class UiStyleSpacingTest {
     fun `the default Looks keep the base spacing`() {
         assertEquals(1f, ModernStyle.spacing)
         assertEquals(1f, MaterialStyle.spacing)
+        assertEquals(1f, DialStyle.spacing)
     }
 
     @Test

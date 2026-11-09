@@ -46,7 +46,7 @@ object UiThemes {
             // A calm, paper-like look: terracotta on warm charcoal, serif titles.
             PackagedUiTheme("clay", themeId = "clay", uiStyleId = "calm"),
             // A streaming-radio look: an indigo ground, a white accent, yellow badges.
-            PackagedUiTheme("indigo", themeId = "indigo", uiStyleId = "modern"),
+            PackagedUiTheme("indigo", themeId = "indigo", uiStyleId = "dial"),
             PackagedUiTheme("rounded", themeId = "midnight", uiStyleId = "cupertino"),
             PackagedUiTheme("sharp", themeId = "amethyst", uiStyleId = "roku"),
             PackagedUiTheme("balanced", themeId = "amoled_black", uiStyleId = "bravia"),

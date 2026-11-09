@@ -29,6 +29,15 @@ data class UiShapeTokens(
     val dialog: Dp,
 )
 
+/** How a chip's label differs from the other labels (`ProvideChipLabel`). */
+@Immutable
+data class UiChipLabelTokens(
+    /** The label in capitals, by the rules of the app's language. */
+    val caps: Boolean,
+    /** Letter spacing added to the label's own. */
+    val trackingSp: Float,
+)
+
 @Immutable
 data class UiTypeTokens(
     /** Every piece of text in this font (FontFamily.Default keeps each text role's own). */
@@ -45,6 +54,8 @@ data class UiTypeTokens(
     val labelFontFamily: FontFamily? = null,
     /** Labels (buttons, tabs, chips, badges) in capitals (Console). Titles and headings keep their case. */
     val capsLabels: Boolean = false,
+    /** Chip labels only (null: as the other labels). Buttons, tabs and badges do not change. */
+    val chipLabel: UiChipLabelTokens? = null,
 )
 
 enum class DialogPosition { CENTERED, BOTTOM_SHEET, FULL_BLEED }
@@ -513,6 +524,28 @@ val CalmStyle =
         spacing = 1.1f,
     )
 
+/** Manrope titles over Inter, 12 dp cards, pill buttons and chips, chip labels in spaced capitals, a focus lift with a shadow: a streaming-radio look. */
+val DialStyle =
+    UiStyle(
+        id = "dial",
+        nameRes = R.string.ui_style_dial,
+        shapes = UiShapeTokens(card = 12.dp, button = 100.dp, chip = 100.dp, dialog = 16.dp),
+        type =
+            UiTypeTokens(
+                fontFamily = UiFonts.Inter,
+                weightRegular = 400,
+                weightEmphasis = 600,
+                trackingTitleSp = -0.3f,
+                trackingBodySp = 0f,
+                titleFontFamily = UiFonts.Manrope,
+                titleWeight = 800,
+                chipLabel = UiChipLabelTokens(caps = true, trackingSp = 0.8f),
+            ),
+        dialog = UiDialogTokens(cornerRadius = 16.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.45f),
+        grid = UiGridTokens(spacing = 10.dp, focusScale = 1.06f, focusUsesOutline = false, focusUsesShadow = true),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
+    )
+
 val AllUiStyles: List<UiStyle> =
     listOf(
         MaterialStyle,
@@ -529,6 +562,7 @@ val AllUiStyles: List<UiStyle> =
         GrooveStyle,
         SpotlightStyle,
         CalmStyle,
+        DialStyle,
     )
 
 /** Looks no longer offered, and the one each profile that had it now gets: Serif went 2026-10-19. */

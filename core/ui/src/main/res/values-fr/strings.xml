@@ -1706,4 +1706,5 @@
     <string name="size_megabytes">%1$s&#160;Mo</string>
     <string name="size_gigabytes">%1$s&#160;Go</string>
     <string name="theme_indigo">Indigo</string>
+    <string name="ui_style_dial">Cadran</string>
 </resources>
