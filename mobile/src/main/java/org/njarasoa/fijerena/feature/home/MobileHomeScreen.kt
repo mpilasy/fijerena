@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -33,10 +31,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -123,6 +125,7 @@ import org.njarasoa.fijerena.ui.components.sendItemOf
 import org.njarasoa.fijerena.ui.components.sendToTvMenuAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import kotlin.math.roundToInt
 
 /** Home's rows, read together (docs/plans/20261019_phone-home-tab-plan.md). */
 private data class HomeRows(
@@ -762,10 +765,10 @@ private fun HomeRowsColumn(
             }
         }
     }
-    // The Wishlist rows: one per section, each brought into view by the banner.
-    val wantedInView = remember { mapOf(ContentType.TV_SHOWS to BringIntoViewRequester(), ContentType.MOVIES to BringIntoViewRequester()) }
+    // The Wishlist rows: one per section, each scrolled to the top of the list by the banner.
+    val wantedRows = remember { mapOf(ContentType.TV_SHOWS to PlacedRow(), ContentType.MOVIES to PlacedRow()) }
     val wantedTitle = stringResource(R.string.wanted_title)
-    val newEpisodesInView = remember { BringIntoViewRequester() }
+    val newEpisodesRow = remember { PlacedRow() }
     // A section's group: its favourites, its Wishlist titles, then its charts; none when all are empty.
     val sectionRows: @Composable (String, List<MediaItem>, Int) -> Unit = { contentType, favorites, title ->
         val wantedCards = wanted.cards.filter { it.entity.contentType == contentType }
@@ -776,7 +779,7 @@ private fun HomeRowsColumn(
         ) {
             HomeSection(if (shows) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE) {
                 if (shows && newEpisodes.cards.isNotEmpty()) {
-                    Box(Modifier.bringIntoViewRequester(newEpisodesInView)) {
+                    Box(Modifier.onPlaced { newEpisodesRow.coordinates = it }) {
                         NewEpisodesRow(
                             shows = newEpisodes.cards,
                             sourceNames = rows.sourceNames,
@@ -788,7 +791,7 @@ private fun HomeRowsColumn(
                 favoritesRow(favorites, contentType, title)
                 // Only with cards: an empty box would still take a gap.
                 if (wantedCards.isNotEmpty()) {
-                    Box(Modifier.bringIntoViewRequester(wantedInView.getValue(contentType))) {
+                    Box(Modifier.onPlaced { wantedRows.getValue(contentType).coordinates = it }) {
                         val sectionNew = wantedCards.count { it.isNew }
                         HomeRow(
                             if (sectionNew >
@@ -809,35 +812,56 @@ private fun HomeRowsColumn(
     }
     val scrollState = rememberScrollState()
     val scrollScope = rememberCoroutineScope()
+    val listViewport = remember { PlacedRow() }
+    val gapAboveRow = with(LocalDensity.current) { Spacing.md.roundToPx() }
+    // What a tapped banner told: it goes at once, as the store's write takes longer than the scroll
+    // and the banner's height would then move the row up, out of the list's top.
+    var wantedBannerTapped by remember { mutableStateOf<List<WantedCard>>(emptyList()) }
+    var newEpisodesBannerTapped by remember { mutableStateOf<List<NewEpisodeShow>>(emptyList()) }
+    val scrollRowToTop: (PlacedRow?) -> Unit = { row ->
+        scrollScope.launch {
+            // The first frame takes the tapped banner out; the second starts with the new layout.
+            repeat(2) { withFrameNanos {} }
+            val viewport = listViewport.coordinates?.takeIf { it.isAttached }
+            val placed = row?.coordinates?.takeIf { it.isAttached }
+            if (viewport != null && placed != null) {
+                val rowTop = viewport.localPositionOf(placed).y.roundToInt()
+                scrollState.animateScrollTo(scrollState.value + rowTop - gapAboveRow)
+            }
+        }
+    }
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(top = padding.calculateTopPadding())
+                .onPlaced { listViewport.coordinates = it }
                 .verticalScroll(scrollState)
                 // Ends with the bar's height so the last row scrolls clear of it.
                 .padding(bottom = Spacing.md + LocalDockInset.current),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
-        if (wanted.announced.isNotEmpty()) {
-            // The news: tapping it brings the Wishlist row of the first title it tells about into view.
+        if (wanted.announced.isNotEmpty() && wanted.announced != wantedBannerTapped) {
+            // The news: tapping it scrolls the Wishlist row of the first title it tells about to the top.
             WantedBanner(pluralStringResource(R.plurals.wanted_banner, wanted.announced.size, wanted.announced.size)) {
                 onBannerSeen()
+                wantedBannerTapped = wanted.announced
                 val type =
                     wanted.announced
                         .first()
                         .entity.contentType
-                scrollScope.launch { wantedInView[type]?.bringIntoView() }
+                scrollRowToTop(wantedRows[type])
             }
         }
-        if (newEpisodes.announced.isNotEmpty()) {
-            // The news: tapping it brings the New Episodes row into view.
+        if (newEpisodes.announced.isNotEmpty() && newEpisodes.announced != newEpisodesBannerTapped) {
+            // The news: tapping it scrolls the New Episodes row to the top of the list.
             WantedBanner(
                 pluralStringResource(R.plurals.new_episodes_banner, newEpisodes.announced.size, newEpisodes.announced.size),
                 stringResource(R.string.new_episodes_banner_open),
             ) {
                 onNewEpisodesBannerSeen()
-                scrollScope.launch { newEpisodesInView.bringIntoView() }
+                newEpisodesBannerTapped = newEpisodes.announced
+                scrollRowToTop(newEpisodesRow)
             }
         }
         HomeRow(stringResource(R.string.series_continue_watching_badge), rows.continueWatching, { it.sourceKey }) { item ->
@@ -980,6 +1004,11 @@ private fun WantedTitleCard(
         tags = false,
         onClick = onClick,
     )
+}
+
+/** Where a part of Home's list is, for a banner's scroll. Not state: only a tap reads it. */
+private class PlacedRow {
+    var coordinates: LayoutCoordinates? = null
 }
 
 /** What Home needs for its New Episodes row and banner (the new episode alerts plan). */
