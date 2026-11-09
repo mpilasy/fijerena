@@ -1273,6 +1273,9 @@ class XtreamMediaProvider(
         return delta
     }
 
+    /** The new episode check, after a successful [syncAll] (the new episode alerts plan). */
+    suspend fun checkNewEpisodes() = repository.checkNewEpisodes()
+
     /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */
     suspend fun getCategoryTotalCount(contentType: String): Int = repository.getCategoryTotalCount(contentType)
 

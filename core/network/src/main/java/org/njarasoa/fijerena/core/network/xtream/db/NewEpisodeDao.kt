@@ -7,6 +7,14 @@ import androidx.room.Query
 import androidx.room.Transaction
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
+/** What the new episode check knows of a followed show, from `xtream_series`. */
+data class NewEpisodeCheckState(
+    val seriesId: Int,
+    val lastModified: String?,
+    val episodesFetchedAt: Long?,
+    val hasEpisodes: Boolean,
+)
+
 /** The new episodes of a source, and the shows the profiles of this device follow on it. */
 @Dao
 interface NewEpisodeDao {
@@ -58,6 +66,17 @@ interface NewEpisodeDao {
         providerId: Long,
         since: Long,
     ): List<String>
+
+    /** What the check needs of each followed show among [ids] (at most the SQLite variable limit). */
+    @Query(
+        "SELECT s.seriesId AS seriesId, s.lastModified AS lastModified, s.episodesFetchedAt AS episodesFetchedAt, " +
+            "EXISTS (SELECT 1 FROM xtream_episodes e WHERE e.providerId = s.providerId AND e.seriesId = s.seriesId) AS hasEpisodes " +
+            "FROM xtream_series s WHERE s.providerId = :providerId AND s.seriesId IN (:ids)",
+    )
+    fun getCheckStates(
+        providerId: Long,
+        ids: List<Int>,
+    ): List<NewEpisodeCheckState>
 
     @Query("DELETE FROM new_episode WHERE providerId = :providerId AND foundAt < :cutoff")
     fun deleteOlderThan(

@@ -228,6 +228,8 @@ class XtreamRepository(
 
     suspend fun getSeriesInfo(seriesId: Int): XtreamResponse<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
+    suspend fun checkNewEpisodes() = contentManager.checkNewEpisodes()
+
     suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> = contentManager.getVodInfo(vodId)
 
     suspend fun getCachedMovieDetail(vodId: Int) = contentManager.getCachedMovieDetail(vodId)

@@ -153,6 +153,10 @@ object ProviderSyncRunner {
                 // merge them, or they grow to eight times their size (disk-footprint plan, Phase 1).
                 CatalogSearchIndex.compact(context)
 
+                // In the same work (the worker's foreground service, or in-process); a failure here
+                // never fails the sync (the new episode alerts plan).
+                NewEpisodeCheck.runSafely(provider.name) { mediaProvider.checkNewEpisodes() }
+
                 return Outcome.Success(delta)
             } catch (e: CancellationException) {
                 // Worker stopped or timed out — not a sync failure. Recording it as one would

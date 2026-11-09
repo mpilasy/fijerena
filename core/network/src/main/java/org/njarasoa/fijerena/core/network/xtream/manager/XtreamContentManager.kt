@@ -20,6 +20,8 @@ import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.xtream.CatalogPart
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncProgress
+import org.njarasoa.fijerena.core.network.xtream.NEW_EPISODE_TTL_MS
+import org.njarasoa.fijerena.core.network.xtream.NewEpisodeCheck
 import org.njarasoa.fijerena.core.network.xtream.NewEpisodeCompare
 import org.njarasoa.fijerena.core.network.xtream.ProgressThrottle
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
@@ -997,6 +999,25 @@ class XtreamContentManager(
                 episodeDao.insertAll(episodes)
             },
         )
+    }
+
+    /**
+     * The new episode check of this source, after a successful catalogue sync: prunes
+     * `new_episode`, then fetches the lists of the followed shows that [NewEpisodeCheck.plan] picks.
+     */
+    suspend fun checkNewEpisodes() {
+        withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            newEpisodeDao.prune(providerId, now - NEW_EPISODE_TTL_MS)
+            val states =
+                followedShowIds(newEpisodeDao, providerId, now)
+                    .toList()
+                    .chunked(SQLITE_DELETE_BATCH_SIZE)
+                    .flatMap { newEpisodeDao.getCheckStates(providerId, it) }
+            NewEpisodeCheck.run(NewEpisodeCheck.plan(states, now), { getSeriesInfo(it) }) {
+                seriesDao.updateEpisodesFetchedAt(providerId, it, System.currentTimeMillis())
+            }
+        }
     }
 
     /** Fetches a movie's details, persisting what came back. See [getSeriesInfo]. */
