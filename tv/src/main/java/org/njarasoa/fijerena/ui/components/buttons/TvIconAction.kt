@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -184,7 +184,14 @@ fun TvIconAction(
                         .align(Alignment.TopEnd)
                         .padding(Spacing.sm.scaled(scale))
                         .size(TvDimensions.liveDotSmall.scaled(scale))
-                        .panel(PanelFill.Accent, PanelCorner.Identity),
+                        .then(
+                            // The accent can be the focus fill's own colour (Indigo).
+                            if (focused) {
+                                Modifier.background(TvButtonStyle.iconFocusedContent, CinemaTheme.shapes.identity)
+                            } else {
+                                Modifier.panel(PanelFill.Accent, PanelCorner.Identity)
+                            },
+                        ),
             )
         }
     }

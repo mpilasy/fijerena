@@ -49,7 +49,8 @@ fun AudioTrackSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = stringResource(R.string.player_select_audio),
+        // Only Night Audio to set: nothing to "select".
+        title = stringResource(if (audioTracks.size > 1) R.string.player_select_audio else R.string.player_audio),
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 CinemaSwitchRow(

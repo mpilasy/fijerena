@@ -25,7 +25,8 @@ fun AudioTrackSelectorDialog(
     val setNightAudio = rememberNightAudioSetter()
 
     TvSelectorDialog(
-        title = stringResource(R.string.player_select_audio),
+        // Only Night Audio to set: nothing to "select".
+        title = stringResource(if (audioTracks.size > 1) R.string.player_select_audio else R.string.player_audio),
         // Night Audio always shows; the list of tracks only when there is something to choose.
         emptyText = if (audioTracks.isEmpty()) stringResource(R.string.player_no_audio) else null,
         onDismiss = onDismiss,

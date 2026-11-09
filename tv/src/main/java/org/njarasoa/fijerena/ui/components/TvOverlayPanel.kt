@@ -136,4 +136,4 @@ fun TvOverlayPanel(
 }
 
 /** The panel's tallest height, as a part of the screen height. */
-private const val PANEL_SCREEN_FRACTION = 0.8f
+private const val PANEL_SCREEN_FRACTION = 0.95f
