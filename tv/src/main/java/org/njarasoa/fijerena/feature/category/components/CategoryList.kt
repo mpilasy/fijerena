@@ -52,7 +52,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -272,29 +271,36 @@ private fun CategoryItem(
                 },
         look = cardStyle,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .currentIndicator(isSelected)
-                    .padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            if (isFavorite) {
-                CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .currentIndicator(isSelected)
+                        .padding(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (isFavorite) {
+                    CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
+                }
+                TvRowTitle(
+                    text = category.name,
+                    isCurrent = isSelected,
+                    isFocused = isFocused,
+                    // The source pill leaves this narrow list little room: a long name takes a second line.
+                    maxLines = 2,
+                    // weight(1f) keeps the hint below at the row's end.
+                    modifier = Modifier.weight(1f),
+                )
+                // The source ends the title line, as on every list row and Home card.
+                sourceName?.let { SourceBadge(it) }
             }
-            TvRowTitle(
-                text = category.name,
-                isCurrent = isSelected,
-                isFocused = isFocused,
-                // weight(1f) keeps the hint below at the row's end.
-                modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
-            )
-            // The source ends the title line, as on every list row and Home card.
-            sourceName?.let { SourceBadge(it) }
-            // See StreamItem: a glyph, not a focus stop, on the focused row only.
-            if (isFocused && onOpenActions != null) RowActionsHint()
+            // See StreamItem: a glyph, not a focus stop, on the focused row only. Over the row's
+            // margin, so that it takes no room from the name: the row keeps its height on focus.
+            if (isFocused && onOpenActions != null) {
+                Box(modifier = Modifier.align(Alignment.CenterEnd)) { RowActionsHint() }
+            }
         }
     }
 }
