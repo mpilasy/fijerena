@@ -1733,4 +1733,10 @@
         <item quantity="many">%1$d de séries que vous suivez ont de nouveaux épisodes</item>
         <item quantity="other">%1$d séries que vous suivez ont de nouveaux épisodes</item>
     </plurals>
+
+    <!-- Envoyer à la TV : la bannière sur la TV -->
+    <string name="send_to_tv_banner_title">%1$s envoie %2$s</string>
+    <string name="send_to_tv_from_position">À partir de %1$s</string>
+    <string name="send_to_tv_for_profile">pour %1$s</string>
+    <string name="send_to_tv_a_device">Un appareil</string>
 </resources>

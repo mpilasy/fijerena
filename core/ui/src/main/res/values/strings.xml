@@ -1726,4 +1726,10 @@
         <item quantity="one">%1$d show you follow has new episodes</item>
         <item quantity="other">%1$d shows you follow have new episodes</item>
     </plurals>
+
+    <!-- Send to TV: the banner on the TV -->
+    <string name="send_to_tv_banner_title">%1$s sends %2$s</string>
+    <string name="send_to_tv_from_position">From %1$s</string>
+    <string name="send_to_tv_for_profile">for %1$s</string>
+    <string name="send_to_tv_a_device">A device</string>
 </resources>

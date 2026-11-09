@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.sync.PlayHandoverEffect
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -596,6 +597,14 @@ internal fun LiveTvSplitLayout(
     // neither pause nor release it (the catch-up is already playing on it). Not saveable: the
     // screen composes afresh on return, and the preview plays again.
     var handedOff by remember { mutableStateOf(false) }
+
+    // Send to TV's Play: as RemoteStopEffect's save, but the player goes on to the sent item.
+    PlayHandoverEffect {
+        finalizeSessionAndAwait(playback.playbackState.value, loader)
+        StreamingPlaybackService.getInstance()?.stop()
+        handedOff = true
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->

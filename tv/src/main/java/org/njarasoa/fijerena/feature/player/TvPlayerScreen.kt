@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.waitKindOf
+import org.njarasoa.fijerena.core.ui.sync.PlayHandoverEffect
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
@@ -216,6 +217,14 @@ fun TvPlayerScreen(
         finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
         playbackViewModel.stopAndRelease()
         onHome()
+    }
+
+    // Send to TV's Play: this screen saves as Back does and stops the player, and the next player
+    // screen takes it over.
+    PlayHandoverEffect {
+        finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+        StreamingPlaybackService.getInstance()?.stop()
+        handedOff = true
     }
 
     LaunchedEffect(contentType) {

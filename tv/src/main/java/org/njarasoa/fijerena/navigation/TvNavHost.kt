@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.sports.league
 import org.njarasoa.fijerena.core.ui.sports.team
 import org.njarasoa.fijerena.core.ui.sports.teamsSearch
+import org.njarasoa.fijerena.core.ui.sync.PlayHandover
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -96,6 +97,7 @@ import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
+import org.njarasoa.fijerena.feature.sendtotv.TvSendToTvHost
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
 import org.njarasoa.fijerena.feature.sports.SportsLeagueScreen
 import org.njarasoa.fijerena.feature.sports.SportsSectionScreen
@@ -110,12 +112,15 @@ import org.njarasoa.fijerena.ui.components.TvGameReminderBanner
 import org.njarasoa.fijerena.ui.components.TvNoticeHost
 import org.njarasoa.fijerena.ui.components.TvPanel
 import org.njarasoa.fijerena.ui.components.TvPinDialog
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 import org.njarasoa.fijerena.ui.components.rememberReminderBannerState
+import org.njarasoa.fijerena.ui.components.rememberSendBannerState
 import org.njarasoa.fijerena.ui.components.reminderBannerKeys
+import org.njarasoa.fijerena.ui.components.sendBannerKeys
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -523,11 +528,13 @@ fun TvNavHost(
                 LocalOpenWanted provides { navController.navigateOnce(it) },
             ) {
                 val reminderBanner = rememberReminderBannerState()
+                val sendBanner = rememberSendBannerState()
                 Box(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .reminderBannerKeys(reminderBanner),
+                            .reminderBannerKeys(reminderBanner)
+                            .sendBannerKeys(sendBanner),
                 ) {
                     NavHost(
                         navController = navController,
@@ -1340,6 +1347,38 @@ fun TvNavHost(
                 // A game reminder while the app is on screen, over everything; it takes the remote's
                 // keys until it closes, and focus stays where it is. Watch tunes as a tapped reminder notification does (below);
                 // Manage reminders opens the Reminders page.
+                // A phone of the sync group sends something: asks first, then plays it. Waits behind the
+                // reminder banner and any dialog. See the send to TV plan.
+                TvSendToTvHost(
+                    state = sendBanner,
+                    isBusy = { navController.currentDestination?.isBusyForSend() != false },
+                    activeProfileId = { appSettings.activeProfileId },
+                    reminderShowing = GameReminderAlerts.banner.collectAsStateWithLifecycle().value != null,
+                    onPlay = { playable ->
+                        // Save and stop what plays here first; the sent item takes over the player.
+                        PlayHandover.handOver()
+                        NavReturnFocus.leaveFromFocused()
+                        val destination = navController.currentDestination
+                        val switches = playable.profileId != appSettings.activeProfileId
+                        val onPicker = destination?.hasRoute<Screen.ProfilePicker>() == true
+                        if (switches) {
+                            org.njarasoa.fijerena.core.ui.di.AppContainer
+                                .getInstance(context)
+                                .switchProfile(playable.profileId)
+                        }
+                        if (switches || onPicker) {
+                            clearSectionStacks()
+                            navController.navigate(Screen.ContentTypeSelection) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        }
+                        val replacesPlayer = destination?.hasRoute<Screen.Player>() == true && !switches && !onPicker
+                        navController.navigate(playable.route) {
+                            if (replacesPlayer) popUpTo<Screen.Player> { inclusive = true }
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
                 TvGameReminderBanner(
                     state = reminderBanner,
                     onWatch = { alert -> alert.channel?.let { GameReminderAlerts.requestTune(ReminderTune(alert.profileId, it)) } },
@@ -1417,6 +1456,10 @@ fun TvNavHost(
         }
     }
 }
+
+/** A sent item shows no banner over safe mode, the newer-data screen or a setup screen: the TV answers busy. */
+private fun androidx.navigation.NavDestination.isBusyForSend(): Boolean =
+    hasRoute<Screen.SafeMode>() || hasRoute<Screen.NewerData>() || hasRoute<Screen.AddProvider>()
 
 /** A reminder's channel is not tuned over the profile picker, safe mode or the newer-data screen. */
 private fun canTuneFrom(destination: androidx.navigation.NavDestination): Boolean =

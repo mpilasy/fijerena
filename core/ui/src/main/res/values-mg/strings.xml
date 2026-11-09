@@ -1720,4 +1720,10 @@
         <item quantity="one">Misy fizarana vaovao ny andian-tantara %1$d arahinao</item>
         <item quantity="other">Misy fizarana vaovao ny andian-tantara %1$d arahinao</item>
     </plurals>
+
+    <!-- Alefa amin'ny TV: ny fanairana amin'ny TV -->
+    <string name="send_to_tv_banner_title">%1$s nandefa %2$s</string>
+    <string name="send_to_tv_from_position">Manomboka amin\'ny %1$s</string>
+    <string name="send_to_tv_for_profile">ho an\'i %1$s</string>
+    <string name="send_to_tv_a_device">Fitaovana</string>
 </resources>

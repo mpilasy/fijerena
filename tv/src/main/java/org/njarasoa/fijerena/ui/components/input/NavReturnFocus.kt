@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.ui.components.input
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -69,6 +71,9 @@ class NavReturnFocus internal constructor(
     private var scrollIndex = initialScrollIndex
     private var scrollOffset = initialScrollOffset
 
+    /** The list [NavReturnFocusEffect] watches: a hand-back the host records keeps its scroll. */
+    internal var boundListState: LazyListState? = null
+
     /**
      * Records [key] as the control navigating away, and [listState]'s position at that moment:
      * on the way back Compose's own first focus may scroll the list before the hand-back runs.
@@ -116,12 +121,28 @@ class NavReturnFocus internal constructor(
     }
 
     companion object {
+        /**
+         * Records the control that has focus now as the one to go back to, for a screen opened by
+         * something other than that control (a Send to TV banner's Play). No effect when the
+         * control in focus is not a [navReturnFocusTarget].
+         */
+        fun leaveFromFocused() {
+            val state = FocusedNavTarget.state ?: return
+            FocusedNavTarget.key?.let { state.leaveFrom(it, state.boundListState) }
+        }
+
         val Saver: Saver<NavReturnFocus, List<Any>> =
             Saver(
                 save = { state -> state.key?.let { listOf(it, state.scrollIndex, state.scrollOffset) } },
                 restore = { saved -> NavReturnFocus(saved[0] as String, saved[1] as Int, saved[2] as Int) },
             )
     }
+}
+
+/** The [navReturnFocusTarget] that has focus now; null when focus is on any other control. */
+private object FocusedNavTarget {
+    var state: NavReturnFocus? = null
+    var key: String? = null
 }
 
 /** A [NavReturnFocus] that survives the navigation round trip (and an activity recreate). */
@@ -135,7 +156,20 @@ fun rememberNavReturnFocus(): NavReturnFocus = rememberSaveable(saver = NavRetur
 fun Modifier.navReturnFocusTarget(
     returnFocus: NavReturnFocus,
     key: String,
-): Modifier = focusRequester(returnFocus.requesterOf(key))
+): Modifier =
+    focusRequester(returnFocus.requesterOf(key)).onFocusChanged {
+        when {
+            it.hasFocus -> {
+                FocusedNavTarget.state = returnFocus
+                FocusedNavTarget.key = key
+            }
+
+            FocusedNavTarget.state === returnFocus && FocusedNavTarget.key == key -> {
+                FocusedNavTarget.state = null
+                FocusedNavTarget.key = null
+            }
+        }
+    }
 
 /**
  * Gives focus back to the [navReturnFocusTarget] whose key [NavReturnFocus.leaveFrom] recorded,
@@ -157,6 +191,7 @@ fun NavReturnFocusEffect(
     val currentListState by rememberUpdatedState(listState)
     val currentFallback by rememberUpdatedState(fallback)
     val currentPrepare by rememberUpdatedState(prepare)
+    SideEffect { returnFocus.boundListState = listState }
     LaunchedEffect(returnFocus, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             val key = returnFocus.key
