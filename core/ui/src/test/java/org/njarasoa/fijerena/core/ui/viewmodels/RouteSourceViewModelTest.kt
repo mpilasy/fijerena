@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -12,9 +13,13 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -28,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RouteSourceViewModelTest {
+    private val created = mutableListOf<ViewModel>()
     private val context = mockk<Context>(relaxed = true)
     private val prefs = mockk<SharedPreferences>(relaxed = true)
     private val container = mockk<AppContainer>(relaxed = true)
@@ -45,6 +51,9 @@ class RouteSourceViewModelTest {
 
     @After
     fun tearDown() {
+        // First: work still running after Main is gone fails the next test that uses runTest.
+        val jobs = created.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { withTimeout(5_000L) { jobs.forEach { it.cancelAndJoin() } } }
         unmockkAll()
         Dispatchers.resetMain()
     }
@@ -81,7 +90,8 @@ class RouteSourceViewModelTest {
         coVerify(timeout = TIMEOUT_MS) { container.getMediaRepository(SOURCE) }
     }
 
-    private inline fun <reified T : ViewModel> create(factory: ViewModelProvider.Factory): T = factory.create(T::class.java)
+    private inline fun <reified T : ViewModel> create(factory: ViewModelProvider.Factory): T =
+        factory.create(T::class.java).also(created::add)
 
     private companion object {
         const val SOURCE = 7L

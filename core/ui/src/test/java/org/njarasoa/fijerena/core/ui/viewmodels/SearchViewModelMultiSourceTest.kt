@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.lifecycle.viewModelScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -10,8 +11,10 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -46,6 +49,7 @@ class SearchViewModelMultiSourceTest {
     private val prefs = mockk<SharedPreferences>(relaxed = true)
     private val container = mockk<AppContainer>(relaxed = true)
     private val providers = mockk<ProviderRepository>(relaxed = true)
+    private val viewModels = mutableListOf<SearchViewModel>()
 
     @Before
     fun setup() {
@@ -59,6 +63,9 @@ class SearchViewModelMultiSourceTest {
 
     @After
     fun tearDown() {
+        // First: work still running after Main is gone fails whichever test class runs next.
+        val jobs = viewModels.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { withTimeout(TIMEOUT_MS) { jobs.forEach { it.cancelAndJoin() } } }
         unmockkAll()
         Dispatchers.resetMain()
     }
@@ -94,7 +101,7 @@ class SearchViewModelMultiSourceTest {
     fun `the Guide tab shows once a local source gets a playlist`() {
         val rows = MutableStateFlow(listOf(local(A, config = "")))
         every { providers.profileSources(any()) } returns rows
-        val viewModel = SearchViewModel(context, ContentType.MOVIES)
+        val viewModel = viewModel()
         assertFalse(viewModel.hasGuide.value)
 
         // Only the row's config changes: the same source, still the profile's only one.
@@ -144,7 +151,7 @@ class SearchViewModelMultiSourceTest {
         val failing = source(A, items = emptyList())
         coEvery { failing.search(any(), any(), any()) } throws IllegalStateException("boom")
 
-        val viewModel = SearchViewModel(context, ContentType.MOVIES)
+        val viewModel = viewModel()
         viewModel.performSearch("matrix")
 
         runBlocking { withTimeout(TIMEOUT_MS) { viewModel.uiState.first { it is SearchViewModel.UiState.Error } } }
@@ -204,7 +211,7 @@ class SearchViewModelMultiSourceTest {
         val alpha = source(A, items = emptyList())
         val beta = source(B, items = emptyList())
 
-        val viewModel = SearchViewModel(context, ContentType.MOVIES)
+        val viewModel = viewModel()
         viewModel.toggleFavorite(B, "1", "Matrix", "c", ContentType.MOVIES, isFavorite = false)
 
         coVerify(timeout = TIMEOUT_MS) { beta.addFavorite("1", "Matrix", "c", ContentType.MOVIES) }
@@ -220,15 +227,17 @@ class SearchViewModelMultiSourceTest {
         coEvery { beta.getPlaybackPositionSuspend("1", ContentType.MOVIES) } returns null
         val result = SearchViewModel.SearchResult("1", "Matrix", "c", "Films", ContentType.MOVIES, providerId = B, sourceName = "Beta")
 
-        val target = runBlocking { withTimeout(TIMEOUT_MS) { SearchViewModel(context, ContentType.MOVIES).menuTarget(result) } }
+        val target = runBlocking { withTimeout(TIMEOUT_MS) { viewModel().menuTarget(result) } }
 
         assertEquals(false, target.isWatched)
         assertNull(target.isShowWatched)
         coVerify(exactly = 0) { alpha.getPlaybackPositionSuspend(any(), any()) }
     }
 
+    private fun viewModel() = SearchViewModel(context, ContentType.MOVIES).also { viewModels += it }
+
     private fun search(query: String): SearchViewModel.UiState.Success {
-        val viewModel = SearchViewModel(context, ContentType.MOVIES)
+        val viewModel = viewModel()
         viewModel.performSearch(query)
         return runBlocking {
             withTimeout(TIMEOUT_MS) {

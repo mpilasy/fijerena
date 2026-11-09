@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -10,6 +12,8 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -28,6 +32,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 /** Back from the player, the details page shows the position the player just saved. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReturnFromPlayerTest {
+    private val created = mutableListOf<ViewModel>()
     private val context = mockk<Context>(relaxed = true)
     private val prefs = mockk<SharedPreferences>(relaxed = true)
     private val container = mockk<AppContainer>(relaxed = true)
@@ -45,6 +50,9 @@ class ReturnFromPlayerTest {
 
     @After
     fun tearDown() {
+        // First: work still running after Main is gone fails the next test that uses runTest.
+        val jobs = created.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { withTimeout(5_000L) { jobs.forEach { it.cancelAndJoin() } } }
         unmockkAll()
         Dispatchers.resetMain()
     }
@@ -56,7 +64,13 @@ class ReturnFromPlayerTest {
             coEvery { repository.getFilteredCategories(any()) } returns Result.success(emptyList())
             coEvery { repository.getSiblingCompletedMovieIds() } returns emptySet()
             coEvery { repository.getPlaybackPositionSuspend(MOVIE, "MOVIES") } returns null
-            val viewModel = MovieDetailsViewModelFactory(context, MOVIE, "c1", "Film").create(MovieDetailsViewModel::class.java)
+            val viewModel =
+                MovieDetailsViewModelFactory(
+                    context,
+                    MOVIE,
+                    "c1",
+                    "Film",
+                ).create(MovieDetailsViewModel::class.java).also(created::add)
             assertEquals(0L, awaitSuccess(viewModel).resumePositionMs)
 
             // The player saved a position, then Back.
@@ -73,7 +87,13 @@ class ReturnFromPlayerTest {
     fun `the player's awaited stop waits for the queued position write`() =
         runBlocking {
             val viewModel =
-                StreamLoaderViewModelFactory(context, MOVIE, "Film", "c1", ContentType.MOVIES).create(StreamLoaderViewModel::class.java)
+                StreamLoaderViewModelFactory(
+                    context,
+                    MOVIE,
+                    "Film",
+                    "c1",
+                    ContentType.MOVIES,
+                ).create(StreamLoaderViewModel::class.java).also(created::add)
             // The first load starts once the repository is ready.
             coVerify(timeout = TIMEOUT_MS) { repository.resolvePlayableStream(any(), any(), any(), any()) }
 

@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -10,9 +12,13 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AlternateStreamSourceTest {
+    private val created = mutableListOf<ViewModel>()
     private val context = mockk<Context>(relaxed = true)
     private val prefs = mockk<SharedPreferences>(relaxed = true)
     private val container = mockk<AppContainer>(relaxed = true)
@@ -49,6 +56,9 @@ class AlternateStreamSourceTest {
 
     @After
     fun tearDown() {
+        // First: work still running after Main is gone fails the next test that uses runTest.
+        val jobs = created.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { withTimeout(5_000L) { jobs.forEach { it.cancelAndJoin() } } }
         unmockkAll()
         Dispatchers.resetMain()
     }
@@ -60,7 +70,14 @@ class AlternateStreamSourceTest {
 
     @Test
     fun `a film's copy on another source opens on that source, one on its own switches in place`() {
-        val viewModel = MovieDetailsViewModelFactory(context, "m1", "c1", "Film", SOURCE).create(MovieDetailsViewModel::class.java)
+        val viewModel =
+            MovieDetailsViewModelFactory(
+                context,
+                "m1",
+                "c1",
+                "Film",
+                SOURCE,
+            ).create(MovieDetailsViewModel::class.java).also(created::add)
         val elsewhere = copy("m2", OTHER)
 
         assertEquals(OTHER, viewModel.otherSourceOf(elsewhere))
@@ -76,7 +93,14 @@ class AlternateStreamSourceTest {
 
     @Test
     fun `a show's copy on another source opens on that source, one on its own switches in place`() {
-        val viewModel = SeriesDetailsViewModelFactory(context, "s1", "c1", "Show", SOURCE).create(SeriesDetailsViewModel::class.java)
+        val viewModel =
+            SeriesDetailsViewModelFactory(
+                context,
+                "s1",
+                "c1",
+                "Show",
+                SOURCE,
+            ).create(SeriesDetailsViewModel::class.java).also(created::add)
         val elsewhere = copy("s2", OTHER)
 
         assertEquals(OTHER, viewModel.otherSourceOf(elsewhere))
@@ -91,12 +115,26 @@ class AlternateStreamSourceTest {
 
     @Test
     fun `after switching to a copy, Play records the copy's category and show, not the route's`() {
-        val film = MovieDetailsViewModelFactory(context, "m1", "c1", "Film", SOURCE).create(MovieDetailsViewModel::class.java)
+        val film =
+            MovieDetailsViewModelFactory(
+                context,
+                "m1",
+                "c1",
+                "Film",
+                SOURCE,
+            ).create(MovieDetailsViewModel::class.java).also(created::add)
         assertEquals("c1", film.currentCategoryId)
         film.switchToAlternateStream(copy("m3", SOURCE))
         assertEquals("c", film.currentCategoryId)
 
-        val show = SeriesDetailsViewModelFactory(context, "s1", "c1", "Show", SOURCE).create(SeriesDetailsViewModel::class.java)
+        val show =
+            SeriesDetailsViewModelFactory(
+                context,
+                "s1",
+                "c1",
+                "Show",
+                SOURCE,
+            ).create(SeriesDetailsViewModel::class.java).also(created::add)
         assertEquals(PlayedSeries("s1", "Show", "c1"), show.playedSeries())
         show.switchToAlternateStream(copy("s3", SOURCE))
         assertEquals(PlayedSeries("s3", "Film s3", "c"), show.playedSeries())

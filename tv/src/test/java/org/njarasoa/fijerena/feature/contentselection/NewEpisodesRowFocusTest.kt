@@ -86,12 +86,12 @@ class NewEpisodesRowFocusTest {
             }
         }
 
-        walk.awaitFocused("S / Show 1 / New / S02E05")
+        walk.awaitFocused("S / New / Show 1 / S02E05")
         walk.run(
-            right("S / Show 2 / New / 3 new episodes"),
-            right("S / Show 3 / New / New season"),
-            right("S / Show 3 / New / New season"),
-            left("S / Show 2 / New / 3 new episodes"),
+            right("S / New / Show 2 / 3 new episodes"),
+            right("S / New / Show 3 / New season"),
+            right("S / New / Show 3 / New season"),
+            left("S / New / Show 2 / 3 new episodes"),
         )
     }
 

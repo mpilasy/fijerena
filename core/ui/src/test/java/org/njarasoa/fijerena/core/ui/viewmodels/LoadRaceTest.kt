@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -12,8 +14,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -44,6 +48,7 @@ import java.util.concurrent.TimeUnit
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoadRaceTest {
+    private val created = mutableListOf<ViewModel>()
     private val context = mockk<Context>(relaxed = true)
     private val prefs = mockk<SharedPreferences>(relaxed = true)
     private val container = mockk<AppContainer>(relaxed = true)
@@ -71,6 +76,9 @@ class LoadRaceTest {
 
     @After
     fun tearDown() {
+        // First: work still running after Main is gone fails the next test that uses runTest.
+        val jobs = created.map { it.viewModelScope.coroutineContext.job }
+        runBlocking { withTimeout(5_000L) { jobs.forEach { it.cancelAndJoin() } } }
         unmockkAll()
         Dispatchers.resetMain()
     }
@@ -90,7 +98,14 @@ class LoadRaceTest {
             Result.success(SeriesDetail(id = "s1", name = "Old"))
         }
         coEvery { repository.getSeriesDetail(SeriesId("s3")) } returns Result.success(SeriesDetail(id = "s3", name = "New"))
-        val viewModel = SeriesDetailsViewModelFactory(context, "s1", "c1", "Show", SOURCE).create(SeriesDetailsViewModel::class.java)
+        val viewModel =
+            SeriesDetailsViewModelFactory(
+                context,
+                "s1",
+                "c1",
+                "Show",
+                SOURCE,
+            ).create(SeriesDetailsViewModel::class.java).also(created::add)
         runBlocking { withTimeout(TIMEOUT_MS) { slowStarted.await() } }
 
         viewModel.switchToAlternateStream(copy("s3", MediaType.SERIES))
@@ -109,7 +124,14 @@ class LoadRaceTest {
             inWrite.countDown()
             release.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)
         }
-        val viewModel = MovieDetailsViewModelFactory(context, "m1", "c1", "Film", SOURCE).create(MovieDetailsViewModel::class.java)
+        val viewModel =
+            MovieDetailsViewModelFactory(
+                context,
+                "m1",
+                "c1",
+                "Film",
+                SOURCE,
+            ).create(MovieDetailsViewModel::class.java).also(created::add)
         awaitState(viewModel.uiState) { it is MovieDetailsViewModel.UiState.Success }
 
         viewModel.toggleFavorite("Film")
@@ -182,6 +204,7 @@ class LoadRaceTest {
     private fun loader(streamId: String): StreamLoaderViewModel =
         StreamLoaderViewModelFactory(context, streamId, "Film $streamId", "c1", ContentType.MOVIES, providerId = SOURCE)
             .create(StreamLoaderViewModel::class.java)
+            .also(created::add)
 
     private fun copy(
         id: String,
