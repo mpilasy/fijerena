@@ -58,10 +58,19 @@ object SyncKind {
     const val PIN_ANSWER = "pin_answer"
 
     /**
+     * A phone sends a film, an episode or a channel to one TV; keyed by the *target TV's* server
+     * id. Volatile — see [VOLATILE], [PlayRequests] and the send to TV plan.
+     */
+    const val PLAY_REQUEST = "play_request"
+
+    /** What the TV did with a [PLAY_REQUEST]; keyed by the *target TV's* server id. Volatile — see [VOLATILE] and [PlayRequests]. */
+    const val PLAY_ANSWER = "play_answer"
+
+    /**
      * Kinds held only in memory, on both ends: pushed from [VolatileRecords], applied to an
      * in-memory store — never a version row, a tombstone, or a step of the receiver's sync clocks.
      */
-    val VOLATILE = setOf(NOW_PLAYING, REMOTE_COMMAND, PIN_REQUEST, PIN_ANSWER)
+    val VOLATILE = setOf(NOW_PLAYING, REMOTE_COMMAND, PIN_REQUEST, PIN_ANSWER, PLAY_REQUEST, PLAY_ANSWER)
 
     /**
      * A film or show on a profile's Wanted list; keyed by its TMDB id, with the content type.

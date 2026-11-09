@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.PinRequests
+import org.njarasoa.fijerena.core.network.sync.PlayRequests
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
 import org.njarasoa.fijerena.core.network.sync.SyncKey
@@ -340,6 +341,7 @@ class SyncSettingsViewModel(
             accounts.leave()
             NowPlayingStore.clear()
             PinRequests.clear()
+            PlayRequests.clear()
             manager.onLinkChanged()
             ui.value = Ui()
         }

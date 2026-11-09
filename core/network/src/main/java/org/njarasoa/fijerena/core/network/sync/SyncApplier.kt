@@ -120,6 +120,8 @@ class SyncApplier(
             SyncKind.REMOTE_COMMAND,
             SyncKind.PIN_REQUEST,
             SyncKind.PIN_ANSWER,
+            SyncKind.PLAY_REQUEST,
+            SyncKind.PLAY_ANSWER,
         )
 
     suspend fun apply(records: List<SyncRecord>): Result {
@@ -250,6 +252,8 @@ class SyncApplier(
             SyncKind.REMOTE_COMMAND -> applyRemoteCommand(record)
             SyncKind.PIN_REQUEST -> applyPinRequest(record)
             SyncKind.PIN_ANSWER -> applyPinAnswer(record)
+            SyncKind.PLAY_REQUEST -> applyPlayRequest(record)
+            SyncKind.PLAY_ANSWER -> applyPlayAnswer(record)
             else -> Outcome.Skipped
         }
     }
@@ -307,6 +311,36 @@ class SyncApplier(
         val fired =
             try {
                 forThisDevice && PinRequests.receiveAnswer(SyncPayloads.decode(record.payload))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+        return if (fired) Outcome.Applied else Outcome.Skipped
+    }
+
+    /** To [PlayRequests] only, and only a request keyed to this device: see [PlayRequests.receiveRequest]. */
+    private fun applyPlayRequest(record: SyncRecord): Outcome {
+        val forThisDevice = !record.deleted && record.key.itemId.isNotEmpty() && record.key.itemId == thisDeviceId()
+        val taken =
+            try {
+                forThisDevice && PlayRequests.receiveRequest(SyncPayloads.decode(record.payload), record.hlc)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+        return if (taken) Outcome.Applied else Outcome.Skipped
+    }
+
+    /**
+     * To [PlayRequests] only: the sender is not the key's device, so [PlayRequests.receiveAnswer]
+     * decides by the request id. A payload this version can't read is skipped, not deferred.
+     */
+    private fun applyPlayAnswer(record: SyncRecord): Outcome {
+        val fired =
+            try {
+                !record.deleted && PlayRequests.receiveAnswer(SyncPayloads.decode(record.payload))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

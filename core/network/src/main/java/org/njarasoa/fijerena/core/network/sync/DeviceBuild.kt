@@ -22,9 +22,15 @@ data class DeviceBuild(
     val model: String = "",
     val androidRelease: String = "",
     val sdkInt: Int = 0,
+    /** What this build can do for the others of its group; a build from before a feature reports nothing for it. */
+    val features: List<String> = emptyList(),
 ) {
+    /** A TV of this build takes a film, an episode or a channel from a phone (the send to TV plan). */
+    val takesPlayRequests: Boolean get() = FEATURE_PLAY_REQUEST in features
+
     companion object {
         const val META_BUILD_TYPE = "fijerena.buildType"
+        const val FEATURE_PLAY_REQUEST = "play_request"
 
         /** This device's build, from its package and the system. */
         fun current(context: Context): DeviceBuild {
@@ -44,6 +50,7 @@ data class DeviceBuild(
                 model = Build.MODEL.orEmpty(),
                 androidRelease = Build.VERSION.RELEASE.orEmpty(),
                 sdkInt = Build.VERSION.SDK_INT,
+                features = listOf(FEATURE_PLAY_REQUEST),
             )
         }
     }

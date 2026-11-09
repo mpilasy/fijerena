@@ -359,6 +359,57 @@ object SyncPayloads {
         }
     }
 
+    /**
+     * A film, an episode or a channel sent to a TV ([SyncKind.PLAY_REQUEST], keyed by the target
+     * TV's id). [requestId] is random and used once. The route fields are those of the player
+     * route, with the source as its [providerKey] (a local id differs per device) and
+     * [profileId] the profile it plays for. [title] and [subtitle] are what the TV's banner shows.
+     * [open] false: the phone stopped waiting. [sentAt] is the phone's clock. See the send to TV plan.
+     */
+    @Serializable
+    data class PlayRequest(
+        val requestId: String,
+        val profileId: String,
+        val profileName: String = "",
+        val fromDeviceName: String = "",
+        val providerKey: String,
+        val streamId: String,
+        val streamName: String = "",
+        val categoryId: String = "",
+        val contentType: String = "",
+        val episodeId: String? = null,
+        val episodeExtension: String? = null,
+        val seriesId: String? = null,
+        val seriesName: String? = null,
+        /** Where the phone left it; null plays from the watch row (a film or an episode), or live. */
+        val positionMs: Long? = null,
+        val title: String = "",
+        val subtitle: String? = null,
+        val open: Boolean = true,
+        val sentAt: Long,
+    )
+
+    /** What the TV did with the [PlayRequest] [requestId] ([SyncKind.PLAY_ANSWER], keyed by the target TV's id). */
+    @Serializable
+    data class PlayAnswer(
+        val requestId: String,
+        val result: String,
+        val fromDeviceName: String = "",
+    ) {
+        companion object {
+            /** The request applied: the TV shows a banner. Not final; the others are. */
+            const val RECEIVED = "received"
+            const val PLAYING = "playing"
+            const val DISMISSED = "dismissed"
+            const val BUSY = "busy"
+            const val NO_SOURCE = "no_source"
+            const val NO_PROFILE = "no_profile"
+            const val NOT_ALLOWED = "not_allowed"
+
+            val ALL = setOf(RECEIVED, PLAYING, DISMISSED, BUSY, NO_SOURCE, NO_PROFILE, NOT_ALLOWED)
+        }
+    }
+
     inline fun <reified T> encode(value: T): String = json.encodeToString(value)
 
     inline fun <reified T> decode(payload: String?): T = json.decodeFromString(requireNotNull(payload) { "Record has no payload" })
