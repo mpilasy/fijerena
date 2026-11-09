@@ -1,6 +1,6 @@
 # Night Audio
 
-**Status:** Planned 2026-11-09, not started. The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** In progress since 2026-11-09 (built on its own branch, not merged). The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
