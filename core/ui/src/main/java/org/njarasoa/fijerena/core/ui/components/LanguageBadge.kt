@@ -47,7 +47,7 @@ import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /** What a badge marks, which decides its colours. */
 enum class BadgeKind {
-    /** A tag: codes, formats, cast names — raised surface, secondary text. */
+    /** A tag: codes, formats, cast names — raised surface or the theme's badge fill. */
     Neutral,
 
     /** [Neutral] on a card (already the raised surface): one step lighter, so the pill still shows. */
@@ -74,8 +74,8 @@ fun CinemaBadge(
     val c = CinemaTheme.colors
     val (container, tone) =
         when (kind) {
-            BadgeKind.Neutral -> c.surfaceRaised to TextTone.Secondary
-            BadgeKind.OnCard -> c.surfaceHigh to TextTone.Secondary
+            BadgeKind.Neutral -> (c.badgeFill ?: c.surfaceRaised) to TextTone.OnBadge
+            BadgeKind.OnCard -> (c.badgeFill ?: c.surfaceHigh) to TextTone.OnBadge
             BadgeKind.OnMedia -> c.mediaScrim.copy(alpha = CinemaAlpha.tint) to TextTone.OnMedia
             BadgeKind.Success -> c.success to TextTone.OnAccent
             BadgeKind.Warning -> c.warning to TextTone.OnAccent
@@ -324,7 +324,7 @@ fun CatchupBadge(
             modifier
                 .clearAndSetSemantics { contentDescription = description }
                 .clip(shape)
-                .background(CinemaTheme.colors.surfaceRaised)
+                .background(CinemaTheme.colors.badgeFill ?: CinemaTheme.colors.surfaceRaised)
                 .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
@@ -332,13 +332,13 @@ fun CatchupBadge(
         CinemaIcon(
             imageVector = CinemaIcons.Replay,
             contentDescription = null,
-            tone = TextTone.Secondary,
+            tone = TextTone.OnBadge,
             modifier = Modifier.size(iconSize),
         )
         CinemaText(
             text = stringResource(R.string.catchup_badge_days, days),
             role = TextRole.Caption,
-            tone = TextTone.Secondary,
+            tone = TextTone.OnBadge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

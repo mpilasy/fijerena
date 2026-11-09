@@ -2,10 +2,12 @@ package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Console, Meadow, Meadow dusk, Slate, Crimson, Forest, Aurora, Royal and Clay: text reads on every surface and on the painted sky (4.5:1). */
+/** Console, Meadow, Meadow dusk, Slate, Crimson, Forest, Aurora, Royal, Clay and Indigo: text reads on every surface and on the painted sky (4.5:1). */
 class NewPaletteContrastTest {
     private val palettes =
         listOf(
@@ -18,6 +20,7 @@ class NewPaletteContrastTest {
             AuroraPalette,
             RoyalPalette,
             ClayPalette,
+            IndigoPalette,
         )
 
     private fun contrast(
@@ -60,9 +63,33 @@ class NewPaletteContrastTest {
 
     @Test
     fun `the streaming looks' accent text reads on the ground`() {
-        listOf(CrimsonPalette, ForestPalette, AuroraPalette, RoyalPalette, ClayPalette).forEach { p ->
+        listOf(CrimsonPalette, ForestPalette, AuroraPalette, RoyalPalette, ClayPalette, IndigoPalette).forEach { p ->
             val ratio = contrast(p.accent, p.background)
             assertTrue("${p.id} accent on ground: $ratio", ratio >= 3.9f)
+        }
+    }
+
+    @Test
+    fun `Indigo's text reads on its yellow badge, on success and on warning`() {
+        val roles = CinemaColorRoles.from(IndigoPalette)
+        assertReads("on badge", roles.onBadge, roles.badgeFill!!)
+        assertReads("on success", roles.onAccent, roles.success)
+        assertReads("on warning", roles.onAccent, roles.warning)
+    }
+
+    @Test
+    fun `a theme with no badge fill keeps the grey badge and its secondary text`() {
+        val roles = CinemaColorRoles.from(RoyalPalette)
+        assertEquals(null, roles.badgeFill)
+        assertEquals(roles.textSecondary, roles.onBadge)
+    }
+
+    @Test
+    fun `the current bar shows on the focus fill in every theme`() {
+        AllPalettes.forEach { p ->
+            val roles = CinemaColorRoles.from(p)
+            assertNotEquals(p.id, roles.focusFill, roles.currentBar)
+            assertEquals(p.id, if (p === IndigoPalette) p.orange else p.accent, roles.currentBar)
         }
     }
 

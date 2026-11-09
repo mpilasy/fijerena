@@ -25,6 +25,7 @@ class PackagedUiThemesTest {
         assertEquals(R.string.ui_style_sharp, uiThemeNameRes("sharp"))
         assertEquals(R.string.theme_meadow_dusk, uiThemeNameRes("meadow_dusk"))
         assertEquals(R.string.theme_slate, uiThemeNameRes("slate"))
+        assertEquals(R.string.theme_indigo, uiThemeNameRes("indigo"))
         assertEquals(R.string.ui_theme_custom, uiThemeNameRes(UiThemes.CUSTOM))
     }
 }

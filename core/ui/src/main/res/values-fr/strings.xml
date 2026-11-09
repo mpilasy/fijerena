@@ -1705,4 +1705,5 @@
     <string name="size_kilobytes">%1$s&#160;Ko</string>
     <string name="size_megabytes">%1$s&#160;Mo</string>
     <string name="size_gigabytes">%1$s&#160;Go</string>
+    <string name="theme_indigo">Indigo</string>
 </resources>

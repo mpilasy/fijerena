@@ -55,6 +55,9 @@ enum class TextTone {
     /** On the danger fill (a warning banner). */
     OnDanger,
 
+    /** On a tag badge: secondary text on the grey fill, or readable on the theme's own badge fill. */
+    OnBadge,
+
     /** On the TV's focus fill (a focused tab or chip): dark on the white or cream fill. */
     OnFocus,
 
@@ -99,6 +102,7 @@ fun colorOf(tone: TextTone): Color {
         TextTone.Live -> c.live
         TextTone.Highlight -> c.highlight
         TextTone.OnAccent -> c.onAccent
+        TextTone.OnBadge -> c.onBadge
         TextTone.OnFocus -> c.onFocusFill
         TextTone.OnMedia -> c.onMedia
         TextTone.OnDanger -> c.onDanger

@@ -62,6 +62,8 @@ data class CinemaThemePalette(
     val focusFill: Color? = null,
     /** Text and icons on the accent where the luminance rule below picks badly (Console's mid-tone orange takes black). */
     val onAccentOverride: Color? = null,
+    /** The fill of a tag badge (`BadgeKind.Neutral` and `OnCard`); null: the grey of the surfaces. */
+    val badgeFill: Color? = null,
 ) {
     /**
      * Text and icons on the accent (filled buttons, the selected tab): white on a dark accent,
@@ -582,6 +584,41 @@ val ClayPalette =
         onAccentOverride = Color(0xFF1F1E1D),
     )
 
+/** An indigo ground with a soft glow, a white accent with navy text on it, yellow badges: a streaming-radio look. */
+val IndigoPalette =
+    CinemaThemePalette(
+        id = "indigo",
+        nameRes = R.string.theme_indigo,
+        isLight = false,
+        accent = Color(0xFFFFFFFF),
+        // Dark: a phone's selected row fills with it and takes white text.
+        accentDark = Color(0xFF4A4F8F),
+        accentLight = Color(0xFFC9CCF2),
+        orange = Color(0xFFFFD23F),
+        orangeDark = Color(0xFFD9A92B),
+        orangeLight = Color(0xFFFFE38A),
+        background = Color(0xFF1C1E3A),
+        surface = Color(0xFF24274A),
+        surfaceVariant = Color(0xFF2D3158),
+        surfaceLight = Color(0xFF383C66),
+        glassBackground = Color(0xBF1C1E3A),
+        glassBorder = Color(0x14FFFFFF),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFB020),
+        error = Color(0xFFEF5350),
+        live = Color(0xFFEF5350),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFC3C5E0),
+        textTertiary = Color(0xFF8E91B8),
+        textDisabled = Color(0xFF5D6088),
+        scrim = Color(0x99000000),
+        groundGlow = Color(0xFF2A2E5C),
+        groundEnd = Color(0xFF14152B),
+        // Navy on white, not the black that the luminance rule picks.
+        onAccentOverride = Color(0xFF1C1E3A),
+        badgeFill = Color(0xFFFFD23F),
+    )
+
 val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
@@ -593,6 +630,7 @@ val AllPalettes: List<CinemaThemePalette> =
         CrimsonPalette,
         RoyalPalette,
         ClayPalette,
+        IndigoPalette,
         AmoledBlackPalette,
         AmethystPalette,
         ForestPalette,
