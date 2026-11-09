@@ -487,8 +487,10 @@ fun MobileHomeScreen(
                 val show = menu.show
                 val isFavorite = rows?.favoriteShows.orEmpty().any { it.sourceKey == show.key }
                 val repo = lists?.repoFor(show.item.providerId)
+                val showTitle = parseDisplayTitle(show.item.name).title.ifBlank { show.item.name }
+                val markedMessage = stringResource(R.string.new_episodes_marked_watched_format, showTitle)
                 ItemActionsDialog(
-                    title = parseDisplayTitle(show.item.name).title.ifBlank { show.item.name },
+                    title = showTitle,
                     isFavorite = isFavorite,
                     onToggleFavorite = {
                         if (repo != null) {
@@ -521,7 +523,7 @@ fun MobileHomeScreen(
                                     wantedScope.launchGuarded("Home.markNewEpisodesWatched") {
                                         repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = true)
                                         done()
-                                        undo.show(show.item.name) {
+                                        undo.showUndo(markedMessage) {
                                             wantedScope.launchGuarded("Home.undoMarkNewEpisodesWatched") {
                                                 repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = false)
                                                 done()

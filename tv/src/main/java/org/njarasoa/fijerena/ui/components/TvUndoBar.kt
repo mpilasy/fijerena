@@ -72,12 +72,16 @@ class UndoBarState {
     val isShowing: Boolean
         get() = entry != null
 
-    /** Shows "Removed [name]" with [onUndo] as its Undo, replacing any bar already up. */
+    /**
+     * Shows "Removed [name]", or with [episodesWatched] "Episodes marked as watched: [name]", with
+     * [onUndo] as its Undo, replacing any bar already up.
+     */
     fun show(
         name: String,
+        episodesWatched: Boolean = false,
         onUndo: () -> Unit,
     ) {
-        entry = Entry(name, onUndo)
+        entry = Entry(name, onUndo, episodesWatched)
     }
 
     /** Runs the Undo of the bar showing and hides it. Returns whether there was one. */
@@ -103,6 +107,7 @@ class UndoBarState {
     internal class Entry(
         val name: String,
         val onUndo: () -> Unit,
+        val episodesWatched: Boolean,
     )
 }
 
@@ -168,7 +173,14 @@ fun TvUndoBar(
         state.expire(entry)
     }
     Box(modifier.fillMaxWidth().padding(top = Spacing.sm), contentAlignment = Alignment.Center) {
-        TvMessageBar(icon = CinemaIcons.Delete, text = stringResource(R.string.undo_removed_format, entry.name))
+        TvMessageBar(
+            icon = if (entry.episodesWatched) CinemaIcons.MarkWatched else CinemaIcons.Delete,
+            text =
+                stringResource(
+                    if (entry.episodesWatched) R.string.new_episodes_marked_watched_undo_format else R.string.undo_removed_format,
+                    entry.name,
+                ),
+        )
     }
 }
 

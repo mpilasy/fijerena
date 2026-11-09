@@ -936,6 +936,8 @@ fun ContentTypeSelectionScreen(
         shelf: HomeShelf,
         key: String,
         name: String,
+        // The card goes because its new episodes are watched: the bar says so, not "Removed".
+        episodesWatched: Boolean = false,
         remove: suspend () -> (suspend () -> Unit),
     ) {
         val oldKeys = shelfKeys(shelf)
@@ -943,7 +945,7 @@ fun ContentTypeSelectionScreen(
         focusAfterChange(shelf, oldKeys, key)
         var undo: (suspend () -> Unit)? = null
         val removing = coroutineScope.launchGuarded("Home.removeCard") { undo = remove() }
-        undoBar.show(parseDisplayTitle(name).title.ifBlank { name }) {
+        undoBar.show(parseDisplayTitle(name).title.ifBlank { name }, episodesWatched) {
             val keysNow = shelfKeys(shelf)
             putBack()
             focusAfterChange(shelf, keysNow, key)
@@ -1071,7 +1073,7 @@ fun ContentTypeSelectionScreen(
                 listOfNotNull(
                     MenuAction(icon = CinemaIcons.MarkWatched, label = markLabel, onClick = {
                         if (repo != null) {
-                            removeCard(HomeShelf.NEW_EPISODES, show.key, show.item.name) {
+                            removeCard(HomeShelf.NEW_EPISODES, show.key, show.item.name, episodesWatched = true) {
                                 repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = true)
                                 suspend { repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = false) }
                             }

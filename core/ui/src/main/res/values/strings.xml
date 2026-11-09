@@ -1721,6 +1721,8 @@
         <item quantity="other">%1$d new episodes</item>
     </plurals>
     <string name="new_episodes_mark_watched">Mark new episodes as watched</string>
+    <string name="new_episodes_marked_watched_format">Episodes marked as watched: %1$s</string>
+    <string name="new_episodes_marked_watched_undo_format">Episodes marked as watched: %1$s · Hold OK or press Menu to undo</string>
     <string name="new_episodes_banner_open">Show new episodes</string>
     <plurals name="new_episodes_banner">
         <item quantity="one">%1$d show you follow has new episodes</item>

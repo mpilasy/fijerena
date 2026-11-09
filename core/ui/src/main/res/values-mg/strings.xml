@@ -1715,6 +1715,8 @@
         <item quantity="other">Fizarana vaovao %1$d</item>
     </plurals>
     <string name="new_episodes_mark_watched">Mariho ho efa nojerena ny fizarana vaovao</string>
+    <string name="new_episodes_marked_watched_format">Voamarika ho efa nojerena: %1$s</string>
+    <string name="new_episodes_marked_watched_undo_format">Voamarika ho efa nojerena: %1$s · Tazony ny OK na tsindrio Menu hanafoanana</string>
     <string name="new_episodes_banner_open">Asehoy ny fizarana vaovao</string>
     <plurals name="new_episodes_banner">
         <item quantity="one">Misy fizarana vaovao ny andian-tantara %1$d arahinao</item>

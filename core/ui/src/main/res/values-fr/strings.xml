@@ -1727,6 +1727,8 @@
         <item quantity="other">%1$d nouveaux épisodes</item>
     </plurals>
     <string name="new_episodes_mark_watched">Marquer les nouveaux épisodes comme vus</string>
+    <string name="new_episodes_marked_watched_format">Épisodes marqués comme vus : %1$s</string>
+    <string name="new_episodes_marked_watched_undo_format">Épisodes marqués comme vus : %1$s · Maintenez OK ou appuyez sur Menu pour annuler</string>
     <string name="new_episodes_banner_open">Voir les nouveaux épisodes</string>
     <plurals name="new_episodes_banner">
         <item quantity="one">%1$d série que vous suivez a de nouveaux épisodes</item>
