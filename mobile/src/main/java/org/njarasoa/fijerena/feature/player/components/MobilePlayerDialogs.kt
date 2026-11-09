@@ -24,10 +24,14 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.nightAudioDescription
+import org.njarasoa.fijerena.core.ui.components.rememberNightAudioOn
+import org.njarasoa.fijerena.core.ui.components.rememberNightAudioSetter
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaRadioRow
+import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -40,19 +44,29 @@ fun AudioTrackSelectorDialog(
     // tracks would freeze on an empty list for its whole lifetime.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val audioTracks = remember(tracksVersion) { viewModel.getAudioTracks() }
+    val nightAudioOn = rememberNightAudioOn()
+    val setNightAudio = rememberNightAudioSetter()
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.player_select_audio),
         text = {
-            if (audioTracks.isEmpty()) {
-                CinemaText(
-                    stringResource(R.string.player_no_audio),
-                    role = TextRole.Body,
-                    tone = TextTone.Inherit,
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CinemaSwitchRow(
+                    checked = nightAudioOn,
+                    onCheckedChange = setNightAudio,
+                    label = stringResource(R.string.night_audio_title),
+                    supportingText = nightAudioDescription(),
                 )
-            } else {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                if (audioTracks.isEmpty()) {
+                    CinemaText(
+                        stringResource(R.string.player_no_audio),
+                        role = TextRole.Body,
+                        tone = TextTone.Inherit,
+                    )
+                }
+                // Night Audio always shows; the tracks only when there is something to choose.
+                if (audioTracks.size > 1) {
                     audioTracks.forEach { track ->
                         CinemaRadioRow(
                             selected = track.isSelected,

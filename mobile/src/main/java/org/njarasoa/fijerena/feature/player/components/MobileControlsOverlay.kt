@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.components.rememberNightAudioOn
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -147,7 +148,7 @@ fun MobileControlsOverlay(
     // again for the rest of the session — leaving these counts permanently 0 and hiding the
     // audio/subtitle/quality buttons even once tracks actually loaded.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
-    val audioTrackCount = remember(metadata, tracksVersion) { viewModel.getAudioTracks().size }
+    val nightAudioOn = rememberNightAudioOn()
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
 
@@ -589,14 +590,24 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        if (audioTrackCount > 1) {
-                            CinemaIconButton(
-                                onClick = onAudioTrack,
-                                icon = {
+                        CinemaIconButton(
+                            onClick = onAudioTrack,
+                            icon = {
+                                Box {
                                     CinemaIcon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tone = TextTone.Primary)
-                                },
-                            )
-                        }
+                                    if (nightAudioOn) {
+                                        // The dot says Night Audio is on (NA-D8).
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .size(MobileDimensions.liveDotSize)
+                                                    .panel(PanelFill.Accent, PanelCorner.Identity),
+                                        )
+                                    }
+                                }
+                            },
+                        )
 
                         if (subtitleTrackCount > 0) {
                             CinemaIconButton(
