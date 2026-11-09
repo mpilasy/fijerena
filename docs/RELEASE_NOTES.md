@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261109212252
 
 - **TV list fixes:** a long category name now takes a second line instead of being cut. The New mark on an episode follows its title, so every title starts in the same place. A focused recent search is filled like every other chip, and a focused Search section title no longer loses its first letter. A channel's badges in the TV Guide are no longer cut off.
 - **Malagasy:** screen readers now read the phone's sheet labels in Malagasy.
