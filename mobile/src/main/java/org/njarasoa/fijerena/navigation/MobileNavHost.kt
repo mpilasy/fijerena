@@ -126,10 +126,13 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.CinemaSnackbarHost
 import org.njarasoa.fijerena.ui.components.LocalCinemaSnackbar
 import org.njarasoa.fijerena.ui.components.LocalMobileClock
+import org.njarasoa.fijerena.ui.components.LocalSendToTv
 import org.njarasoa.fijerena.ui.components.MobileClockOverlay
 import org.njarasoa.fijerena.ui.components.MobileClockState
 import org.njarasoa.fijerena.ui.components.PinDialog
+import org.njarasoa.fijerena.ui.components.SendToTvSheetHost
 import org.njarasoa.fijerena.ui.components.rememberCinemaSnackbar
+import org.njarasoa.fijerena.ui.components.rememberSendToTv
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
@@ -637,9 +640,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             selectTab(MobileTab.HOME)
         }
     }
+    val sendToTv = rememberSendToTv()
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Surface)) {
         CompositionLocalProvider(
             LocalDockInset provides dockInset,
+            LocalSendToTv provides sendToTv,
             LocalCinemaSnackbar provides snackbar,
             LocalOpenWanted provides { navController.navigateOnce(it) },
             LocalMobileClock provides clock,
@@ -1380,6 +1385,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 }
             }
             CinemaSnackbarHost(snackbar)
+            SendToTvSheetHost(sendToTv)
         }
         // After the NavHost, so it draws over the screen.
         MobileClockOverlay(clock)

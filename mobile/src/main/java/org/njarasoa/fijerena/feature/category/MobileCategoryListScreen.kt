@@ -240,6 +240,8 @@ import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.components.scrollEdgeFade
+import org.njarasoa.fijerena.ui.components.sendItem
+import org.njarasoa.fijerena.ui.components.sendToTvMenuAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import kotlin.math.roundToInt
@@ -1122,6 +1124,7 @@ fun MobileCategoryListScreen(
                                                 // category keeps its place across docking (UX-D8).
                                                 val dockListState = rememberLazyListState()
                                                 StreamsList(
+                                                    fallbackSource = viewModel.sourceId,
                                                     items = displayedStreams,
                                                     listState = if (showsCategory) browseListState else dockListState,
                                                     streamsLoading = displayedStreamsLoading,
@@ -1981,6 +1984,8 @@ private fun StreamsList(
     /** The Favourites list's tag (favourite tags plan, FT3): another tag is another list, opened at its top. */
     selectedTag: String? = null,
     libraryLoading: Boolean = false,
+    // The list's source, for a row that does not name its own (Send to TV).
+    fallbackSource: Long = 0L,
     lastPlayedItemId: String? = null,
     // [lastPlayedItemId]'s source (0: any): the same id on another source isn't current (Phase 6).
     lastPlayedSource: Long = 0L,
@@ -2399,7 +2404,7 @@ private fun StreamsList(
                         isFavorite = item.sourceKey in favoriteIds,
                         onToggleFavorite = { onToggleFavorite(item) },
                         onDismiss = { rowMenu = null },
-                        actions = actions,
+                        actions = actions + listOfNotNull(sendToTvMenuAction(item.sendItem(contentType, fallbackSource))),
                         onEditTags = editTagsFor(item),
                     )
                 }

@@ -1739,4 +1739,20 @@
     <string name="send_to_tv_from_position">À partir de %1$s</string>
     <string name="send_to_tv_for_profile">pour %1$s</string>
     <string name="send_to_tv_a_device">Un appareil</string>
+
+    <!-- Envoyer à la TV : le téléphone -->
+    <string name="send_to_tv_action">Envoyer à la TV</string>
+    <string name="send_to_tv_open">Ouverte</string>
+    <string name="send_to_tv_not_open">Fermée</string>
+    <string name="send_to_tv_open_the_app">Ouvrez Fijerena sur la TV</string>
+    <string name="send_to_tv_needs_update">Mise à jour nécessaire</string>
+    <string name="send_to_tv_no_tvs">Aucune TV dans ce groupe de synchronisation</string>
+    <string name="send_to_tv_sending">Envoyé à %1$s…</string>
+    <string name="send_to_tv_playing_on">Lecture sur %1$s</string>
+    <string name="send_to_tv_dismissed">%1$s l’a ignoré</string>
+    <string name="send_to_tv_busy">%1$s est occupée</string>
+    <string name="send_to_tv_no_source">%1$s n’a pas cette source</string>
+    <string name="send_to_tv_no_profile">%1$s n’est pas sur %2$s</string>
+    <string name="send_to_tv_not_allowed">Non autorisé sur %1$s pour %2$s</string>
+    <string name="send_to_tv_unreachable">Impossible de joindre %1$s</string>
 </resources>

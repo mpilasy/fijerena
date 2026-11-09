@@ -82,8 +82,10 @@ class StreamLoaderViewModel(
     // Live TV as it airs; false for catch-up, which plays a live channel's archive like a film.
     private val isLiveTv = contentType == ContentType.LIVE_TV && catchup == null
 
-    private var currentEpisodeId: String? = episodeId
-    private var currentEpisodeExtension: String? = episodeExtension
+    var currentEpisodeId: String? = episodeId
+        private set
+    var currentEpisodeExtension: String? = episodeExtension
+        private set
     private val episode: EpisodeId?
         get() = currentEpisodeId?.let(::EpisodeId)
     private val series = seriesId?.let(::SeriesId)

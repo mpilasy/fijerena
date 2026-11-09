@@ -1726,4 +1726,20 @@
     <string name="send_to_tv_from_position">Manomboka amin\'ny %1$s</string>
     <string name="send_to_tv_for_profile">ho an\'i %1$s</string>
     <string name="send_to_tv_a_device">Fitaovana</string>
+
+    <!-- Alefaso amin'ny TV: ny finday -->
+    <string name="send_to_tv_action">Alefaso amin\'ny TV</string>
+    <string name="send_to_tv_open">Misokatra</string>
+    <string name="send_to_tv_not_open">Tsy misokatra</string>
+    <string name="send_to_tv_open_the_app">Sokafy ny Fijerena amin\'ny TV</string>
+    <string name="send_to_tv_needs_update">Mila fanavaozana</string>
+    <string name="send_to_tv_no_tvs">Tsy misy TV amin\'ity vondrona ity</string>
+    <string name="send_to_tv_sending">Lasa any amin\'ny %1$s…</string>
+    <string name="send_to_tv_playing_on">Mandeha amin\'ny %1$s</string>
+    <string name="send_to_tv_dismissed">Nolavin\'ny %1$s</string>
+    <string name="send_to_tv_busy">Sahirana ny %1$s</string>
+    <string name="send_to_tv_no_source">Tsy manana ity loharano ity ny %1$s</string>
+    <string name="send_to_tv_no_profile">Tsy ao amin\'ny %2$s ny %1$s</string>
+    <string name="send_to_tv_not_allowed">Tsy azo atao amin\'ny %1$s ho an\'i %2$s</string>
+    <string name="send_to_tv_unreachable">Tsy nety nifandray tamin\'ny %1$s</string>
 </resources>

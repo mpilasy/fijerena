@@ -134,6 +134,8 @@ fun MobileControlsOverlay(
     onWatchLive: (() -> Unit)? = null,
     // Live TV: Start over, the programme on air from its start (catch-up). Null leaves it out.
     onStartOver: (() -> Unit)? = null,
+    // Send this item to a TV of the sync group. Null leaves it out (catch-up, or no TV).
+    onSendToTv: (() -> Unit)? = null,
     // The bottom panel's height in px, for the player to lift the subtitles above it.
     onPanelHeightChanged: (Int) -> Unit = {},
     // The player's wait indicator is up in the centre: the Play/Pause row moves down under it.
@@ -586,6 +588,15 @@ fun MobileControlsOverlay(
                                         stringResource(R.string.player_osd_start_over),
                                         tone = TextTone.Primary,
                                     )
+                                },
+                            )
+                        }
+
+                        if (onSendToTv != null) {
+                            CinemaIconButton(
+                                onClick = onSendToTv,
+                                icon = {
+                                    CinemaIcon(CinemaIcons.Tv, stringResource(R.string.send_to_tv_action), tone = TextTone.Primary)
                                 },
                             )
                         }

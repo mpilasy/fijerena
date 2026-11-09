@@ -21,6 +21,9 @@ object CinemaAnimation {
 
     /** How long the TV game reminder banner stays up while nobody chose an action on it. */
     const val reminderBannerDismissMs = 30_000L
+
+    /** How long the TV shows a Send to TV banner before it answers dismissed. */
+    const val sendBannerDismissMs = 60_000L
     const val statsUpdateMs = 1_000L
     const val loadingDebounceMs = 600L
     const val searchDebounceMs = 300L

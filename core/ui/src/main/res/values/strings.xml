@@ -1732,4 +1732,20 @@
     <string name="send_to_tv_from_position">From %1$s</string>
     <string name="send_to_tv_for_profile">for %1$s</string>
     <string name="send_to_tv_a_device">A device</string>
+
+    <!-- Send to TV: the phone -->
+    <string name="send_to_tv_action">Send to TV</string>
+    <string name="send_to_tv_open">Open</string>
+    <string name="send_to_tv_not_open">Not open</string>
+    <string name="send_to_tv_open_the_app">Open Fijerena on the TV</string>
+    <string name="send_to_tv_needs_update">Needs an update</string>
+    <string name="send_to_tv_no_tvs">No TV in this sync group</string>
+    <string name="send_to_tv_sending">Sent to %1$s…</string>
+    <string name="send_to_tv_playing_on">Playing on %1$s</string>
+    <string name="send_to_tv_dismissed">%1$s dismissed it</string>
+    <string name="send_to_tv_busy">%1$s is busy</string>
+    <string name="send_to_tv_no_source">%1$s doesn\'t have this source</string>
+    <string name="send_to_tv_no_profile">%1$s isn\'t on %2$s</string>
+    <string name="send_to_tv_not_allowed">Not allowed on %1$s for %2$s</string>
+    <string name="send_to_tv_unreachable">Couldn\'t reach %1$s</string>
 </resources>

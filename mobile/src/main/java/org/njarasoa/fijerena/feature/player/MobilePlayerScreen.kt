@@ -98,6 +98,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideMediaTheme
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
+import org.njarasoa.fijerena.core.ui.viewmodels.SendItem
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -115,6 +116,7 @@ import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SlowConnectionBanner
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
 import org.njarasoa.fijerena.ui.components.HideMobileClock
+import org.njarasoa.fijerena.ui.components.LocalSendToTv
 import org.njarasoa.fijerena.ui.components.MobileErrorState
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 
@@ -211,6 +213,7 @@ fun MobilePlayerScreen(
     }
 
     val scope = rememberCoroutineScope()
+    val sendToTv = LocalSendToTv.current
 
     // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
     // for (panel-a), so reaching its end asks again and carries on from there, until the window has
@@ -254,6 +257,43 @@ fun MobilePlayerScreen(
         handedOff = { handedOff },
         continueOnEnd = continueCatchup,
         onWatchLive = catchup?.let { { leaveCatchup(onWatchLive) } },
+        onSendToTv =
+            sendToTv?.takeIf { catchup == null && it.available }?.let { controller ->
+                {
+                    val success = loaderViewModel.state.value as? StreamLoaderViewModel.StreamState.Success
+                    val sendId = success?.streamId ?: streamId
+                    val sendName = success?.streamName ?: streamName
+                    val sendSeries = success?.seriesName ?: seriesName
+                    controller.send(
+                        SendItem(
+                            providerId = providerId,
+                            streamId = sendId,
+                            streamName = sendName,
+                            categoryId = categoryId,
+                            contentType = contentType,
+                            episodeId = loaderViewModel.currentEpisodeId,
+                            episodeExtension = loaderViewModel.currentEpisodeExtension,
+                            seriesId = seriesId,
+                            seriesName = sendSeries,
+                            title = sendSeries?.takeIf { it.isNotBlank() } ?: sendName,
+                            subtitle = sendName.takeIf { sendSeries != null },
+                        ),
+                    ) {
+                        // Stops here first and frees a one-connection source (ST-D14); the watch position is saved as on Back.
+                        val state = activityScopedViewModel.playbackState.value
+                        val position =
+                            when (state) {
+                                is PlaybackState.Playing -> state.position
+                                is PlaybackState.Paused -> state.position
+                                else -> null
+                            }
+                        finalizeSessionAndAwait(state, loaderViewModel)
+                        activityScopedViewModel.stop()
+                        onBack()
+                        position
+                    }
+                }
+            },
         onBack = {
             if (catchup != null) {
                 leaveCatchup(onBack)
@@ -291,6 +331,8 @@ fun MobilePlayerContent(
     continueOnEnd: (() -> Boolean)? = null,
     // Catch-up: the controls' Watch live. Null leaves the button out.
     onWatchLive: (() -> Unit)? = null,
+    // Send to TV: this item, from the phone's position. Null leaves it out.
+    onSendToTv: (() -> Unit)? = null,
     // Live TV: the controls' Start over, the programme on air from its start. Null leaves it out.
     onStartOver: (() -> Unit)? = null,
     // True once the player has been handed to another screen (Watch live, Start over): leaving
@@ -1004,6 +1046,7 @@ fun MobilePlayerContent(
                                     { loaderViewModel.toggleFavorite() }
                                 },
                             onWatchLive = onWatchLive,
+                            onSendToTv = onSendToTv,
                             onStartOver = onStartOver,
                             nextEpisode = state.nextEpisode,
                             onPlayNextEpisode = { nextEp ->

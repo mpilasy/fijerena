@@ -67,6 +67,7 @@ import org.njarasoa.fijerena.core.ui.utils.displayDate
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SendItem
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -74,6 +75,7 @@ import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.HeaderGround
+import org.njarasoa.fijerena.ui.components.LocalSendToTv
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
@@ -110,6 +112,7 @@ fun MobileMovieDetailsScreen(
     onPersonSelected: (personId: String, name: String, crew: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
+    val sendToTv = LocalSendToTv.current
     val viewModel: MovieDetailsViewModel =
         viewModel(
             factory =
@@ -228,6 +231,19 @@ fun MobileMovieDetailsScreen(
                                 ->
                                 onPlayMovie(id, name, extension, fromStart, viewModel.currentCategoryId)
                             },
+                            onSendToTv = { name, extension ->
+                                sendToTv?.send(
+                                    SendItem(
+                                        providerId = providerId,
+                                        streamId = movieId,
+                                        streamName = name,
+                                        categoryId = viewModel.currentCategoryId,
+                                        contentType = ContentType.MOVIES,
+                                        episodeExtension = extension,
+                                        title = name,
+                                    ),
+                                )
+                            },
                             onCategorySelected = { onCategorySelected(shown.categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
                             // A copy on another source opens on that source, as a related title does.
@@ -275,6 +291,7 @@ private fun MovieDetailsContent(
     onToggleFavorite: () -> Unit,
     onToggleWatched: (() -> Unit)?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onSendToTv: ((name: String, extension: String) -> Unit)? = null,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
@@ -432,6 +449,13 @@ private fun MovieDetailsContent(
                                 icon = CinemaIcons.Movie,
                                 label = stringResource(R.string.details_watch_trailer),
                                 onClick = { playTrailer(trailer, movieDetail.metadata.tmdbTrailerUrl) },
+                            )
+                        }
+                        if (LocalSendToTv.current?.available == true && onSendToTv != null) {
+                            DetailIconAction(
+                                icon = CinemaIcons.Tv,
+                                label = stringResource(R.string.send_to_tv_action),
+                                onClick = { onSendToTv(movieDetail.name, extension) },
                             )
                         }
                     }

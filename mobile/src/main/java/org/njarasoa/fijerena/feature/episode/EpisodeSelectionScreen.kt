@@ -115,6 +115,7 @@ import org.njarasoa.fijerena.core.ui.utils.displayDate
 import org.njarasoa.fijerena.core.ui.utils.seasonsAndEpisodesText
 import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
+import org.njarasoa.fijerena.core.ui.viewmodels.SendItem
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
@@ -126,6 +127,7 @@ import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.HeaderGround
+import org.njarasoa.fijerena.ui.components.LocalSendToTv
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
@@ -176,6 +178,7 @@ fun MobileEpisodeSelectionScreen(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
+    val sendToTv = LocalSendToTv.current
     val viewModel: SeriesDetailsViewModel =
         viewModel(
             factory =
@@ -387,6 +390,23 @@ fun MobileEpisodeSelectionScreen(
                                 resumeState.setResumeEpisode(episodeId, season = null)
                                 onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning, viewModel.playedSeries())
                             },
+                            onSendEpisode = { episode ->
+                                sendToTv?.send(
+                                    SendItem(
+                                        providerId = providerId,
+                                        streamId = episode.id,
+                                        streamName = episode.title,
+                                        categoryId = lastSuccess?.categoryId ?: categoryId,
+                                        contentType = ContentType.TV_SHOWS,
+                                        episodeId = episode.id,
+                                        episodeExtension = episode.extension,
+                                        seriesId = seriesId,
+                                        seriesName = seriesName,
+                                        title = seriesName,
+                                        subtitle = episode.title,
+                                    ),
+                                )
+                            },
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
                             },
@@ -441,6 +461,7 @@ private fun EpisodeListContent(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onPlayEpisode: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onSendEpisode: ((DomainEpisodeItem) -> Unit)? = null,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -653,7 +674,12 @@ private fun EpisodeListContent(
                             }
                         },
                     ),
-                ),
+                ) +
+                    listOfNotNull(
+                        onSendEpisode?.takeIf { LocalSendToTv.current?.available == true }?.let { send ->
+                            MenuAction(CinemaIcons.Tv, stringResource(R.string.send_to_tv_action)) { send(episode) }
+                        },
+                    ),
             onDismiss = { episodeMenu = null },
         )
     }
@@ -985,6 +1011,13 @@ private fun EpisodeListContent(
                             icon = CinemaIcons.Movie,
                             label = stringResource(R.string.details_watch_trailer),
                             onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
+                        )
+                    }
+                    if (anchorEpisode != null && onSendEpisode != null && LocalSendToTv.current?.available == true) {
+                        DetailIconAction(
+                            icon = CinemaIcons.Tv,
+                            label = stringResource(R.string.send_to_tv_action),
+                            onClick = { onSendEpisode(anchorEpisode) },
                         )
                     }
                 }

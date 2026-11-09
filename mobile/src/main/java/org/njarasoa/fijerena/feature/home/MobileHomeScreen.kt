@@ -98,6 +98,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SendItem
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.cards
 import org.njarasoa.fijerena.core.ui.wanted.gone
@@ -117,6 +118,9 @@ import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.PosterCard
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.homeCardClicks
+import org.njarasoa.fijerena.ui.components.sendItem
+import org.njarasoa.fijerena.ui.components.sendItemOf
+import org.njarasoa.fijerena.ui.components.sendToTvMenuAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -371,6 +375,7 @@ fun MobileHomeScreen(
                     onDismiss = { homeMenu = null },
                     actions =
                         listOfNotNull(
+                            sendToTvMenuAction(menu.send),
                             menu.isShowWatched?.let { showWatched ->
                                 MenuAction(
                                     if (showWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
@@ -438,6 +443,7 @@ fun MobileHomeScreen(
                 ItemActionsDialog(
                     title = parseDisplayTitle(item.name).title.ifBlank { item.name },
                     isFavorite = menu.isFavorite,
+                    actions = listOfNotNull(sendToTvMenuAction(item.sendItem(menu.contentType, item.providerId))),
                     onToggleFavorite = {
                         if (lists != null) {
                             val repo = lists.repoFor(item.providerId)
@@ -678,7 +684,14 @@ private fun HomeRowsColumn(
                     if (entry.fromFavorites) {
                         HomeMenu.Favorite(entry.item, ContentType.LIVE_TV)
                     } else {
-                        HomeMenu.Recent(entry.item.providerId, entry.item.id, ContentType.LIVE_TV, entry.item.name, entry.item.categoryId)
+                        HomeMenu.Recent(
+                            entry.item.providerId,
+                            entry.item.id,
+                            ContentType.LIVE_TV,
+                            entry.item.name,
+                            entry.item.categoryId,
+                            send = entry.item.sendItem(ContentType.LIVE_TV, entry.item.providerId),
+                        )
                     },
                 )
             },
@@ -846,6 +859,17 @@ private fun HomeRowsColumn(
                             item.categoryId,
                             showSeriesId = (item.target as? BrowseTarget.Series)?.seriesId?.raw,
                             watchedFilmId = (item.target as? BrowseTarget.Movie)?.let { item.id },
+                            send =
+                                item.target?.let {
+                                    sendItemOf(
+                                        it,
+                                        item.contentType,
+                                        item.id,
+                                        item.name,
+                                        item.categoryId,
+                                        item.providerId,
+                                    )
+                                },
                         ),
                     )
                 },
@@ -909,6 +933,8 @@ private sealed interface HomeMenu {
         val isShowWatched: Boolean? = null,
         /** Read when the menu opens: whether the source keeps watched marks here. */
         val canMarkWatched: Boolean = false,
+        /** The card as one film, episode or channel; null: Send to TV is not offered. */
+        val send: SendItem? = null,
     ) : HomeMenu
 
     class Favorite(

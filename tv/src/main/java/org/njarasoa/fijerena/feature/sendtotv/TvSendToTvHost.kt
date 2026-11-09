@@ -17,12 +17,10 @@ import org.njarasoa.fijerena.core.network.sync.SyncPayloads.PlayAnswer
 import org.njarasoa.fijerena.core.ui.sync.PlayRequestResolver
 import org.njarasoa.fijerena.core.ui.sync.PlayResolution
 import org.njarasoa.fijerena.core.ui.sync.SendToTv
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.components.SendBanner
 import org.njarasoa.fijerena.ui.components.SendBannerState
 import org.njarasoa.fijerena.ui.components.TvSendBanner
-
-/** How long the banner stays before it answers dismissed by itself. */
-const val SEND_BANNER_MS = 60_000L
 
 /**
  * A request's route through the TV (the send to TV plan, ST-D4 to ST-D6): it answers received at
@@ -138,7 +136,7 @@ fun TvSendToTvHost(
         val current = banner ?: return@LaunchedEffect
         if (reminderShowing) return@LaunchedEffect
         val left = PlayRequests.MAX_AGE_MS - (System.currentTimeMillis() - current.receivedAt)
-        delay(minOf(SEND_BANNER_MS, left).coerceAtLeast(0))
+        delay(minOf(CinemaAnimation.sendBannerDismissMs, left).coerceAtLeast(0))
         state.keys.reset()
         handler.dismiss(current)
     }
