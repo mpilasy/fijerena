@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -666,6 +667,7 @@ private fun EpgSearchHistorySection(
         ) {
             val chipLook = TvCardLooks.chip()
             history.forEachIndexed { index, term ->
+                var chipFocused by remember { mutableStateOf(false) }
                 TvCard(
                     onClick = { onItemClick(term) },
                     // The first recent search starts the first line: Left from it goes to the navigation
@@ -675,7 +677,7 @@ private fun EpgSearchHistorySection(
                             index != 0 -> Modifier
                             firstItemFocusRequester != null -> Modifier.focusRequester(firstItemFocusRequester).leftToRail()
                             else -> Modifier.leftToRail()
-                        },
+                        }.onFocusChanged { chipFocused = it.isFocused },
                     look = chipLook,
                 ) {
                     Row(
@@ -690,13 +692,13 @@ private fun EpgSearchHistorySection(
                         TvIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tone = TextTone.Secondary,
+                            tone = if (chipFocused) TextTone.OnFocus else TextTone.Secondary,
                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         )
                         CinemaText(
                             text = term,
                             role = TextRole.Body,
-                            tone = TextTone.Primary,
+                            tone = if (chipFocused) TextTone.OnFocus else TextTone.Primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

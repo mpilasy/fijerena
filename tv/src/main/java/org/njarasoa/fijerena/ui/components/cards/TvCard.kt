@@ -68,7 +68,7 @@ object TvCardLooks {
                     focusedContentColor = CinemaTheme.colors.textPrimary,
                 ),
             border = TvListRowDefaults.border(),
-            scale = CardDefaults.scale(),
+            scale = TvListRowDefaults.scale(),
             glow = CardDefaults.glow(),
             shape = TvListRowDefaults.shape(),
         )
@@ -134,14 +134,14 @@ object TvCardLooks {
         )
     }
 
-    /** A recent-search chip: raised at rest, a faint accent fill on focus. */
+    /** A recent-search chip: raised at rest, the focus fill of every chip on focus; its content takes [TextTone.OnFocus]. */
     @Composable
     fun chip(): TvCardLook =
         TvCardLook(
             colors =
                 CardDefaults.colors(
                     containerColor = CinemaTheme.colors.surface,
-                    focusedContainerColor = CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.glassBorder),
+                    focusedContainerColor = TvFocusTokens.focusFill,
                 ),
             border = CardDefaults.border(),
             scale =

@@ -1092,6 +1092,7 @@ private fun SearchHistorySection(
         ) {
             val chipLook = TvCardLooks.chip()
             history.forEachIndexed { index, term ->
+                var chipFocused by remember { mutableStateOf(false) }
                 TvCard(
                     onClick = { onItemClick(term) },
                     // The first chip is at the screen's left edge: Left from it opens the TV
@@ -1101,7 +1102,7 @@ private fun SearchHistorySection(
                             (firstItemFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).leftToRail()
                         } else {
                             Modifier
-                        },
+                        }.onFocusChanged { chipFocused = it.isFocused },
                     look = chipLook,
                 ) {
                     Row(
@@ -1112,10 +1113,15 @@ private fun SearchHistorySection(
                         TvIcon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tone = TextTone.Secondary,
+                            tone = if (chipFocused) TextTone.OnFocus else TextTone.Secondary,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
-                        CinemaText(text = term, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        CinemaText(
+                            text = term,
+                            tone = if (chipFocused) TextTone.OnFocus else TextTone.Primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
