@@ -1744,4 +1744,10 @@
     <string name="send_to_tv_no_profile">Tsy ao amin\'ny %2$s ny %1$s</string>
     <string name="send_to_tv_not_allowed">Tsy azo atao amin\'ny %1$s ho an\'i %2$s</string>
     <string name="send_to_tv_unreachable">Tsy nety nifandray tamin\'ny %1$s</string>
+    <!-- Material's sheet labels for screen readers: it has no Malagasy of its own. -->
+    <string name="close_sheet" tools:ignore="ExtraTranslation,PrivateResource">Akatony</string>
+    <string name="m3c_bottom_sheet_dismiss_description" tools:ignore="ExtraTranslation,PrivateResource">Akatony</string>
+    <string name="m3c_bottom_sheet_drag_handle_description" tools:ignore="ExtraTranslation,PrivateResource">Sintony</string>
+    <string name="m3c_bottom_sheet_collapse_description" tools:ignore="ExtraTranslation,PrivateResource">Akatony ny tambatra</string>
+    <string name="m3c_bottom_sheet_expand_description" tools:ignore="ExtraTranslation,PrivateResource">Sokafy ny tambatra</string>
 </resources>
