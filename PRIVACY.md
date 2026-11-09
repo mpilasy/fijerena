@@ -53,7 +53,7 @@ says what the app stores, what it sends and to whom.
   to your other devices inside the encrypted records. TMDB's own privacy policy applies to those
   requests.
 - **Live sync, only if you set it up.** Sources (logins included), guide sources, settings (the TMDB key included),
-  profiles, favourites and watch history are sent to the sync server whose address you enter.
+  profiles, favourites, watch history and what you send to a TV are sent to the sync server whose address you enter.
   Every record is encrypted on the device with AES-256-GCM, with keys derived (HKDF-SHA256) from
   an account key that only your devices hold; the server never sees it. The server sees what it
   needs to work: your devices' names, when they connect, encrypted records, and when each record
