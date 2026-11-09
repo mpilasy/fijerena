@@ -147,6 +147,8 @@ import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
+import org.njarasoa.fijerena.core.ui.newepisodes.LocalNewEpisodes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodeMark
 import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -374,6 +376,8 @@ internal fun EpisodeListContent(
         repo.getProviderById(mediaRepository.getProviderId())?.let { providerName = it.name }
     }
     val listState = rememberLazyListState()
+    // This show's new episodes, for the New mark on their cards (the new episode alerts plan).
+    val newEpisodeIds = LocalNewEpisodes.current.episodeIds(mediaRepository.getProviderId(), seriesDetail.id)
     val scale = LocalUiScale.current
     // Built once per list, not once per card (CardDefaults calls are @Composable).
     val episodeCardStyle = TvCardLooks.episode()
@@ -1464,6 +1468,7 @@ internal fun EpisodeListContent(
                                     isContinueWatching = isResumeAnchor && (episode.id != initialEpisodeId || routeEpisodePlayed),
                                     watchProgress = episodeProgress[episode.id] ?: 0f,
                                     isWatched = episode.id in watchedEpisodeIds,
+                                    isNew = episode.id in newEpisodeIds,
                                     focusRequester = if (isResumeAnchor) resumeCardFocusRequester else null,
                                     modifier =
                                         Modifier
@@ -2390,6 +2395,7 @@ private fun EpisodeCard(
     isContinueWatching: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
+    isNew: Boolean = false,
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -2460,6 +2466,11 @@ private fun EpisodeCard(
                 )
 
                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+
+                if (isNew) {
+                    NewEpisodeMark()
+                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                }
 
                 Column(
                     modifier = Modifier.weight(1f),

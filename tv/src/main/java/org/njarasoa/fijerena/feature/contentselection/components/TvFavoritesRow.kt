@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -175,6 +176,8 @@ private fun TvFavoriteCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // New episodes of a followed show (the new episode alerts plan).
+                    if (thumbnailType == ThumbnailContentType.TV_SHOW) NewEpisodesBadge(item)
                     // The source (Nerd) ends the title line, as on the list rows.
                     sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // The row-actions hint, as on the focused list row.

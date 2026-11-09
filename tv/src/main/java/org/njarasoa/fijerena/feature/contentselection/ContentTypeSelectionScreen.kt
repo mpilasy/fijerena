@@ -153,6 +153,10 @@ import org.njarasoa.fijerena.core.ui.model.FavoriteTagsDraft
 import org.njarasoa.fijerena.core.ui.model.favoriteTagsDraft
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.model.saveFavoriteTags
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodeShow
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
+import org.njarasoa.fijerena.core.ui.newepisodes.statusLine
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -239,6 +243,8 @@ fun ContentTypeSelectionScreen(
     onAddSource: (() -> Unit)? = null,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWantedSelected: (Screen) -> Unit = {},
+    // A New Episodes card: the show page on the season of its first new episode.
+    onNewEpisodesSelected: (NewEpisodeShow) -> Unit = {},
     // A channel of an Upcoming Games card's sheet: its preview, as a guide result opens it.
     onGameChannelSelected: (Screen.CategoryList) -> Unit = {},
     // Opened from the navigation rail: on the first card of the first row, never on the card that
@@ -357,6 +363,30 @@ fun ContentTypeSelectionScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (bannerSeen) wantedTitles.markNotifiedLater(currentAnnounced.map { it.wantedKey })
         bannerSeen = false
+    }
+
+    // New episodes of the followed shows (the new episode alerts plan): the TV Shows group's first
+    // row, kept in a list of its own so a card can leave it at once. The banner is once per find,
+    // on this device, not on a child's Home.
+    val newEpisodesStore = remember { NewEpisodesStore.getInstance(context.applicationContext) }
+    val newEpisodesState by newEpisodesStore.state.collectAsStateWithLifecycle()
+    var newEpisodeCards by remember { mutableStateOf<List<NewEpisodeShow>>(emptyList()) }
+    var newEpisodesMenu by remember { mutableStateOf<NewEpisodeShow?>(null) }
+    var focusedNewEpisode by remember { mutableStateOf<String?>(null) }
+    val newEpisodesFirstFocus = remember { FocusRequester() }
+    val newEpisodesListState = rememberLazyListState()
+    val newEpisodesBannerFocus = remember { FocusRequester() }
+    // The row's keys when a card opened a page: Back finds the card that took its place.
+    var newEpisodesKeysWhenLeft by rememberSaveable { mutableStateOf("") }
+    val newEpisodesAnnounced = remember(newEpisodesState) { if (child) emptyList() else newEpisodesState.announced }
+    val currentNewEpisodesAnnounced by rememberUpdatedState(newEpisodesAnnounced)
+    var newEpisodesBannerSeen by remember { mutableStateOf(false) }
+    LaunchedEffect(newEpisodesAnnounced.isNotEmpty(), homeLifecycle) {
+        if (newEpisodesAnnounced.isNotEmpty() && homeLifecycle.isAtLeast(Lifecycle.State.RESUMED)) newEpisodesBannerSeen = true
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (newEpisodesBannerSeen) newEpisodesStore.markToldLater(currentNewEpisodesAnnounced)
+        newEpisodesBannerSeen = false
     }
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
@@ -527,6 +557,7 @@ fun ContentTypeSelectionScreen(
     val sectionFirstFocus: (String) -> FocusRequester? = { type ->
         val wanted = wantedShelves.first { it.wantedContentType == type }
         when {
+            type == ContentType.TV_SHOWS && newEpisodeCards.isNotEmpty() -> newEpisodesFirstFocus
             type == ContentType.TV_SHOWS && favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
             type == ContentType.MOVIES && favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
             wantedOf(wanted).isNotEmpty() -> wantedFirstFocus.getValue(wanted)
@@ -540,11 +571,13 @@ fun ContentTypeSelectionScreen(
     // (Continue Watching) was not the first yet, focus went to a lower row's card, and the rows
     // loading above it pushed that card out of view, so nothing had focus (Back from Settings).
     val firstRowFocusState =
-        remember(announced) {
+        remember(announced, newEpisodesAnnounced) {
             derivedStateOf {
                 when {
-                    // News first: titles that just became available.
+                    // News first: titles that just became available, then new episodes.
                     announced.isNotEmpty() -> wantedBannerFocus
+
+                    newEpisodesAnnounced.isNotEmpty() -> newEpisodesBannerFocus
 
                     continueWatchingItems.isNotEmpty() -> shelfFirstFocus
 
@@ -596,6 +629,18 @@ fun ContentTypeSelectionScreen(
         if (target != null) target.requestFocusWithRetry() else rail?.entry?.requestFocusWithRetry()
     }
     NavReturnFocusEffect(returnFocus, fallback = firstRowFocus) { key ->
+        if (key.startsWith(RETURN_NEW_EPISODES_PREFIX)) {
+            val cardKey = key.removePrefix(RETURN_NEW_EPISODES_PREFIX)
+            val cards =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { newEpisodeCards }.first { cards ->
+                        cards.any { it.key == cardKey } ||
+                            newEpisodesState.shows.none { it.key == cardKey }
+                    }
+                }
+            val index = cards?.indexOfFirst { it.key == cardKey } ?: -1
+            if (index >= 0) newEpisodesListState.showReturnCard(index)
+        }
         if (key.startsWith(RETURN_CONTINUE_WATCHING_PREFIX)) {
             val itemId = key.removePrefix(RETURN_CONTINUE_WATCHING_PREFIX)
             val items =
@@ -725,6 +770,8 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
 
+            HomeShelf.NEW_EPISODES -> newEpisodeCards.map { it.key }
+
             HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> wantedOf(shelf).map { it.key }
 
             HomeShelf.CHART_TRENDING_MOVIES,
@@ -750,6 +797,8 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_SHOWS -> favoriteShowsListState
 
+            HomeShelf.NEW_EPISODES -> newEpisodesListState
+
             HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> wantedListState.getValue(shelf)
 
             HomeShelf.CHART_TRENDING_MOVIES,
@@ -764,13 +813,37 @@ fun ContentTypeSelectionScreen(
     val focusAfterChange: (HomeShelf, List<String>, String) -> Unit = { shelf, oldKeys, key ->
         cardFocusRequest = CardFocusRequest(cardAfterChange(shelf, oldKeys, key, HomeShelf.entries.associateWith(shelfKeys)))
     }
+    // Back from a show page after its new episodes were watched: the card is gone and the hand-back
+    // ended on the first row; focus goes where the card was (the new episode alerts plan, NE-D13).
+    val returningNewEpisode =
+        remember {
+            returnFocus.key?.takeIf { it.startsWith(RETURN_NEW_EPISODES_PREFIX) }?.removePrefix(RETURN_NEW_EPISODES_PREFIX)
+        }
+    LaunchedEffect(returningNewEpisode) {
+        val cardKey = returningNewEpisode ?: return@LaunchedEffect
+        withTimeoutOrNull(RETURN_SHELF_WAIT_MS) { snapshotFlow { returnFocus.key }.first { it == null } }
+        if (newEpisodeCards.none { it.key == cardKey }) {
+            focusAfterChange(HomeShelf.NEW_EPISODES, newEpisodesKeysWhenLeft.split('\n'), cardKey)
+        }
+    }
+    // New finds, a watched mark or a play elsewhere: the row follows; a card that leaves while it
+    // has focus hands it on (the new episode alerts plan, NE-D13).
+    LaunchedEffect(newEpisodesState) {
+        val next = newEpisodesState.shows.take(NewEpisodes.MAX_CARDS)
+        val oldKeys = newEpisodeCards.map { it.key }
+        newEpisodeCards = next
+        val focused = focusedNewEpisode
+        if (focused != null && focused in oldKeys && next.none { it.key == focused }) {
+            focusAfterChange(HomeShelf.NEW_EPISODES, oldKeys, focused)
+        }
+    }
     // The card asked for, scrolled into its row when off screen; no card left: the rail. Never
     // nothing focused.
     LaunchedEffect(cardFocusRequest) {
         val request = cardFocusRequest ?: return@LaunchedEffect
         // After the card menu has closed: its window hands focus back to Home as it goes, and a
         // request made while it was still up landed, then fell back to the row's first card.
-        snapshotFlow { cardMenu == null && wantedMenu == null }.first { it }
+        snapshotFlow { cardMenu == null && wantedMenu == null && newEpisodesMenu == null }.first { it }
         repeat(2) { withFrameNanos { } }
         val card = request.card
         if (card == null) {
@@ -838,6 +911,10 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> {
                 takeOut(wantedCards, key, { it.key }, { wantedCards }) { wantedCards = it }
+            }
+
+            HomeShelf.NEW_EPISODES -> {
+                takeOut(newEpisodeCards, key, { it.key }, { newEpisodeCards }) { newEpisodeCards = it }
             }
 
             // A chart card and a game card are never removed.
@@ -980,6 +1057,59 @@ fun ContentTypeSelectionScreen(
                     }),
                 ),
             onDismiss = { wantedMenu = null },
+        )
+    }
+    // A New Episodes card's menu: Mark New Episodes Watched, with its Undo, and the favourite
+    // toggle (the new episode alerts plan, NE-D12).
+    newEpisodesMenu?.let { show ->
+        val repo = mergedLists?.repoFor(show.item.providerId)
+        val isFavorite = favoriteShows.any { it.sourceKey == show.key }
+        val markLabel = stringResource(R.string.new_episodes_mark_watched)
+        TvActionMenu(
+            title = parseDisplayTitle(show.item.name).title.ifBlank { show.item.name },
+            actions =
+                listOfNotNull(
+                    MenuAction(icon = CinemaIcons.MarkWatched, label = markLabel, onClick = {
+                        if (repo != null) {
+                            removeCard(HomeShelf.NEW_EPISODES, show.key, show.item.name) {
+                                repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = true)
+                                suspend { repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = false) }
+                            }
+                        }
+                    }),
+                    MenuAction(
+                        icon = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
+                        label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                        removal = isFavorite,
+                        onClick = {
+                            val merged = mergedLists
+                            if (repo != null && merged != null) {
+                                coroutineScope.launchGuarded("Home.newEpisodesFavorite") {
+                                    if (isFavorite) {
+                                        repo.removeFavoriteSuspend(show.item.id, ContentType.TV_SHOWS)
+                                    } else {
+                                        repo.addFavoriteSuspend(show.item.id, show.item.name, show.item.categoryId, ContentType.TV_SHOWS)
+                                    }
+                                    reloadFavorites(merged, ContentType.TV_SHOWS)
+                                }
+                                if (isFavorite) {
+                                    undoBar.show(parseDisplayTitle(show.item.name).title.ifBlank { show.item.name }) {
+                                        coroutineScope.launchGuarded("Home.undoNewEpisodesFavorite") {
+                                            repo.addFavoriteSuspend(
+                                                show.item.id,
+                                                show.item.name,
+                                                show.item.categoryId,
+                                                ContentType.TV_SHOWS,
+                                            )
+                                            reloadFavorites(merged, ContentType.TV_SHOWS)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    ),
+                ),
+            onDismiss = { newEpisodesMenu = null },
         )
     }
     // The favourite whose tag dialog is open (favourite tags plan, FT2).
@@ -1135,6 +1265,52 @@ fun ContentTypeSelectionScreen(
                         .then(cardFocusTarget(shelf, card.key))
                         .then(artOnFocus(card.posterUrl, true))
                 },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xl.scaled(scale)),
+            )
+        }
+    }
+    // New episodes of the followed shows: the first row of the TV Shows group. One card per show;
+    // its second line says what is new; OK opens the show page on the season of its first new
+    // episode (the new episode alerts plan, NE-D9).
+    val newEpisodesRow: @Composable () -> Unit = {
+        if (newEpisodeCards.isNotEmpty()) {
+            val resources = LocalResources.current
+            TvFavoritesRow(
+                title = stringResource(R.string.new_episodes_row_title),
+                items = newEpisodeCards.map { it.item },
+                thumbnailType = ThumbnailContentType.TV_SHOW,
+                onItemSelected = { item ->
+                    val show = newEpisodeCards.first { it.key == item.sourceKey }
+                    newEpisodesKeysWhenLeft = newEpisodeCards.joinToString("\n") { it.key }
+                    leaveTo(RETURN_NEW_EPISODES_PREFIX + show.key) { onNewEpisodesSelected(show) }
+                },
+                statusOf = { item -> newEpisodeCards.firstOrNull { it.key == item.sourceKey }?.statusLine(resources) },
+                firstItemFocus = newEpisodesFirstFocus,
+                restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_NEW_EPISODES_PREFIX) },
+                onOpenActions =
+                    if (child) {
+                        null
+                    } else {
+                        ({ item -> newEpisodesMenu = newEpisodeCards.firstOrNull { it.key == item.sourceKey } })
+                    },
+                listState = newEpisodesListState,
+                itemModifier = { item ->
+                    Modifier
+                        .navReturnFocusTarget(returnFocus, RETURN_NEW_EPISODES_PREFIX + item.sourceKey)
+                        .then(cardFocusTarget(HomeShelf.NEW_EPISODES, item.sourceKey))
+                        .then(artOnFocus(item.thumbnailUrl, true))
+                        .onFocusChanged { state ->
+                            if (state.hasFocus) {
+                                focusedNewEpisode = item.sourceKey
+                            } else if (focusedNewEpisode == item.sourceKey) {
+                                focusedNewEpisode = null
+                            }
+                        }
+                },
+                sourceNames = sourceNames,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -1403,6 +1579,26 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
+                            if (newEpisodesAnnounced.isNotEmpty()) {
+                                TvWantedBanner(
+                                    text =
+                                        pluralStringResource(
+                                            R.plurals.new_episodes_banner,
+                                            newEpisodesAnnounced.size,
+                                            newEpisodesAnnounced.size,
+                                        ),
+                                    action = stringResource(R.string.new_episodes_banner_open),
+                                    onClick = {
+                                        // To the row first, then the banner goes: it has told its news.
+                                        coroutineScope.launch {
+                                            newEpisodesFirstFocus.requestFocusWithRetry()
+                                            newEpisodesStore.markToldLater(newEpisodesAnnounced)
+                                        }
+                                    },
+                                    modifier = Modifier.focusRequester(newEpisodesBannerFocus).leftToRail(),
+                                )
+                            }
+
                             if (continueWatchingItems.isNotEmpty()) {
                                 TvContinueWatchingShelf(
                                     items = continueWatchingItems,
@@ -1551,7 +1747,10 @@ fun ContentTypeSelectionScreen(
                                 }
                             }
 
-                            if (favoriteShows.isNotEmpty() || wantedOf(HomeShelf.WANTED_SHOWS).isNotEmpty() ||
+                            if (newEpisodeCards.isNotEmpty() || favoriteShows.isNotEmpty() ||
+                                wantedOf(
+                                    HomeShelf.WANTED_SHOWS,
+                                ).isNotEmpty() ||
                                 chartShelves.any { it.chart?.contentType == ContentType.TV_SHOWS && chartShows(it) }
                             ) {
                                 SectionPanel(
@@ -1568,6 +1767,7 @@ fun ContentTypeSelectionScreen(
                                             bottom = Spacing.xl.scaled(scale),
                                         ),
                                 ) {
+                                    newEpisodesRow()
                                     if (favoriteShows.isNotEmpty()) {
                                         TvFavoritesRow(
                                             title = stringResource(R.string.home_favorite_shows),
@@ -1738,6 +1938,7 @@ private const val RETURN_LIVE_ROW_PREFIX = "live:"
 private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
 private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
+private const val RETURN_NEW_EPISODES_PREFIX = "newEp:"
 private const val RETURN_WANTED_PREFIX = "wanted:"
 private const val RETURN_UPCOMING_PREFIX = "game:"
 

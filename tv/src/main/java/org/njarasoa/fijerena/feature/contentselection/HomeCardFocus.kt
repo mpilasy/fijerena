@@ -25,6 +25,9 @@ internal enum class HomeShelf {
     /** The games of the followed teams and leagues in the next 48 hours (the sports teams plan → Home row). */
     UPCOMING_GAMES,
 
+    /** New episodes of the followed shows, the TV Shows group's first row (the new episode alerts plan). */
+    NEW_EPISODES,
+
     FAVORITE_SHOWS,
 
     /** The Wishlist's shows (wanted titles plan, Phase 5). */

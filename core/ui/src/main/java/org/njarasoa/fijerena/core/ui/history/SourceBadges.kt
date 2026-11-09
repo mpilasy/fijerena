@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.combine
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.newepisodes.LocalNewEpisodes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 
 /**
  * The profile in use is a Nerd: it sees the stats and extra information, source badges first. Read
@@ -32,7 +34,7 @@ data class SourceShortNameMap(
 val LocalSourceShortNames = compositionLocalOf { SourceShortNameMap() }
 
 /**
- * Provides [LocalNerd] and [LocalSourceShortNames] to [content], following profile
+ * Provides [LocalNerd], [LocalSourceShortNames] and [LocalNewEpisodes] to [content], following profile
  * switches, the profile's Nerd flag ([AppSettings.observeNerdMode]) and every source's name and
  * short name.
  */
@@ -54,9 +56,11 @@ fun ProvideSourceBadges(content: @Composable () -> Unit) {
             )
         }
     }.collectAsState(initial = SourceShortNameMap())
+    val newEpisodes by remember(context) { NewEpisodesStore.getInstance(context).state }.collectAsState()
     CompositionLocalProvider(
         LocalNerd provides nerd,
         LocalSourceShortNames provides shortNames,
+        LocalNewEpisodes provides newEpisodes,
         content = content,
     )
 }

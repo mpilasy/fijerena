@@ -10,11 +10,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceKey
@@ -66,6 +68,9 @@ class NewEpisodesStore internal constructor(
 
     private val mutex = Mutex()
 
+    // Outlives the screen that asks: Home marks its banner told as it leaves.
+    private val scope = AppScopes.create("NewEpisodesStore", Dispatchers.IO)
+
     /** Works out [state] again. Never throws: a failure is logged and [state] stays as it was. */
     suspend fun refresh() {
         withContext(Dispatchers.IO) {
@@ -104,6 +109,11 @@ class NewEpisodesStore internal constructor(
         val settings = AppSettings(context)
         settings.setNewEpisodesToldAt(settings.activeProfileId, newest)
         refresh()
+    }
+
+    /** [markTold] in the background, for a screen that is leaving. */
+    fun markToldLater(announced: List<NewEpisodeShow>) {
+        if (announced.isNotEmpty()) scope.launch { markTold(announced) }
     }
 
     companion object {

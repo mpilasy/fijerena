@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -1000,6 +1001,8 @@ internal fun StreamItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
                     )
+                    // New episodes of a followed show (the new episode alerts plan).
+                    NewEpisodesBadge(item)
                     // The source (Nerd) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }

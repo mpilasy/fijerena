@@ -1,0 +1,17 @@
+# Home's New Episodes row (the new episode alerts plan), TV emulator, profile main. Needs a show with
+# a new episode (see docs/RUN_GUIDE.md → Focus walks; the plan's emulator walk tells how to make one).
+# Written by hand, not recorded yet: record it with scripts/tv-focus-walk.sh -r once a show has new
+# episodes. Start: a fresh launch, main picked, with the banner already told, so focus opens on a
+# Continue Watching or Channels card; D-pad Down until the TV Shows group.
+#
+# The row is the first of the TV Shows group: "New Episodes", then "Favourite Shows". Right walks
+# its cards; the card's second line says S02E05, N new episodes or New season. OK opens the show
+# page on the season of the first new episode; Back returns to the card.
+@start Continue Watching card
+DOWN	TV Shows group, the New Episodes row's first card
+RIGHT	the row's next card
+LEFT	the row's first card
+DOWN	Favourite Shows row's first card
+UP	the New Episodes row's first card
+CENTER	the show page, on the season of the first new episode
+BACK	the same New Episodes card

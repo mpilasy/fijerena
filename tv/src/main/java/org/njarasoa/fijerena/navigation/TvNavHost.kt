@@ -613,6 +613,18 @@ fun TvNavHost(
                                         )
                                     }
                                 },
+                                // A New Episodes card: the show page on the season of its first new episode.
+                                onNewEpisodesSelected = { show ->
+                                    navController.navigateOnce(
+                                        Screen.EpisodeSelection(
+                                            seriesId = show.item.id,
+                                            seriesName = show.item.name,
+                                            categoryId = show.item.categoryId,
+                                            providerId = show.item.providerId,
+                                            initialSeason = show.season,
+                                        ),
+                                    )
+                                },
                                 onContinueWatchingSelected = { item ->
                                     // Same dispatch as CategoryList's Recent row (below) — a shelf card is
                                     // just another resumable entry, and should route exactly like one.

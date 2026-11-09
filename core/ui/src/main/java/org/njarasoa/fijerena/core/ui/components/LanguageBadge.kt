@@ -61,6 +61,9 @@ enum class BadgeKind {
 
     /** Something about to happen ("Soon"): the warning colour. */
     Warning,
+
+    /** Something new for this profile (a new episode): the accent colour. */
+    Accent,
 }
 
 @Composable
@@ -79,6 +82,7 @@ fun CinemaBadge(
             BadgeKind.OnMedia -> c.mediaScrim.copy(alpha = CinemaAlpha.tint) to TextTone.OnMedia
             BadgeKind.Success -> c.success to TextTone.OnAccent
             BadgeKind.Warning -> c.warning to TextTone.OnAccent
+            BadgeKind.Accent -> c.accent to TextTone.OnAccent
         }
     CinemaText(
         text = text,
