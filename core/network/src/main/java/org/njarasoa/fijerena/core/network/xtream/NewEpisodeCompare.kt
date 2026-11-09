@@ -73,5 +73,5 @@ internal fun followedShowIds(
     providerId: Long,
     now: Long,
 ): Set<Int> =
-    (dao.getFavoriteSeriesIds(providerId) + dao.getWatchedUnfinishedSeriesIds(providerId, now - FOLLOWED_WATCHED_WINDOW_MS))
+    (dao.getFavoriteSeriesIds(providerId) + dao.getRecentlyWatchedSeriesIds(providerId, now - FOLLOWED_WATCHED_WINDOW_MS))
         .mapNotNullTo(HashSet()) { it.toIntOrNull() }

@@ -46,23 +46,15 @@ interface NewEpisodeDao {
     fun getFavoriteSeriesIds(providerId: Long): List<String>
 
     /**
-     * The shows that a profile played since [since] and has not finished: a stored episode that the
-     * profile has not completed, or no stored list yet (nothing says that it is finished). For each
-     * profile on its own, as a profile that finished a show does not follow it for another profile.
+     * The shows that a profile played since [since], finished or not: a viewer who is caught up on a
+     * weekly show still waits for its next episode.
      */
     @Query(
         "SELECT DISTINCT w.seriesId FROM watch_state w " +
             "WHERE w.providerId = :providerId AND w.contentType = '${ContentType.TV_SHOWS}' " +
-            "AND w.seriesId IS NOT NULL AND w.lastPlayedAt >= :since " +
-            "AND (NOT EXISTS (SELECT 1 FROM xtream_episodes e " +
-            "WHERE e.providerId = :providerId AND e.seriesId = CAST(w.seriesId AS INTEGER)) " +
-            "OR EXISTS (SELECT 1 FROM xtream_episodes e " +
-            "WHERE e.providerId = :providerId AND e.seriesId = CAST(w.seriesId AS INTEGER) " +
-            "AND NOT EXISTS (SELECT 1 FROM watch_state done " +
-            "WHERE done.providerId = :providerId AND done.profileId = w.profileId " +
-            "AND done.contentType = '${ContentType.TV_SHOWS}' AND done.itemId = e.id AND done.isCompleted = 1)))",
+            "AND w.seriesId IS NOT NULL AND w.lastPlayedAt >= :since",
     )
-    fun getWatchedUnfinishedSeriesIds(
+    fun getRecentlyWatchedSeriesIds(
         providerId: Long,
         since: Long,
     ): List<String>

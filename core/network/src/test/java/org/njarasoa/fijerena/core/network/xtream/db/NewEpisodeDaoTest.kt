@@ -76,7 +76,7 @@ class NewEpisodeDaoTest {
     private fun series(id: Int) = XtreamSeriesEntity(seriesId = id, providerId = P, name = "Show $id", categoryId = "c")
 
     @Test
-    fun `favourites and shows being watched are followed, a finished or old one is not`() =
+    fun `favourites and shows played in the last 60 days are followed, finished or not`() =
         runBlocking {
             db.favoriteStateDao().upsert(
                 FavoriteStateEntity(P, "other", "10", ContentType.TV_SHOWS, FavoriteKind.STREAM, "Fav", createdAt = 1),
@@ -90,7 +90,7 @@ class NewEpisodeDaoTest {
                     watch("a", 20, now - day, completed = true),
                     // Watched recently, every stored episode finished.
                     watch("c", 21, now - day, completed = true),
-                    // Not finished, but played more than 60 days ago.
+                    // Played more than 60 days ago.
                     watch("d", 22, now - 90 * day),
                     // Played recently, no stored list yet.
                     watch("e", 23, now - day),
@@ -99,7 +99,7 @@ class NewEpisodeDaoTest {
                 ),
             )
 
-            assertEquals(setOf(10, 20, 23), followedShowIds(dao, P, now))
+            assertEquals(setOf(10, 20, 21, 23), followedShowIds(dao, P, now))
         }
 
     @Test

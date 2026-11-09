@@ -81,7 +81,7 @@ on TV and phone. A notification is possible (NE-Q4). Xtream sources only in this
 
 | # | Answer |
 |---|---|
-| NE-Q1 | (b) Favourite shows, plus shows watched in the last 60 days that are not finished. |
+| NE-Q1 | (b), changed by the user on 2026-11-09: favourite shows, plus every show played in the last 60 days, finished or not. A viewer who is caught up on a weekly show still gets the alert. |
 | NE-Q2 | (b) Watching (or marking watched) each new episode clears it; after 30 days it goes in all cases. |
 | NE-Q3 | (a) No new sync kind; seen follows `watch_state`. |
 | NE-Q4 | (b) A Home banner once per find, TV and phone; no system notification. |
