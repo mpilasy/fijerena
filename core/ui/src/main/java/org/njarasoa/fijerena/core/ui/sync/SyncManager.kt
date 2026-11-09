@@ -387,9 +387,9 @@ class SyncManager internal constructor(
         if (ServerClock.isKnown) return
         val link = store.link ?: return
         try {
-            val askedAt = System.currentTimeMillis()
+            val askedAt = ServerClock.elapsed()
             val devices = api.devices(link.serverUrl, link.deviceToken)
-            ServerClock.update(devices, link.deviceId, askedAt, System.currentTimeMillis())
+            ServerClock.update(devices, link.deviceId, askedAt, ServerClock.elapsed())
         } catch (e: SyncApiException) {
             // The pass goes on, and the next one asks again.
             Log.w(TAG, "Server clock not read: ${e.message}")

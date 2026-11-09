@@ -108,7 +108,8 @@ class PlayRequestsTest {
     @Test
     fun `a TV clock two hours wrong keeps a fresh request and drops a stale one`() {
         val tvNow = now - 2 * 60 * 60_000L
-        ServerClock.update(listOf(tvRow(serverNow = now)), "tv", askedAt = tvNow, answeredAt = tvNow)
+        val elapsed = ServerClock.elapsed()
+        ServerClock.update(listOf(tvRow(serverNow = now)), "tv", askedAt = elapsed, answeredAt = elapsed)
         try {
             assertTrue(receive(request(sentAt = now), at = tvNow))
             assertFalse(receive(request(requestId = "r2", sentAt = tvNow), hlc = 8, at = tvNow))

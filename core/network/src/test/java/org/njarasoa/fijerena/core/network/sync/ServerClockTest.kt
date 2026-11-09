@@ -22,12 +22,19 @@ class ServerClockTest {
     }
 
     @Test
-    fun `the offset comes from the device's own row, at the middle of the call`() {
+    fun `the time comes from the device's own row, at the middle of the call`() {
         ServerClock.update(listOf(device("other", 1L), device("me", 10_000L)), "me", askedAt = 1_000L, answeredAt = 1_200L)
 
         assertTrue(ServerClock.isKnown)
-        assertEquals(10_000L, ServerClock.now(1_100L))
-        assertEquals(10_500L, ServerClock.now(1_600L))
+        assertEquals(10_000L, ServerClock.now(elapsedNow = 1_100L))
+        assertEquals(10_500L, ServerClock.now(elapsedNow = 1_600L))
+    }
+
+    @Test
+    fun `a change of the device's clock after the reading changes nothing`() {
+        ServerClock.update(listOf(device("me", 10_000L)), "me", askedAt = 1_000L, answeredAt = 1_000L)
+
+        assertEquals(10_500L, ServerClock.now(deviceNow = 99_000_000L, elapsedNow = 1_500L))
     }
 
     @Test
