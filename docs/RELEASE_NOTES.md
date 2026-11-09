@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.9.20261109201957
 
 - **Phone player lists open at your choice:** the Audio, Subtitles and Quality dialogs now scroll to the selected row when they open. On a phone in landscape, a selected row below the visible part looked as if it was not in the list.
 - **Indigo UI theme:** a new UI theme for TV and phone: an indigo ground with a soft glow, a white accent with navy text on it, yellow badges, a yellow focus on TV, with pill chips whose labels are in spaced capitals. Indigo is also a colour theme, and its look is a new Look and Feel, **Dial** (Manrope titles over Inter, 12 dp cards, pill buttons and chips).
