@@ -25,6 +25,7 @@ import okhttp3.WebSocketListener
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.ServerClock
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncApi
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
@@ -348,6 +349,7 @@ class SyncManager internal constructor(
                 publishProgress()
             }
         try {
+            readServerClock()
             val outcome = engine.syncNow(listener) ?: return
             retryDelayMs = INITIAL_RETRY_MS
             if (outcome.pulled + outcome.pushed >
@@ -380,6 +382,20 @@ class SyncManager internal constructor(
         }
     }
 
+    /** Before the pull, so that a play request in this pass is judged on the server's clock. */
+    private suspend fun readServerClock() {
+        if (ServerClock.isKnown) return
+        val link = store.link ?: return
+        try {
+            val askedAt = System.currentTimeMillis()
+            val devices = api.devices(link.serverUrl, link.deviceToken)
+            ServerClock.update(devices, link.deviceId, askedAt, System.currentTimeMillis())
+        } catch (e: SyncApiException) {
+            // The pass goes on, and the next one asks again.
+            Log.w(TAG, "Server clock not read: ${e.message}")
+        }
+    }
+
     private fun retryLater() {
         if (foreground) {
             val wait = retryDelayMs
@@ -390,6 +406,7 @@ class SyncManager internal constructor(
 
     internal fun onForeground() {
         foreground = true
+        ServerClock.forget()
         if (!engine.isLinked) return
         openSocket()
         requestSync(0)

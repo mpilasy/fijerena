@@ -17,8 +17,9 @@ import kotlin.math.abs
  *   phone closes it.
  *
  * A request id is random and used once: a record read again never shows a banner again, as the TV
- * keeps every id it saw. A request older than [MAX_AGE_MS] is ignored, by the TV's clock when it
- * arrives and by its receive time afterwards ([isExpired]), so a TV that opens later does nothing.
+ * keeps every id it saw. A request older than [MAX_AGE_MS] is ignored, by the sync server's clock
+ * when it arrives ([ServerClock]: a wrong TV clock does not matter) and by its receive time
+ * afterwards ([isExpired]), so a TV that opens later does nothing.
  */
 object PlayRequests {
     /** A request older than this is dropped: the TV never starts something sent minutes ago. */
@@ -56,7 +57,7 @@ object PlayRequests {
     ): Boolean {
         val held = _incoming.value
         val fresh = request.requestId !in seen
-        val recent = abs(now - request.sentAt) <= MAX_AGE_MS
+        val recent = abs(ServerClock.now(now) - request.sentAt) <= MAX_AGE_MS
         val usable = request.requestId.isNotEmpty() && request.profileId.isNotEmpty() && request.providerKey.isNotEmpty()
         return when {
             held != null && held.hlc > hlc -> {

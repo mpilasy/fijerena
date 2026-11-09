@@ -144,8 +144,11 @@ not answer.
 
 - **Presence lag:** a TV closed less than 90 s ago still shows Open; the 20 s `received` timeout
   covers it. A TV in its screensaver can stop the activity and close the socket: it shows Not open.
-- **Wrong TV clocks:** the TV also checks the receive time, so a TV clock that runs behind does not
-  keep an old request alive; a request from a phone with a wrong clock can be dropped (fails safe).
+- **Wrong TV clocks (changed 2026-11-09, by the user):** both devices compare a request's age on the
+  sync server's clock (`ServerClock`), so a TV clock that is wrong keeps a fresh request and drops a
+  stale one. Each device reads its offset once per app start from its own row of `/devices`, so the
+  server needs no change. The TV also checks the receive time. Before the offset is read, a device
+  uses its own clock.
 - **Key conflicts:** two phones sending to one TV write the same key; the newer one wins and the
   older phone gets no `received`, so it says "Couldn't reach". Acceptable for v1.
 - **Banner clash:** a game reminder and a send at the same time. One banner shows at a time; the

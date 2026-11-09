@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.PlayRequests
+import org.njarasoa.fijerena.core.network.sync.ServerClock
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
@@ -95,7 +96,7 @@ class SendToTvAppGateway(
             positionMs = sentPosition,
             title = item.title,
             subtitle = item.subtitle,
-            sentAt = System.currentTimeMillis(),
+            sentAt = ServerClock.now(),
         )
     }
 

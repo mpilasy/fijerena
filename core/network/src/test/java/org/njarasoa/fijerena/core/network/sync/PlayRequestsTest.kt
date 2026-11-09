@@ -22,6 +22,9 @@ class PlayRequestsTest {
         sentAt: Long = now,
     ) = SyncPayloads.PlayRequest(requestId, profileId = "anna", providerKey = "pk", streamId = "42", open = open, sentAt = sentAt)
 
+    private fun tvRow(serverNow: Long) =
+        SyncWire.Device(id = "tv", name = "TV", createdAt = 0, lastSeen = serverNow, revoked = false, current = true)
+
     private fun receive(
         request: SyncPayloads.PlayRequest,
         hlc: Long = 7,
@@ -100,6 +103,18 @@ class PlayRequestsTest {
         assertFalse(receive(request(sentAt = now - PlayRequests.MAX_AGE_MS - 1)))
         assertFalse(receive(request(requestId = "r2", sentAt = now + PlayRequests.MAX_AGE_MS + 1), hlc = 8))
         assertNull(PlayRequests.incoming.value)
+    }
+
+    @Test
+    fun `a TV clock two hours wrong keeps a fresh request and drops a stale one`() {
+        val tvNow = now - 2 * 60 * 60_000L
+        ServerClock.update(listOf(tvRow(serverNow = now)), "tv", askedAt = tvNow, answeredAt = tvNow)
+        try {
+            assertTrue(receive(request(sentAt = now), at = tvNow))
+            assertFalse(receive(request(requestId = "r2", sentAt = tvNow), hlc = 8, at = tvNow))
+        } finally {
+            ServerClock.forget()
+        }
     }
 
     @Test

@@ -51,6 +51,7 @@ class SyncManagerSocketTest {
         every { store.cursor } returns 0
         every { engine.isLinked } returns true
         coEvery { engine.syncNow(any()) } returns SyncEngine.Outcome(0, 0, 0, false)
+        coEvery { api.devices(any(), any()) } returns emptyList()
         every { api.openSocket(any(), any(), any()) } answers {
             listener = thirdArg()
             mockk<WebSocket>(relaxed = true).also { sockets += it to scheduler.currentTime }
