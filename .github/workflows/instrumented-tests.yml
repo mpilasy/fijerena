@@ -65,6 +65,10 @@ jobs:
       - name: Build test APKs
         run: ./gradlew ${{ matrix.build }}
 
+      # The emulator runner downloads the image only once, and a bad download failed the job.
+      - name: Install the system image
+        run: scripts/ci-install-system-image.sh 34 ${{ matrix.target }} ${{ matrix.arch }}
+
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -140,6 +144,10 @@ jobs:
             sleep 1
           done
           exit 1
+
+      # As in the phone job: tries a bad image download again.
+      - name: Install the system image
+        run: scripts/ci-install-system-image.sh 34 android-tv x86
 
       - name: Run the TV walk
         uses: reactivecircus/android-emulator-runner@v2
