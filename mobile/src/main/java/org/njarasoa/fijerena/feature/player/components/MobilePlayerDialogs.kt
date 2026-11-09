@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,6 +37,19 @@ import org.njarasoa.fijerena.ui.components.CinemaRadioRow
 import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
+
+/**
+ * Shows a row when it is the selected one. A phone in landscape has less height than some lists,
+ * and a selected row below the visible part looks as if the list does not have it.
+ */
+@Composable
+internal fun inViewWhen(selected: Boolean): Modifier {
+    val requester = remember { BringIntoViewRequester() }
+    LaunchedEffect(selected) {
+        if (selected) requester.bringIntoView()
+    }
+    return Modifier.bringIntoViewRequester(requester)
+}
 
 @Composable
 fun AudioTrackSelectorDialog(
@@ -76,6 +92,7 @@ fun AudioTrackSelectorDialog(
                                 onDismiss()
                             },
                             label = track.label,
+                            modifier = inViewWhen(track.isSelected),
                             supportingText = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
                             labelMaxLines = 2,
                         )
@@ -119,6 +136,7 @@ fun SubtitleSelectorDialog(
                             onDismiss()
                         },
                         label = track.label,
+                        modifier = inViewWhen(track.isSelected),
                         supportingText = subtitleDetail(track),
                         labelMaxLines = 2,
                     )
@@ -162,6 +180,7 @@ fun QualitySelectorDialog(
                             onDismiss()
                         },
                         label = quality.label,
+                        modifier = inViewWhen(quality.isSelected),
                         supportingText =
                             stringResource(
                                 R.string.player_quality_dimensions_format,
