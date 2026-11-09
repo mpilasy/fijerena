@@ -156,6 +156,63 @@ class MediaRepositoryFavoritesTest {
             assertEquals("""["News"]""", row.tags)
         }
 
+    // The new episode alerts plan, NE-D7: a later date than the find hides the New Episodes card.
+    @Test
+    fun `the Undo of a removal brings the date back`() =
+        runBlocking {
+            favoriteDao.upsert(tvShowFavorite(createdAt = 111L))
+            repository.invalidateFavoriteSnapshot()
+
+            repository.removeFavorite("show", ContentType.TV_SHOWS)
+            repository.addFavorite("show", "Show", "cat1", ContentType.TV_SHOWS)
+            repository.awaitPendingWrites()
+
+            assertEquals(111L, tvShowRow().createdAt)
+        }
+
+    @Test
+    fun `the Undo of a removal brings the date and the tags back together`() =
+        runBlocking {
+            favoriteDao.upsert(tvShowFavorite(createdAt = 111L, tags = listOf("News")))
+            repository.invalidateFavoriteSnapshot()
+
+            repository.removeFavorite("show", ContentType.TV_SHOWS)
+            repository.addFavorite("show", "Show", "cat1", ContentType.TV_SHOWS)
+            repository.awaitPendingWrites()
+
+            assertEquals(111L, tvShowRow().createdAt)
+            assertEquals("""["News"]""", tvShowRow().tags)
+        }
+
+    @Test
+    fun `a favourite that was not removed before gets a date of now`() =
+        runBlocking {
+            val before = System.currentTimeMillis()
+
+            repository.addFavorite("show", "Show", "cat1", ContentType.TV_SHOWS)
+            repository.awaitPendingWrites()
+
+            assertTrue(tvShowRow().createdAt >= before)
+        }
+
+    private fun tvShowFavorite(
+        createdAt: Long,
+        tags: List<String> = emptyList(),
+    ) = FavoriteStateEntity(
+        providerId = 1L,
+        profileId = ProfileEntity.DEFAULT_ID,
+        itemId = "show",
+        contentType = ContentType.TV_SHOWS,
+        kind = FavoriteKind.STREAM,
+        name = "Show",
+        parentCategoryId = "cat1",
+        createdAt = createdAt,
+        tags = FavoriteStateEntity.encodeTags(tags),
+    )
+
+    private fun tvShowRow(): FavoriteStateEntity =
+        favoriteDao.get(1L, ProfileEntity.DEFAULT_ID, "show", ContentType.TV_SHOWS, FavoriteKind.STREAM)!!
+
     @Test
     fun `tags of an item that is not a favourite are not set`() {
         assertFalse(repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News")))
