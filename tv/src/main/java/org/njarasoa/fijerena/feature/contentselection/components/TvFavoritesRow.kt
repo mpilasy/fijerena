@@ -154,6 +154,11 @@ private fun TvFavoriteCard(
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f),
                 )
+                // New episodes of a followed show (the new episode alerts plan): on the art, as the title
+                // line has no room for it beside the source and the actions hint.
+                if (thumbnailType == ThumbnailContentType.TV_SHOW) {
+                    Box(Modifier.align(Alignment.TopStart).padding(Spacing.xs)) { NewEpisodesBadge(item) }
+                }
                 if (notAvailable) {
                     NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
                 }
@@ -176,8 +181,6 @@ private fun TvFavoriteCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    // New episodes of a followed show (the new episode alerts plan).
-                    if (thumbnailType == ThumbnailContentType.TV_SHOW) NewEpisodesBadge(item)
                     // The source (Nerd) ends the title line, as on the list rows.
                     sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // The row-actions hint, as on the focused list row.

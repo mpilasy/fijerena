@@ -65,7 +65,7 @@ on TV and phone. A notification is possible (NE-Q4). Xtream sources only in this
 | NE-D10 | Multi-source | The alert is on the followed copy's source. A new episode on another copy (same TMDB id) does not count in this plan. |
 | NE-D11 | Child profile | The row and the badge use the same filtered lists as Favourite Shows. A show hidden by the content filters or the kids' filter gives no card and no notification. The kids' Home gets the row (it is built from its favourites). |
 | NE-D12 | Card menu | TV Hold OK / Menu and phone long-press on a New Episodes card: **Mark New Episodes Watched** (through `setEpisodesWatched`, with Undo) and the favourite toggle. |
-| NE-D13 | TV focus | The row follows `HomeShelf` order and the focus contract in CONTRIBUTING.md. After a card leaves (its episodes watched), focus goes to the next card, else the next row. |
+| NE-D13 | TV focus | The row follows `HomeShelf` order and the focus contract in CONTRIBUTING.md. After a card leaves (its episodes watched), focus goes to the card that takes its place: the next card, else the previous card of the row, as on every Home row; when the row is empty, the next row. |
 
 ## Open questions
 
