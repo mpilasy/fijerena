@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Indigo UI theme:** a new UI theme for TV and phone: an indigo ground with a soft glow, a white accent with navy text on it and yellow badges, with pill chips whose labels are in spaced capitals. Indigo is also a colour theme, and its look is a new Look and Feel, **Dial** (Manrope titles over Inter, 12 dp cards, pill buttons and chips).
+- **Night Audio:** a new switch in the player's Audio dialog, on TV and phone, for late-night watching at a low volume: quiet speech is louder and loud sounds are quieter. The Audio button now always shows. It stays on until you turn it off, and it is per device (Settings → Admin → This Device has the same switch). While it is on, surround sound that goes to a receiver as a bitstream is decoded on the device, so Atmos and DTS:X objects are not used.
 
 ## Version: 0.9.20261107205303
 
