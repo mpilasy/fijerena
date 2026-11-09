@@ -616,6 +616,8 @@ val IndigoPalette =
         groundEnd = Color(0xFF14152B),
         // Navy on white, not the black that the luminance rule picks.
         onAccentOverride = Color(0xFF1C1E3A),
+        // Not the white default: a Main button at rest is white here, and focus must differ from it.
+        focusFill = Color(0xFFFFD23F),
         badgeFill = Color(0xFFFFD23F),
     )
 

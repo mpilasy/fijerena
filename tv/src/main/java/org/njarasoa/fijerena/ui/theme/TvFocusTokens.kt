@@ -112,11 +112,11 @@ object TvFocusTokens {
 
     /**
      * Colour of the "current" bar. The full accent, not [CinemaTheme.colors.accentSoft], so it never
-     * reads as the focus outline; the highlight where the accent is as white as the focus fill.
+     * reads as the focus outline.
      */
     val currentAccent: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.currentBar
+        get() = CinemaTheme.colors.accent
 
     /**
      * Title colour on a selected / current row, focused or not. The light accent, so it stays

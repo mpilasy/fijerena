@@ -257,7 +257,7 @@ mobile/.../ui/theme/Color.kt        re-exports (computed get() properties)
 | Amethyst | `amethyst` | `#9C6BFF` purple | `#140E1F` plum, glow `#2E1B52`, to `#08060D` | `#1C1430` |
 | Forest | `forest` | `#2EBD85` green | `#0E1311` | `#141B18` |
 | Slate | `slate` | `#A8C7FA` light blue, `#062E6F` text on it | `#131314` (plain, no glow) | `#1E1F20` |
-| Indigo | `indigo` | `#FFFFFF` white, `#1C1E3A` navy text on it; badges `#FFD23F` yellow (`badgeFill`) | `#1C1E3A`, glow `#2A2E5C`, to `#14152B` | `#24274A` |
+| Indigo | `indigo` | `#FFFFFF` white, `#1C1E3A` navy text on it; badges and TV focus `#FFD23F` yellow (`badgeFill`, `focusFill`) | `#1C1E3A`, glow `#2A2E5C`, to `#14152B` | `#24274A` |
 | Daylight (light, admin only) | `daylight` | `#1565C0` deep blue | `#F4F6F9` | `#FFFFFF` |
 
 Midnight, Ember, Aurora, Graphite, Amethyst and Indigo have a ground with depth (Teal, `teal`, went on 2026-10-19 and reads as Aurora, `paletteById`) (`groundGlow`, `groundEnd`): `Modifier.cinemaGround` draws the glow from the top right over the background fading to the far colour corner to corner, behind every screen that has the ambient backdrop. The secondary colour is `#FF6D00` in the older dark themes (`#D84315` in Daylight); Midnight, Ember and Aurora have their own. Each profile has its own theme (`theme_id_<profileId>`); `palettesFor(admin, current)` leaves Daylight out of the picker for anyone but an admin.

@@ -85,12 +85,10 @@ class NewPaletteContrastTest {
     }
 
     @Test
-    fun `the current bar shows on the focus fill in every theme`() {
-        AllPalettes.forEach { p ->
-            val roles = CinemaColorRoles.from(p)
-            assertNotEquals(p.id, roles.focusFill, roles.currentBar)
-            assertEquals(p.id, if (p === IndigoPalette) p.orange else p.accent, roles.currentBar)
-        }
+    fun `focus differs from a white main button in Indigo and its text reads`() {
+        val roles = CinemaColorRoles.from(IndigoPalette)
+        assertNotEquals(IndigoPalette.accent, roles.focusFill)
+        assertEquals(IndigoPalette.onAccentOverride, roles.onFocusFill)
     }
 
     @Test

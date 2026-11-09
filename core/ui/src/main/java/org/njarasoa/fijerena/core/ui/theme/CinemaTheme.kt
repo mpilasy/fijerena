@@ -92,8 +92,6 @@ data class CinemaColorRoles(
     val focusFill: Color = textPrimary,
     /** Text and icons on [focusFill]. */
     val onFocusFill: Color = background,
-    /** The bar that marks the current item on TV: it must show on [focusFill]. */
-    val currentBar: Color = accent,
     /** The fill of a tag badge ([CinemaThemePalette.badgeFill]); null: the grey of the surfaces. */
     val badgeFill: Color? = null,
     /** Text and icons on a tag badge. */
@@ -135,10 +133,8 @@ data class CinemaColorRoles(
                 groundEnd = palette.groundEnd,
                 scenery = palette.scenery,
                 focusFill = palette.focusFill ?: palette.textPrimary,
-                // The background on the white focus, as before; black on a stated (light) fill.
-                onFocusFill = if (palette.focusFill == null) palette.background else Color.Black,
-                // An accent as white as the focus fill does not show on it: the highlight takes its place.
-                currentBar = if (palette.accent == (palette.focusFill ?: palette.textPrimary)) palette.orange else palette.accent,
+                // The background on the white focus, as before; the theme's dark text on a stated (light) fill.
+                onFocusFill = if (palette.focusFill == null) palette.background else palette.onAccentOverride ?: Color.Black,
                 badgeFill = palette.badgeFill,
                 onBadge = palette.badgeFill?.let { contentOn(it) } ?: palette.textSecondary,
             )
