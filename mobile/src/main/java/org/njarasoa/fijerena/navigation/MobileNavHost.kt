@@ -746,6 +746,17 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             sourceTopBar = sourceTopBar(MobileTab.HOME),
                             onSearch = { navController.navigateOnce(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL)) },
                             onGameChannel = { navController.navigateOnce(it) },
+                            onNewEpisodes = { show ->
+                                navController.navigateOnce(
+                                    Screen.EpisodeSelection(
+                                        seriesId = show.item.id,
+                                        seriesName = show.item.name,
+                                        categoryId = show.item.categoryId,
+                                        providerId = show.item.providerId,
+                                        initialSeason = show.season,
+                                    ),
+                                )
+                            },
                             onContinueWatching = { item ->
                                 navController.navigateOnce(
                                     browseTargetRoute(item.target, item.name, item.categoryId, item.providerId, item.contentType),

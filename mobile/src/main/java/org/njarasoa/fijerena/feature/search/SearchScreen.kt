@@ -91,6 +91,7 @@ import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.history.sourceFilterLabel
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesBadge
 import org.njarasoa.fijerena.core.ui.search.SearchFacetLabels
 import org.njarasoa.fijerena.core.ui.search.rememberSearchFacetLabels
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -1427,6 +1428,8 @@ internal fun SearchResultCard(
                         role = TextRole.Heading,
                         tone = TextTone.Primary,
                     )
+                    // New episodes of a followed show (the new episode alerts plan).
+                    if (result.contentType == ContentType.TV_SHOWS) NewEpisodesBadge(result.providerId, result.itemId)
                     // Its source (when the search covers several) ends the line, in the same place on every row.
                     result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
                 }

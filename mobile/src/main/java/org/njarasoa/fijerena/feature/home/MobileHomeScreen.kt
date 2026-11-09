@@ -82,6 +82,11 @@ import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
 import org.njarasoa.fijerena.core.ui.model.FavoriteTagsDraft
 import org.njarasoa.fijerena.core.ui.model.favoriteTagsDraft
 import org.njarasoa.fijerena.core.ui.model.saveFavoriteTags
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodeShow
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesBadge
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
+import org.njarasoa.fijerena.core.ui.newepisodes.statusLine
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.UpcomingGames
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -149,6 +154,8 @@ fun MobileHomeScreen(
     onFavorite: (item: MediaItem, contentType: String) -> Unit,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWanted: (Screen) -> Unit = {},
+    // A New Episodes card: the show page on the season of its first new episode.
+    onNewEpisodes: (NewEpisodeShow) -> Unit = {},
     // A channel of an Upcoming Games card's sheet: its mini-player, as a guide result opens it.
     onGameChannel: (Screen.CategoryList) -> Unit = {},
 ) {
@@ -175,6 +182,23 @@ fun MobileHomeScreen(
         bannerSeen = false
     }
     val wantedScope = rememberCoroutineScope()
+
+    // New episodes of the followed shows (the new episode alerts plan): the TV Shows group's first
+    // row; the banner once per find, on this device, not on a child's Home.
+    val newEpisodesStore = remember { NewEpisodesStore.getInstance(context.applicationContext) }
+    val newEpisodesState by newEpisodesStore.state.collectAsStateWithLifecycle()
+    val newEpisodeCards = remember(newEpisodesState) { newEpisodesState.shows.take(NewEpisodes.MAX_CARDS) }
+    val newEpisodesChild = remember { AppSettings(context.applicationContext).let { it.isChildProfile(it.activeProfileId) } }
+    val newEpisodesAnnounced = remember(newEpisodesState) { if (newEpisodesChild) emptyList() else newEpisodesState.announced }
+    val currentNewEpisodesAnnounced by rememberUpdatedState(newEpisodesAnnounced)
+    var newEpisodesBannerSeen by remember { mutableStateOf(false) }
+    LaunchedEffect(newEpisodesAnnounced.isNotEmpty(), homeLifecycle) {
+        if (newEpisodesAnnounced.isNotEmpty() && homeLifecycle.isAtLeast(Lifecycle.State.RESUMED)) newEpisodesBannerSeen = true
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (newEpisodesBannerSeen) newEpisodesStore.markToldLater(currentNewEpisodesAnnounced)
+        newEpisodesBannerSeen = false
+    }
 
     var nowPlaying by remember { mutableStateOf<Map<String, EpgProgram>>(emptyMap()) }
     // Bumped on each return (from playback, details, another tab): progress and favourites changed.
@@ -450,6 +474,57 @@ fun MobileHomeScreen(
                 )
             }
 
+            is HomeMenu.NewEpisodes -> {
+                val show = menu.show
+                val isFavorite = rows?.favoriteShows.orEmpty().any { it.sourceKey == show.key }
+                val repo = lists?.repoFor(show.item.providerId)
+                ItemActionsDialog(
+                    title = parseDisplayTitle(show.item.name).title.ifBlank { show.item.name },
+                    isFavorite = isFavorite,
+                    onToggleFavorite = {
+                        if (repo != null) {
+                            wantedScope.launchGuarded("Home.newEpisodesFavorite") {
+                                if (isFavorite) {
+                                    repo.removeFavoriteSuspend(show.item.id, ContentType.TV_SHOWS)
+                                    undo.show(show.item.name) {
+                                        wantedScope.launchGuarded("Home.undoNewEpisodesFavorite") {
+                                            repo.addFavoriteSuspend(
+                                                show.item.id,
+                                                show.item.name,
+                                                show.item.categoryId,
+                                                ContentType.TV_SHOWS,
+                                            )
+                                            done()
+                                        }
+                                    }
+                                } else {
+                                    repo.addFavoriteSuspend(show.item.id, show.item.name, show.item.categoryId, ContentType.TV_SHOWS)
+                                }
+                                done()
+                            }
+                        }
+                    },
+                    onDismiss = { homeMenu = null },
+                    actions =
+                        listOf(
+                            MenuAction(CinemaIcons.MarkWatched, stringResource(R.string.new_episodes_mark_watched)) {
+                                if (repo != null) {
+                                    wantedScope.launchGuarded("Home.markNewEpisodesWatched") {
+                                        repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = true)
+                                        done()
+                                        undo.show(show.item.name) {
+                                            wantedScope.launchGuarded("Home.undoMarkNewEpisodesWatched") {
+                                                repo.setEpisodesWatched(show.item.id, show.episodeIds, watched = false)
+                                                done()
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                        ),
+                )
+            }
+
             is HomeMenu.Wishlist -> {
                 val card = menu.card
                 ItemActionsDialog(
@@ -480,7 +555,7 @@ fun MobileHomeScreen(
             topBar = { sourceTopBar(onSearch) },
         ) { padding ->
             val loaded = rows ?: return@Scaffold
-            if (loaded.isEmpty && wantedCards.isEmpty() && charts.isEmpty() && upcoming.isEmpty()) {
+            if (loaded.isEmpty && wantedCards.isEmpty() && newEpisodeCards.isEmpty() && charts.isEmpty() && upcoming.isEmpty()) {
                 MobileEmptyState(
                     message = stringResource(R.string.home_empty),
                     icon = CinemaIcons.Home,
@@ -521,6 +596,8 @@ fun MobileHomeScreen(
                         onWanted(card.route)
                     },
                 onBannerSeen = { wantedTitles.markNotifiedLater(announced.map { it.wantedKey }) },
+                newEpisodes = NewEpisodesRowData(newEpisodeCards, newEpisodesAnnounced, onNewEpisodes),
+                onNewEpisodesBannerSeen = { newEpisodesStore.markToldLater(newEpisodesAnnounced) },
                 onMenu = { menu ->
                     when {
                         child -> {}
@@ -582,6 +659,8 @@ private fun HomeRowsColumn(
     onShowMissing: (Boolean) -> Unit,
     wanted: WantedRow,
     onBannerSeen: () -> Unit,
+    newEpisodes: NewEpisodesRowData,
+    onNewEpisodesBannerSeen: () -> Unit,
     // A favourite card's short state: Gone from source when its source no longer lists it.
     goneStatus: (MediaItem, String) -> String?,
     // A card's long-press: its menu.
@@ -619,6 +698,7 @@ private fun HomeRowsColumn(
                 onLongClick = { onMenu(HomeMenu.Favorite(item, contentType)) },
                 titleBadges = false,
                 rating = item.metadata.rating,
+                badge = showNewBadge(item, contentType),
             ) { onFavorite(item, contentType) }
         }
     }
@@ -664,6 +744,7 @@ private fun HomeRowsColumn(
                     titleBadges = false,
                     rating = item.metadata.rating,
                     tags = item.listTitle == null,
+                    badge = showNewBadge(item, contentType),
                 ) { onChart(item, contentType) }
             }
         }
@@ -671,12 +752,26 @@ private fun HomeRowsColumn(
     // The Wishlist rows: one per section, each brought into view by the banner.
     val wantedInView = remember { mapOf(ContentType.TV_SHOWS to BringIntoViewRequester(), ContentType.MOVIES to BringIntoViewRequester()) }
     val wantedTitle = stringResource(R.string.wanted_title)
+    val newEpisodesInView = remember { BringIntoViewRequester() }
     // A section's group: its favourites, its Wishlist titles, then its charts; none when all are empty.
     val sectionRows: @Composable (String, List<MediaItem>, Int) -> Unit = { contentType, favorites, title ->
         val wantedCards = wanted.cards.filter { it.entity.contentType == contentType }
         val sectionCharts = charts.filter { it.chart.contentType == contentType }
-        if (favorites.isNotEmpty() || wantedCards.isNotEmpty() || sectionCharts.any { it.items.isNotEmpty() || it.chart.canShowMissing }) {
-            HomeSection(if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE) {
+        val shows = contentType == ContentType.TV_SHOWS
+        if ((shows && newEpisodes.cards.isNotEmpty()) || favorites.isNotEmpty() || wantedCards.isNotEmpty() ||
+            sectionCharts.any { it.items.isNotEmpty() || it.chart.canShowMissing }
+        ) {
+            HomeSection(if (shows) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE) {
+                if (shows && newEpisodes.cards.isNotEmpty()) {
+                    Box(Modifier.bringIntoViewRequester(newEpisodesInView)) {
+                        NewEpisodesRow(
+                            shows = newEpisodes.cards,
+                            sourceNames = rows.sourceNames,
+                            onOpen = newEpisodes.onOpen,
+                            onMenu = { onMenu(HomeMenu.NewEpisodes(it)) },
+                        )
+                    }
+                }
                 favoritesRow(favorites, contentType, title)
                 // Only with cards: an empty box would still take a gap.
                 if (wantedCards.isNotEmpty()) {
@@ -720,6 +815,16 @@ private fun HomeRowsColumn(
                         .first()
                         .entity.contentType
                 scrollScope.launch { wantedInView[type]?.bringIntoView() }
+            }
+        }
+        if (newEpisodes.announced.isNotEmpty()) {
+            // The news: tapping it brings the New Episodes row into view.
+            WantedBanner(
+                pluralStringResource(R.plurals.new_episodes_banner, newEpisodes.announced.size, newEpisodes.announced.size),
+                stringResource(R.string.new_episodes_banner_open),
+            ) {
+                onNewEpisodesBannerSeen()
+                scrollScope.launch { newEpisodesInView.bringIntoView() }
             }
         }
         HomeRow(stringResource(R.string.series_continue_watching_badge), rows.continueWatching, { it.sourceKey }) { item ->
@@ -815,6 +920,10 @@ private sealed interface HomeMenu {
     class Wishlist(
         val card: WantedCard,
     ) : HomeMenu
+
+    class NewEpisodes(
+        val show: NewEpisodeShow,
+    ) : HomeMenu
 }
 
 /** Home's Wanted row and banner: the cards, what the banner announces, and what opening a card does. */
@@ -847,10 +956,54 @@ private fun WantedTitleCard(
     )
 }
 
-/** "2 titles you wanted are now available", once; tapping it goes to the Wanted row. */
+/** What Home needs for its New Episodes row and banner (the new episode alerts plan). */
+private class NewEpisodesRowData(
+    val cards: List<NewEpisodeShow>,
+    val announced: List<NewEpisodeShow>,
+    val onOpen: (NewEpisodeShow) -> Unit,
+)
+
+/** The New badge on a show's card of [contentType]; null on a film's. */
+private fun showNewBadge(
+    item: MediaItem,
+    contentType: String,
+): (@Composable () -> Unit)? = if (contentType == ContentType.TV_SHOWS) ({ NewEpisodesBadge(item) }) else null
+
+/**
+ * Home's New Episodes row (the new episode alerts plan, NE-D9): one card per show, newest find
+ * first, with the New badge and what is new as its second line ("S02E05", "3 new episodes", "New
+ * season"). A tap opens the show page on the season of its first new episode; a long press, the
+ * card's menu (Mark new episodes as watched, the favourite toggle).
+ */
+@Composable
+internal fun NewEpisodesRow(
+    shows: List<NewEpisodeShow>,
+    sourceNames: Map<Long, String>,
+    onOpen: (NewEpisodeShow) -> Unit,
+    onMenu: (NewEpisodeShow) -> Unit,
+) {
+    val resources = LocalResources.current
+    HomeRow(stringResource(R.string.new_episodes_row_title), shows, { it.key }) { show ->
+        PosterCard(
+            title = show.item.name,
+            subtitle = show.statusLine(resources),
+            thumbnailUrl = show.item.thumbnailUrl,
+            thumbnailType = ThumbnailContentType.TV_SHOW,
+            sourceName = sourceNames[show.item.providerId],
+            providerId = show.item.providerId,
+            onLongClick = { onMenu(show) },
+            titleBadges = false,
+            rating = show.item.metadata.rating,
+            badge = { NewEpisodesBadge(show.item) },
+        ) { onOpen(show) }
+    }
+}
+
+/** "2 titles you wanted are now available" or "3 shows you follow have new episodes", once; a tap goes to the row. */
 @Composable
 private fun WantedBanner(
     text: String,
+    action: String = stringResource(R.string.wanted_banner_open),
     onClick: () -> Unit,
 ) {
     CinemaCard(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md)) {
@@ -861,7 +1014,7 @@ private fun WantedBanner(
         ) {
             CinemaIcon(imageVector = CinemaIcons.Bookmark, contentDescription = null, tone = TextTone.Accent)
             CinemaText(text = text, role = TextRole.Body, modifier = Modifier.weight(1f))
-            CinemaText(text = stringResource(R.string.wanted_banner_open), role = TextRole.Label, tone = TextTone.Accent)
+            CinemaText(text = action, role = TextRole.Label, tone = TextTone.Accent)
         }
     }
 }

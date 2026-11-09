@@ -182,6 +182,7 @@ import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.model.FavoriteTagTarget
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesBadge
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -2705,6 +2706,8 @@ internal fun StreamCard(
                         // end it, it would scroll for ever and cut the title's start.
                         modifier = Modifier.weight(1f),
                     )
+                    // New episodes of a followed show (the new episode alerts plan).
+                    NewEpisodesBadge(item)
                     // The source (Nerd) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }

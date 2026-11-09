@@ -100,6 +100,8 @@ import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
+import org.njarasoa.fijerena.core.ui.newepisodes.LocalNewEpisodes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodeMark
 import org.njarasoa.fijerena.core.ui.person.rememberEpisodeCredits
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -534,6 +536,8 @@ private fun EpisodeListContent(
     LaunchedEffect(initialEpisodeId) {
         routeEpisodePlayed = initialEpisodeId != null && wasPlayed(mediaRepository, initialEpisodeId)
     }
+    // This show's new episodes, for the New mark on their cards (the new episode alerts plan).
+    val newEpisodeIds = LocalNewEpisodes.current.episodeIds(mediaRepository.getProviderId(), seriesDetail.id)
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
     // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1): asked when the show
     // is watched to the end, its last episode watched (consistency plan, C-D4). None for a child.
@@ -1064,6 +1068,7 @@ private fun EpisodeListContent(
                         episode.id == resumeState.resumeEpisodeId && (episode.id != initialEpisodeId || routeEpisodePlayed),
                     watchProgress = episodeProgress[episode.id] ?: 0f,
                     isWatched = episode.id in watchedEpisodeIds,
+                    isNew = episode.id in newEpisodeIds,
                     onClick = {
                         onEpisodeSelected(episode)
                     },
@@ -1616,6 +1621,7 @@ private fun EpisodeCard(
     isContinueWatching: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
+    isNew: Boolean = false,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -1670,6 +1676,7 @@ private fun EpisodeCard(
                         role = TextRole.Label,
                         tone = TextTone.Secondary,
                     )
+                    if (isNew) NewEpisodeMark()
                     // The watched check only shows; the row's long press marks it (its action menu).
                     if (isWatched) {
                         CinemaIcon(
