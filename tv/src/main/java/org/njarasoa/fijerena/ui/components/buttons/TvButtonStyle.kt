@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * How buttons look on TV: [ButtonStyle]'s shared look with the TV's sizes, its focus and the
@@ -34,17 +35,22 @@ object TvButtonStyle : ButtonStyle() {
 
     /**
      * Focus (TV visual refresh, 2026-10-17): every focused button, whatever its kind, turns solid
-     * white (the text colour, so dark on a light theme) with the Display style's focus scale and no
-     * ring; the label goes dark, or the danger colour on a deleting button.
+     * [TvFocusTokens.focusFill] (white unless the theme states its own) with the Display style's
+     * focus scale and no ring; the label goes dark, or the danger colour on a deleting button. On
+     * a theme's own fill a deleting button's label stays dark: red does not read on Indigo's yellow.
      */
     val focusedContainer: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.textPrimary
+        get() = TvFocusTokens.focusFill
 
     @Composable
     @ReadOnlyComposable
     fun focusedContent(kind: ButtonKind): Color =
-        if (kind == ButtonKind.Danger) CinemaTheme.colors.danger else CinemaTheme.colors.background
+        if (kind == ButtonKind.Danger && focusedContainer == CinemaTheme.colors.textPrimary) {
+            CinemaTheme.colors.danger
+        } else {
+            TvFocusTokens.onFocusFill
+        }
 
     // Icon buttons: a resting disc that turns white with a dark glyph when focused.
     override val iconContainer: Color
@@ -55,7 +61,7 @@ object TvButtonStyle : ButtonStyle() {
         get() = focusedContainer
     val iconFocusedContent: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.background
+        get() = TvFocusTokens.onFocusFill
     val iconOutline: Color
         @Composable @ReadOnlyComposable
         get() = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow)
@@ -69,5 +75,5 @@ object TvButtonStyle : ButtonStyle() {
         get() = focusedContainer
     val dangerIconFocusedContent: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTheme.colors.danger
+        get() = focusedContent(ButtonKind.Danger)
 }

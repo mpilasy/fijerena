@@ -1,6 +1,6 @@
 # Indigo: a packaged UI theme
 
-**Status:** In progress since 2026-11-09 (built on its own branch, not merged). The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09, on local main, not pushed. The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
@@ -56,7 +56,7 @@ TV and phone. Layout does not change: a theme changes colours, fonts, corners an
 | IN-D1 | Ids | Colour theme, packaged UI theme and string key share one id (`indigo`, or the IN-Q1 pick), so `uiThemeNameRes()` shows the colour theme's name. |
 | IN-D2 | Palette | `IndigoPalette`: background `#1C1E3A`, surface `#24274A`, surfaceVariant `#2D3158`, surfaceLight `#383C66`; accent `#FFFFFF`, accentLight `#C9CCF2`, `onAccentOverride` `#1C1E3A` (navy on white); `orange` (highlight) `#FFD23F` yellow; text `#FFFFFF` / `#C3C5E0` / `#8E91B8` / `#5D6088`; live and error a warm red, warning amber (not the badge yellow). Values are a start; `NewPaletteContrastTest` decides. Dark, not admin only. |
 | IN-D3 | Ground | A soft glow (`groundGlow` `#2A2E5C`, `groundEnd` `#14152B`), as Royal. |
-| IN-D4 | Focus (changed by the user, 2026-11-09, after the TV walk) | A yellow focus fill with navy text on it: a Main button at rest is white, so a white focus did not show. The current chip or tab keeps its bar in the white accent. |
+| IN-D4 | Focus (changed by the user, 2026-11-09, after the TV walk) | A yellow focus fill with navy text on it: a Main button at rest is white, so a white focus did not show. A focused card's glow is yellow too (user, 2026-11-09). A deleting button's label stays navy on the yellow: red does not read on it. The current chip or tab keeps its bar in the white accent. |
 | IN-D5 | Chip labels | New `UiTypeTokens.chipLabel: UiChipLabelTokens?` (`caps`, `trackingSp`); null keeps today's look in every other Look. Read in one place (a chip label style in core/ui) by `TvSelectableButton` and phone `CinemaChip`. Buttons keep their case. Capitals use the app language's locale (`lookCase`). |
 | IN-D6 | Strings | `theme_indigo` (+ `ui_style_<id>` for a new Look) in en, fr and mg, British spelling. Malagasy name by the user (IN-Q1). |
 | IN-D7 | Docs | FEATURES (Themes, Look and Feel), design.md (Palettes row; Look list), RELEASE_NOTES, CONTRIBUTING only if IN-D5 adds a rule. |
@@ -93,9 +93,9 @@ TV and phone. Layout does not change: a theme changes colours, fonts, corners an
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
-| 2 | Not started |
-| 3 | Not started |
+| 1 | Done (6536bd3d9) |
+| 2 | Done (02e62d8b4) |
+| 3 | Done (0675c2cf0, 2fbe1665e, and the yellow buttons and card glow) |
 
 ## Checks
 

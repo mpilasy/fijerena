@@ -60,6 +60,8 @@ data class CinemaThemePalette(
      * 2026-10-17 refresh). Console's is a pale cream.
      */
     val focusFill: Color? = null,
+    /** A focused TV card's glow (null: [accent]). Indigo's is its yellow focus: its accent is white. */
+    val focusGlow: Color? = null,
     /** Text and icons on the accent where the luminance rule below picks badly (Console's mid-tone orange takes black). */
     val onAccentOverride: Color? = null,
     /** The fill of a tag badge (`BadgeKind.Neutral` and `OnCard`); null: the grey of the surfaces. */
@@ -618,6 +620,7 @@ val IndigoPalette =
         onAccentOverride = Color(0xFF1C1E3A),
         // Not the white default: a Main button at rest is white here, and focus must differ from it.
         focusFill = Color(0xFFFFD23F),
+        focusGlow = Color(0xFFFFD23F),
         badgeFill = Color(0xFFFFD23F),
     )
 

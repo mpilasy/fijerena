@@ -90,6 +90,8 @@ data class CinemaColorRoles(
     val scenery: Scenery? = null,
     /** The fill of a focused TV button, tab or chip, and a focused card's ring. */
     val focusFill: Color = textPrimary,
+    /** A focused TV card's glow. */
+    val focusGlow: Color = accent,
     /** Text and icons on [focusFill]. */
     val onFocusFill: Color = background,
     /** The fill of a tag badge ([CinemaThemePalette.badgeFill]); null: the grey of the surfaces. */
@@ -133,6 +135,7 @@ data class CinemaColorRoles(
                 groundEnd = palette.groundEnd,
                 scenery = palette.scenery,
                 focusFill = palette.focusFill ?: palette.textPrimary,
+                focusGlow = palette.focusGlow ?: palette.accent,
                 // The background on the white focus, as before; the theme's dark text on a stated (light) fill.
                 onFocusFill = if (palette.focusFill == null) palette.background else palette.onAccentOverride ?: Color.Black,
                 badgeFill = palette.badgeFill,

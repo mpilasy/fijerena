@@ -89,6 +89,7 @@ class NewPaletteContrastTest {
         val roles = CinemaColorRoles.from(IndigoPalette)
         assertNotEquals(IndigoPalette.accent, roles.focusFill)
         assertEquals(IndigoPalette.onAccentOverride, roles.onFocusFill)
+        assertEquals(roles.focusFill, roles.focusGlow)
     }
 
     @Test

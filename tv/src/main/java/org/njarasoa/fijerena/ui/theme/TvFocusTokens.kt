@@ -183,8 +183,8 @@ object TvFocusTokens {
         get() = FontWeight(LocalUiStyle.current.type.weightRegular)
 
     /**
-     * A focused card's lift (TV visual refresh, 2026-10-17): a soft glow in the theme's accent in
-     * every Look, with the Look's focus scale and no ring.
+     * A focused card's lift (TV visual refresh, 2026-10-17): a soft glow in the theme's accent, or its
+     * own colour (Indigo's yellow), in every Look, with the Look's focus scale and no ring.
      */
     val cardFocusGlow: Glow
         @Composable @ReadOnlyComposable
@@ -192,7 +192,7 @@ object TvFocusTokens {
             if (LocalUiStyle.current.grid.flat) {
                 Glow.None
             } else {
-                Glow(elevationColor = CinemaTheme.colors.accent.copy(alpha = CARD_GLOW_ALPHA), elevation = focusShadowElevation)
+                Glow(elevationColor = CinemaTheme.colors.focusGlow.copy(alpha = CARD_GLOW_ALPHA), elevation = focusShadowElevation)
             }
 
     /**
