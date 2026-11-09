@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.player.service
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -42,6 +43,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.R
 import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
+import org.njarasoa.fijerena.core.player.audio.NightAudioProcessor
+import org.njarasoa.fijerena.core.player.audio.NightAudioRenderersFactory
+import org.njarasoa.fijerena.core.player.audio.NightAudioSetting
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -96,6 +100,17 @@ class StreamingPlaybackService : MediaSessionService() {
     internal var wakeLock: PowerManager.WakeLock? = null
     private var playerListener: PlayerListener? = null
     private var analyticsListener: PerformanceAnalyticsListener? = null
+
+    // The one Night Audio processor, in the audio chain of whatever player this service builds.
+    internal val nightAudioProcessor = NightAudioProcessor()
+    private var nightAudioPrefs: SharedPreferences? = null
+
+    // A field: SharedPreferences holds its listeners weakly. A change from either the player menu or
+    // This Device takes effect at once, on the main thread.
+    private val nightAudioListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == NightAudioSetting.KEY) setNightAudio(prefs.getBoolean(key, false))
+        }
     internal var mediaSourceFactory: StreamingMediaSourceFactory? = null
 
     // Guards releasePlayerAndSession() against running twice on the same instance —
@@ -546,8 +561,9 @@ class StreamingPlaybackService : MediaSessionService() {
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
         val renderersFactory =
-            DefaultRenderersFactory(this)
+            NightAudioRenderersFactory(this, nightAudioProcessor)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        observeNightAudioSetting()
 
         // Cellular buffers always use the profile's own sizes (1.0×): the multiplier setting is gone
         // (UX overhaul A-W5), and a value saved by an older build must not keep applying unseen.
@@ -753,6 +769,21 @@ class StreamingPlaybackService : MediaSessionService() {
         if (XtreamStreamUrl.sameStream(current.streamUrl, streamUrl)) {
             _currentMetadata.value = update(current)
         }
+    }
+
+    /** Night Audio on or off, without a player rebuild. The setting decides: see [observeNightAudioSetting]. */
+    fun setNightAudio(on: Boolean) {
+        nightAudioProcessor.setEnabled(on)
+    }
+
+    /** The compressor's gain now, in dB, for Stats; null while Night Audio is off. */
+    fun nightAudioGainDb(): Float? = nightAudioProcessor.gainDb.takeIf { nightAudioProcessor.isEnabled }
+
+    private fun observeNightAudioSetting() {
+        val prefs = getSharedPreferences(NightAudioSetting.PREFS_NAME, Context.MODE_PRIVATE)
+        nightAudioPrefs = prefs
+        prefs.registerOnSharedPreferenceChangeListener(nightAudioListener)
+        setNightAudio(prefs.getBoolean(NightAudioSetting.KEY, false))
     }
 
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
@@ -1669,6 +1700,10 @@ class StreamingPlaybackService : MediaSessionService() {
             mainHandler.removeCallbacks(recoveryExhaustedHandler)
             _playbackState.value = PlaybackState.Idle
             _newStreamStarting.value = true
+        }
+        releaseStage("nightAudioListener") {
+            nightAudioPrefs?.unregisterOnSharedPreferenceChangeListener(nightAudioListener)
+            nightAudioPrefs = null
         }
         val session = mediaSession
         releaseStage("finalSave") {

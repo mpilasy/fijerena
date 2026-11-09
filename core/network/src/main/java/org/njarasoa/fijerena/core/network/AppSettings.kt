@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
+import org.njarasoa.fijerena.core.player.audio.NightAudioSetting
 
 class AppSettings(
     private val context: Context,
@@ -213,6 +214,25 @@ class AppSettings(
     var shareNowPlaying: Boolean
         get() = prefs.getBoolean(KEY_SHARE_NOW_PLAYING, false)
         set(value) = prefs.edit { putBoolean(KEY_SHARE_NOW_PLAYING, value) }
+
+    /**
+     * Night Audio (quieter loud sounds, clearer speech). Per device — not per profile and never
+     * synced (not in [SYNCED_SETTING_KEYS]): night viewing is a room thing. Off until turned on, and
+     * it stays on until turned off. The player service reads the same key directly and follows
+     * every change, so this property is the one place to write it. See the Night Audio plan.
+     */
+    var nightAudio: Boolean
+        get() = prefs.getBoolean(NightAudioSetting.KEY, false)
+        set(value) = prefs.edit { putBoolean(NightAudioSetting.KEY, value) }
+
+    /** [nightAudio], now and on every change (from the player menu or This Device). */
+    fun observeNightAudio(): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(nightAudio) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(nightAudio)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
 
     /**
      * The active profile is an Admin — each profile has its own flag, off until turned on. See
