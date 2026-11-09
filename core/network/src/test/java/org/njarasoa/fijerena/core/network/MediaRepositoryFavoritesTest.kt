@@ -181,9 +181,10 @@ class MediaRepositoryFavoritesTest {
                 MediaRepository(context, 2L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = favoriteDao)
             repository.addFavorite("bbc", "BBC One", "cat1", ContentType.LIVE_TV)
             repository.setFavoriteTags("bbc", ContentType.LIVE_TV, listOf("News"))
+            // The first spelling of a tag wins, so this row must be written before the other provider's.
+            repository.awaitPendingWrites()
             other.addFavorite("dune", "Dune", "cat9", ContentType.MOVIES)
             other.setFavoriteTags("dune", ContentType.MOVIES, listOf("Weekend", "news"))
-            repository.awaitPendingWrites()
             other.awaitPendingWrites()
 
             assertEquals(listOf("News", "Weekend"), repository.getProfileFavoriteTags())

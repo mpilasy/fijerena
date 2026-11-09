@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.ui.player.components.dialogs
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import org.junit.Assert.assertTrue
@@ -33,7 +34,7 @@ class TvSelectorDialogFocusTest {
         onChecked: (Boolean) -> Unit = {},
     ) {
         rule.setContent {
-            var checked by mutableStateOf(false)
+            var checked by remember { mutableStateOf(false) }
             TvSelectorDialog(
                 title = "Audio",
                 options = options,
