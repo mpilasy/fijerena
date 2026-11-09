@@ -79,3 +79,33 @@ jobs:
           name: tv-debug-apk
           path: tv/build/outputs/apk/debug/*.apk
           retention-days: 14
+
+  # Each build on main saves a new copy of the Gradle caches (each 0.5 GB or more), but the next
+  # build restores only the newest. The old copies filled the repository's 10 GB of Actions cache,
+  # and GitHub then deleted the oldest entries, the emulator system images among them. This job
+  # keeps the newest entry of each Gradle cache and deletes the others.
+  prune-gradle-caches:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Delete old Gradle cache entries
+        run: |
+          # The kind of an entry is its key without the content hash or the build's tag at the end,
+          # for example gradle-transforms-v1 or gradle-home-v1|Linux-X64|build.
+          gh cache list --ref refs/heads/main --limit 1000 --json id,key,createdAt --jq '
+            map(select(.key | startswith("gradle-")))
+            | map(. + {kind: (.key | sub("\\[.*$"; "") | sub("-[0-9a-f]{32,}$"; ""))})
+            | group_by(.kind)[]
+            | sort_by(.createdAt) | reverse | .[1:][]
+            | "\(.id) \(.key)"' |
+          while read -r id key; do
+            echo "Delete $key"
+            gh cache delete "$id"
+          done
