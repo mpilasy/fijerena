@@ -30,9 +30,12 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.FOLLOWED_WATCHED_WINDOW_MS
+import org.njarasoa.fijerena.core.network.xtream.NEW_EPISODE_TTL_MS
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.NewEpisodeEntity
 import org.njarasoa.fijerena.core.network.xtream.db.RecentPlay
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
@@ -777,6 +780,78 @@ class MediaRepository(
         contentType: String,
         includeExcluded: Boolean = false,
     ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType, includeExcluded)
+
+    /**
+     * What the New Episodes read side needs of this source for the profile in use (see
+     * `NewEpisodes.forProfile`, core:ui): the rows of the last 30 days and, per show, whether the
+     * profile follows it and from when, filtered as Favourite Shows (content filters and the
+     * kids' filter). A profile follows a show from its favourite, or from its first play when it
+     * played an episode in the last 60 days; a not finished test would be no use here, as an
+     * unwatched new episode makes every show not finished. Null when this source has nothing,
+     * and on a source that keeps its own state.
+     */
+    suspend fun getNewEpisodeFacts(now: Long = System.currentTimeMillis()): NewEpisodeFacts? {
+        val rows =
+            if (usesServerUserData) {
+                emptyList()
+            } else {
+                withContext(Dispatchers.IO) { xtreamDb.value.newEpisodeDao().getAll(providerId) }
+                    .filter { now - it.foundAt < NEW_EPISODE_TTL_MS }
+            }
+        return if (rows.isEmpty()) null else newEpisodeFacts(rows, now)
+    }
+
+    private suspend fun newEpisodeFacts(
+        rows: List<NewEpisodeEntity>,
+        now: Long,
+    ): NewEpisodeFacts {
+        val favoriteSince =
+            withContext(Dispatchers.IO) { favoriteStateDao.getAllOfKind(providerId, profileId, FavoriteKind.STREAM) }
+                .filter { it.contentType == ContentType.TV_SHOWS }
+                .associate { it.itemId to it.createdAt }
+        val watchRows = watchStateDao.getByContentType(providerId, profileId, ContentType.TV_SHOWS)
+        val playedAt = watchRows.filter { it.seriesId != null }.groupBy({ it.seriesId }, { it.lastPlayedAt })
+        val since: (String) -> Long? = { seriesId ->
+            val plays = playedAt[seriesId].orEmpty().filterNotNull()
+            val firstPlayKept = plays.minOrNull().takeIf { plays.any { now - it <= FOLLOWED_WATCHED_WINDOW_MS } }
+            listOfNotNull(favoriteSince[seriesId], firstPlayKept).minOrNull()
+        }
+        val series =
+            rows
+                .map { it.seriesId }
+                .distinct()
+                .mapNotNull { id -> withContext(Dispatchers.IO) { xtreamDb.value.seriesDao().getSeriesById(providerId, id) } }
+        val items =
+            rehydrateRatings(
+                rehydrateThumbnails(
+                    withoutHiddenCategories(
+                        series.map { MediaItem(it.seriesId.toString(), it.name, MediaType.SERIES, it.categoryId, providerId = providerId) },
+                        ContentType.TV_SHOWS,
+                    ),
+                    ContentType.TV_SHOWS,
+                ),
+                ContentType.TV_SHOWS,
+            )
+        val rowsBySeries = rows.groupBy { it.seriesId }
+        val shows =
+            items.map { item ->
+                val seriesRows = rowsBySeries[item.id.toInt()].orEmpty()
+                val storedEpisodes = withContext(Dispatchers.IO) { episodeDao.getEpisodes(providerId, item.id.toInt()) }
+                val newIds = seriesRows.mapTo(HashSet()) { it.episodeId }
+                val newSeasons =
+                    seriesRows
+                        .map { it.season }
+                        .distinct()
+                        .filterTo(HashSet()) { season -> storedEpisodes.filter { it.season == season }.all { it.id in newIds } }
+                NewEpisodeFacts.Show(item, since(item.id), newSeasons)
+            }
+        val seen =
+            watchRows
+                .filter { it.isCompleted || it.positionMs > 0 || it.lastPlayedAt != null }
+                .flatMapTo(HashSet()) { listOfNotNull(it.itemId, it.episodeId) }
+        shows.forEach { seen += getSiblingCompletedEpisodeIds(it.item.id) }
+        return NewEpisodeFacts(rows, shows, seen)
+    }
 
     /** See [MediaProvider.getRelatedTitles]. Either list is empty when its row should not appear. */
     suspend fun getRelatedTitles(
@@ -2593,6 +2668,38 @@ class MediaRepository(
                 episodeIds.all { id -> completed[id]?.isCompleted == true || id in siblingCompleted }
             }
         return result
+    }
+
+    /**
+     * Marks exactly [episodeIds] of the show [seriesId] watched or unwatched: the New Episodes
+     * card's menu and its Undo (the new episode alerts plan). The same writes as
+     * [setEpisodesWatched], for episodes that are not a whole season.
+     */
+    suspend fun setEpisodesWatched(
+        seriesId: String,
+        episodeIds: Collection<String>,
+        watched: Boolean,
+    ) {
+        if (usesServerUserData || episodeIds.isEmpty()) return
+        val now = System.currentTimeMillis()
+        xtreamDb.value.withTransaction {
+            for (episodeId in episodeIds) {
+                if (watched) {
+                    watchStateDao.markWatched(
+                        providerId,
+                        profileId,
+                        episodeId,
+                        ContentType.TV_SHOWS,
+                        now,
+                        seriesId = seriesId,
+                        episodeId = episodeId,
+                    )
+                } else {
+                    watchStateDao.markUnwatched(providerId, profileId, episodeId, ContentType.TV_SHOWS, now)
+                    episodeDao.clearGroupCompletion(providerId, profileId, episodeId, now)
+                }
+            }
+        }
     }
 
     /** Episode ids of [season], or of every season when null — keyed as the episode screens key them. */

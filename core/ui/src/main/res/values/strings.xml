@@ -1710,4 +1710,20 @@
     <string name="player_stats_output">Output</string>
     <string name="player_stats_output_pcm">PCM</string>
     <string name="player_stats_output_passthrough_format">passthrough %1$s</string>
+
+    <!-- New episode alerts -->
+    <string name="new_episodes_row_title">New Episodes</string>
+    <string name="new_episodes_badge">New</string>
+    <string name="new_episodes_new_season">New season</string>
+    <string name="new_episodes_code">S%1$02dE%2$02d</string>
+    <plurals name="new_episodes_count">
+        <item quantity="one">%1$d new episode</item>
+        <item quantity="other">%1$d new episodes</item>
+    </plurals>
+    <string name="new_episodes_mark_watched">Mark new episodes as watched</string>
+    <string name="new_episodes_banner_open">Show new episodes</string>
+    <plurals name="new_episodes_banner">
+        <item quantity="one">%1$d show you follow has new episodes</item>
+        <item quantity="other">%1$d shows you follow have new episodes</item>
+    </plurals>
 </resources>

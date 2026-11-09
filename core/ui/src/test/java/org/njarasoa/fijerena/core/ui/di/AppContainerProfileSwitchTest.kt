@@ -20,6 +20,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 
 /**
  * A profile switch moves no source (multi-source plan, Phase 6): it recomputes the hidden
@@ -40,6 +41,9 @@ class AppContainerProfileSwitchTest {
         // The switch asks for the new profile's Wanted list in the background; not this test's subject.
         mockkObject(WantedTitles.Companion)
         every { WantedTitles.getInstance(any()) } returns mockk(relaxed = true)
+        // The same for the new profile's New Episodes.
+        mockkObject(NewEpisodesStore.Companion)
+        every { NewEpisodesStore.getInstance(any()) } returns mockk(relaxed = true)
         container = AppContainer(context)
         container.mediaRepositories[SOURCE] = repository
     }

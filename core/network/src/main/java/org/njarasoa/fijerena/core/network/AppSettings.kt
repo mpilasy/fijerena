@@ -94,6 +94,7 @@ class AppSettings(
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
         private const val KEY_SHOW_SPORTS = "show_sports"
         const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
+        private const val KEY_NEW_EPISODES_TOLD_AT = "new_episodes_told_at"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LAST_TAB = "last_tab"
@@ -1131,6 +1132,20 @@ class AppSettings(
      * follow-up). Set on the row itself; per profile, synced to the profile on every device. Off by
      * default.
      */
+
+    /**
+     * The newest find of new episodes that the Home banner told a profile about, on this device
+     * (the new episode alerts plan). Not synced: each device finds new episodes on its own.
+     */
+    fun newEpisodesToldAt(profileId: String): Long = prefs.getLong(profileKey(KEY_NEW_EPISODES_TOLD_AT, profileId), 0L)
+
+    fun setNewEpisodesToldAt(
+        profileId: String,
+        foundAt: Long,
+    ) {
+        prefs.edit { putLong(profileKey(KEY_NEW_EPISODES_TOLD_AT, profileId), foundAt) }
+    }
+
     fun chartsShowMissing(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), false)
 
     fun setChartsShowMissing(

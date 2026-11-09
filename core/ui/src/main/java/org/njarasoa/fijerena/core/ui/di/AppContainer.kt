@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbPeople
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 
 /**
  * Dependency Injection container for the app.
@@ -176,6 +177,7 @@ class AppContainer(
         }
         // The new profile's Wanted list and gone favourites; in the background, so the switch doesn't wait.
         scope.launch { WantedTitles.getInstance(context).refresh() }
+        scope.launch { NewEpisodesStore.getInstance(context).refresh() }
     }
 
     private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)

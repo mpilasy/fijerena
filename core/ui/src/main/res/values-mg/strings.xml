@@ -1704,4 +1704,20 @@
     <string name="player_stats_output">Fivoahana</string>
     <string name="player_stats_output_pcm">PCM</string>
     <string name="player_stats_output_passthrough_format">passthrough %1$s</string>
+
+    <!-- New episode alerts -->
+    <string name="new_episodes_row_title">Fizarana vaovao</string>
+    <string name="new_episodes_badge">Vaovao</string>
+    <string name="new_episodes_new_season">Vanim-potoana vaovao</string>
+    <string name="new_episodes_code">S%1$02dE%2$02d</string>
+    <plurals name="new_episodes_count">
+        <item quantity="one">Fizarana vaovao %1$d</item>
+        <item quantity="other">Fizarana vaovao %1$d</item>
+    </plurals>
+    <string name="new_episodes_mark_watched">Mariho ho efa nojerena ny fizarana vaovao</string>
+    <string name="new_episodes_banner_open">Asehoy ny fizarana vaovao</string>
+    <plurals name="new_episodes_banner">
+        <item quantity="one">Misy fizarana vaovao ny andian-tantara %1$d arahinao</item>
+        <item quantity="other">Misy fizarana vaovao ny andian-tantara %1$d arahinao</item>
+    </plurals>
 </resources>

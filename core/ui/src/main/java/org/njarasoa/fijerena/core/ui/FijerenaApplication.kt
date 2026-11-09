@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.player.service.PlaybackServiceLocale
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.image.MaxImageSizeInterceptor
+import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopFallback
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
@@ -188,6 +189,11 @@ class FijerenaApplication :
         // coroutine: it runs as long as the process.
         startupScope.launch {
             ProviderSyncRunner.catalogueUpdates.collect { WantedTitles.getInstance(this@FijerenaApplication).refresh() }
+        }
+        // The New Episodes state, worked out at start and after each change of what it reads
+        // (the new episode alerts plan). Its own coroutine: it runs as long as the process.
+        startupScope.launch {
+            NewEpisodesStore.getInstance(this@FijerenaApplication).followChanges()
         }
         // Its own coroutine, so nothing above can skip it: finishes a provider deletion the app was
         // killed in the middle of. See the next level rock solid resilience plan → R-03.

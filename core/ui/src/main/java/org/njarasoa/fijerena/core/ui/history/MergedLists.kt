@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.njarasoa.fijerena.core.network.FavoriteTags
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.NewEpisodeFacts
 import org.njarasoa.fijerena.core.network.RecentCategory
 import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.suspendRunCatching
@@ -135,6 +136,9 @@ class MergedLists(
         primary.deleteFavoriteTag(name)
         sources.forEach { it.repo.invalidateFavoriteSnapshot() }
     }
+
+    /** Each source's new episode facts (the new episode alerts plan); a source with none is left out. */
+    suspend fun newEpisodeFacts(now: Long): List<NewEpisodeFacts> = each { it.getNewEpisodeFacts(now) }.filterNotNull()
 
     /** The Continue Watching shelf: every source's, newest first, at most [limit]. */
     suspend fun continueWatching(limit: Int = CONTINUE_WATCHING_LIMIT): List<ContinueWatchingItem> =

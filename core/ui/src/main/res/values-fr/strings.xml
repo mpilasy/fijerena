@@ -1715,4 +1715,22 @@
     <string name="player_stats_output">Sortie</string>
     <string name="player_stats_output_pcm">PCM</string>
     <string name="player_stats_output_passthrough_format">passthrough %1$s</string>
+
+    <!-- New episode alerts -->
+    <string name="new_episodes_row_title">Nouveaux épisodes</string>
+    <string name="new_episodes_badge">Nouveau</string>
+    <string name="new_episodes_new_season">Nouvelle saison</string>
+    <string name="new_episodes_code">S%1$02dE%2$02d</string>
+    <plurals name="new_episodes_count">
+        <item quantity="one">%1$d nouvel épisode</item>
+        <item quantity="many">%1$d de nouveaux épisodes</item>
+        <item quantity="other">%1$d nouveaux épisodes</item>
+    </plurals>
+    <string name="new_episodes_mark_watched">Marquer les nouveaux épisodes comme vus</string>
+    <string name="new_episodes_banner_open">Voir les nouveaux épisodes</string>
+    <plurals name="new_episodes_banner">
+        <item quantity="one">%1$d série que vous suivez a de nouveaux épisodes</item>
+        <item quantity="many">%1$d de séries que vous suivez ont de nouveaux épisodes</item>
+        <item quantity="other">%1$d séries que vous suivez ont de nouveaux épisodes</item>
+    </plurals>
 </resources>
