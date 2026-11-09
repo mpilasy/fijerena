@@ -2467,11 +2467,6 @@ private fun EpisodeCard(
 
                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
-                if (isNew) {
-                    NewEpisodeMark()
-                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                }
-
                 Column(
                     modifier = Modifier.weight(1f),
                 ) {
@@ -2484,8 +2479,22 @@ private fun EpisodeCard(
                     }
                     // Nothing when the provider's title only repeats the show and the number.
                     val ownTitle = remember(episode.title) { episodeOwnTitle(episode.title) }
-                    if (ownTitle.isNotBlank()) {
-                        TvRowTitle(text = ownTitle, isCurrent = isContinueWatching, isFocused = false)
+                    // The mark follows the title, so that every row's title starts in the same place.
+                    if (ownTitle.isNotBlank() || isNew) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (ownTitle.isNotBlank()) {
+                                TvRowTitle(
+                                    text = ownTitle,
+                                    isCurrent = isContinueWatching,
+                                    isFocused = false,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
+                            if (isNew) NewEpisodeMark()
+                        }
                     }
                     episode.metadata.plot?.let { plotText ->
                         CinemaText(
