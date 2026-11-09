@@ -223,8 +223,8 @@ fun TvPlayerScreen(
     // screen takes it over.
     PlayHandoverEffect {
         finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
-        StreamingPlaybackService.getInstance()?.stop()
         handedOff = true
+        StreamingPlaybackService.getInstance()?.stop()
     }
 
     LaunchedEffect(contentType) {
@@ -247,6 +247,8 @@ fun TvPlayerScreen(
     // started for the previous one would keep writing that one's.
     LaunchedEffect(currentStreamId) {
         StreamingPlaybackService.positionSaves.collect { save ->
+            // Handed off: the next item's saves are not this screen's stream.
+            if (handedOff) return@collect
             lastKnownPositionMs = save.positionMs
             loaderViewModel.recordHistory(save.positionMs, save.durationMs, save.isPaused, save.audioTrackIndex, save.subtitleTrackIndex)
         }
