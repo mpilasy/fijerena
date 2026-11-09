@@ -65,6 +65,15 @@ jobs:
       - name: Build test APKs
         run: ./gradlew ${{ matrix.build }}
 
+      # The emulator's system image, kept between runs: the runner's download of it failed some
+      # nights ("Error on ZipFile unknown archive"), and the job then failed without a test run.
+      # With the image in place, the emulator runner's install finds it and downloads nothing.
+      - name: Restore the emulator system image
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-34/${{ matrix.target }}/${{ matrix.arch }}
+          key: system-image-34-${{ matrix.target }}-${{ matrix.arch }}-v1
+
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -140,6 +149,13 @@ jobs:
             sleep 1
           done
           exit 1
+
+      # As in the job above: the system image is kept between runs, so no download can fail.
+      - name: Restore the emulator system image
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-34/android-tv/x86
+          key: system-image-34-android-tv-x86-v1
 
       - name: Run the TV walk
         uses: reactivecircus/android-emulator-runner@v2
