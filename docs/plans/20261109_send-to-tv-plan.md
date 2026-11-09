@@ -1,6 +1,6 @@
 # Send to TV
 
-**Status:** In progress since 2026-11-09 (built on its own branch, not merged). The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09, on local main, not pushed. The walk was stopped early by the user and then rechecked: A14 and A15 are partly tested and A16 (Malagasy) is not tested. The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
@@ -112,11 +112,11 @@ not answer.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
-| 2 | Not started | |
-| 3 | Not started | |
-| 4 | Not started | |
-| 5 | Not started | |
+| 1 | Done | 719a465da |
+| 2 | Done | 3f82c396d |
+| 3 | Done | 06584d26e |
+| 4 | Done | 66710acd1 |
+| 5 | Done | 3ae7c10d5 |
 
 ## Checks
 
@@ -146,8 +146,8 @@ not answer.
   covers it. A TV in its screensaver can stop the activity and close the socket: it shows Not open.
 - **Wrong TV clocks (changed 2026-11-09, by the user):** both devices compare a request's age on the
   sync server's clock (`ServerClock`), so a TV clock that is wrong keeps a fresh request and drops a
-  stale one. Each device reads its offset once per app start from its own row of `/devices`, so the
-  server needs no change. The TV also checks the receive time. Before the offset is read, a device
+  stale one. Each device reads the server's time once per app start from its own row of `/devices` and counts on with a timer that a change of the device's clock does not move, so the
+  server needs no change. The TV also checks the receive time. Before that time is read, a device
   uses its own clock.
 - **Key conflicts:** two phones sending to one TV write the same key; the newer one wins and the
   older phone gets no `received`, so it says "Couldn't reach". Acceptable for v1.

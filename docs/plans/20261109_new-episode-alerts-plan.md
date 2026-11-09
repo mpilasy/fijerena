@@ -1,6 +1,6 @@
 # New episode alerts
 
-**Status:** In progress since 2026-11-09 (built on its own branch, not merged). The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09, on local main, not pushed. The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
@@ -105,13 +105,13 @@ Phases 4 and 5 can run in parallel after Phase 3.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
-| 2 | Not started | |
-| 3 | Not started | |
-| 4 | Not started | |
-| 5 | Not started | |
-| 6 | Not started | |
-| W | Not started | |
+| 1 | Done | 45309b0cd |
+| 2 | Done | 0c1340bdd |
+| 3 | Done | e8b7da278 |
+| 4 | Done | 6ef004617 |
+| 5 | Done | f4b578b6a |
+| 6 | Done | be1403a1b |
+| W | Done | walks done on TV and phone |
 
 ## Checks
 

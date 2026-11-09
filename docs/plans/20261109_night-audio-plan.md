@@ -1,6 +1,6 @@
 # Night Audio
 
-**Status:** In progress since 2026-11-09 (built on its own branch, not merged). The user took every recommended answer on 2026-11-09 (see Answers).
+**Status:** Done 2026-11-09 on the emulators, on local main, not pushed. The check by ear and with passthrough on a Shield was skipped for now by the user (2026-11-09). The user took every recommended answer on 2026-11-09 (see Answers).
 
 ## Goal
 
@@ -94,11 +94,11 @@ Phases 3 and 4 run in parallel after Phase 2.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
-| 2 | Not started | |
-| 3 | Not started | |
-| 4 | Not started | |
-| W | Not started | |
+| 1 | Done | b11ac7031 |
+| 2 | Done | 5150e1ddd |
+| 3 | Done | 614f8346d |
+| 4 | Done | db0404a4e |
+| W | Done | a9120f9b3 |
 
 ## Checks
 
