@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.components.nightAudioDescription
+import org.njarasoa.fijerena.core.ui.components.rememberNightAudioOn
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.sports.reminderLeadLabel
@@ -519,7 +520,7 @@ fun MobileSettingsScreen(
                                 supportingText = stringResource(R.string.settings_show_clock_desc),
                             )
                             CinemaSwitchRow(
-                                checked = uiState.nightAudio,
+                                checked = rememberNightAudioOn(),
                                 onCheckedChange = viewModel::updateNightAudio,
                                 label = stringResource(R.string.night_audio_title),
                                 modifier = Modifier.padding(horizontal = Spacing.md),

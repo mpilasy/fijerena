@@ -48,7 +48,6 @@ data class SettingsUiState(
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val showClock: Boolean = false,
-    val nightAudio: Boolean = false,
     /** Minutes before the start a reminder rings on this device (the Reminders page plan, RP-D11). */
     val reminderLeadMinutes: Int = ReminderSchedule.DEFAULT_LEAD_MINUTES,
     val showTmdbCharts: Boolean = true,
@@ -86,7 +85,6 @@ class SettingsViewModel(
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 showClock = appSettings.showClock,
-                nightAudio = appSettings.nightAudio,
                 reminderLeadMinutes = appSettings.reminderLeadMinutes,
                 showTmdbCharts = appSettings.showTmdbCharts,
                 showSports = appSettings.showSports,
@@ -201,7 +199,6 @@ class SettingsViewModel(
     fun updateNightAudio(on: Boolean) {
         if (!appSettings.isAdmin) return
         appSettings.nightAudio = on
-        _uiState.value = _uiState.value.copy(nightAudio = on)
     }
 
     /** This device's reminder time; the alarms already set move to it. */
