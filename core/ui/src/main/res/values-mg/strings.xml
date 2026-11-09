@@ -1698,9 +1698,9 @@
     <string name="ui_style_dial">Kodia</string>
 
     <!-- Night Audio -->
-    <string name="night_audio_title">Feo alina</string>
+    <string name="night_audio_title">Faneno tony</string>
     <string name="night_audio_summary">Feo mafy malefaka kokoa, resaka mazava kokoa</string>
-    <string name="night_audio_passthrough_note">Ity fitaovana ity no mamaky ny feo surround raha mandeha ny Feo alina</string>
+    <string name="night_audio_passthrough_note">Ity fitaovana ity no mamaky ny feo surround raha mandeha ny Faneno tony</string>
     <string name="player_stats_output">Fivoahana</string>
     <string name="player_stats_output_pcm">PCM</string>
     <string name="player_stats_output_passthrough_format">passthrough %1$s</string>
