@@ -51,7 +51,15 @@ class ProviderRepository(
 
         /** Every `xtream_v2.db` table keyed by `providerId` that a provider deletion empties. */
         private val CATALOG_TABLES =
-            listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "favorite_state", "xtream_epg_cache")
+            listOf(
+                "xtream_streams",
+                "xtream_series",
+                "xtream_episodes",
+                "new_episode",
+                "xtream_categories",
+                "favorite_state",
+                "xtream_epg_cache",
+            )
 
         /**
          * What the orphan sweep may delete: downloaded catalogue only, everything the app fetches
@@ -63,7 +71,7 @@ class ProviderRepository(
          * the next level rock solid resilience plan → R-02.
          */
         internal val ORPHAN_SWEEP_TABLES =
-            listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "xtream_epg_cache")
+            listOf("xtream_streams", "xtream_series", "xtream_episodes", "new_episode", "xtream_categories", "xtream_epg_cache")
 
         private val CACHE_PREFS_PREFIXES = listOf("media_cache_", "xtream_cache_")
         private const val CREDENTIALS_PREFS_PREFIX = "provider_creds_"

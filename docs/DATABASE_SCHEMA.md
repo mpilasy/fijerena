@@ -283,7 +283,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 31
+**Version:** 32
 
 **Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
 pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
@@ -317,7 +317,8 @@ the wanted titles plan; v27 added the ask-once answer and release data to
 and cleared their `detailFetchedAt` (and `xtream_series.episodesFetchedAt`), so the next open of
 each film or show fetches its facts once; v29 added `followed_sport` (the teams and leagues a
 profile follows), see the sports teams plan; v30 added `game_reminder` (game reminders, local
-only), see the same plan; v31 added `tags` on `favorite_state`, see the favourite tags plan.)
+only), see the same plan; v31 added `tags` on `favorite_state`, see the favourite tags plan; v32 added `new_episode` (new
+episodes of followed shows, local only), see the new episode alerts plan.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -606,6 +607,27 @@ game of that team whose bell is cleared stays as a muted row (start stored negat
 the team's next refresh does not add it again. A reminder is deleted when it rings, when its game
 is over, cancelled or postponed, and (muted rows too) once its start has passed. Deleted with its
 profile; kept by the backup and restore scripts.
+
+### Table: `new_episode` (added v32)
+An episode that a source added to a show that a profile of this device follows. A row is written by
+the compare step (`NewEpisodeCompare`), when the episode list of the show from the check after a
+catalogue sync or from the open of a show page is compared with the stored `xtream_episodes` rows.
+A show with no stored list gets its first list as the baseline, with no row. Catalogue data, local
+to the device: not synced (no triggers, no tombstones), not exported, not in the backup and restore
+scripts. Whether a row is new for a profile is worked out at read time from `favorite_state` and
+`watch_state`; the table has no profile. See the new episode alerts plan.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `providerId` | INTEGER (PK) | The source |
+| `seriesId` | INTEGER (PK) | The Xtream id of the show |
+| `episodeId` | TEXT (PK) | The episode id at the source |
+| `season` | INTEGER? | The season number; NULL as in `xtream_episodes` |
+| `episodeNum` | INTEGER | The episode number |
+| `foundAt` | INTEGER | When the episode was found (ms). The first find stays |
+
+Rows go after 30 days, with their show (the catalogue no longer lists it), when their episode leaves
+the source's list, and with the source (`ProviderRepository`'s catalogue tables and orphan sweep).
 
 ### Table: `sync_tombstone` (added v21)
 Removed favourites and cleared watch histories, kept so live sync can tell other devices — without

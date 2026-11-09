@@ -20,9 +20,11 @@ import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.xtream.CatalogPart
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncProgress
+import org.njarasoa.fijerena.core.network.xtream.NewEpisodeCompare
 import org.njarasoa.fijerena.core.network.xtream.ProgressThrottle
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.*
+import org.njarasoa.fijerena.core.network.xtream.followedShowIds
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -69,6 +71,7 @@ class XtreamContentManager(
     private val streamDao = database.streamDao()
     private val seriesDao = database.seriesDao()
     private val episodeDao = database.episodeDao()
+    private val newEpisodeDao = database.newEpisodeDao()
 
     // See MediaRepository's identical writeScope/commitAsync for the full rationale: commit()
     // on a background thread never leaves an entry in QueuedWork, unlike apply(). These freshness
@@ -953,7 +956,7 @@ class XtreamContentManager(
                     }
                 }
                 if (episodesToInsert.isNotEmpty()) {
-                    episodeDao.insertAll(guardSeriesLevelEpisodeTmdbIds(episodesToInsert))
+                    storeEpisodes(seriesId, guardSeriesLevelEpisodeTmdbIds(episodesToInsert))
                     // Only stamped when episodes actually came back — an empty list already
                     // reads as "no usable cache" to buildCachedSeriesDetail regardless of this
                     // timestamp, so there's nothing worth marking fresh in that case.
@@ -967,6 +970,34 @@ class XtreamContentManager(
                 XtreamResponse.Failed(e)
             }
         }
+
+    /**
+     * Stores a show's episode list. For a show that a profile follows, the compare step runs first
+     * and in the same transaction: it needs the stored list from before this one replaces it (see
+     * [NewEpisodeCompare]).
+     */
+    private fun storeEpisodes(
+        seriesId: Int,
+        episodes: List<XtreamEpisodeEntity>,
+    ) {
+        val now = System.currentTimeMillis()
+        val followed = seriesId in followedShowIds(newEpisodeDao, providerId, now)
+        database.runInTransaction(
+            Runnable {
+                if (followed) {
+                    NewEpisodeCompare.record(
+                        newEpisodeDao,
+                        providerId,
+                        seriesId,
+                        episodeDao.getEpisodes(providerId, seriesId),
+                        episodes,
+                        now,
+                    )
+                }
+                episodeDao.insertAll(episodes)
+            },
+        )
+    }
 
     /** Fetches a movie's details, persisting what came back. See [getSeriesInfo]. */
     suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> =

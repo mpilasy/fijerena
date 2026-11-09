@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         WantedTitleEntity::class,
         FollowedSportEntity::class,
         GameReminderEntity::class,
+        NewEpisodeEntity::class,
     ],
     version = XtreamDatabase.DB_VERSION,
     exportSchema = true,
@@ -54,6 +55,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun followedSportDao(): FollowedSportDao
 
     abstract fun gameReminderDao(): GameReminderDao
+
+    abstract fun newEpisodeDao(): NewEpisodeDao
 
     companion object {
         @Volatile
@@ -516,7 +519,23 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        const val DB_VERSION = 31
+        /**
+         * Migration 31→32: the new episodes found on this device (`new_episode`), local only. See the
+         * new episode alerts plan.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigration31To32Test.
+        internal val MIGRATION_31_32 =
+            object : Migration(31, 32) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `new_episode` (`providerId` INTEGER NOT NULL, `seriesId` INTEGER NOT NULL, " +
+                            "`episodeId` TEXT NOT NULL, `season` INTEGER, `episodeNum` INTEGER NOT NULL, " +
+                            "`foundAt` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `seriesId`, `episodeId`))",
+                    )
+                }
+            }
+
+        const val DB_VERSION = 32
         private const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
@@ -596,6 +615,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 MIGRATION_28_29,
                 MIGRATION_29_30,
                 MIGRATION_30_31,
+                MIGRATION_31_32,
             )
 
         fun getInstance(context: Context): XtreamDatabase =
