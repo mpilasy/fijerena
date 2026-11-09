@@ -124,7 +124,8 @@ DOWN	Check a Source
 DOWN	Content Filters of Each Profile
 LEFT	Parental Controls
 # This Device: Language (English on a fresh install), Text & Grid Size, Items in Recent, the watch
-# delay (OK opens its picker on 10 s, the default; Left closes it), Reminder Time, Show Clock.
+# delay (OK opens its picker on 10 s, the default; Left closes it), Reminder Time, Show Clock,
+# Night Audio.
 DOWN	This Device
 CENTER	Language / Language for menus and messages / English
 DOWN	Text & Grid Size
@@ -134,6 +135,7 @@ CENTER	10 s
 LEFT	Add a Channel to Recent After
 DOWN	Reminder Time
 DOWN	Show Clock
+DOWN	Night Audio
 BACK	This Device
 # Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
 # Maintenance, the TMDB key (On or Off by build: not checked), the TMDB Charts switch, Refresh Charts,

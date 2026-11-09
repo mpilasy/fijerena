@@ -1711,7 +1711,7 @@
     <!-- Night Audio -->
     <string name="night_audio_title">Audio de nuit</string>
     <string name="night_audio_summary">Sons forts plus doux, dialogues plus clairs</string>
-    <string name="night_audio_passthrough_note">Le son surround est décodé sur cet appareil quand l\'audio de nuit est activé</string>
+    <string name="night_audio_passthrough_note">Le son surround est décodé sur cet appareil quand l’audio de nuit est activé</string>
     <string name="player_stats_output">Sortie</string>
     <string name="player_stats_output_pcm">PCM</string>
     <string name="player_stats_output_passthrough_format">passthrough %1$s</string>

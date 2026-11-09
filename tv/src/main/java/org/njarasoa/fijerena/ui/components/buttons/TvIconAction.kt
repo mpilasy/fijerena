@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -41,9 +42,12 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PanelCorner
+import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.colorOf
+import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -63,6 +67,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * The icon carries the state (filled or outlined star); [label] names the action and is the
  * button's content description. [danger] (Remove, Delete) is outlined in the error colour.
  * [iconTone]: the glyph's colour at rest, from the theme (null: the button's content colour).
+ * [dot]: a small mark at the top right says a setting behind the button is on (Night Audio).
  * [on]: the button is a switch (UX-D7) — its glyph takes `TvButtonStyle.iconOnContent` at rest while
  * on, and it reads as a switch with that state; [label] then names the setting and its state.
  * See the icon buttons plan.
@@ -78,6 +83,7 @@ fun TvIconAction(
     iconTone: TextTone? = null,
     iconModifier: Modifier = Modifier,
     on: Boolean? = null,
+    dot: Boolean = false,
 ) {
     val scale = LocalUiScale.current
     var focused by remember { mutableStateOf(false) }
@@ -170,6 +176,16 @@ fun TvIconAction(
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                 }
             }
+        }
+        if (dot) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Spacing.sm.scaled(scale))
+                        .size(TvDimensions.liveDotSmall.scaled(scale))
+                        .panel(PanelFill.Accent, PanelCorner.Identity),
+            )
         }
     }
 }

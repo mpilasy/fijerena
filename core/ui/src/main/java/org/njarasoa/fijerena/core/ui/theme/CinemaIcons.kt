@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.sharp.VolumeUp
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CheckBox
@@ -89,6 +90,7 @@ import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.CheckBox
@@ -150,6 +152,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.sharp.Add
 import androidx.compose.material.icons.sharp.ArrowDropDown
 import androidx.compose.material.icons.sharp.BarChart
+import androidx.compose.material.icons.sharp.Bedtime
 import androidx.compose.material.icons.sharp.Bookmark
 import androidx.compose.material.icons.sharp.BookmarkBorder
 import androidx.compose.material.icons.sharp.CheckBox
@@ -393,6 +396,11 @@ object CinemaIcons {
     val Add: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Add, Icons.Outlined.Add, Icons.Sharp.Add)
+
+    /** The moon that says Night Audio is on. */
+    val NightAudio: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Bedtime, Icons.Outlined.Bedtime, Icons.Sharp.Bedtime)
 
     val VolumeUp: ImageVector
         @Composable @ReadOnlyComposable

@@ -93,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.components.rememberNightAudioOn
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -171,7 +172,7 @@ fun TvPlayerControlsOverlay(
     // again for the rest of the session — leaving these counts permanently 0 and hiding the
     // audio/subtitle/quality buttons even once tracks actually loaded.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
-    val audioTrackCount = remember(metadata, tracksVersion) { viewModel.getAudioTracks().size }
+    val nightAudioOn = rememberNightAudioOn()
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
 
@@ -419,6 +420,14 @@ fun TvPlayerControlsOverlay(
                             modifier = Modifier.padding(start = Spacing.xs),
                             textModifier = Modifier.bounceMarquee(),
                         )
+                        if (nightAudioOn) {
+                            TvIcon(
+                                imageVector = CinemaIcons.NightAudio,
+                                contentDescription = stringResource(R.string.night_audio_title),
+                                tone = TextTone.AccentSoft,
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                            )
+                        }
                     } else if (metadata.catchupLabel != null) {
                         // Catch-up: CATCH-UP · the programme · its channel and day, time.
                         TvIcon(
@@ -758,17 +767,16 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        if (audioTrackCount > 1) {
-                            OsdButton(
-                                icon = CinemaIcons.VolumeUp,
-                                label = stringResource(R.string.player_audio),
-                                onClick = {
-                                    pickerOpener = audioFocusRequester
-                                    onShowAudioTrackSelector()
-                                },
-                                modifier = Modifier.focusRequester(audioFocusRequester),
-                            )
-                        }
+                        OsdButton(
+                            icon = CinemaIcons.VolumeUp,
+                            label = stringResource(R.string.player_audio),
+                            onClick = {
+                                pickerOpener = audioFocusRequester
+                                onShowAudioTrackSelector()
+                            },
+                            modifier = Modifier.focusRequester(audioFocusRequester),
+                            dot = nightAudioOn,
+                        )
 
                         if (qualityCount > 1) {
                             OsdButton(
@@ -818,8 +826,9 @@ private fun OsdButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconTone: TextTone? = null,
+    dot: Boolean = false,
 ) {
-    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTone = iconTone)
+    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTone = iconTone, dot = dot)
 }
 
 /** [key] (on KeyDown) moves focus to [target]; no-op when [target] is null or can't take focus. */

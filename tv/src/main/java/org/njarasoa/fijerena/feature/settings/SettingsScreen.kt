@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.nightAudioDescription
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -766,6 +767,12 @@ fun SettingsScreen(
                                                                             onCheckedChange = viewModel::updateShowClock,
                                                                             label = stringResource(R.string.settings_show_clock_title),
                                                                             description = stringResource(R.string.settings_show_clock_desc),
+                                                                        )
+                                                                        TvSwitchRow(
+                                                                            checked = uiState.nightAudio,
+                                                                            onCheckedChange = viewModel::updateNightAudio,
+                                                                            label = stringResource(R.string.night_audio_title),
+                                                                            description = nightAudioDescription(),
                                                                         )
                                                                         KeyInputSettingsRow(
                                                                             until = keyInputUntil,

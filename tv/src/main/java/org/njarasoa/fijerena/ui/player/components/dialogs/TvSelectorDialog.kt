@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.ui.components.TvOverlayPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvRadioRow
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -40,6 +41,15 @@ data class TvSelectorOption(
     val subtitle: String? = null,
 )
 
+/** A switch row at the top of a [TvSelectorDialog], above the choices (the Audio dialog's Night Audio). */
+@Immutable
+data class TvSelectorSwitch(
+    val title: String,
+    val description: String?,
+    val checked: Boolean,
+    val onCheckedChange: (Boolean) -> Unit,
+)
+
 /**
  * The in-player picker shared by the audio, subtitle, quality and chapter dialogs.
  *
@@ -54,6 +64,7 @@ fun TvSelectorDialog(
     options: List<TvSelectorOption>,
     onDismiss: () -> Unit,
     emptyText: String? = null,
+    switchRow: TvSelectorSwitch? = null,
 ) {
     val initialFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.selected }
@@ -78,7 +89,11 @@ fun TvSelectorDialog(
                         .align(CenterHorizontally)
                         .width(TvDimensions.selectionListWidth)
                         .then(
-                            if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                            if (selectedIndex < 0 && switchRow == null) {
+                                Modifier.focusRequester(initialFocusRequester)
+                            } else {
+                                Modifier
+                            },
                         ),
             )
 
@@ -91,6 +106,17 @@ fun TvSelectorDialog(
             )
         },
     ) {
+        switchRow?.let { row ->
+            TvSwitchRow(
+                checked = row.checked,
+                onCheckedChange = row.onCheckedChange,
+                label = row.title,
+                description = row.description,
+                // Up reaches it from the first choice; with no choice selected, focus opens here.
+                modifier = if (selectedIndex < 0) Modifier.focusRequester(initialFocusRequester) else Modifier,
+            )
+        }
+
         if (options.isEmpty() && emptyText != null) {
             CinemaText(
                 text = emptyText,

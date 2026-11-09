@@ -221,6 +221,9 @@ private fun largestSize(video: MediaCodecInfo.VideoCapabilities): Pair<Int, Int>
     return if (video.isSizeSupported(width, height)) width to height else width to video.getSupportedHeightsFor(width).upper
 }
 
+/** Whether the audio output takes any bitstream format without decoding it (a receiver, an eARC TV). */
+fun hasAudioPassthrough(context: Context): Boolean = readAudioOutput(context).passthrough.isNotEmpty()
+
 /** Media3's view of the output, the one the player uses to choose passthrough. */
 @OptIn(UnstableApi::class)
 private fun readAudioOutput(context: Context): AudioOutputInfo {

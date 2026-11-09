@@ -55,6 +55,14 @@ class TvPlayerStatsButtonTest {
     }
 
     @Test
+    fun theAudioButtonShowsWithNoTracksForNightAudio() {
+        // No service in the test: the player has no tracks. Night Audio needs the button anyway.
+        showControls(nerd = false)
+
+        rule.onAllNodesWithContentDescription("Audio").assertCountEquals(1)
+    }
+
+    @Test
     fun aNerdHasTheStatsButton() {
         showControls(nerd = true)
 
