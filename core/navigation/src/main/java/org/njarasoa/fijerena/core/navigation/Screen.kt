@@ -369,5 +369,7 @@ sealed interface Screen {
         val catchupOffsetSec: Long = 0L,
         val programTitle: String? = null,
         val providerId: Long,
+        /** Start here instead of the watch row: the phone's position on a Send to TV. Null otherwise. */
+        val startPositionMs: Long? = null,
     ) : Screen
 }

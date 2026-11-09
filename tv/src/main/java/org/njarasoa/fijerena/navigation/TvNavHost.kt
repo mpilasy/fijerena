@@ -1172,6 +1172,7 @@ fun TvNavHost(
                                     },
                                 programTitle = playerScreen.programTitle,
                                 providerId = playerScreen.providerId,
+                                startPositionMs = playerScreen.startPositionMs,
                                 // Catch-up's Watch live: the channel's preview in place of the player,
                                 // so Back returns where the catch-up was opened from.
                                 onWatchLive = {

@@ -72,6 +72,8 @@ class StreamLoaderViewModel(
     private val programTitle: String? = null,
     // The source the stream is on (the route's).
     private val providerId: Long = 0L,
+    // Starts here rather than at the watch row (Send to TV); a film or an episode only.
+    private val startPositionMs: Long? = null,
     // The engine's stream and state: a live channel goes into Recent only after it shows a picture.
     private val engine: StateFlow<EngineStream> = StreamingPlaybackService.engineStream,
     // How long a load may take, repository and URL together, before it ends in Error.
@@ -310,6 +312,9 @@ class StreamLoaderViewModel(
                             }
                         }
                     }
+
+                    // Send to TV: the phone's position wins over this device's watch row.
+                    startPositionMs?.takeIf { contentType != ContentType.LIVE_TV }?.let { resumePos = it }
 
                     // Catch-up opens on the programme, past the window's lead-in.
                     if (window != null) resumePos = window.programOffsetSec * MILLIS_PER_SECOND
@@ -1057,6 +1062,7 @@ class StreamLoaderViewModelFactory(
     private val catchup: CatchupWindow? = null,
     private val programTitle: String? = null,
     private val providerId: Long = 0L,
+    private val startPositionMs: Long? = null,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
@@ -1078,6 +1084,7 @@ class StreamLoaderViewModelFactory(
                 catchup,
                 programTitle,
                 providerId,
+                startPositionMs,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

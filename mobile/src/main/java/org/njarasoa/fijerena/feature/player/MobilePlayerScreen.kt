@@ -154,6 +154,8 @@ fun MobilePlayerScreen(
     onWatchLive: () -> Unit = {},
     // The source the stream plays from (the route's).
     providerId: Long = 0L,
+    // Send to TV: start here rather than at the watch row.
+    startPositionMs: Long? = null,
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -171,6 +173,7 @@ fun MobilePlayerScreen(
                     catchup = catchup,
                     programTitle = programTitle,
                     providerId = providerId,
+                    startPositionMs = startPositionMs,
                 ),
         ),
 ) {

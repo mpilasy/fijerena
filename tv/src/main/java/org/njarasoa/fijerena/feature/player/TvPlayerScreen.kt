@@ -76,6 +76,8 @@ fun TvPlayerScreen(
     onWatchLive: () -> Unit = {},
     // The source the stream plays from (the route's).
     providerId: Long = 0L,
+    // Send to TV: start here rather than at the watch row.
+    startPositionMs: Long? = null,
     playbackViewModel: PlaybackViewModel = viewModel(),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
@@ -94,6 +96,7 @@ fun TvPlayerScreen(
                     catchup = catchup,
                     programTitle = programTitle,
                     providerId = providerId,
+                    startPositionMs = startPositionMs,
                 ),
         ),
 ) {

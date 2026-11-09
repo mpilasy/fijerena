@@ -886,6 +886,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             },
                         programTitle = playerScreen.programTitle,
                         providerId = playerScreen.providerId,
+                        startPositionMs = playerScreen.startPositionMs,
                         // Catch-up's Watch live: the channel in the docked mini-player in place of the
                         // player, so Back returns where the catch-up was opened from.
                         onWatchLive = {
