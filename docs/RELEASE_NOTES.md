@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Episode list no longer shakes, also on episode 2 or 3:** on TV, the episode list still shook without end when the second or third episode had focus (seen on a Chromecast with Google TV and the emulator). The app drew the screen all the time, which on a Chromecast also kept the processor busy. Two causes: since the last Compose update, the list scrolled to a different point when the season tabs were pinned, and the line with the show, the season and Play next made the season tabs taller when it showed. Now the focused episode goes to the same point either way, and that line hangs over the episodes under the season tabs, so it moves nothing.
+
 ## Version: 0.9.20261109212252
 
 - **TV list fixes:** a long category name now takes a second line instead of being cut. The New mark on an episode follows its title, so every title starts in the same place. A focused recent search is filled like every other chip, and a focused Search section title no longer loses its first letter. A channel's badges in the TV Guide are no longer cut off.
