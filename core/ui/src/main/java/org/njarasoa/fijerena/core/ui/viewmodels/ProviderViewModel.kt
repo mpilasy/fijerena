@@ -161,16 +161,19 @@ class ProviderViewModel(
         _saveState.value = SaveState.Idle
     }
 
+    /**
+     * Each source's kind, subscription and whether the profile in use has it: the Sources list's line.
+     * Declared before init: loadProviders() can run in init, before the fields below it are set.
+     */
+    private val _sourceStatuses = MutableStateFlow<Map<Long, SourceStatus>>(emptyMap())
+    val sourceStatuses: StateFlow<Map<Long, SourceStatus>> = _sourceStatuses.asStateFlow()
+
     init {
         viewModelScope.launch {
             migrateIfNeeded()
             loadProviders()
         }
     }
-
-    /** Each source's kind, subscription and whether the profile in use has it: the Sources list's line. */
-    private val _sourceStatuses = MutableStateFlow<Map<Long, SourceStatus>>(emptyMap())
-    val sourceStatuses: StateFlow<Map<Long, SourceStatus>> = _sourceStatuses.asStateFlow()
 
     fun loadProviders() {
         viewModelScope.launch {
