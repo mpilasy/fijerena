@@ -5,10 +5,10 @@ import android.hardware.display.DisplayManager
 import android.view.Display
 
 /**
- * Text & grid size on Auto: from the best resolution the screen takes (the largest mode it lists,
- * not the current one — a Shield drops to the video's resolution while matching content, and the
- * menus mustn't change size with it). A 4K screen gets 4K (60%), 1080p gets HD (80%), anything
- * smaller SD (100%); HD when the screen says nothing.
+ * Text & grid size on Auto, from the best resolution the screen takes (the largest mode it lists,
+ * not the current one: a Shield drops to the video's resolution while matching content, and the
+ * menus must not change size with it). 4K gets 4K (60%), 1080p gets HD (80%), anything smaller SD
+ * (100%); HD when the screen says nothing.
  */
 fun autoUiScale(context: Context): Float {
     val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)

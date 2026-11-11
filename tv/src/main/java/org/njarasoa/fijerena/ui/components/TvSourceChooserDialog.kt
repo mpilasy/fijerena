@@ -28,10 +28,10 @@ import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Picks one of [sources] (id to name) before a setting edited per source opens — content filters
- * — when there is more than one (`SourceChoice.Ask`, O4 of
+ * Picks one of [sources] (id to name) before a setting edited per source (content filters) opens,
+ * when there is more than one (`SourceChoice.Ask`, O4 of
  * docs/plans/20261012_multi-source-search-history-plan.md). A dialog window: focus opens on the
- * first source (never on Cancel), Back closes it and focus goes back to its opener.
+ * first source (never on Cancel); Back closes it and focus goes back to its opener.
  */
 @Composable
 fun TvSourceChooserDialog(

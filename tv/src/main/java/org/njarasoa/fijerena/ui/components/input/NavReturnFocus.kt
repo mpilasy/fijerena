@@ -24,10 +24,9 @@ import androidx.lifecycle.repeatOnLifecycle
  *
  * Navigation Compose disposes a destination while another one is on top and rebuilds it on Back:
  * every `remember` and FocusRequester is new, nothing is focused, and Compose gives focus to the
- * first focusable on the screen — the "Switch Source" chip on Home, the top card in Settings,
- * scrolling a long list back to its top on the way. What survives the trip is saveable state,
- * kept in the back-stack entry, so this remembers the control by a string key with
- * `rememberSaveable` and hands focus back to it when the screen is RESUMED again.
+ * first focusable on the screen (the top card in Settings), scrolling a long list back to its top.
+ * Saveable state in the back-stack entry survives the trip, so this remembers the control by a
+ * string key with `rememberSaveable` and hands focus back to it when the screen is RESUMED again.
  *
  * ```
  * val returnFocus = rememberNavReturnFocus()
@@ -43,7 +42,7 @@ import androidx.lifecycle.repeatOnLifecycle
  *
  * Each key has its own requester, attached to its control for good: a requester attached only
  * while the hand-back was pending came off the focused control when the key was cleared, and that
- * change of modifiers dropped focus from it (Home's cards, 2026-10-30).
+ * change of modifiers dropped focus from it.
  */
 @Stable
 class NavReturnFocus internal constructor(

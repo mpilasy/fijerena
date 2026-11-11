@@ -4,9 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The rail's groups (the Admin sections plan): Your Profile, the five
- * Admin sections (only for an Admin) and About (a child profile has no Settings on TV). Only the
- * Admin sections ask the PIN on the way in, in the order the Admin list had.
+ * The rail's groups (the Admin sections plan): Your Profile, the five Admin sections (only for an
+ * Admin) and About (a child profile has no Settings on TV). Only the Admin sections ask the PIN on
+ * the way in.
  */
 class SettingsGroupTest {
     private val adminSections =

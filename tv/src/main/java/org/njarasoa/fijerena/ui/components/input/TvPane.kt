@@ -39,11 +39,10 @@ import kotlinx.coroutines.launch
  *
  * The pane remembers the key of the row that last had focus (`rememberSaveable`, so it survives
  * the Back round trip), and a new selection (the row opened, the channel playing) becomes that
- * memory. A D-pad entry lands on the remembered row, else the selected one, else the first —
- * or, with [bind]'s `preferSelected`, on the selected row first (a categories pane: Left from an
- * item lands on the category being browsed, not the one last scrolled past). A row that is not
- * composed (scrolled away in a `LazyColumn`) is scrolled to first, then focused with
- * [requestFocusWithRetry].
+ * memory. A D-pad entry lands on the remembered row, else the selected one, else the first; with
+ * [bind]'s `preferSelected`, on the selected row first (a categories pane: Left from an item lands
+ * on the category being browsed). A row that is not composed (scrolled away in a `LazyColumn`) is
+ * scrolled to first, then focused with [requestFocusWithRetry].
  */
 @Stable
 class PaneFocusState internal constructor(
@@ -64,12 +63,11 @@ class PaneFocusState internal constructor(
     private val requesters = HashMap<String, FocusRequester>()
 
     /**
-     * Tells the pane what it holds. Called by the list composable every time it composes:
-     * [selectedKey] is the row the screen considers current (a new value becomes the remembered
-     * row), [firstKey] the default landing, [listState] and [indexOf] let the pane scroll a row
-     * into composition before focusing it (-1 for a row outside the lazy list, which is then
-     * assumed always composed). [preferSelected] lands entries on the selected row before the
-     * remembered one.
+     * Tells the pane what it holds; the list composable calls it on every composition. [selectedKey]
+     * is the row the screen considers current (a new value becomes the remembered row), [firstKey] the
+     * default landing; [listState] and [indexOf] let the pane scroll a row into composition before
+     * focusing it (-1: a row outside the lazy list, always composed). [preferSelected] lands entries
+     * on the selected row before the remembered one.
      */
     fun bind(
         selectedKey: String?,
@@ -119,9 +117,8 @@ class PaneFocusState internal constructor(
     }
 
     /**
-     * [focusEntry] after the rows under the pane were replaced (another list in the same list
-     * state): scrolls the entry row to the top first, since the scroll position belongs to the old
-     * rows and could leave the focused row clipped out of view.
+     * [focusEntry] after the rows under the pane were replaced (another list in the same list state):
+     * scrolls the entry row to the top first, as the old rows' scroll position could leave it clipped.
      */
     suspend fun focusEntryInNewList(): Boolean {
         val entry = entryKey() ?: return false
@@ -188,12 +185,12 @@ fun rememberPaneFocus(): PaneFocusState {
  * Makes this node a pane: a focus group that D-pad moves enter on [PaneFocusState.entryKey] and
  * leave only where the caller says.
  *
- * Left and Right are taken here, not by Compose's geometric search: they go to the neighbour
- * pane ([exitLeft] / [exitRight]), which lands on its own entry row, or nowhere when there is no
- * neighbour on that side. A row's own key handling (the hidden action buttons) runs first and
- * keeps its Left/Right inside the row. Down at the end of the pane stays put; Up at the top
- * leaves to whatever is above (the screen header) unless [exitUp] is false. Programmatic focus
- * requests ([requestFocusWithRetry], `NavReturnFocus`) are not D-pad moves and pass through.
+ * Left and Right are taken here, not by Compose's geometric search: they go to the neighbour pane
+ * ([exitLeft] / [exitRight]), which lands on its own entry row, or nowhere when there is no
+ * neighbour on that side. A row's own key handling runs first and can keep Left/Right inside the
+ * row. Down at the end of the pane stays; Up at the top leaves to what is above (the screen
+ * header) unless [exitUp] is false. Programmatic focus requests ([requestFocusWithRetry],
+ * `NavReturnFocus`) are not D-pad moves and pass through.
  *
  * [leftToRail]: a pane at the screen's left edge with no [exitLeft] lets Left through instead of
  * keeping it, so its rows' `leftToRail()` reaches the navigation rail (browse's categories column).

@@ -72,10 +72,9 @@ fun Modifier.reminderBannerKeys(state: ReminderBannerState): Modifier = onPrevie
 /**
  * The reminder that rang while the TV app is on screen ([GameReminderAlerts.banner]): "Arsenal v
  * Chelsea starts at 20:00", the best channel, and Watch (only with a channel), Dismiss and Manage
- * reminders ([onManage], the Reminders page; the banner closes). Place it
- * at the top centre, after the content, so it draws over it. While composed and the app is started,
- * it counts as the banner host, so reminders show here instead of as notifications. See
- * [ReminderBannerState] for its keys.
+ * reminders ([onManage], the Reminders page; the banner closes). Place it at the top centre, after
+ * the content, so it draws over it. While composed and the app is started, it is the banner host,
+ * so reminders show here, not as notifications. See [ReminderBannerState] for its keys.
  */
 @Composable
 fun TvGameReminderBanner(

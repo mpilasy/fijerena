@@ -181,11 +181,10 @@ object TvCardLooks {
         )
     }
 
-    /** An episode row: raised at rest, an accent tint and shadow on focus. */
+    /** An episode row: raised at rest; on focus a lighter container, the row outline and an accent glow. */
     @Composable
     fun episode(): TvCardLook =
-        // A content row's focus look, as every list row: a lighter lift and an outline, never an accent
-        // fill — the accent fill hid the current episode's accent title, on a light theme entirely.
+        // A content row's focus look, never an accent fill: that hid the current episode's accent title.
         TvCardLook(
             colors =
                 CardDefaults.colors(
@@ -229,10 +228,9 @@ object TvCardLooks {
     }
 
     /**
-     * A profile's avatar on the picker: the avatar shape (as round as the style's buttons), the style's focus scale, and a
-     * white ring hugging its edge on focus (F-PP-1, TV UI audit #1): drawn just outside the edge, with
-     * no gap, so it reads as the avatar's own outline; white, the rows' focus colour, never blends
-     * into a coloured avatar the way the accent did.
+     * A profile's avatar on the picker: the avatar shape (as round as the style's buttons), the style's
+     * focus scale, and a white ring just outside its edge on focus (F-PP-1, TV UI audit #1). No gap, so
+     * it reads as the avatar's own outline; white never blends into a coloured avatar as the accent did.
      */
     @Composable
     fun avatar(): TvCardLook {

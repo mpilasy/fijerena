@@ -161,16 +161,14 @@ fun TvPlayerControlsOverlay(
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
-    // The logo at the top left. While it shows, a film's or a series' title row stays empty: the
-    // logo names it, as before 9f351e2d.
+    // The logo at the top left. While it shows, a film's or a series' title row stays empty: the logo
+    // names it.
     val logoUrl = metadata.logoUrl
     var logoFailed by remember(logoUrl) { mutableStateOf(false) }
     val logoShown = !hideTopBars && logoUrl != null && !logoFailed
-    // Memoize track counts keyed on metadata to avoid O(N) track iteration every recomposition (1 Hz clock tick)
-    // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
-    // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
-    // again for the rest of the session — leaving these counts permanently 0 and hiding the
-    // audio/subtitle/quality buttons even once tracks actually loaded.
+    // Track counts, remembered so the 1 Hz clock tick does not walk the tracks. Keyed on tracksVersion
+    // too: metadata is set at playStream(), usually before ExoPlayer resolves the tracks, and on Live TV
+    // may never change again, which left the counts at 0 and hid the track buttons.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val nightAudioOn = rememberNightAudioOn()
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
@@ -179,10 +177,9 @@ fun TvPlayerControlsOverlay(
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
-    // Extract resolution and codec periodically — for a Nerd only, the only time it is shown.
+    // Read resolution and codec every second, for a Nerd only (the only time they show).
     LaunchedEffect(playbackState, metadata.streamUrl, isNerd) {
         if (isNerd && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
-            // Keep checking every second as tracks might take time to load
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
                     val tracks = p.currentTracks
@@ -210,26 +207,23 @@ fun TvPlayerControlsOverlay(
         }
     }
 
-    // [controlsFocusRequester] is attached to Play/Pause, the first button of the row on VOD (none
-    // on live: nothing to pause), where the controls open, so OK right after opening pauses. It
-    // stays in the row while buffering, so the row never shifts under focus; nothing sits over
-    // the picture (the centre button went 2026-10-19).
+    // [controlsFocusRequester] is on Play/Pause, the first button of the row on VOD (none on live:
+    // nothing to pause), where the controls open, so OK right after opening pauses. It stays in the row
+    // while buffering, so the row never shifts under focus; nothing sits over the picture.
     val controlsFocusRequester = remember { FocusRequester() }
     val iconRowFocusRequester = remember { FocusRequester() }
     var isProgressBarFocused by remember { mutableStateOf(false) }
     val canFocusPlayPause = !isLive
     val showsPlayPause = showFullControls && canFocusPlayPause
-    // VOD's D-pad column: the seek bar ↔ (Down / Up) the row, landing on Play/Pause. Set
-    // explicitly: geometric search from the full-width seek bar picked the button nearest the
-    // screen's centre, not the first.
+    // VOD's D-pad column: the seek bar ↔ (Down / Up) the row, landing on Play/Pause. Set explicitly:
+    // geometric search from the full-width seek bar picked the button nearest the screen's centre.
     val seekBarFocusRequester = remember { FocusRequester() }
     val hasSeekBar = !isLive && liveDuration > 0
 
-    // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
-    // implicit first child — whichever button happens to be first for this stream. Live opens on
-    // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
-    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats, which
-    // every profile has — never on Favourite or a track picker.
+    // Default focus on the button row must not go to its first child, whatever button that is for this
+    // stream. Live opens on Channels (LT4): a stray second OK opens the channel panel, never favourites
+    // the channel. Else (live without the panel) it opens on Stats, which every profile has, never
+    // on Favourite or a track picker.
     val channelsFocusRequester = remember { FocusRequester() }
     val statsFocusRequester = remember { FocusRequester() }
     val safeIconFocusRequester =
@@ -239,7 +233,7 @@ fun TvPlayerControlsOverlay(
         }
 
     // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
-    // instead of being left on nothing once the picker's rows leave composition.
+    // not to nothing.
     val chapterFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
@@ -253,24 +247,21 @@ fun TvPlayerControlsOverlay(
         }
     }
 
-    // One-shot per OSD session: once focus has landed on Play/Pause, later
-    // Playing<->Paused/Buffering flicker must not keep yanking focus away from wherever the
-    // user has since navigated.
+    // Once per OSD session: after focus reached Play/Pause, later Playing/Paused/Buffering changes must
+    // not take focus from where the user has gone.
     var reachedPlayPauseFocus by remember { mutableStateOf(false) }
     LaunchedEffect(showFullControls) {
         if (showFullControls) reachedPlayPauseFocus = false
     }
 
-    // Live: re-keyed on the stream too — Up/Down zap with the OSD up (LT4), and the new channel's
-    // track buttons can come and go under focus, so focus goes back to Channels on each zap.
+    // Live: keyed on the stream too. Up/Down zap with the OSD up (LT4), and the new channel's track
+    // buttons can come and go under focus, so focus goes back to Channels on each zap.
     LaunchedEffect(showFullControls, isLive, canFocusPlayPause, metadata.streamUrl.takeIf { isLive }) {
         if (showFullControls && !reachedPlayPauseFocus) {
             val requester = if (isLive) safeIconFocusRequester else controlsFocusRequester
-            // requestFocus() fails (returns false) if its target isn't composed/laid out yet: the
-            // row composes with the controls, so one frame's delay wasn't always enough, and a
-            // single fixed retry left focus wherever it was before the OSD opened — a following
-            // OK then hit that instead of pausing. Retry across frames; the cap guards against a
-            // target that never composes at all.
+            // requestFocus() fails until the target is composed and laid out, and one frame was not always
+            // enough: focus stayed where it was, and the next OK hit that instead of pausing. Retry across
+            // frames, with a cap for a target that never composes.
             androidx.compose.runtime.withFrameMillis {}
             if (requester.requestFocusWithRetry(maxFrames = FOCUS_REQUEST_MAX_ATTEMPTS)) {
                 if (canFocusPlayPause) reachedPlayPauseFocus = true
@@ -286,10 +277,10 @@ fun TvPlayerControlsOverlay(
                 .fillMaxSize()
                 .panel(PanelFill.Osd),
     ) {
-        // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's
-        // logo (Live TV) with the Nerd's resolution/codec line under it, on a scrim that
-        // fades out below the text ([PanelFill.OsdTop]), so the text reads over a bright frame.
-        // Hidden while a side panel is open since they would collide with the panel's own tab row.
+        // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's logo
+        // (Live TV) with the Nerd's resolution/codec line under it, on a scrim ([PanelFill.OsdTop]) so the
+        // text reads over a bright frame. Hidden while a side panel is open: it would hit the panel's tab
+        // row.
         if (!hideTopBars) {
             Box(
                 modifier =
@@ -369,16 +360,8 @@ fun TvPlayerControlsOverlay(
             }
         }
 
-        // Center: Play/Pause (VOD only, hidden for live). Also gated to Playing/Paused —
-        // showFullControls is driven purely by the OK-key toggle, with no gate on playback state,
-        // so pressing OK during Buffering/Error/Ended/Idle used to land this button directly on
-        // top of PlayerScreen's own centered content for that state (BufferingContent(),
-        // ErrorContent(), ...). An allowlist closes all of them at once. Mobile's equivalent overlay uses the same allowlist for the same reason.
-        // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
-        // visible regardless — only this button collides with another state's centered content.
-        // Bottom section: title, progress/EPG info + icon controls. Spans full width, so when a
-        // side panel is open this needs to be opaque enough to fully mask its channel list rather
-        // than letting it ghost through at the usual, lighter glass alpha. Its height goes to the
+        // Bottom section: title, progress/EPG info and icon controls. It spans the full width, so with a
+        // side panel open it is near-opaque to hide the channel list behind it. Its height goes to the
         // player, which lifts the subtitles above it.
         TvGlassPanel(
             modifier =
@@ -397,9 +380,8 @@ fun TvPlayerControlsOverlay(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.xl, vertical = Spacing.md),
             ) {
-                // The title, the same size on VOD and live. VOD: the film, or "Show · S01E02 ·
-                // Episode". Live (LT4): LIVE · the channel name, the one title — this banner, not a
-                // top bar, so it is still there when hideTopBars is set.
+                // The title, the same size on VOD and live. VOD: the film, or "Show · S01E02 · Episode". Live
+                // (LT4): LIVE · the channel name, in this banner, not a top bar, so it stays when hideTopBars is set.
                 // TODO: the channel number goes before the name once one reaches the player.
                 Row(
                     verticalAlignment = CenterVertically,
@@ -630,7 +612,7 @@ fun TvPlayerControlsOverlay(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                    // Programme progress, keyed on livePosition so the clock read is tracked.
                     val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
                     val epgProgress =
                         if (currentEpgProgram.duration > 0) {
@@ -662,11 +644,10 @@ fun TvPlayerControlsOverlay(
                     Spacer(modifier = Modifier.height(Spacing.sm))
                 }
 
-                // Button row (only when full controls are visible). Icon buttons, each naming itself
-                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats;
-                // VOD the same without Channels, with Play/Pause then Chapters first and Next episode
-                // before Stats. Left/Right move along it and stop at its ends; Up/Down zap on live
-                // (PlayerKeyHandler); on VOD Up goes to the seek bar.
+                // Button row (full controls only). Icon buttons, each naming itself while focused. Live: Channels,
+                // Guide, ★, Subtitles, Audio, Quality, Stats; VOD the same without Channels, with Play/Pause then
+                // Chapters first and Next episode before Stats. Left/Right move along it and stop at its ends;
+                // Up/Down zap on live (PlayerKeyHandler); on VOD Up goes to the seek bar.
                 if (showFullControls) {
                     val rowUp = if (!isLive && hasSeekBar) seekBarFocusRequester else null
                     Row(
@@ -790,7 +771,7 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
+                        // Next episode: only for an episode past 80% with a next episode.
                         val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
                         val isOver80Percent = progressRatio >= 0.80f
                         if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
@@ -801,7 +782,7 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // Stats: for every profile, as on the phone (user, 2026-11-06).
+                        // Stats: for every profile, as on the phone.
                         OsdButton(
                             icon = CinemaIcons.BarChart,
                             label = stringResource(R.string.player_stats),

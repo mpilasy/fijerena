@@ -51,12 +51,10 @@ data class TvSelectorSwitch(
 )
 
 /**
- * The in-player picker shared by the audio, subtitle, quality and chapter dialogs.
- *
- * Selection comes from the caller, never from `onFocusChanged` (which would re-point the "Active"
- * marker at whichever row the viewer is looking at); focus is the row's own business, which is
- * also what lets both read at once — see
- * [org.njarasoa.fijerena.ui.components.input.TvInputDefaults].
+ * The in-player picker shared by the audio, subtitle, quality and chapter dialogs. Selection comes
+ * from the caller, never from `onFocusChanged` (which would move the "Active" mark to the row the
+ * viewer looks at); focus is the row's own, so both read at once (see
+ * [org.njarasoa.fijerena.ui.components.input.TvInputDefaults]).
  */
 @Composable
 fun TvSelectorDialog(
@@ -70,8 +68,8 @@ fun TvSelectorDialog(
     val selectedIndex = options.indexOfFirst { it.selected }
 
     LaunchedEffect(Unit) {
-        // Open on the active choice, so a viewer who only wants to confirm what is playing does
-        // not have to hunt for it. Falls back to the Cancel button when nothing is selected.
+        // Open on the active choice, so a viewer who only wants to confirm what plays need not look for it.
+        // Falls back to the Cancel button when nothing is selected.
         initialFocusRequester.requestFocusWithRetry()
     }
 

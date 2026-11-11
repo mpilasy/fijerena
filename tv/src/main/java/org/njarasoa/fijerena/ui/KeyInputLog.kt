@@ -8,9 +8,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Show Key Input (Admin → This Device): the last [MAX_LINES] keys the activity received, for
- * finding presses that seem to go missing; a line goes after [LINE_LIFE_MS]. MainActivity records each key after it dispatched
- * it; KeyInputOverlay shows the lines while [on].
+ * Show Key Input (Admin → This Device): the last [MAX_LINES] keys the activity received, to find
+ * presses that seem to go missing; a line goes after [LINE_LIFE_MS]. MainActivity records each key
+ * after it dispatched it; KeyInputOverlay shows the lines while [on].
  */
 object KeyInputLog {
     const val MAX_LINES = 10

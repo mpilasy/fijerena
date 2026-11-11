@@ -79,11 +79,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.text.Collator
 
-/** A team or a league the profile follows, as the section's row of logos shows it. */
-
 /** Followed teams and leagues together in alphabetical order, accents and case ignored. */
 private val byName: Collator = Collator.getInstance().apply { strength = Collator.PRIMARY }
 
+/** A team or a league the profile follows, as the section's row of logos shows it. */
 private data class FollowedItem(
     val key: String,
     val name: String,
@@ -139,8 +138,8 @@ fun SportsSectionScreen(
                 ).sortedWith(compareBy(byName) { it.name })
             }
         }
-    // The effects below wait for the follows: they read this state, not [items] as it was when they started
-    // (null on a first open, when the follows come from the database after the first frame).
+    // The effects below wait for the follows: they read this state, not [items] as it was when they
+    // started (null on a first open, as the follows come from the database after the first frame).
     val itemsState = rememberUpdatedState(items)
     val leave: (String, () -> Unit) -> Unit = { key, go ->
         returnFocus.leaveFrom(key, listState)

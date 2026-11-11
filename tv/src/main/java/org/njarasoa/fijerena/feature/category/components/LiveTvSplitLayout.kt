@@ -105,12 +105,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * (UX-D6). A channel whose load fails, or that shows no picture in 10 s, is stopped and said to be
  * not available right now; OK then goes to the next channel of the list (UX-D2).
  *
- * Full screen does not navigate to a separate destination. It PROMOTES the existing preview's
- * playback (same PlaybackViewModel, same StreamLoaderViewModel, same engine
- * connection) to a full-screen PlayerScreen in place. A second, independently-connecting
- * PlaybackViewModel here (i.e. actually navigating to Screen.Player) reliably caused a main-thread
- * ANR (Android's QueuedWork.waitToFinish flush racing the new Service/MediaSession connection) —
- * reusing the single connection removes the race entirely.
+ * Full screen does not navigate to another destination: it promotes the preview's playback (same
+ * PlaybackViewModel, StreamLoaderViewModel and engine connection) to a full-screen PlayerScreen in
+ * place. A second PlaybackViewModel (navigating to Screen.Player) caused a main-thread ANR
+ * (QueuedWork.waitToFinish racing the new Service/MediaSession connection).
  */
 @Composable
 internal fun LiveTvSplitLayout(
@@ -151,8 +149,8 @@ internal fun LiveTvSplitLayout(
      */
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     /**
-     * A child profile's (the kids' Home plan, Phase 2): the Favourites list only,
-     * no Recent or category tab, no row menu — it zaps through what its Home shows.
+     * A child profile's (the kids' Home plan, Phase 2): the Favourites list only, no Recent or
+     * category tab, no row menu.
      */
     favoritesOnly: Boolean = false,
 ) {
@@ -162,18 +160,15 @@ internal fun LiveTvSplitLayout(
     // the profile's sources, each row on its own (multi-source plan, Phases 4–5).
     val listSource = categoryViewModel.sourceId
 
-    // The channel the preview plays: set by the entry seed below and by OK on a row (P8 of
-    // the sources guide profiles plan) — focus moves never change it, so moving
-    // through the list doesn't tune anything.
+    // The channel the preview plays: set by the entry seed below and by OK on a row (P8 of the sources
+    // guide profiles plan). Focus moves never change it.
     var previewTarget by remember { mutableStateOf<MediaItem?>(null) }
 
-    // Seed the initial preview once the category's streams are loaded (runs once — hasSeeded
-    // guards against re-firing on every streams refresh). Two cases:
-    // - initialStreamId set: the user picked this exact channel to get here (EPG search, catalog
-    //   search, the per-category EPG guide).
-    // - No initialStreamId, but a lastPlayedItemId exists: nothing specific picked — auto-seed
-    //   with the last-watched channel so entry never lands on a bare list. (Home → Live TV passes
-    //   the last channel as initialStreamId, and this preview is a layer over browse there — LT7.)
+    // Seed the preview once, when the streams have loaded (hasSeeded stops it on later refreshes):
+    // - initialStreamId set: the user picked this channel (EPG search, catalogue search, the category
+    //   guide).
+    // - Else the last-watched channel, so entry never lands on a bare list. (Home → Live TV passes the
+    //   last channel as initialStreamId, and this preview is a layer over browse there, LT7.)
     var hasSeeded by remember { mutableStateOf(false) }
     // The channel full screen was showing when the OSD's Guide button left this screen (GD5): Back
     // from the guide rebuilds this screen, and it comes back to that channel, not the entry one.
@@ -187,9 +182,9 @@ internal fun LiveTvSplitLayout(
             id: String,
             source: Long,
         ): MediaItem? = list.firstOrNull { it.id == id && it.sourceOr(listSource) == source } ?: list.firstOrNull { it.id == id }
-        // The last channel only when no channel was asked for: a requested one this list doesn't have
-        // (its category hidden by the profile, so the list is Recent) must not play the last channel
-        // watched instead (the guide watch wrong channel plan, fix 1).
+        // The last channel only when no channel was asked for: a requested one this list does not have
+        // (its category hidden by the profile) must not play the last channel instead (the guide watch
+        // wrong channel plan, fix 1).
         val seed =
             if (guideReturnStreamId != null || initialStreamId != null) {
                 guideReturnStreamId?.let { id -> channel(id, listSource) }
@@ -201,9 +196,8 @@ internal fun LiveTvSplitLayout(
         // death the list comes back as Recent first, then the category the preview was on.
         if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
         hasSeeded = true
-        // A separator row is a heading, never played — not even one recorded as watched before
-        // they were headings (TV UI audit #24). Asked to open on one (Home → Live TV with it as
-        // the last channel), the preview closes as Back would: browse, not an empty preview.
+        // A separator row is a heading, never played, also when recorded as watched (TV UI audit #24).
+        // Asked to open on one, the preview closes as Back would: browse, not an empty preview.
         when {
             seed == null -> Unit
             !seed.isSeparatorRow -> previewTarget = seed
@@ -211,20 +205,17 @@ internal fun LiveTvSplitLayout(
         }
     }
 
-    // No setContentType(LIVE_TV) effect here: StreamingPlaybackService.playStream() picks the
-    // buffer profile from metadata.isLive itself, so the preview and the promoted player are always
-    // on the live profile. (The effect that used to do it could crash the app with an uncaught
-    // ServiceDestroyedException — see the rock solid stability resilience plan F-03.)
+    // No setContentType(LIVE_TV) effect: StreamingPlaybackService.playStream() picks the live buffer
+    // profile from metadata.isLive, and that effect could crash with ServiceDestroyedException (the
+    // rock solid stability resilience plan, F-03).
 
     // Saveable: Back from the TV Guide opened by the OSD's Guide button returns to full screen.
     var fullScreen by rememberSaveable { mutableStateOf(false) }
 
-    // Back: while full-screen, demote to the split (same behavior as the plan's "Back from
-    // full-screen returns to split, preview keeps playing"). Otherwise onBack: close this layer
-    // to the browse list under it (LT7), or leave the entry for the search/EPG screen that pushed
-    // it. BackHandler (not a key-event intercept) is required — consuming
-    // the key event alone doesn't stop the NavController's own back callback, so an intercept
-    // would double-pop out of the app.
+    // Back: in full screen, go back to the split; the preview keeps playing. Else onBack: close this
+    // layer to the browse list under it (LT7), or go back to the search/EPG screen that opened it.
+    // BackHandler, not a key-event intercept: consuming the key does not stop the NavController's own
+    // back callback, so an intercept would pop twice and leave the app.
     androidx.activity.compose.BackHandler {
         if (fullScreen) fullScreen = false else onBack()
     }
@@ -234,8 +225,8 @@ internal fun LiveTvSplitLayout(
         onDispose { org.njarasoa.fijerena.ui.DeadKeyDetector.layer = null }
     }
 
-    // 5% TV overscan safe margin — applied here (not by the caller) so the promoted full-screen
-    // player below, which renders in place inside this same composable, stays edge-to-edge.
+    // 5% TV overscan safe margin, applied here and not by the caller, so the full-screen player that
+    // renders inside this composable stays edge to edge.
     val safeMarginModifier =
         Modifier
             .fillMaxSize()
@@ -243,14 +234,13 @@ internal fun LiveTvSplitLayout(
 
     val previewPaneShape = CinemaTheme.shapes.card
 
-    // The context list (ChannelContext, LT2). The channel was chosen from one list — the browsed
-    // category, Recent or Favourites: TvCategoryGridScreen passes that list's id as this entry's
-    // category, so categoryViewModel's selectedCategoryId/streams *are* that list when it is a
-    // real category; Home → Live TV lands on Recent. That one list is what the panel shows —
-    // docked here and over the video in full screen (LT3) — and what Up/Down zap through in full
-    // screen, until a tab switches it.
-    // Saveable so the tab choice survives an activity recreate; keyed on the entry's category
-    // because the first Success state arrives before it is resolved.
+    // The context list (ChannelContext, LT2): the list the channel was chosen from (the browsed
+    // category, Recent or Favourites). TvCategoryGridScreen passes that list's id as this entry's
+    // category, so categoryViewModel's selection is that list when it is a real category; Home → Live
+    // TV lands on Recent. The panel shows it, docked and over full screen (LT3), and Up/Down zap through
+    // it in full screen, until a tab switches it.
+    // Saveable, so the tab survives an activity recreate; keyed on the entry's category because the
+    // first Success arrives before it is resolved.
     val pickedCategory =
         remember(selectedCategoryKey, categoryMap) {
             selectedCategoryId
@@ -297,19 +287,16 @@ internal fun LiveTvSplitLayout(
     }
 
     val target = previewTarget
-    // Browse, rebuilt when Back closes this layer, lands on this channel (LT6) — the one tuned
-    // now, after any zap or retune, not the one that opened the preview.
+    // Browse, rebuilt when Back closes this layer, lands on this channel (LT6): the one tuned now,
+    // after any zap, not the one that opened the preview.
     val currentOnPlayingChannel by rememberUpdatedState(onPlayingChannel)
     LaunchedEffect(target?.sourceKey) {
         target?.let { currentOnPlayingChannel(it.id, it.sourceOr(listSource)) }
     }
-    // FIRST: the channel playing is the most recent, so it is the top row, also before its delayed
-    // write lands — there's always a row to OK-press for promote, and a zap neighbour. Not done for
-    // Favorites — there it's expected the current channel may simply not be one, same as any
-    // other list the user browses to. Remembered, not built inline: an unremembered wrapper
-    // hands StreamList a new `streams` identity on every recomposition of this screen, which
-    // re-runs its `remember(streams)` blocks — re-arming the entrance animation for every
-    // visible row and, with it, a per-frame invalidateMeasurement loop.
+    // FIRST: the playing channel is the most recent, so it is the top row before its delayed write
+    // lands. Not done for Favourites: the current channel may not be one. Remembered, not built inline:
+    // a new `streams` identity on each recomposition re-runs StreamList's `remember(streams)` blocks,
+    // which restarts the entrance animation and a per-frame invalidateMeasurement loop.
     val recentWithCurrent =
         remember(recentStreams, target?.sourceKey) {
             ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.FIRST, listSource))
@@ -353,11 +340,10 @@ internal fun LiveTvSplitLayout(
         }
     }
 
-    // The panel opens on a list that has the playing channel, so its row takes focus and OK keeps
-    // it: a Live TV restored on another category (or the list a channel was picked from no longer
-    // holding it) opened on that category's first row, and OK tuned a channel nobody wanted. Checked
-    // when the channel changes, not on a tab picked by hand: first the channel's own category, then
-    // Recent, which always has the playing channel.
+    // The panel opens on a list that has the playing channel, so its row takes focus and OK keeps it;
+    // else OK on the first row of another category tuned an unwanted channel. Checked when the channel
+    // changes, not on a tab picked by hand: first the channel's own category, then Recent, which always
+    // has it.
     var contextCheckStep by remember(target?.sourceKey) { mutableStateOf(0) }
     LaunchedEffect(target?.sourceKey, contextCheckStep, contextStreams, contextLoading) {
         val playing = target ?: return@LaunchedEffect
@@ -378,8 +364,8 @@ internal fun LiveTvSplitLayout(
     }
 
     if (target == null) {
-        // Nothing playing yet (streams still loading, or no channel to seed with) — the list only,
-        // until OK picks a channel.
+        // Nothing playing yet (streams loading, or no channel to seed with): the list only, until OK picks
+        // a channel.
         AmbientBackdrop(modifier = Modifier.fillMaxSize())
         Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
@@ -408,9 +394,8 @@ internal fun LiveTvSplitLayout(
         return
     }
 
-    // Single playback connection for this screen, shared by the small preview AND the promoted
-    // full-screen player — never a second one. Created once (per screen visit) and re-pointed via
-    // loadStream(Light) as the target channel changes; never recreated when `target` changes.
+    // One playback connection for this screen, shared by the preview and the full-screen player.
+    // Created once per visit and pointed at each new channel with loadStream(Light), never recreated.
     val playback: PlaybackViewModel = viewModel()
     val previewPlaybackState by playback.playbackState.collectAsStateWithLifecycle()
 
@@ -431,9 +416,9 @@ internal fun LiveTvSplitLayout(
                     providerId = targetSource,
                 ),
         )
-    // The loader a pick on another source left: nothing of it may land any more (its delayed
-    // Recent write would record a channel no longer playing). One of this source used earlier in
-    // the layer is still on its old channel: it loads this one (the effect below skips full screen).
+    // The loader a pick on another source left: nothing of it may land (its delayed Recent write would
+    // record a channel no longer playing). A loader of this source used earlier in the layer is still
+    // on its old channel: it loads this one (the effect below skips full screen).
     var activeLoader by remember { mutableStateOf<StreamLoaderViewModel?>(null) }
     LaunchedEffect(loader) {
         val previous = activeLoader
@@ -448,14 +433,12 @@ internal fun LiveTvSplitLayout(
     val streamState by loader.state.collectAsStateWithLifecycle()
     val success = streamState as? StreamLoaderViewModel.StreamState.Success
 
-    // Zap feedback (LT5): "Tuning · <channel>" from the moment the target changes — an OK on
-    // another row in the preview, Up/Down or a panel pick in full screen —
-    // until the engine plays *that* channel. Only display state: derived from what the loader and
-    // engine already publish, it changes nothing about how a channel is loaded or played. The
-    // engine keeps the old channel (or its state) until the loader resolves the new one, so
-    // "playing" means the engine's stream is the target's resolved URL and it reached Playing.
-    // tunedId remembers that, so a later rebuffer of the same channel is not shown as a tune.
-    // Hidden on a loader or playback error, which have their own UI.
+    // Zap feedback (LT5): "Tuning · <channel>" from the moment the target changes until the engine
+    // plays that channel. Display state only, derived from what the loader and engine publish. The
+    // engine keeps the old channel until the loader resolves the new one, so "playing" means the
+    // engine's stream is the target's resolved URL and it reached Playing. tunedId remembers that, so a
+    // later rebuffer of the same channel does not show as a tune. Hidden on a loader or playback error,
+    // which have their own UI.
     val playingMetadata by playback.currentMetadata.collectAsStateWithLifecycle()
     // sameStream, not ==: the engine may have moved the stream to another login of the source.
     val targetPlaying =
@@ -482,10 +465,10 @@ internal fun LiveTvSplitLayout(
                 previewPlaybackState !is PlaybackState.Error
         }
 
-    // A new pick: the channel playing stops at once, so its picture never shows under the new
-    // channel's name (UX-D2). Now, not through the view model's coroutine, which could land after
-    // the new channel started. [tuneTick] lets the play effect below start a channel whose Success
-    // the loader still holds from before (a quick pick away and back).
+    // A new pick stops the playing channel at once, so its picture never shows under the new name
+    // (UX-D2). Now, not through the view model's coroutine, which could land after the new channel
+    // started. [tuneTick] lets the play effect below start a channel whose Success the loader still
+    // holds (a quick pick away and back).
     var tuneTick by remember { mutableIntStateOf(0) }
     val tune: (MediaItem) -> Unit = { item ->
         if (!item.isSameChannel(target, listSource)) {
@@ -502,14 +485,11 @@ internal fun LiveTvSplitLayout(
         unavailableId = target.id
     }
 
-    // Re-point the loader whenever the previewed channel changes, via the lean resolution path
-    // (skips the channel-switcher list refetch that a real "commit to watching" does — a preview
-    // doesn't render that list). Watch history is still recorded on the usual delay.
-    // Skipped while full-screen: the full-screen next/previous/select handlers already call the
-    // full loader.loadStream() directly for the new target.id, so firing this too would race two
-    // loads for the same channel on the same loader/loadJob (duplicate DB/EPG work per switch).
-    // Also skipped for the channel the loader was constructed with, which it is already
-    // resolving — otherwise every entry into the preview resolved the same stream and EPG twice.
+    // Point the loader at each new previewed channel with the light path (no channel-switcher list
+    // fetch; the preview does not show that list). Watch history is still recorded after the usual
+    // delay. Skipped in full screen: its handlers already call loader.loadStream(), and two loads on
+    // the same loadJob would race. Also skipped for the channel the loader was made with, which it is
+    // already resolving.
     LaunchedEffect(target.sourceKey) {
         if (!fullScreen && loader.requestedStreamId != target.id) {
             loader.loadStreamLight(target)
@@ -520,11 +500,9 @@ internal fun LiveTvSplitLayout(
         // Only the target's own Success: an older one still held while a new pick loads must not
         // start the channel just stopped.
         val s = success?.takeIf { it.streamId == target.id }
-        // A promote-triggered upgrade from the dock's light load to a full load (see
-        // onStreamPromote below) re-runs loadStream(), which briefly flips this state to
-        // Loading and back — success?.streamId goes from the current id to null and back to the
-        // same id, which is two key changes and would otherwise re-fire this effect and restart
-        // an already-playing stream. Skip when we're already playing this exact URL.
+        // A promote upgrades the dock's light load to a full load (onStreamPromote below), which flips this
+        // state to Loading and back: two key changes that would restart a playing stream. Skip when this URL
+        // already plays.
         val alreadyPlayingThis =
             s != null &&
                 playback.currentMetadata.value.streamUrl == s.streamUrl &&
@@ -535,26 +513,25 @@ internal fun LiveTvSplitLayout(
         }
     }
 
-    // The guide lookup lands after playback started, and the programme rolls over while it plays:
-    // patch it into what is playing, for live sync's "now playing"; the channel icon likewise (see PlaybackViewModel.updateMetadata).
+    // The guide lookup lands after playback started, and the programme changes while it plays: patch
+    // it and the channel icon into what plays, for live sync's "now playing" (see
+    // PlaybackViewModel.updateMetadata).
     LaunchedEffect(success?.streamUrl, success?.currentEpgProgram?.title, success?.logoUrl) {
         val s = success ?: return@LaunchedEffect
         playback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title, logoUrl = s.logoUrl) }
     }
 
-    // Another device of the sync group stopped this playback — preview or promoted full-screen
-    // alike: finalise and release as leaving Live TV does, then go Home. See
-    // the live sync now playing plan → Remote Stop.
+    // Another device of the sync group stopped this playback (preview or full screen): finalise and
+    // release as leaving Live TV does, then go Home (the live sync now playing plan, Remote Stop).
     RemoteStopEffect {
         finalizeSessionAndAwait(playback.playbackState.value, loader)
         playback.stopAndRelease()
         onHome()
     }
 
-    // Dead-stream watchdog (UX-D2): a channel with no picture 10 s after it was picked — in the
-    // preview or in full screen — is stopped rather than left to buffer in the background (that
-    // churn caused main-thread ANRs), and says so over the video instead of "Tuning" for ever. A
-    // failed load says so at once.
+    // Dead-stream watchdog (UX-D2): a channel with no picture 10 s after the pick is stopped, not left
+    // to buffer in the background (that churn caused main-thread ANRs), and the video says so instead of
+    // "Tuning" for ever. A failed load says so at once.
     val currentTargetPlaying by rememberUpdatedState(targetPlaying)
     // Picture lost after it came: the engine waits or fails again (not a pause, not a stop).
     val currentPictureLost by rememberUpdatedState(
@@ -578,18 +555,12 @@ internal fun LiveTvSplitLayout(
         if (error.streamId == null || error.streamId == target.id) giveUp()
     }
 
-    // Pause when this screen isn't RESUMED; resume on return. Release entirely on final disposal
-    // (leaving Live TV altogether) — stopAndRelease, not stop: this preview player runs
-    // continuously as long as any Live TV screen is on-screen (that's the whole point of the
-    // preview), so this is the one place that actually tears it down. Leaving it on plain stop()
-    // kept the native decoder/renderer buffers resident indefinitely after leaving Live TV,
-    // verified on-device: service still alive, memory unchanged, after fully backing out to home.
-    //
-    // Resume on return means play again, at the live edge: ON_PAUSE pauses the preview and, after
-    // 30 s away (screensaver, HDMI input switch), stops it — and ON_RESUME used to only cancel that
-    // timer, so a short absence came back to a frozen frame and a long one to a black, idle pane.
-    // Only when it was playing as the screen paused: a user's own pause in full screen stays put.
-    // See the rock solid stability resilience plan → F-16.
+    // Pause when this screen is not RESUMED; resume on return. On final disposal (leaving Live TV) use
+    // stopAndRelease, not stop: this is the only place that tears the preview player down, and stop()
+    // kept the native decoder/renderer buffers in memory.
+    // Resume means play again, at the live edge: ON_PAUSE pauses the preview and stops it after 30 s
+    // away (screensaver, HDMI input switch). Only when it was playing as the screen paused: a user's own
+    // pause in full screen stays. See the rock solid stability resilience plan, F-16.
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentSuccess by rememberUpdatedState(success)
     var resumeOnReturn by remember { mutableStateOf(false) }
@@ -635,11 +606,9 @@ internal fun LiveTvSplitLayout(
     }
 
     if (fullScreen) {
-        // Refresh the preview's favorites list on demote (fullScreen leaving composition) so it
-        // reflects what was just (un)favorited — promoting/demoting never leaves this screen (no
-        // nav pop, no fresh CategoryViewModel), so nothing else would re-fetch it. The Recent
-        // list needs no equivalent: the player's own delayed history write republishes the
-        // shared list, which the panel collects, docked or in full screen.
+        // Refresh the preview's Favourites list when full screen closes, so it shows what was just
+        // (un)favourited: nothing else fetches it again, as this screen stays. Recent needs none: the
+        // player's delayed history write publishes the shared list again.
         DisposableEffect(Unit) {
             onDispose {
                 composableScope.launch {
@@ -698,11 +667,9 @@ internal fun LiveTvSplitLayout(
                 // The same panel as the split's, over the video (LT3): same tabs, rows and row
                 // actions, and its tabs switch channelContext — so the zap order below follows.
                 channelPanel = { close ->
-                    // Opened on a tab with no rows (no favourites, or the last one removed), focus
-                    // was left on the tab row: open on the tab that has the playing channel
-                    // instead — the category it came from, else Recent — on its row. Switched
-                    // before the panel composes: its empty tab would take focus and, focus
-                    // following selection, select itself again.
+                    // Opened on a tab with no rows, focus stayed on the tab row: open on the tab that has the playing
+                    // channel instead (its category, else Recent), on its row. Switched before the panel composes: the
+                    // empty tab would take focus and, with focus-follow-select, select itself again.
                     val reopenOn =
                         remember {
                             if (!contextLoading && contextStreams?.isEmpty() == true) {
@@ -736,10 +703,8 @@ internal fun LiveTvSplitLayout(
                             onCategorySelected = onCategorySelected,
                             onStreamSelected = onStreamSelected,
                             onStreamPromote = { newItem ->
-                                // Switching channels while already full-screen is a real "commit to
-                                // watching" — use the full loadStream (with side effects), still on
-                                // the SAME loader/engine. A channel of another source gets its own
-                                // loader, which starts on it.
+                                // A channel switch in full screen commits to watching: use the full loadStream, on the same
+                                // loader/engine. A channel of another source gets its own loader, which starts on it.
                                 tune(newItem)
                                 zapOrder = null
                                 if (newItem.sourceOr(listSource) == targetSource) loader.loadStream(newItem)
@@ -785,20 +750,13 @@ internal fun LiveTvSplitLayout(
                             .clip(previewPaneShape)
                             .panel(PanelFill.Surface),
                 ) {
-                    // TextureView (not the default SurfaceView): this box sits next to the
-                    // scrolling/recomposing channel list, and SurfaceView there stalls the main
-                    // thread and ANRs. Full-screen playback above uses PlayerScreen's own
-                    // default surface instead of sharing this one — promoting/demoting now does
-                    // a real detach/reattach (one frame's worth of glitch) rather than relocating
-                    // this node, but it stops every OSD/flyout interaction in full-screen from
-                    // janking the video for the rest of the session. See
-                    // the tv ui performance plan's dropped "do not touch" note on this
-                    // TextureView for why that tradeoff reverted.
+                    // TextureView, not SurfaceView: next to the scrolling channel list, SurfaceView stalls the main
+                    // thread and ANRs. Full screen uses PlayerScreen's own surface, so promoting does a detach/reattach
+                    // (one frame of glitch) but full-screen OSD actions do not jank the video. See the tv ui performance
+                    // plan's "do not touch" note on this TextureView.
                     EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
-                    // The preview surface has no controls/error UI of its own, so a stalled or
-                    // watchdog-killed stream would otherwise look identical to a live frozen
-                    // frame. Surface the state so it reads as "still loading", not "broken" —
-                    // naming the channel while it is being tuned (LT5).
+                    // The preview has no controls or error UI, so a stalled or stopped stream would look like a live
+                    // frozen frame. Show the state, with the channel name while it tunes (LT5).
                     if (unavailable) {
                         TvTuningOverlay(channelName = target.name, compact = true, unavailable = true)
                     } else if (tuningName != null) {
@@ -820,16 +778,11 @@ internal fun LiveTvSplitLayout(
                     }
                 }
 
-                // Below the video (LT5): name · category, Now with its progress and Next when the
-                // guide has them, and the one key hint. The guide lines are the target's only —
-                // while a retune resolves, the loader still holds the previous channel's.
-                // No "LIVE PREVIEW" badge any more: it marked this as the preview layer, distinct
-                // from the bare browse list behind it, and the video with the hint line under it
-                // already does (docs/UX_FLOW_AUDIT.md, "Live TV back-stopover").
+                // Below the video (LT5), one hierarchy (TV UI audit #4): the channel's name, its category, Now with
+                // its progress, Next, then the key hint. Guide lines are the target's only: during a retune the
+                // loader still holds the previous channel's. No "LIVE PREVIEW" badge: the video with the hint under
+                // it marks the layer (docs/UX_FLOW_AUDIT.md, "Live TV back-stopover").
                 // TODO: the channel number goes before the name once metadata carries one.
-                // One hierarchy (TV UI audit #4): the channel's name, its category under it, then
-                // Now (with its progress) and Next — and the key hint right below, where it
-                // explains what is above it, not floating at the bottom of the screen.
                 val resolved = success?.takeIf { it.streamId == target.id }
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     // The clean name with its badges, as in the player.
@@ -888,7 +841,7 @@ internal fun LiveTvSplitLayout(
                 onContextSelected = { channelContext = it },
                 streams = contextStreams,
                 streamsLoading = contextLoading,
-                // Highlight whatever's actually previewing, if present in the current list.
+                // Highlight the previewed channel, if it is in the current list.
                 lastPlayedItemId = target.id,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
@@ -900,23 +853,17 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onRefresh = refreshContext,
                 onStreamPromote = { item ->
-                    // OK on another row plays it here: the target change re-points the SAME
-                    // loader/engine (loadStreamLight above) — still only one connection ever.
-                    // OK on the row playing goes full screen once it shows a picture; before that
-                    // the OK does nothing (UX-D6). On a channel that did not start, OK goes to the
-                    // next channel of the list (UX-D2).
+                    // OK on another row plays it here: the target change points the same loader/engine at it
+                    // (loadStreamLight above). OK on the playing row goes full screen once it shows a picture; before
+                    // that OK does nothing (UX-D6). On a channel that did not start, OK goes to the next channel (UX-D2).
                     if (!item.isSameChannel(target, listSource)) {
                         tune(item)
                     } else if (unavailable) {
                         neighborChannel(zapOrder ?: contextStreams, target, +1, listSource)?.let(tune)
                     } else if (targetPlaying) {
-                        // Upgrade from the dock's light load (empty categoryStreams/
-                        // recent-channel list — see loadStreamLight's doc
-                        // comment) to a full load so the promoted full-screen view has real category/
-                        // last-watched lists and actually records watch history. Safe for the
-                        // channel already previewing: playback itself is driven by a
-                        // separate LaunchedEffect keyed on the streamId *value*, which doesn't change
-                        // here, so this only refreshes metadata — it does not restart the stream.
+                        // Upgrade the dock's light load to a full load, so full screen has the category and last-watched
+                        // lists and records watch history (see loadStreamLight). Playback is keyed on the streamId value,
+                        // which does not change, so this does not restart the stream.
                         loader.loadStream(item)
                         // Opening full screen is a choice: Recent now, not after the watch delay.
                         loader.addToRecentNow()
@@ -934,14 +881,11 @@ internal fun LiveTvSplitLayout(
 private const val CONTEXT_CHECK_DONE = 2
 
 /**
- * Computes the channel next to [current] in [streams], wrapping around. Used for full-screen
- * Up/Down channel switching — computed off the currently-displayed list rather than the loader's
- * internal index, which [StreamLoaderViewModel.loadStreamLight] (the preview re-point path) never
- * keeps in sync with what's actually on screen. Separator rows are skipped: a heading is never
- * zapped to (TV UI audit #24). So are channels of other sources than [current]'s (Recent and
- * Favourites mix the profile's sources): Up/Down stays on the playing channel's source, in the
- * list's order, wrapping within it (multi-source plan, Q4). A row that leaves its source 0 is on
- * [listSource].
+ * The channel next to [current] in [streams], wrapping around, for full-screen Up/Down. Uses the
+ * displayed list, not the loader's index, which [StreamLoaderViewModel.loadStreamLight] does not
+ * keep in sync. Skips separator rows (TV UI audit #24) and channels of other sources than
+ * [current]'s: Up/Down stays on the playing channel's source (multi-source plan, Q4). A row that
+ * leaves its source 0 is on [listSource].
  */
 
 internal fun neighborChannel(

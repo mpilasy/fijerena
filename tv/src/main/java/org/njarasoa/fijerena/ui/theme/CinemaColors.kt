@@ -5,8 +5,7 @@ package org.njarasoa.fijerena.ui.theme
 import androidx.compose.ui.graphics.Color
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
-// Dynamic color re-exports — reads from CinemaThemeHolder.current at access time.
-// All 400+ references across screen files resolve through these properties.
+// Colour re-exports: each reads CinemaThemeHolder.current when accessed.
 
 val CinemaAccent: Color get() = CinemaThemeHolder.current.accent
 val CinemaAccentDark: Color get() = CinemaThemeHolder.current.accentDark

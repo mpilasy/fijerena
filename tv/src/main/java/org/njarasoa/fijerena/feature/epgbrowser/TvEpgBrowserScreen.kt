@@ -174,12 +174,12 @@ private const val RETURN_TV_GUIDE = "header:tvGuide"
 private const val RETURN_REMINDERS = "header:reminders"
 
 /**
- * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
- * toggle — on by default — keeps the results on that guide's channels. One search, programme
- * titles (D7: the channel mode is gone). When the profile has a source with live channels the
- * header has TV Guide, opening the grid for Recent on the first of them ([onTvGuide], D7), and
- * Guide sources next to Refresh, opening the one Guide Sources page ([onGuideSources]). A bell
- * opens the Reminders page ([onReminders]).
+ * "Search the guide": one search, of programme titles (D7). Opened from a TV Guide ([categoryId]
+ * set, GD5), an "In <category> only" toggle (on by default) keeps the results on that guide's
+ * channels. When the profile has a source with live channels, the header has TV Guide, opening the
+ * grid for Recent on the first of them ([onTvGuide], D7), and Guide sources next to Refresh,
+ * opening the one Guide Sources page ([onGuideSources]). A bell opens the Reminders page
+ * ([onReminders]).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -232,9 +232,9 @@ fun TvEpgBrowserScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // The shared TV header (TV UI audit #15): the title, the icon actions on the right (no
-            // source subtitle: the search covers every source of the profile); how fresh the
-            // guides are goes on its own line beneath it.
+            // The shared TV header (TV UI audit #15): the title and the icon actions on the right, no source
+            // subtitle (the search covers every source of the profile); how fresh the guides are goes on its
+            // own line under it.
             TvScreenHeader(title = stringResource(R.string.epg_browser_title)) {
                 guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
                     TvIconAction(
@@ -427,8 +427,7 @@ private fun EpgBrowserContent(
 
     // Down from the field (or the chip under it) should reach the first recent-search chip.
     val historyFocusRequester = remember { FocusRequester() }
-    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
-    // until a later change gives it a home.
+    // Unmatched airings (no channel in the profile's sources) stay hidden; there is no toggle for them.
     val matchedOnly = true
     // Opened from a TV Guide: its channels only, until switched off (GD5). Saveable: Back from a
     // channel must find the same filtered list, or the airing it came from may have moved or gone.
@@ -438,30 +437,28 @@ private fun EpgBrowserContent(
     val scale = LocalUiScale.current
     val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
 
-    // The history chips only render in the Idle state, so that is the only time `down` has a
-    // target to aim at.
+    // The history chips show only in the Idle state, so only then does `down` have a target.
     val showsHistory = uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isNotEmpty()
 
-    // Entry (Part II Phase 7): the field without the keyboard when there are recent searches, so
-    // Down reaches them; straight into the keyboard for a first search. Not on a return from a
-    // channel — NavReturnFocusEffect lands on the airing instead.
+    // Entry (Part II Phase 7): the field without the keyboard when there are recent searches, so Down
+    // reaches them; the keyboard at once for a first search. Not on a return from a channel:
+    // NavReturnFocusEffect focuses the airing.
     var editing by remember {
         mutableStateOf(
             returnFocus.key == null && !headerReturnPending && uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isEmpty(),
         )
     }
 
-    // Auto-focus logic: when results appear for the first time for a new query, focus the first item
-    // (not when Back is about to hand focus to the airing that was opened).
+    // Focus the first item when a new query's results appear, not when Back is about to focus the
+    // airing that was opened.
     LaunchedEffect(uiState) {
         if (returnFocus.key == null && !headerReturnPending && uiState is EpgBrowserViewModel.UiState.Results) {
             firstItemFocusRequester.requestFocusWithRetry()
         }
     }
 
-    // Down to the first recent search, not the "Clear all" icon a spatial search would find first;
-    // only wired up while the history is on screen, since aiming `down` at an unattached requester
-    // would stop Down working at all.
+    // Down to the first recent search, not the "Clear all" icon a spatial search finds first. Wired only
+    // while the history shows: a `down` aimed at an unattached requester stops Down working at all.
     val downToHistory = if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -493,7 +490,7 @@ private fun EpgBrowserContent(
             )
         }
 
-        // Auto-focus on screen open (not on a return from a channel)
+        // First focus on screen open, not on a return from a channel.
         LaunchedEffect(Unit) {
             if (returnFocus.key == null && !headerReturnPending && !editing) searchFocusRequester.requestFocusWithRetry()
         }
@@ -658,8 +655,7 @@ private fun EpgSearchHistorySection(
                 )
             },
         )
-        // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
-        // and a D-pad user should not have to scroll a rail to reach the last entry.
+        // Wraps instead of scrolling sideways, so the whole history shows at once.
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
@@ -726,7 +722,7 @@ private fun ResultsContent(
 ) {
     val scale = LocalUiScale.current
 
-    // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
+    // Hide the date groups' unmatched channels, then keep the guide's channels when asked.
     val contextFilter = contextChannels?.takeIf { contextName != null }
     val displayDateGroups =
         remember(results.dateGroups, matchedOnly, contextFilter) {
@@ -760,7 +756,7 @@ private fun ResultsContent(
                 takeFocus = false,
             )
         } else {
-            // Build index-to-dateLabel mapping for sticky header
+            // Index-to-date-label map for the sticky header.
             val headerIndices =
                 remember(displayDateGroups) {
                     val indices = mutableListOf<Pair<Int, String>>()

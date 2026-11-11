@@ -47,12 +47,13 @@ import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The TV team and league pages and the game sheet (the sports teams plan → Screens): focus on
- * the first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to its
- * next channel, Back closes the sheet onto the game; a league's teams follow its games. A game's
- * bell is Right of its row; once the team is followed, its bell for every game is Right of Unfollow,
- * in a slot kept while it is hidden, so Unfollow is where Follow was. A row with
- * no logo reads its letter first ("C / Arsenal v Chelsea": the opponent's letter, then both teams), as the device walk reads it.
+ * The TV team and league pages and the game sheet (the sports teams plan, Screens): focus on the
+ * first game, Up to Follow, OK on a game opens its sheet on its first channel, Down to its next
+ * channel, Back closes the sheet onto the game; a league's teams follow its games. A game's bell
+ * is Right of its row; once the team is followed, its bell for every game is Right of Unfollow, in
+ * a slot kept while it is hidden, so Unfollow is where Follow was. A row with no logo reads its
+ * letter first ("C / Arsenal v Chelsea": the opponent's letter, then both teams), as the device
+ * walk reads it.
  */
 @RunWith(RobolectricTestRunner::class)
 class SportsPagesFocusTest {

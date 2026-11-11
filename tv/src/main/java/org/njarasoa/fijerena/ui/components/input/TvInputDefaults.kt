@@ -32,29 +32,26 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * The one focus/selection language shared by every D-pad control in `ui/components/input`.
+ * The one focus/selection language of every D-pad control in `ui/components/input`. Every value
+ * comes from the active [org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette] (colour) and
+ * [org.njarasoa.fijerena.core.ui.theme.UiStyle] (corner radius, focus scale, outline weight, focus
+ * shadow), so these controls follow the user's theme and look-and-feel as the rest of the TV UI does.
  *
- * Every value here resolves through the active [org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette]
- * (colour) and [org.njarasoa.fijerena.core.ui.theme.UiStyle] (corner radius, focus scale, outline
- * weight, focus shadow), so these controls follow the user's theme and look-and-feel settings the
- * same way the rest of the TV UI does.
- *
- * `androidx.tv.material3.ListItem` carries a full focused × selected state matrix, which is what
- * these tokens fill in. That matrix is the whole point: a row can be focused-and-unselected or
- * selected-and-unfocused, and both have to read at ten feet.
+ * `androidx.tv.material3.ListItem` has a full focused × selected state matrix, which these tokens
+ * fill in: a row can be focused and unselected or selected and unfocused, and both must read at ten
+ * feet.
  *
  * - **Focus** lifts: [TvFocusTokens.focusedContainer] (lighter than rest) plus a full-weight white
  *   outline ([TvFocusTokens.focusedRowOutline]) plus the active style's scale and, where the style
  *   asks for one, its shadow; the text stays white. The same look as a content list row
- *   ([org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults], TV UI audit X2), so a settings
- *   row and a channel row focus alike.
+ *   ([org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults], TV UI audit X2).
  * - **Selection** keeps the container: a [TvFocusTokens.currentBarWidth] bar on the leading edge
  *   ([currentIndicator]), [TvFocusTokens.currentText] for the text at rest, and the control's own
- *   glyph (check / radio dot / switch thumb). No tint and no outline, so a selected row never
- *   looks like a second focused one (UX overhaul plan Part II P5).
+ *   glyph (check / radio dot / switch thumb). No tint and no outline, so a selected row never looks
+ *   like a second focused one (UX overhaul plan Part II P5).
  *
- * When a row is both, it gets the focus look (white text) and keeps the bar, so the two never
- * collapse into one another and focus never borrows the accent.
+ * A row that is both gets the focus look (white text) and keeps the bar, so focus never borrows
+ * the accent.
  */
 object TvInputDefaults {
     /**
@@ -141,16 +138,14 @@ enum class CurrentIndicatorEdge { Start, Bottom }
 
 /**
  * The one "selected / current" mark (UX overhaul plan Part II P5): a [TvFocusTokens.currentBarWidth]
- * bar in [TvFocusTokens.currentAccent] along the leading edge (or the bottom edge, for tabs — see
+ * bar in [TvFocusTokens.currentAccent] along the leading edge (or the bottom edge for tabs, see
  * [edge]), drawn over the content and clipped to [shape]. Pair it with [TvFocusTokens.currentText]
- * for the row's title. It sits on top of whatever the focus look draws, so a focused current row
- * keeps its bar.
+ * for the row's title. It draws over the focus look, so a focused current row keeps its bar.
  *
- * Put it on a node that fills the row's container — inside a tv `Surface` / `Card`'s content, which
- * the container already clips and scales. Outside one (as [TvInputListItem] must, `ListItem` pads
- * its content), pass the container's [shape] and its animated scale as [containerScale]: the
- * container scales only in its own draw, so a bar drawn outside it would otherwise sit inside its
- * edge while it is focused.
+ * Put it on a node that fills the row's container, inside a tv `Surface` / `Card`'s content, which
+ * the container clips and scales. Outside one (as [TvInputListItem] must, as `ListItem` pads its
+ * content), pass the container's [shape] and its animated scale as [containerScale]: the container
+ * scales only in its own draw, so a bar drawn outside it would sit inside its edge while focused.
  */
 @Composable
 fun Modifier.currentIndicator(

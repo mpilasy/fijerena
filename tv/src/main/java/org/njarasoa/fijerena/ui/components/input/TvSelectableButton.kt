@@ -31,21 +31,18 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 /**
  * A one-of-N picker button (theme, UI scale, language, stream format, …).
  *
- * The point of this component is that it is **one composable with a `selected` flag**, not two
- * composables swapped in one slot. The `if (selected) CinemaPrimaryButton else
- * CinemaSecondaryButton` shape it replaces made Compose remove the focused node and insert a
- * different one every time the user picked an option, which dropped focus to the window root — the
- * next D-pad press then restarted from the top of the screen.
+ * It is one composable with a `selected` flag, not two composables swapped in one slot: swapping
+ * removed the focused node on every pick, which dropped focus to the window root.
  *
- * Pressing OK on the already-selected option re-invokes [onSelect]; callers should treat that as
- * idempotent rather than wiring it to `{}`, so the press still gives visible feedback.
+ * OK on the selected option calls [onSelect] again; callers treat that as idempotent instead of
+ * wiring it to `{}`, so the press still gives visible feedback.
  *
- * Colour comes from the active palette and shape / scale / outline weight / focus shadow /
+ * Colour comes from the active palette, and shape / scale / outline weight / focus shadow /
  * emphasis weight from the active look-and-feel style, via [TvFocusTokens].
  *
- * Selected is never a fill nor an outline: the P5 "current" bar on the leading edge
- * ([currentIndicator]), [TvFocusTokens.currentText] and the emphasis weight carry it on the resting
- * container, so the one lifted, outlined option in a grid is always the focused one, selected or not.
+ * Selected is never a fill or an outline: the P5 "current" bar on the leading edge
+ * ([currentIndicator]), [TvFocusTokens.currentText] and the emphasis weight mark it on the resting
+ * container, so the one lifted, outlined option is always the focused one.
  * [tab]: the button is one of a page's tabs (Search's Catalogue / People / Teams / Guide), not a
  * filter chip: the tab's text role and the bar on the bottom edge, as on every other tab row
  * ([TvInputDefaults.tabLabelRole]).

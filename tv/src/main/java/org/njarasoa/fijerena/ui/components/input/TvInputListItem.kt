@@ -19,11 +19,11 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * `androidx.tv.material3.ListItem` pre-wired to [TvInputDefaults]. Every control in this package
- * routes through here so focus and selection look identical wherever they appear.
+ * `androidx.tv.material3.ListItem` wired to [TvInputDefaults]. Every control in this package goes
+ * through here, so focus and selection look the same everywhere.
  *
- * A selected row carries the P5 "current" bar ([currentIndicator]). `ListItem` pads its content,
- * so the bar is drawn from outside the item and follows the item's focus / press scale itself.
+ * A selected row has the P5 "current" bar ([currentIndicator]). `ListItem` pads its content, so the
+ * bar is drawn from outside the item and follows the item's focus / press scale itself.
  * [focusBorder] false: the row around the item draws the focus outline ([restingRowGround]).
  */
 @Composable

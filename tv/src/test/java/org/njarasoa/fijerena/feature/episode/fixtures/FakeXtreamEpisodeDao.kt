@@ -4,11 +4,10 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeEntity
 
 /**
- * In-memory stand-in for [XtreamEpisodeDao], for the episode-selection Compose UI tests.
- * `EpisodeListContent` only ever reaches [getSiblingCompletedEpisodeIds] (TMDB sibling-completion
- * dedup, via `MediaRepository.getSiblingCompletedEpisodeIds`) — the fixture data these tests use
- * has no catalogue rows to dedup against, so every other method here is unreachable and just
- * returns an empty/inert result rather than reproducing the real queries.
+ * In-memory [XtreamEpisodeDao] for the episode-selection Compose UI tests. `EpisodeListContent`
+ * only reaches [getSiblingCompletedEpisodeIds] (TMDB sibling dedup, through
+ * `MediaRepository.getSiblingCompletedEpisodeIds`); the fixture data has no catalogue rows, so every
+ * other method returns an empty result.
  */
 class FakeXtreamEpisodeDao : XtreamEpisodeDao {
     override fun getEpisodes(

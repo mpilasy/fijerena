@@ -225,14 +225,8 @@ fun CinemaDangerButton(
 ) = CinemaTextLabelButton(onClick, text, ButtonKind.Danger, modifier, enabled)
 
 /**
- * Icon Button - For icon-only actions
- * Circular button with icon.
- *
- * Focus is a lifted container plus an accent ring, matching every other control, rather than a
- * solid accent fill. The fill collided with the content: most call sites tint their glyph
- * [CinemaAccent] — decoratively (Add, Edit, LiveTv, the select check) or to mark an "on" state
- * (the favourite star) — so focusing the button painted an accent glyph onto an accent circle and
- * the icon disappeared at exactly the moment the viewer was pointing at it.
+ * An icon-only button: a resting disc with a faint outline that turns into the focus fill with a
+ * dark glyph and no ring when focused (TvButtonStyle).
  */
 @Composable
 fun CinemaIconButton(

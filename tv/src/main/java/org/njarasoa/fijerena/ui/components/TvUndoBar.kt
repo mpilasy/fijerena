@@ -116,16 +116,15 @@ fun rememberUndoBarState(): UndoBarState = remember { UndoBarState() }
 
 /**
  * The remote's ways to Undo while the bar shows: the Menu key, or holding OK (for remotes without
- * a Menu key, such as the Chromecast with Google TV's). The bar itself never takes focus — a
- * focusable bar that goes away after a few seconds would drop focus with it, the very bug the
- * removal fix is about — so focus stays on the list (on the row that took the removed row's
- * place) and Menu or a held OK, which otherwise open a row's actions, undo instead. A short OK
- * still does the focused row's job. Put this on the screen's (or the panel's) root: it previews
- * the keys before the focused row sees them.
+ * a Menu key, such as the Chromecast with Google TV's). The bar never takes focus: a focusable bar
+ * that goes away after a few seconds would drop focus with it. So focus stays on the list (on the
+ * row that took the removed row's place), and Menu or a held OK, which otherwise open a row's
+ * actions, undo instead. A short OK still does the focused row's job. Put this on the screen's (or
+ * the panel's) root: it previews the keys before the focused row.
  *
- * A held OK is caught on its first auto-repeat, where a row's `onLongClick` would fire; the
- * press's later repeats and its key-up are swallowed too, so the row neither opens its actions
- * nor takes the release as a click.
+ * A held OK is caught on its first auto-repeat, where a row's `onLongClick` would fire; the press's
+ * later repeats and its key-up are swallowed too, so the row neither opens its actions nor takes
+ * the release as a click.
  */
 fun Modifier.undoOnRemoteKeys(state: UndoBarState): Modifier =
     onPreviewKeyEvent { event ->
@@ -157,10 +156,9 @@ fun Modifier.undoOnRemoteKeys(state: UndoBarState): Modifier =
 
 /**
  * A small bar, "Removed 24Hrs TV · Hold OK or press Menu to undo", for [state]'s last removal. Not
- * focusable — see [undoOnRemoteKeys]. It places itself: put it in the screen's (or the panel's)
- * column, under the list, which gives it its own room — it never covers the last row. The list
- * above it takes the rest of the column (`Modifier.weight(1f)`). Callers give it no alignment or
- * padding.
+ * focusable (see [undoOnRemoteKeys]). Put it in the screen's (or the panel's) column under the
+ * list, which takes the rest of the column (`Modifier.weight(1f)`), so it never covers the last
+ * row. Callers give it no alignment or padding.
  */
 @Composable
 fun TvUndoBar(

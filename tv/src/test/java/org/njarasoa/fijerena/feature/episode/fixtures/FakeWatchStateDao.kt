@@ -8,9 +8,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 
 /**
- * In-memory stand-in for [WatchStateDao], for the episode-selection Compose UI tests — no real
- * Room/SQLite instance needed. A copy of core/network's own `FakeWatchStateDao` (JVM unit tests,
- * not visible to this module's androidTest source set); keep the two in step when the DAO changes.
+ * In-memory [WatchStateDao] for the episode-selection Compose UI tests, with no Room/SQLite. A copy
+ * of core/network's own `FakeWatchStateDao` (JVM unit tests, not visible to this module's test
+ * sources); keep the two in step when the DAO changes.
  */
 class FakeWatchStateDao : WatchStateDao {
     private data class Key(
@@ -22,7 +22,7 @@ class FakeWatchStateDao : WatchStateDao {
 
     private val rows = LinkedHashMap<Key, WatchStateEntity>()
 
-    /** Seeds a row directly, bypassing the upsert SQL — for tests that set up state, not exercise writes. */
+    /** Seeds a row directly, without the upsert SQL: for tests that set up state, not test writes. */
     fun seed(entity: WatchStateEntity) {
         rows[Key(entity.providerId, entity.profileId, entity.itemId, entity.contentType)] = entity
     }
@@ -59,7 +59,7 @@ class FakeWatchStateDao : WatchStateDao {
                 categoryId = categoryId ?: existing?.categoryId ?: "",
                 positionMs = positionMs,
                 durationMs = durationMs,
-                // Sticky since Phase 6: can only raise isCompleted, never lower it.
+                // Sticky (Phase 6): it can only raise isCompleted, never lower it.
                 isCompleted = isCompleted || existing?.isCompleted == true,
                 updatedAt = now,
                 lastPlayedAt = now,
@@ -195,8 +195,7 @@ class FakeWatchStateDao : WatchStateDao {
         val existing = rows[k]
         rows[k] =
             if (existing != null) {
-                // Must not touch positionMs/durationMs/isCompleted — a start write must never
-                // erase progress a progress write already stored.
+                // Must not touch positionMs/durationMs/isCompleted: a start write never erases stored progress.
                 existing.copy(
                     updatedAt = now,
                     lastPlayedAt = now,

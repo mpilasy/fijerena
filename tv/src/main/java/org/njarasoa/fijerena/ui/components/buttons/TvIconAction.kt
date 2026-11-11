@@ -132,8 +132,8 @@ fun TvIconAction(
                 focusedBorder = Border.None,
             ),
     ) {
-        // Full height, or the row sits at the top of the circle and CenterVertically only centres
-        // the icon within the row: every icon rode high in its button.
+        // Full height, else the row sits at the top of the circle and CenterVertically centres the icon
+        // only within the row.
         Row(
             modifier =
                 Modifier

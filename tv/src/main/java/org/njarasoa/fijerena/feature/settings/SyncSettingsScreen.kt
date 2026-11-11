@@ -97,8 +97,8 @@ fun SyncSettingsScreen() {
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
 
-    // Entry focus on Sync now (Add a device while a sync runs: Sync now is disabled then), or the
-    // screen opened with nothing focused and the remote did nothing.
+    // Entry focus on Sync now (Add a device while a sync runs, as Sync now is disabled then); else the
+    // screen opened with nothing focused.
     val syncNowFocus = remember { FocusRequester() }
     val addDeviceFocus = remember { FocusRequester() }
     val pairing = ui.handoffQr != null || ui.inviteQr != null
@@ -160,8 +160,8 @@ fun SyncSettingsScreen() {
                 description = stringResource(R.string.live_sync_share_playing_desc),
                 modifier = Modifier.leftToRail(),
             )
-            // Up from Leave goes to the last Remove: it sits at the far right of its row, outside the
-            // left-aligned Leave button's beam, so plain focus search skipped it for the share switch.
+            // Up from Leave goes to the last Remove: it is at the far right of its row, outside the left-aligned
+            // Leave button's beam, so plain focus search went to the share switch.
             val lastActionFocus = remember { FocusRequester() }
             val hasDevices = ui.devices.orEmpty().any { !it.revoked }
             DevicesPanel(ui.devices, nowPlaying, deviceBuilds, lastActionFocus, onRename = { renaming = it }, onRemove = {
@@ -229,8 +229,8 @@ private fun SetupPanel(
 ) {
     val scale = LocalUiScale.current
     var setupSecret by remember { mutableStateOf("") }
-    // Once the server checks out, Check server is gone: land on Join, so the D-pad's nearest pick
-    // (Start a sync group, under the edit button) can't make a new group by accident.
+    // Once the server checks out, Check server goes: land on Join, so the D-pad's nearest pick (Start a
+    // sync group) cannot make a new group by accident.
     val joinFocus = remember { FocusRequester() }
     LaunchedEffect(ui.serverChecked) { if (ui.serverChecked) joinFocus.requestFocus() }
     // First focus before that: Check server, or the server address's edit button while Check

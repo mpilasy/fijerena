@@ -34,9 +34,9 @@ import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * The source type, as a row like Settings' (TV UI audit, X5): "Source Type … Xtream IPTV". Adding a
- * source, OK on the row opens the list of types ([TvPickerDialog]). With [enabled] false (editing an existing source)
- * it is read-only text, not focusable: the type of a source is fixed.
+ * The source type, as a row like Settings' (TV UI audit, X5): "Source Type … Xtream IPTV". When
+ * adding a source, OK on the row opens the list of types ([TvPickerDialog]). With [enabled] false
+ * (editing a source) it is read-only text, not focusable: a source's type is fixed.
  */
 @Composable
 fun ProviderTypeDropdown(

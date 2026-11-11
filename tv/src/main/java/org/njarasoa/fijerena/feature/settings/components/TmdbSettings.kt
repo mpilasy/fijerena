@@ -40,8 +40,8 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /*
- * The user's own TMDB key (D4, the public release plan): a row
- * in Source & guide showing whether TMDB is on, the key's sub-pane, and TMDB's attribution in About.
+ * The user's own TMDB key (D4, the public release plan): a row in Source & guide showing whether
+ * TMDB is on, the key's sub-pane, and TMDB's attribution in About.
  */
 
 /** "Film and series details (TMDB) · On / Off / Key refused ›"; OK opens [TmdbKeyPane]. */
@@ -63,7 +63,7 @@ fun TmdbKeySettingsRow(
 
 /**
  * The key's page: what TMDB adds, where to get a key, the key (masked; OK edits it), Test, Save,
- * then Remove key — never the first focus, and behind a confirm. A key TMDB refused is said here
+ * then Remove key (never the first focus, and behind a confirm). A key TMDB refused is said here
  * and nowhere else.
  */
 @Composable

@@ -210,9 +210,8 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * the first one on air.
  *
  * OK on a programme opens its details panel, whose Watch channel opens the channel's preview, as
- * OK on a channel does. Long-press OK or the Menu key on either
- * kind of cell opens the channel's row actions (P3). Both are Dialog windows: Back closes them and
- * focus goes back to the cell (GD6).
+ * OK on a channel does. Long-press OK or the Menu key on either kind of cell opens the channel's
+ * row actions (P3). Both are Dialog windows: Back closes them and focus goes back to the cell (GD6).
  *
  * Search (GD5, G-9): the header's Search opens the EPG Browser ("Search the guide") filtered to
  * this guide's channels; Back from it lands on the Search button. There is no in-grid search.
@@ -472,9 +471,7 @@ fun TvGuideGrid(
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Header: title, status line, labelled buttons
-// ---------------------------------------------------------------------------------------------
+// Header: title, status line, labelled buttons.
 
 @Composable
 private fun GuideHeader(
@@ -710,9 +707,7 @@ private fun updatedLabel(updatedAtMs: Long?): String =
         timeAgo(updatedAtMs)
     }
 
-// ---------------------------------------------------------------------------------------------
-// Loading / NoListings bodies, inside the same chrome
-// ---------------------------------------------------------------------------------------------
+// Loading / NoListings bodies, inside the same chrome.
 
 @Composable
 private fun LoadingBody() {
@@ -775,9 +770,7 @@ private fun NoListingsBody(
 
 private const val FULL_TURN_DEGREES = 360f
 
-// ---------------------------------------------------------------------------------------------
-// The grid: ruler + rows on one time axis, and its focus controller
-// ---------------------------------------------------------------------------------------------
+// The grid: ruler + rows on one time axis, and its focus controller.
 
 /**
  * Which cell has focus, which cells are composed, and the moves between them. Rows and cells are
@@ -1594,9 +1587,7 @@ private fun Modifier.onMenuKey(onMenu: () -> Unit): Modifier =
         isMenu
     }
 
-// ---------------------------------------------------------------------------------------------
-// Programme details (GD6)
-// ---------------------------------------------------------------------------------------------
+// Programme details (GD6).
 
 /** Lines of description shown; the panel never scrolls, so a long one is cut. */
 private const val DETAILS_DESCRIPTION_MAX_LINES = 8
@@ -1656,9 +1647,7 @@ private fun ProgramDetailsDialog(
     )
 }
 
-// ---------------------------------------------------------------------------------------------
-// Cells
-// ---------------------------------------------------------------------------------------------
+// Cells.
 
 /**
  * A guide row's height: [TvDimensions.epgRowHeight], or more when the channel cell's name line and

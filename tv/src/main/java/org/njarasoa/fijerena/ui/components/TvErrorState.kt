@@ -38,9 +38,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * The TV error screen: [title] over [message], a Retry button that takes focus on entry, and a Back
  * button when [backLabel] is set. Retries by itself, once, when the network comes back
- * ([RetryWhenOnline]). [onBack] also takes the Back key, in `onPreviewKeyEvent` — with Retry
- * focused, a `BackHandler` would miss the first press (docs/NAVIGATION_GUIDE.md → "TV Back on Detail
- * Screens"). the next level rock solid resilience plan → R-15.
+ * ([RetryWhenOnline]). [onBack] also takes the Back key, in `onPreviewKeyEvent`: with Retry focused,
+ * a `BackHandler` would miss the first press (docs/NAVIGATION_GUIDE.md → "TV Back on Detail
+ * Screens"). See the next level rock solid resilience plan, R-15.
  */
 @Composable
 fun TvErrorState(

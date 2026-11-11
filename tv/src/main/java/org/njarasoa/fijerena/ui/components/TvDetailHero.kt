@@ -52,21 +52,20 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * Shared header for the TV movie and series detail screens: full-bleed backdrop, one left-aligned
- * text column, an action row, and an optional top-right side slot (the series "Next Up" card in
- * Phase 5). Both screens build on this so their headers can't drift apart. See the tv detail hero ui plan Phase 2.
+ * Shared header for the TV film and series detail screens: full-bleed backdrop, one left-aligned
+ * text column, an action row, and an optional top-right side slot (the series "Next Up" note).
+ * Both screens use it, so their headers cannot drift apart (the tv detail hero ui plan, Phase 2).
  *
- * Meant as one non-focusable item in the screen's existing `LazyColumn` — it takes no focus and
- * intercepts no input itself, so the screen's own D-pad handling is untouched by adding it.
+ * One non-focusable item in the screen's `LazyColumn`: it takes no focus and no input, so the
+ * screen's own D-pad handling is unchanged.
  *
- * The rating is part of [metaLine] (plain "8.2/10"), not a boxed chip of its own, and the
- * backdrop fades into the screen background at the bottom and left instead of ending in a hard
- * edge (TV UI audit, #12).
+ * The rating is part of [metaLine] (plain "8.2/10"), not a chip, and the backdrop fades into the
+ * screen background at the bottom and left (TV UI audit, #12).
  *
- * @param title Plain-text title, used only as the logo image's accessibility description —
- *   [titleFallback] draws its own text and is free to use a different string.
- * @param metaLine Already-formatted facts (year, content rating, runtime, genres, ...), joined
- *   here with " · "; blank entries are dropped rather than left as a dangling separator.
+ * @param title Plain-text title, used only as the logo image's accessibility description;
+ *   [titleFallback] draws its own text.
+ * @param metaLine Formatted facts (year, content rating, runtime, genres, ...), joined here with
+ *   " · "; blank entries are dropped.
  * @param note A line under the plot: the details are the saved copy (`isSavedCopy`).
  */
 @Composable
@@ -85,19 +84,14 @@ fun TvDetailHero(
 ) {
     val palette = CinemaTheme.colors
 
-    // BoxWithConstraints, not a fixed aspectRatio: aspectRatio at heroBackdropAspect works out to
-    // exactly full screen height on a 16:9 TV (screen width / (16/9) == screen height), so
-    // bottom-aligned content taller than that (a 3-line plot, a longer meta line) overflowed
-    // above the top edge with nothing to scroll it into view, hiding the title entirely.
-    // heightIn(min = ...) keeps the full-bleed look when content fits and grows the hero instead
-    // of clipping when it doesn't — measured here, not from LocalConfiguration.screenWidthDp,
-    // because that reads the platform density while this app applies its own UI-scale density
-    // override (see LocalUiScale/UiScale.kt); the two disagreeing silently reproduced the exact
-    // same overflow this was meant to fix.
+    // BoxWithConstraints, not a fixed aspectRatio: at heroBackdropAspect that is exactly the screen
+    // height on a 16:9 TV, so taller content (a 3-line plot) went above the top edge and hid the title.
+    // heightIn(min = ...) keeps the full-bleed look and grows the hero when needed. Measured here, not
+    // from LocalConfiguration.screenWidthDp, which ignores the app's own UI-scale density (see
+    // UiScale.kt) and gave the same overflow.
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        // Not the full 16:9 height: the tab row below has to peek in at the bottom, so it's seen
-        // to be there and is composed for Down to land on (with the hero kept in view while
-        // focused, a full-height hero left the tab row out of the tree and Down did nothing).
+        // Not the full 16:9 height: the tab row below must show at the bottom, so it is seen and composed
+        // for Down to land on (with a full-height hero kept in view, Down did nothing).
         val heroMinHeight = remember(maxWidth) { maxWidth / TvDimensions.heroBackdropAspect * HERO_HEIGHT_FRACTION }
 
         Box(
@@ -107,15 +101,9 @@ fun TvDetailHero(
                     .heightIn(min = heroMinHeight)
                     .background(palette.background),
         ) {
-            // matchParentSize, not fillMaxSize: this Box is sized by its content (heightIn(min)
-            // above, growing for a plot/meta line taller than the aspect-ratio minimum) — inside
-            // a LazyColumn item, the incoming height constraint is unbounded, so a plain
-            // fillMaxSize() child sizes itself off that raw incoming constraint instead of the
-            // Box's own resolved size. matchParentSize() is Box's own two-pass mechanism for
-            // exactly this "background matches content-determined size" shape; using fillMaxSize
-            // here silently reproduced the pre-fix full-screen-height overflow bug even with the
-            // heightIn(min) fix in place, since the visible clipped area was still bounded by the
-            // Column's own height instead of the (now taller) Box's.
+            // matchParentSize, not fillMaxSize: this Box is sized by its content (heightIn(min) above). In a
+            // LazyColumn item the height constraint is unbounded, so fillMaxSize() sizes off that constraint,
+            // not the Box's own size, and brought the overflow back.
             if (backdropUrl != null) {
                 AsyncImage(
                     model = backdropUrl,
@@ -195,9 +183,8 @@ fun TvDetailHero(
                 }
 
                 Spacer(Modifier.height(Spacing.lg))
-                // The text keeps to the column; the buttons may run past it — at a large Text &
-                // grid size the column was narrower than Play plus four icon buttons, and More was
-                // cut off (TV UI audit, spot check at 100 %).
+                // The text keeps to the column; the buttons may run past it: at a large Text & grid size the column
+                // was narrower than Play plus four icon buttons, and More was cut off (TV UI audit).
                 Row(
                     modifier = Modifier.wrapContentWidth(align = Alignment.Start, unbounded = true),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -258,11 +245,10 @@ private const val BOTTOM_FADE_START = 0.4f
 
 /**
  * Keeps a details screen's hero whole while focus is in it. On Android TV the default
- * [BringIntoViewSpec] pivots every focused child to about a third of the viewport, so focusing
- * Play scrolled the screen until the title or logo was cut off at the top (TV UI audit, #13).
- * While focus is inside the hero — [content] puts the modifier it is given on the hero — no
- * scroll is asked for and [scrollToTop] brings the hero back in full; everywhere else (the tab
- * row, episode cards, related titles) the default pivot stays.
+ * [BringIntoViewSpec] pivots each focused child to about a third of the viewport, so focusing Play
+ * cut the title off at the top (TV UI audit, #13). While focus is inside the hero ([content] puts
+ * the given modifier on it) no scroll is asked for, and [scrollToTop] brings the hero back in full;
+ * elsewhere (tab row, episode cards, related titles) the default pivot stays.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

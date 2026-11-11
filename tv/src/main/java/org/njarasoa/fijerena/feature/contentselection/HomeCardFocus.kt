@@ -10,14 +10,13 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 
 /**
- * Home's rows, top to bottom (user, 2026-10-29): Continue Watching alone, then a group per section,
- * Channels (with the Upcoming Games after the favourite channels), TV Shows, Movies, each with its
- * favourites first.
+ * Home's rows, top to bottom: Continue Watching alone, then a group per section, Channels (with the
+ * Upcoming Games after the favourite channels), TV Shows, Movies, each with its favourites first.
  */
 internal enum class HomeShelf {
     CONTINUE_WATCHING,
 
-    /** Recent channels, alone under Continue Watching (user, 2026-10-30). */
+    /** Recent channels, alone under Continue Watching. */
     CHANNELS,
 
     FAVORITE_CHANNELS,
@@ -89,12 +88,12 @@ internal data class HomeCard(
 )
 
 /**
- * The card that takes focus once [key] left [shelf] (or came back to it with an Undo), the shelf's
- * keys being [oldKeys] at the time and every shelf's keys being [rows] now
- * (the tv recents favorites plan → A, "Home's cards"): [key] itself when it is
- * there, else the card that took its place in the same row ([rowAfterChange]); when the row is
- * empty (and gone from Home), the first card of the next row that has one, else of the nearest row
- * above; null when Home has no card left (the navigation rail takes focus).
+ * The card that takes focus once [key] left [shelf] (or came back to it with an Undo), with the
+ * shelf's keys [oldKeys] at the time and every shelf's keys [rows] now (the tv recents favorites
+ * plan, A, "Home's cards"): [key] itself when it is there, else the card that took its place in the
+ * same row ([rowAfterChange]); when the row is empty (and gone from Home), the first card of the
+ * next row that has one, else of the nearest row above; null when Home has no card left (the
+ * navigation rail takes focus).
  */
 internal fun cardAfterChange(
     shelf: HomeShelf,

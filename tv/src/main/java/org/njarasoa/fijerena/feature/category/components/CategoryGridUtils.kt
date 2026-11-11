@@ -19,10 +19,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 
-/**
- * Modifier that detects long-press of the D-pad center / Enter key on TV.
- * Calls [onLongPress] when the key has been held long enough.
- */
+/** Long press of the D-pad centre / Enter on TV: [onLongPress] runs on the key-up of a held press. */
 internal fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
     composed {
         var longPressDetected by remember { mutableStateOf(false) }
@@ -40,10 +37,10 @@ internal fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
                 longPressDetected = true
                 true
             } else if (isDpadCenter && event.type == KeyEventType.KeyDown && longPressDetected) {
-                // Consume repeated KeyDown events while held
+                // Consume the repeated KeyDown events while held.
                 true
             } else if (isDpadCenter && event.type == KeyEventType.KeyUp && longPressDetected) {
-                // Fire callback on release so the dialog opens after the key is up
+                // Fire on release, so the dialog opens after the key is up.
                 longPressDetected = false
                 onLongPress()
                 true

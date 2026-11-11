@@ -16,8 +16,8 @@ fun AudioTrackSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
-    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    // Keyed on tracksVersion: a dialog opened before ExoPlayer resolved the tracks would otherwise keep
+    // an empty list.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val audioTracks = remember(tracksVersion) { viewModel.getAudioTracks() }
 

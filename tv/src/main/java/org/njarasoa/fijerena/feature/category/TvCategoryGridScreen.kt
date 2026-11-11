@@ -65,9 +65,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
-/**
- * TV two-column layout: Categories on left, Streams on right.
- */
+/** TV two-column layout: categories on the left, streams on the right. */
 @Composable
 fun TvCategoryGridScreen(
     contentType: String,
@@ -131,29 +129,27 @@ fun TvCategoryGridScreen(
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
 
-    // Refresh last played item when screen resumes (e.g. back from player)
-    // Uses repeatOnLifecycle to avoid recomposing the entire screen on every lifecycle transition
+    // Refresh the last played item on resume (back from the player). repeatOnLifecycle, so lifecycle
+    // changes do not recompose the whole screen.
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
-        // The first RESUMED is this screen's own initial composition, which just ran the load
-        // that populates uiState/favoriteIds/watchProgress/watchedIds from scratch — re-running
-        // the same per-item refresh here duplicates that work. Only a *later* RESUMED means an
-        // actual return from elsewhere, which is what this refresh exists for.
+        // The first RESUMED is the screen's first composition, which just loaded everything; only a later
+        // RESUMED is a return from elsewhere, which this refresh is for.
         var isFirstResume = true
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (!isFirstResume) {
                 viewModel.refreshLastPlayedItem()
-                // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
-                // an episode list, search) has no way back to this instance's cache otherwise.
+                // A watched/favourite mark made on a screen this ViewModel does not own (movie details, an episode
+                // list, search) reaches this instance's cache only here.
                 viewModel.refreshWatchStateOnResume()
             }
             isFirstResume = false
         }
     }
 
-    // Read once, over the kept ViewModel: one still loading opens on Recent anyway. The browse waits
-    // for the switch (the ViewModel names the list at once, before it loads), so it composes on
-    // Recent and takes its entry focus there, not on the old list's row that the switch removes.
+    // Read once, over the kept ViewModel: one still loading opens on Recent anyway. Browse waits for the
+    // switch (the ViewModel names the list before it loads), so it composes on Recent and takes its
+    // entry focus there, not on a row of the old list.
     val recent = CategoryViewModel.RECENT_CATEGORY_ID
     val reopenOnRecent =
         remember {
@@ -238,16 +234,14 @@ private fun CategoryGridContent(
                 vertical = Spacing.tvSafeMarginVertical,
             )
 
-    // Live TV is one nav entry (LT7). The preview — and full screen, promoted inside it — is a layer
-    // over the browse list, as the dock is on mobile, not an entry of its own: open while
-    // livePreviewChannelId names the channel it opened on (Home → Live TV: the last channel, passed
-    // as initialStreamId; browse: the channel OK was pressed on), closed by Back. An entry with
-    // showPreviewPane is the preview alone and has no browse under it.
-    // Browse is not composed under the preview: its rows would stay in the focus tree, and its own
-    // focus effects keep running, behind an opaque preview or the full-screen player. Its saved
-    // state is kept for it instead (browseState), and it shares this CategoryViewModel, so the list
-    // the channel was picked from is the preview's ChannelContext (LT2) and Back rebuilds browse
-    // without reloading the categories.
+    // Live TV is one nav entry (LT7). The preview (and full screen, inside it) is a layer over the
+    // browse list, not an entry of its own: open while livePreviewChannelId names its channel (Home →
+    // Live TV: the last channel, as initialStreamId; browse: the channel OK was pressed on), closed by
+    // Back. An entry with showPreviewPane is the preview alone, with no browse under it.
+    // Browse is not composed under the preview: its rows would stay in the focus tree and its focus
+    // effects keep running. Its saved state is kept (browseState), and it shares this
+    // CategoryViewModel, so the list the channel was picked from is the preview's ChannelContext (LT2)
+    // and Back rebuilds browse without loading the categories again.
     val isLiveTv = contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV
     val isLiveBrowse = isLiveTv && !showPreviewPane
     var livePreviewChannelId by rememberSaveable { mutableStateOf(initialStreamId.takeIf { isLiveBrowse }) }
@@ -255,14 +249,14 @@ private fun CategoryGridContent(
     // sources than this list's (multi-source plan, Phase 5); 0 = this list's.
     var livePreviewSource by rememberSaveable { mutableLongStateOf(initialStreamSource.takeIf { isLiveBrowse } ?: 0L) }
     val showLivePreview = isLiveTv && (showPreviewPane || livePreviewChannelId != null)
-    // The channel the preview plays now, after any retune or zap: Back hands it to browse, which
-    // lands on it (LT6), and a preview rebuilt after process death comes back on it. Cleared when
-    // the preview closes, so the next one starts on the channel it is opened on.
+    // The channel the preview plays now, after any retune or zap: Back hands it to browse, which lands
+    // on it (LT6), and a preview rebuilt after process death comes back on it. Cleared when the preview
+    // closes.
     var livePlayingChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     var livePlayingSource by rememberSaveable { mutableLongStateOf(0L) }
     // Each opening of the layer is keyed by this count, so a layer dropped while saved open
-    // (closeSavedLivePreview) leaves its saved state — full screen, the guide's return channel —
-    // behind instead of handing it to the next opening.
+    // (closeSavedLivePreview) does not hand its saved state (full screen, the guide's return channel) to
+    // the next opening.
     var livePreviewOpening by rememberSaveable { mutableIntStateOf(0) }
     // Once, before anything reads them: the layer must not compose (and start playing) first.
     var dropSavedPreview by remember { mutableStateOf(closeSavedLivePreview) }
@@ -274,12 +268,11 @@ private fun CategoryGridContent(
             livePreviewOpening++
         }
     }
-    // Plain remember, as the nav hand-off it replaces was taken once: a return from Search or the
-    // TV Guide rebuilds browse without it.
+    // Plain remember: a return from Search or the TV Guide rebuilds browse without it.
     var returnedLiveChannelId by remember { mutableStateOf<String?>(null) }
     val browseState = rememberSaveableStateHolder()
-    // The layer's ViewModels go when it closes — in an effect, so after its own teardown
-    // (stopAndRelease) has run.
+    // The layer's ViewModels go when it closes, in an effect, so after its own teardown
+    // (stopAndRelease).
     val previewViewModels: LivePreviewViewModels = viewModel()
     LaunchedEffect(showLivePreview) {
         if (!showLivePreview) previewViewModels.clear()
@@ -289,29 +282,25 @@ private fun CategoryGridContent(
         livePlayingChannelId = null
         livePreviewChannelId = null
         livePreviewSource = 0L
-        // What resuming the browse entry did on Back from a preview entry, and Recent reloaded as
-        // the fresh browse under Home's preview loaded it — after the preview recorded its channels.
-        // Live TV's Recent keeps its order for the visit (the tv recents favorites plan
-        // → B): the channels the preview recorded come in at the top, the rows already there stay put.
+        // Do what resuming the browse entry did after a preview entry, and reload Recent after the preview
+        // recorded its channels. Live TV's Recent keeps its order for the visit (the tv recents favorites
+        // plan, B): new channels come in at the top, the other rows stay.
         catViewModel.refreshLastPlayedItem()
         catViewModel.refreshWatchStateOnResume()
         val browsed = (catViewModel.uiState.value as? CategoryViewModel.UiState.Success)?.selectedCategoryId
         if (browsed == CategoryViewModel.RECENT_CATEGORY_ID) catViewModel.loadStreams(browsed)
     }
 
-    // Live TV entered again — from another section, Home, or back from the TV Guide or Search, each
-    // a fresh composition over the kept ViewModel — re-sorts Recent, last watched first; while you
-    // are in the section it keeps its order (plan → B). Nothing to do on the first entry: the
-    // ViewModel is still loading.
+    // Live TV entered again (from another section, Home, or back from the TV Guide or Search, each a new
+    // composition over the kept ViewModel) sorts Recent again, last watched first; inside the section it
+    // keeps its order (plan, B). On the first entry the ViewModel is still loading.
     LaunchedEffect(Unit) {
         if (isLiveBrowse && !showLivePreview) catViewModel.reloadRecentOnEntry()
     }
 
     // The ViewModel's list is the preview's ChannelContext (LT2), and a ViewModel recreated after
-    // process death starts on its default list (Recent): the preview would come back on a channel
-    // that list doesn't have, with no video. So the list is kept with this screen's saved state and
-    // put back once if the recreated ViewModel lands elsewhere. With its source: the list holds
-    // every source's categories, the same id on two of them (Phase 6).
+    // process death starts on Recent, which may not have the channel. So the list (with its source: the
+    // same id can be on two sources, Phase 6) is kept in saved state and put back once.
     var savedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
     var savedCategorySource by rememberSaveable { mutableLongStateOf(0L) }
     var selectionChecked by remember { mutableStateOf(false) }
@@ -332,20 +321,16 @@ private fun CategoryGridContent(
         savedCategorySource = selectedCategorySource
     }
 
-    // 5% padding for TV overscan safety — applied per-branch rather than around the whole
-    // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it
-    // renders inside this same composable, in place, to avoid a second PlaybackViewModel/ANR —
-    // see LiveTvSplitLayout's doc comment). LiveTvSplitLayout applies this same margin itself,
-    // but only around its split/browsing UI, not the full-screen player.
+    // 5% TV overscan padding, per branch and not around the whole `when`: LiveTvSplitLayout's full-screen
+    // player renders inside this composable and must not get it. LiveTvSplitLayout applies the margin to
+    // its split UI itself.
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
         AnimatedContent(
             targetState = uiState,
-            // Keyed on the sealed subtype, not the state instance itself — Success carries fresh
-            // data (stream lists, streamsLoading) on nearly every emission, and a plain
-            // targetState comparison would refire the crossfade on every one of those instead of
-            // only on Loading/Success/Error swaps.
+            // Keyed on the sealed subtype: Success carries new data on almost every emission, and comparing
+            // instances would run the crossfade each time, not only on Loading/Success/Error changes.
             contentKey = { it::class },
             transitionSpec = {
                 fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
@@ -449,10 +434,8 @@ private fun CategoryGridContent(
                                         catViewModel.loadStreams(categoryId, source)
                                     },
                                     onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
-                                        // OK on a channel opens the preview layer on it (LT7). The
-                                        // list it was picked from — the browsed category, Recent or
-                                        // Favourites — is this CategoryViewModel's selection, so it
-                                        // is the preview's ChannelContext (LT2).
+                                        // OK on a channel opens the preview layer on it (LT7). The list it was picked from is this
+                                        // CategoryViewModel's selection, so it is the preview's ChannelContext (LT2).
                                         if (target is BrowseTarget.Channel) {
                                             livePreviewChannelId = target.streamId
                                             livePreviewSource = providerId
@@ -493,12 +476,11 @@ private fun CategoryGridContent(
 private const val BROWSE_STATE_KEY = "browse"
 
 /**
- * The Live TV preview layer's ViewModels (LT7) — its `PlaybackViewModel` and
- * `StreamLoaderViewModel` — in a store of their own, held by the entry. They live as long as the
- * layer is open, as they did when the preview was a nav entry: across a trip to the TV Guide and
- * back, and an activity recreate, but not past Back to browse — a loader left behind would still
- * write its channel into Recent after the watch delay, and the next opening would start from its
- * stale stream. Popping the entry clears them too.
+ * The Live TV preview layer's ViewModels (LT7), its `PlaybackViewModel` and
+ * `StreamLoaderViewModel`, in a store of their own held by the entry. They live while the layer is
+ * open (across a trip to the TV Guide and an activity recreate), but not past Back to browse: a
+ * loader left behind would still write its channel into Recent, and the next opening would start
+ * from its stale stream. Popping the entry clears them too.
  */
 internal class LivePreviewViewModels : ViewModel() {
     private var store: ViewModelStore? = null

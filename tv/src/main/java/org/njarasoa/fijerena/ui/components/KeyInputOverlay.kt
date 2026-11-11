@@ -29,9 +29,9 @@ import org.njarasoa.fijerena.ui.KeyInputLog
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Show Key Input's list of keys ([KeyInputLog]) at the top right of every screen, below the clock (the player's too),
- * while [AppSettings.keyInputUntil] lasts; at that time it turns Show Key Input off. It takes no
- * focus and no key: the keys go to the screen as before.
+ * Show Key Input's list of keys ([KeyInputLog]) at the top right of every screen, below the clock
+ * (the player's too), while [AppSettings.keyInputUntil] lasts; then it turns Show Key Input off. It
+ * takes no focus and no key: the keys go to the screen as before.
  */
 @Composable
 fun KeyInputOverlay(appSettings: AppSettings) {

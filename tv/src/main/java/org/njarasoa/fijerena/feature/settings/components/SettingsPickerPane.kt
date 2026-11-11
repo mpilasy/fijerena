@@ -63,13 +63,12 @@ data class PickerOption<T>(
 
 /**
  * Drill-in picker for a choice setting (plan Part I, B, "value row + drill-in picker"): a
- * `‹ Title` header and a one-column list of radio rows in place of the group's rows. Focus opens
- * on the selected option; OK applies and leaves, Back and Left leave unchanged (Left = back one
- * level, the TV focus contract). Back is taken in `onPreviewKeyEvent` on the pane root
- * (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"), with [BackHandler] as the fallback;
- * Left is taken there too, before the enclosing `tvPane` could hand it to the rail.
- * [paneLook]: the whole pane drawn in the focused option's look, as a preview; nothing is applied
- * until OK.
+ * `‹ Title` header and a one-column list of radio rows in place of the group's rows. Focus opens on
+ * the selected option; OK applies and leaves, Back and Left leave unchanged (Left = back one level,
+ * the TV focus contract). Back is taken in `onPreviewKeyEvent` on the pane root
+ * (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"), with [BackHandler] as the fallback; Left
+ * is taken there too, before the enclosing `tvPane` could hand it to the rail. [paneLook]: the
+ * whole pane drawn in the focused option's look, as a preview; nothing applies until OK.
  */
 @Composable
 fun <T> SettingsPickerPane(
@@ -112,8 +111,8 @@ private fun <T> PickerColumn(
 ) {
     val selectedFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.value == selectedValue }.coerceAtLeast(0)
-    // Opens scrolled to the selected option: one below the first screen is not composed yet, so
-    // its focus request would fail and leave focus nowhere.
+    // Opens scrolled to the selected option: one below the first screen is not composed yet, so its
+    // focus request would fail.
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     LaunchedEffect(Unit) {
         selectedFocusRequester.requestFocusWithRetry()

@@ -12,8 +12,8 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Sync & Backup (an Admin section) (`scripts/focus-walks/settings.txt`): its rows. They open
- * Live sync's screen or the system's file picker, so nothing here presses OK.
+ * TV Settings → Sync & Backup (an Admin section) (`scripts/focus-walks/settings.txt`): its rows.
+ * They open Live sync's screen or the system's file picker, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsSyncBackupFocusTest : SettingsFocusTest() {

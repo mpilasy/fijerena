@@ -23,9 +23,9 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * "Connection too slow for this video (needs ~60 Mbps, getting ~20 Mbps)" at the top of the
- * picture while the stream starves (P4, the playback capability errors plan).
- * Not focusable; the remote keeps working.
+ * "Connection too slow for this video (needs ~60 Mbps, getting ~20 Mbps)" at the top of the picture
+ * while the stream starves (P4, the playback capability errors plan). Not focusable; the remote
+ * keeps working.
  */
 @Composable
 fun TvSlowConnectionBanner(

@@ -34,20 +34,17 @@ import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
 import org.njarasoa.fijerena.core.ui.theme.cinemaGround
 
 /**
- * Full-bleed decorative background: a heavily blurred, saturation-boosted wash of the given
- * image (channel logo / poster art) over a theme-accent gradient fallback. Cross-dissolves
- * when [imageUrl] changes instead of popping.
- *
- * Purely visual — no focus/click handling — so it is safe to place behind any screen's root
- * content without touching that screen's D-pad/state logic.
+ * Full-bleed decorative background: a heavily blurred, saturated wash of the given image (channel
+ * logo / poster art) over a theme-accent gradient. Cross-dissolves when [imageUrl] changes.
+ * Visual only (no focus or clicks), so it can go behind any screen's root content.
  *
  * - API 31+ with a non-blank [imageUrl]: blurred, saturated image wash over the gradient.
- * - API < 31 with a non-blank [imageUrl]: `RenderEffect` blur doesn't exist on this API level
- *   (e.g. Shield TVs stuck on Android 11), so instead the gradient is tinted with the image's
- *   dominant color (via [Palette], decoded at 64px so it's cheap on old hardware).
- * - No image (either API level): gradient wash only.
+ * - API < 31 with a non-blank [imageUrl]: there is no `RenderEffect` blur (Shield TVs on Android
+ *   11), so the gradient is tinted with the image's dominant colour ([Palette], decoded at 64 px to
+ *   stay cheap on old hardware).
+ * - No image: the gradient wash only.
  * - [blur] false: the API < 31 tint on every device. For screens with live video in front: the GPU
- *   of a weak device (Chromecast HD) can't redraw the blur under every video frame, and the video
+ *   of a weak device (Chromecast HD) cannot redraw the blur under every video frame, and the video
  *   stutters.
  */
 @Composable
@@ -93,12 +90,9 @@ fun AmbientBackdrop(
 
     val crossfadeTarget = shownUrl.takeIf { !it.isNullOrBlank() && supportsBlur }
 
-    // Hoisted so the blur/saturation RenderEffect isn't rebuilt on every redraw of the layer
-    // (recomposition, Crossfade animation ticks) — only when blurRadius actually changes.
-    // supportsBlur never changes for a call site (Build.VERSION.SDK_INT and a fixed [blur]), so
-    // gating the remember() call on it is stable across this composable instance's recompositions.
-    // Must stay gated: RenderEffect is API 31+, so calling it below that level would crash exactly
-    // the older devices (e.g. Shield TVs on Android 11) this branch exists to avoid.
+    // Remembered, so the RenderEffect is built again only when blurRadius changes, not on every redraw.
+    // supportsBlur never changes for a call site, so the gate around remember() is stable. It must stay
+    // gated: RenderEffect is API 31+ and would crash the older devices (Shield TVs on Android 11).
     val ambientRenderEffect =
         if (supportsBlur) {
             remember(blurRadius) {
@@ -142,10 +136,9 @@ fun AmbientBackdrop(
                 )
             }
         }
-        // The wash takes the image's own brightness: a light logo or poster (Al Jazeera's grey
-        // logo) turned the whole screen pale, and the white and grey text over it — channel name,
-        // category, hints, unselected tabs — vanished. The theme's background over it caps the
-        // brightness, so text stays readable whatever the image.
+        // The wash takes the image's own brightness: a light logo turned the whole screen pale and the white
+        // and grey text over it vanished. The theme's background over it caps the brightness, so text stays
+        // readable whatever the image.
         if (crossfadeTarget != null) {
             Box(modifier = Modifier.fillMaxSize().background(palette.background.copy(alpha = BACKDROP_SCRIM_ALPHA)))
         }

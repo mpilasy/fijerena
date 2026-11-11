@@ -114,12 +114,9 @@ fun CacheManagementSection(
                     tone = TextTone.Secondary,
                 )
 
-                // Delta only means something for Xtream — every other provider type has no
-                // equivalent row-level diff, and its columns just hold whatever they defaulted
-                // to. Only shown next to a clean sync: on error the columns hold the last
-                // *successful* sync's delta (ProviderDao.updateSyncStats COALESCEs rather than
-                // zeroing on failure), so showing it next to an error would misleadingly read as
-                // "this failed run found 5 changes".
+                // The delta means something only for Xtream; other types have no row-level diff. Shown only after a
+                // clean sync: on error the columns still hold the last successful sync's delta
+                // (ProviderDao.updateSyncStats uses COALESCE), which would read as "this failed run found 5 changes".
                 if (isXtream && lastSyncError == null) {
                     CinemaText(
                         if (lastSyncInserted == 0 && lastSyncUpdated == 0 && lastSyncDeleted == 0) {

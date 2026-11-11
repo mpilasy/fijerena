@@ -52,23 +52,21 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * The Live TV channel panel (LT2, LT3): a tab row — the picked category when there is one ·
- * Recent · Favourites, with Refresh at its end — over the rows of the selected [ChannelContext].
+ * The Live TV channel panel (LT2, LT3): a tab row (the picked category when there is one ·
+ * Recent · Favourites, with Refresh at its end) over the rows of the selected [ChannelContext].
  * One component in two places: docked beside the preview, and over the video in full screen
  * ([overlay], hosted by `PlayerScreen`, which owns opening, Back and keeping focus inside).
  *
- * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
- * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
- * [TvSectionTabs] does everywhere), and Left on the first tab stays put — only Back leaves the
- * preview (user, 2026-10-09: Left leaving it was a surprise); Left/Right on a row switch to the
- * previous / next tab too, focus staying
- * in the rows (on the current channel when the new list has it) — Recent ↔ Favourites in one press
- * from anywhere in the list, without climbing to the tabs; Down from the tabs enters the rows on the current channel when the list
- * has it, else the first row; OK on a row promotes it to full screen, or tunes it in full
- * screen. The rows take focus on the current channel when they appear, so the overlay opens on
- * it. An empty list is a line of text, not a Refresh button, so focus stays on the tabs (L-10).
- * Refresh is at the end of the tab row, no longer a stop between the tabs and the first row
- * (L-13).
+ * Keys: Up from the first row lands on the selected tab, whatever node above it geometric search
+ * picked. Left/Right on the tabs switch the list (focus follows selection, as [TvSectionTabs]
+ * does), and Left on the first tab stays: only Back leaves the preview. Left/Right on a row also
+ * switch to the previous / next tab, with focus staying in the rows (on the current channel when
+ * the new list has it), so Recent ↔ Favourites is one press. Down from the tabs enters the rows on
+ * the current channel when the list has it, else the first row. OK on a row promotes it to full
+ * screen, or tunes it in full screen. The rows take focus on the current channel when they appear,
+ * so the overlay opens on it. An empty list is a line of text, not a Refresh button, so focus stays
+ * on the tabs (L-10). Refresh is at the end of the tab row, not a stop between the tabs and the
+ * first row (L-13).
  */
 @Composable
 internal fun LiveTvChannelPanel(
@@ -93,11 +91,6 @@ internal fun LiveTvChannelPanel(
     overlay: Boolean = false,
     /** False: no row menu (a child profile's, kids' Home plan Phase 2). */
     rowActions: Boolean = true,
-    /**
-     * Docked in the preview: Left on the first tab leaves the preview as Back does (UX overhaul
-     * plan Part II Live TV target item 8). Null (full screen, where Back closes the panel) keeps
-     * focus on the tab.
-     */
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -107,19 +100,18 @@ internal fun LiveTvChannelPanel(
     val selectedIndex = tabs.indexOfFirst { it.id == context.id }.coerceAtLeast(0)
     val labels = tabs.map { it.label() }
 
-    // An empty tab has nothing focusable below the tabs, so focus goes (or stays) there — also
-    // when the last favourite is removed from its row and the row disappears under focus. Over
-    // the video the tabs also hold focus while the list loads, since the player gave it up when
-    // the panel opened; the rows take it on the current channel once they are there.
+    // An empty tab has nothing focusable below the tabs, so focus goes (or stays) there, also when the
+    // last favourite is removed under focus. Over the video the tabs also hold focus while the list
+    // loads, as the player gave it up when the panel opened; the rows take it on the current channel
+    // once they are there.
     val isEmpty = !streamsLoading && streams != null && streams.isEmpty()
     val focusTabs = isEmpty || (overlay && streamsLoading)
     LaunchedEffect(context, focusTabs) {
         if (focusTabs) tabsEntry.requestFocusWithRetry()
     }
 
-    // Left/Right on a row: the previous / next tab. Its rows take focus once the new list is
-    // there — not the list still on screen when the tab changed, whose rows are about to go and
-    // would leave focus on the list's container.
+    // Left/Right on a row: the previous / next tab. Its rows take focus once the new list is there, not
+    // the old list's rows, which are about to go and would leave focus on the list's container.
     var rowsFocusPendingFrom by remember { mutableStateOf<ImmutableMediaList?>(null) }
     var rowsFocusPending by remember { mutableStateOf(false) }
     LaunchedEffect(streams, streamsLoading, rowsFocusPending) {
@@ -153,9 +145,8 @@ internal fun LiveTvChannelPanel(
                     Modifier
                         .fillMaxWidth()
                         .padding(bottom = Spacing.sm.scaled(scale))
-                        // Entering this row from the list lands on the selected tab, not on
-                        // whichever tab or the Refresh icon geometry preferred. focusProperties
-                        // directly before focusGroup, as Modifier.tvPane does.
+                        // Entering this row from the list lands on the selected tab, not where geometry prefers.
+                        // focusProperties directly before focusGroup, as Modifier.tvPane does.
                         .focusProperties { onEnter = { tabsEntry.requestFocus() } }
                         .focusGroup(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -214,8 +205,7 @@ internal fun LiveTvChannelPanel(
                         if (item != null && target !is BrowseTarget.CategoryRef) {
                             onStreamPromote(item)
                         } else {
-                            // Not resolvable from the current list (shouldn't normally happen), or
-                            // another source's category — fall back to the caller's own handling.
+                            // Not resolvable from the current list, or another source's category: the caller handles it.
                             onStreamSelected(streamId, streamName, categoryId, target, providerId)
                         }
                     }

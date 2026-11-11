@@ -25,10 +25,8 @@ class PlayerScreenState(
     var showQualitySelector by mutableStateOf(false)
     private var showStreamInfoState by mutableStateOf(false)
 
-    // Bumped whenever showStreamInfo is set to true, so PlayerEffects' auto-hide LaunchedEffect
-    // restarts its delay even when a second trigger (e.g. another channel zap) lands while
-    // showStreamInfo is already true from a previous one — keying on showStreamInfo alone
-    // wouldn't restart the coroutine since the value doesn't actually change.
+    // Bumped each time showStreamInfo is set to true, so PlayerEffects' auto-hide restarts its delay
+    // when a second trigger (another zap) lands while showStreamInfo is already true.
     var showStreamInfoTick by mutableIntStateOf(0)
         private set
 
@@ -44,9 +42,8 @@ class PlayerScreenState(
     var showChapterSelector by mutableStateOf(false)
 
     /**
-     * True while anything that owns the D-pad is on screen. The player's key handler treats Up and
-     * Down as channel change on live, so without this a track picker could be open and arrowing
-     * through it would change channel instead of moving between its options.
+     * True while anything that owns the D-pad is on screen. On live the key handler zaps on Up/Down,
+     * so without this, arrowing through an open track picker would change channel.
      */
     val isModalOpen: Boolean
         get() =
@@ -57,26 +54,24 @@ class PlayerScreenState(
                 showChapterSelector
     var showTopOfHourClock by mutableStateOf(false)
 
-    // Bumped on every key press while the OSD is up, so PlayerEffects' auto-hide counts its 5 s
-    // from the last key rather than from when the OSD opened (LT4).
+    // Bumped on every key press while the OSD is up, so PlayerEffects' auto-hide counts its 5 s from the
+    // last key (LT4).
     var controlsKeyTick by mutableIntStateOf(0)
 
     var lastOkClickTime by mutableLongStateOf(0L)
 
-    // Set when a Center/Enter KeyDown reveals the OSD (and moves focus onto a button —
-    // Channels on live, Play/Pause on VOD). Compose's clickable() fires on KeyUp of
-    // Center/Enter, so the same physical press's KeyUp must be consumed too, or it activates
-    // whatever focus just landed on — turning "open the OSD" into "open the OSD AND toggle
-    // favourite / pause" from a single press. Not Compose state: read/written only inside
-    // handlePlayerKeyEvent, never observed by composition.
+    // Set when a Center/Enter KeyDown reveals the OSD (and moves focus to a button: Channels on live,
+    // Play/Pause on VOD). clickable() fires on KeyUp, so the same press's KeyUp must be consumed too, or
+    // one press would open the OSD and also activate that button. Not Compose state: only
+    // handlePlayerKeyEvent reads and writes it.
     var suppressNextCenterKeyUp: Boolean = false
 
-    // Scrub cursor position for VOD: non-null while user is scrubbing with D-pad.
-    // Releasing Left/Right (or OK/Center) commits the seek; Back cancels.
+    // VOD scrub cursor position: non-null while the user scrubs with the D-pad. Releasing Left/Right (or
+    // OK/Center) commits the seek; Back cancels.
     var scrubPositionMs by mutableStateOf<Long?>(null)
 
-    // Net channel hops accumulated from D-pad auto-repeat ticks (repeatCount >= 1) while a
-    // direction key is held. The first tap/tick of every press fires immediately instead.
+    // Net channel hops from D-pad auto-repeat ticks (repeatCount >= 1) while a direction key is held.
+    // The first tick of each press fires at once instead.
     var pendingChannelDelta by mutableIntStateOf(0)
 
     var livePosition by mutableLongStateOf(0L)

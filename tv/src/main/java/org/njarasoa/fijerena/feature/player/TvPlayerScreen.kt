@@ -107,27 +107,23 @@ fun TvPlayerScreen(
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
 
-    // Remember the last successful stream so a channel change can keep PlayerScreen mounted
-    // (and the old video visible) through the Loading window instead of unmounting to a
-    // full-screen spinner. The LaunchedEffect below still checks live streamState, not this.
-    // Also what the lifecycle observer below resumes onto after a long screensaver/HDMI-switch
-    // absence — declared before it for that reason.
+    // The last successful stream, so a channel change keeps PlayerScreen mounted (with the old video)
+    // through Loading instead of a full-screen spinner. The LaunchedEffect below still checks the live
+    // streamState. The lifecycle observer below also resumes onto it after a long absence, so it is
+    // declared first.
     var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
     if (streamState is StreamLoaderViewModel.StreamState.Success) {
         lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
     }
 
-    // Playback Trigger key — declared here because the screensaver-resume position tracking
-    // right below needs to key off it too.
-    // Use derived state or specific key to avoid re-triggering on EPG updates
+    // Playback trigger key, declared here for the resume position tracking below. A plain id, so EPG
+    // updates do not trigger playback again.
     val currentStreamId = lastSuccessState?.streamId
 
-    // The last position the service's positionSaves reported for the *current* stream, reset to null
-    // on a channel/title change. lastSuccessState.resumePosition (used below) only ever reflects
-    // where this stream stood when it was first loaded — recordHistory() writes fresh positions
-    // to the DB but never back into loaderViewModel's own state, so without this a screensaver
-    // resume after watching 45 minutes of a movie would restart from wherever the user was
-    // *before this viewing session*, not 45:00.
+    // The last position positionSaves reported for the current stream, null after a change of stream.
+    // lastSuccessState.resumePosition is only where the stream stood when it loaded (recordHistory()
+    // writes to the DB, not to the loader's state), so without this a screensaver resume would restart
+    // from before this viewing session.
     var lastKnownPositionMs by remember(currentStreamId) { mutableStateOf<Long?>(null) }
 
     // Set when catch-up has saved, stopped the player and left (Back, Watch live): the screen it
@@ -135,8 +131,8 @@ fun TvPlayerScreen(
     // on this one must not pause, stop or release it.
     var handedOff by remember { mutableStateOf(false) }
 
-    // Observe app focus/lifecycle to pause on background and stop after timeout
-    // Live only: whether the stream was playing as the screen paused — see ON_RESUME below.
+    // Pause on background and stop after a timeout. Live only: whether the stream was playing as the
+    // screen paused (see ON_RESUME below).
     var liveWasPlaying by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -153,14 +149,10 @@ fun TvPlayerScreen(
 
                     Lifecycle.Event.ON_RESUME -> {
                         playbackViewModel.onFocusRegained()
-                        // A long absence (TV screensaver, HDMI input switch) lets onFocusLost's
-                        // 30s timer fire stop() while we were away, tearing playback down to Idle
-                        // with nothing bringing it back — the screen stayed mounted showing a
-                        // black frame forever. Resume with the last known-good stream if that's
-                        // what happened. A short absence leaves it Paused instead: right for VOD
-                        // (the viewer resumes), but a paused live stream is a frozen, stale frame,
-                        // so live that was playing restarts at the live edge too. See
-                        // the rock solid stability resilience plan → F-16.
+                        // After a long absence (TV screensaver, HDMI input switch) onFocusLost's 30 s timer has stopped
+                        // playback to Idle, and nothing brings it back: resume the last good stream. A short absence leaves
+                        // it Paused, right for VOD, but a paused live stream is a stale frame, so live that was playing
+                        // restarts at the live edge too. See the rock solid stability resilience plan, F-16.
                         val success = lastSuccessState
                         val state = playbackViewModel.playbackState.value
                         val restart = state is PlaybackState.Idle || (liveWasPlaying && state is PlaybackState.Paused)
@@ -179,11 +171,9 @@ fun TvPlayerScreen(
         }
     }
 
-    // Leaving catch-up (Back, Watch live): the session saved and the player stopped, then [then].
-    // Stopped, not released: a release also ends the playback service, and the live preview that
-    // starts on it at once is released with it. Stopped now, not through the view model's
-    // coroutine, which could land after that preview has started. Both seen on the emulator,
-    // 2026-10-10.
+    // Leaving catch-up (Back, Watch live): save the session, stop the player, then [then]. Stopped, not
+    // released: a release also ends the playback service, which the live preview starts on at once.
+    // Stopped now, not through the view model's coroutine, which could land after that preview started.
     val scope = rememberCoroutineScope()
     val leaveCatchup: (then: () -> Unit) -> Unit = { then ->
         scope.launch {
@@ -196,23 +186,21 @@ fun TvPlayerScreen(
     val watchLive: (() -> Unit)? = catchup?.let { { leaveCatchup(onWatchLive) } }
     val catchupBack: (() -> Unit)? = catchup?.let { { leaveCatchup(onBack) } }
 
-    // Stop and fully release playback when leaving the player screen. TV has no
-    // background-playback/PiP feature, so the service (and its native decoder/renderer
-    // buffers) has no reason to outlive this screen — see stopAndRelease's kdoc. Not once catch-up
-    // has handed the player on (see leaveCatchup).
+    // Stop and fully release playback when leaving the player screen. TV has no background playback or
+    // PiP, so the service (and its native buffers) has no reason to outlive this screen (see
+    // stopAndRelease). Not once catch-up has handed the player on (see leaveCatchup).
     DisposableEffect(Unit) {
         onDispose {
             if (handedOff) return@onDispose
-            // The teardown's own final position save finds no collector by now (the
-            // positionSaves effect below has left composition): finalizeSession is that save.
+            // The teardown's own final position save has no collector by now (the positionSaves effect below
+            // has left composition): finalizeSession is that save.
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
             playbackViewModel.stopAndRelease()
         }
     }
 
-    // Another device of the sync group stopped this playback: the explicit Back path (awaited
-    // finalise, so the watch position is saved, then release), but landing on Home. See
-    // the live sync now playing plan → Remote Stop.
+    // Another device of the sync group stopped this playback: the Back path (awaited finalise, then
+    // release), but to Home. See the live sync now playing plan, Remote Stop.
     RemoteStopEffect {
         finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
         playbackViewModel.stopAndRelease()
@@ -240,11 +228,10 @@ fun TvPlayerScreen(
         StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
     }
 
-    // Save playback position and track choices. Collected from the service's process-wide flow,
-    // not a listener set on one instance: Home → return destroys the service (MainActivity.onStop)
-    // and ON_RESUME plays on a new one. See the next level rock solid resilience plan → R-04.
-    // Keyed on the stream: lastKnownPositionMs is a fresh state per stream, and a collector
-    // started for the previous one would keep writing that one's.
+    // Save playback position and track choices. Collected from the service's process-wide flow, not a
+    // listener on one instance: Home and back destroys the service (MainActivity.onStop) and ON_RESUME
+    // plays on a new one (the next level rock solid resilience plan, R-04). Keyed on the stream, so a
+    // collector of the previous stream does not keep writing its position.
     LaunchedEffect(currentStreamId) {
         StreamingPlaybackService.positionSaves.collect { save ->
             // Handed off: the next item's saves are not this screen's stream.
@@ -254,9 +241,9 @@ fun TvPlayerScreen(
         }
     }
 
-    // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
-    // for (panel-a), so reaching its end asks again and carries on from there, until the window has
-    // been asked for in full. See the catchup plan → Phase 2.
+    // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked for
+    // (panel-a), so at its end ask again and carry on, until the whole window was asked for. See the
+    // catchup plan, Phase 2.
     var catchupAskedAtSec by remember { mutableStateOf(0L) }
     val continueCatchup: (() -> Boolean)? =
         catchup?.let { window ->
@@ -279,17 +266,14 @@ fun TvPlayerScreen(
             catchupAskedAtSec = System.currentTimeMillis() / 1000
             playbackViewModel.playStream(state.playerMetadata(), state.resumePosition)
 
-            // Restore saved track settings when player is ready
+            // Restore saved track choices when the player is ready.
             if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it in
-                // snapshotFlow{} never registers an observable read, so it emits once and never
-                // again, leaving this stuck waiting forever instead of restoring tracks (this is
-                // the bug behind "track choice doesn't stick": it silently never ran). Collect the
-                // flow directly instead, same fix already applied on MobilePlayerScreen.
+                // playbackState is a plain StateFlow, not snapshot state: snapshotFlow {} would emit once and wait
+                // for ever, so tracks were never restored. Collect the flow directly, as MobilePlayerScreen does.
                 val readyState =
                     playbackViewModel.playbackState
                         .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                        .first() // Wait for first ready state (or bail on Error, so a failed stream doesn't hang this forever)
+                        .first() // Wait for the first ready state, or stop on Error so a failed stream does not hang this.
 
                 if (readyState !is PlaybackState.Error) {
                     val service = StreamingPlaybackService.getInstance()
@@ -306,10 +290,9 @@ fun TvPlayerScreen(
         }
     }
 
-    // The series name / episode label / TMDB logo / synopsis above resolve asynchronously (a
-    // series-detail and a TMDB lookup) well after the effect above already started playback with
-    // whatever was known at that instant — almost always still null. Patch them into the OSD's
-    // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
+    // The series name, episode label, TMDB logo and synopsis arrive after playback started (a series
+    // detail and a TMDB lookup). Patch them into the OSD's metadata as they land, without touching
+    // playback (see PlaybackViewModel.updateMetadata).
     val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
     LaunchedEffect(
         enrichedState?.seriesName,
@@ -331,8 +314,8 @@ fun TvPlayerScreen(
         }
     }
 
-    // Autoplay next episode — held here, not in PlayerScreen, which the Loading branch below
-    // re-mounts while the next episode loads.
+    // Autoplay next episode: held here, not in PlayerScreen, which the Loading branch below mounts again
+    // while the next episode loads.
     val upNextState = remember { UpNextState() }
     when (val state = streamState) {
         is StreamLoaderViewModel.StreamState.Loading -> {
@@ -404,11 +387,9 @@ private fun PlayerContent(
         viewModel = playbackViewModel,
         currentStreamId = data.streamId,
         onBack = {
-            // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
-            // straight back to the episode-selection screen — its own watch-history read can
-            // otherwise win the race against an unawaited write and land on the wrong resume
-            // season. See finalizeSessionAndAwait's kdoc and
-            // the episode selection fragility plan.
+            // Awaited: Back goes straight to the episode screen, whose watch-history read could otherwise win
+            // against an unawaited write and land on the wrong season. See finalizeSessionAndAwait and the
+            // episode selection fragility plan.
             if (onBackStops) {
                 onBack()
             } else {
@@ -434,9 +415,8 @@ private fun PlayerContent(
             },
         nextEpisode = data.nextEpisode,
         onPlayNextEpisode = { nextEp ->
-            // Awaited: playNextEpisode() flips loaderViewModel's state to Loading in its own
-            // coroutine, which races an unawaited finalizeSession()'s position-save read of that
-            // same state — same hazard as onBack above, see finalizeSessionAndAwait's kdoc.
+            // Awaited: playNextEpisode() sets the loader to Loading in its own coroutine, which races an
+            // unawaited finalizeSession()'s read of that state (see finalizeSessionAndAwait).
             scope.launch {
                 finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
                 loaderViewModel.playNextEpisode(nextEp)

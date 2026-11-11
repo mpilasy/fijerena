@@ -61,10 +61,9 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * One row of related titles on a detail screen — those the provider actually carries. [title] is
- * the heading above the row, or null when the tab it sits under already names it ("Similar").
- * Draws nothing at all when [items] is empty — no header, no empty state — since a row is a
- * bonus and an empty one only takes up space.
+ * One row of related titles on a detail screen that the provider carries. [title] is the heading
+ * above the row, or null when its tab already names it ("Similar"). Draws nothing when [items] is
+ * empty: a row is a bonus, and an empty one only takes space.
  */
 @Composable
 fun RelatedTitlesRow(
@@ -98,8 +97,8 @@ fun RelatedTitlesRow(
             state = rowState,
             // Coming back to the row lands on the card the user left, not back at the start.
             modifier = Modifier.focusRestorer(),
-            // A focused card grows past its layout bounds, and the row clips its children — without
-            // this slack the top and bottom of the focus border and glow are cut off.
+            // A focused card grows past its bounds and the row clips its children: without this slack the
+            // focus border and glow are cut off at the top and bottom.
             contentPadding = PaddingValues(horizontal = FOCUS_BLEED, vertical = FOCUS_BLEED),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
@@ -121,12 +120,9 @@ fun RelatedTitlesRow(
 }
 
 /**
- * Card styling for one row, built once per row composition rather than once per card.
- *
- * `CardDefaults.*` are `@Composable`, so they cannot be wrapped in `remember` — hoisting the calls
- * out of the item body is what stops a `CardColors`/`CardScale`/`Border`/`CardGlow`/`CardShape` set
- * being allocated per card per recomposition. Same pattern, and same reason, as `StreamList`'s
- * `TvCardLooks` (cards/TvCard.kt).
+ * Card styling for one row, built once per row, not once per card: `CardDefaults.*` are
+ * `@Composable` and cannot go in `remember`, so hoisting them out of the item body stops a set of
+ * card values being allocated per card per recomposition (as `TvCardLooks` in cards/TvCard.kt).
  */
 @Immutable
 private data class RelatedCardStyle(
@@ -141,8 +137,8 @@ private data class RelatedCardStyle(
 private fun relatedTitleCardStyle(): RelatedCardStyle {
     val shape = cornerShape(CornerRadius.medium)
     return RelatedCardStyle(
-        // The poster covers the card face, so the container tint alone cannot carry focus here —
-        // the lift and the glow are what read from the sofa (a ring only in a Look that doesn't scale).
+        // The poster covers the card face, so the container tint cannot carry focus: the lift and the glow
+        // do (a ring only in a Look that does not scale).
         colors =
             CardDefaults.colors(
                 containerColor = CinemaTheme.colors.surface,
@@ -215,11 +211,11 @@ private fun RelatedTitleCard(
                 NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
             }
         }
-        // Room for two lines on every card (minLines), so a one-line title doesn't make its card
-        // shorter than the rest and a long one takes its second line before the ellipsis (TV UI
-        // audit X4). A fixed height of two style line heights cut a Look's taller font to one line.
+        // Room for two lines on every card (minLines), so a one-line title does not make its card shorter
+        // and a long one gets a second line before the ellipsis (TV UI audit X4). A fixed height of two line
+        // heights cut a Look's taller font to one line.
         CinemaText(
-            // See mobile's StreamCard — provider data occasionally sends a blank name.
+            // Provider data sometimes sends a blank name; see mobile's StreamCard.
             text = item.listTitle ?: rowDisplayTitle(parsedTitle, item.name, null) ?: stringResource(R.string.content_untitled),
             role = TextRole.Heading,
             maxLines = 2,

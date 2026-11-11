@@ -32,10 +32,10 @@ import org.njarasoa.fijerena.ui.components.rail.TvNavRail
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 
 /**
- * The TV's sections (the tv nav rail plan → Sections keep their place): their
- * rail item, their root destination and the content type they browse. The roots are the phone's tab
- * routes: Navigation saves a section's back stack under its root, so each needs its own. Sports
- * (the sports teams plan) browses no content type: its [contentType] is [SPORTS_SECTION].
+ * The TV's sections (the tv nav rail plan, Sections keep their place): their rail item, root
+ * destination and content type. The roots are the phone's tab routes: Navigation saves a section's
+ * back stack under its root, so each needs its own. Sports (the sports teams plan) browses no
+ * content type: its [contentType] is [SPORTS_SECTION].
  */
 internal enum class TvSection(
     val item: RailItem,
@@ -60,11 +60,10 @@ internal const val SPORTS_SECTION = "SPORTS"
 
 /**
  * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
- * Xtream sources' content types, merged; none while unknown or when it has no Xtream source),
- * Sports while Admin's Sports switch is on ([sports], SP-D9), Search, Settings. The Browse entries
- * go between those and Search (`TvNavRail`). A [child] profile has only the avatar, Home and
- * Search: it watches what is on its Home or what it finds, never browses
- * (the kids' Home plan, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
+ * Xtream sources' content types, merged; none while unknown or with no Xtream source), Sports while
+ * Admin's Sports switch is on ([sports], SP-D9), Search, Settings. The Browse entries go between
+ * those and Search (`TvNavRail`). A [child] profile has only the avatar, Home and Search: it never
+ * browses (the kids' Home plan, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
  */
 internal fun railItems(
     sections: Set<String>?,
@@ -129,9 +128,9 @@ internal fun NavDestination.isSettingsTree(): Boolean =
         hasRoute<Screen.Diagnostics>()
 
 /**
- * The section whose stack is on the back stack: its root is the one section root there (a pick
- * replaces the stack above Home). Asked per section with `getBackStackEntry`, which throws when the
- * route isn't on the stack — `currentBackStack` would say it in one read, but it is restricted API.
+ * The section whose stack is on the back stack: the one section root there (a pick replaces the
+ * stack above Home). Asked per section with `getBackStackEntry`, which throws when the route is not
+ * on the stack; `currentBackStack` is restricted API.
  */
 internal fun NavController.currentSection(): TvSection? = TvSection.entries.firstOrNull { isOnBackStack(it.route) }
 
@@ -163,12 +162,11 @@ internal fun litBrowse(
 
 /**
  * The rail over the nav host: its items from the profile's sources (the merged sections, then a
- * Browse entry per other source), the profile's initial, and the lit
- * item from the back stack. The sources and profile are re-read on every destination change — a
- * profile switch, a source turned on or off, added or renamed all end on another screen. Hidden
- * while the profile has no source, and without Home under the screen (Settings, Safe mode or Newer data as the
- * first screen): the rail's picks all lead from Home. Its own composable, so a destination change recomposes the rail, not the
- * NavHost.
+ * Browse entry per other source), the profile's initial, and the lit item from the back stack. The
+ * sources and profile are read again on every destination change: a profile switch or a source
+ * change ends on another screen. Hidden while the profile has no source, and without Home under the
+ * screen (Settings, Safe mode or Newer data as the first screen): the rail's picks all lead from
+ * Home. Its own composable, so a destination change recomposes the rail, not the NavHost.
  */
 @Composable
 internal fun TvSectionRail(

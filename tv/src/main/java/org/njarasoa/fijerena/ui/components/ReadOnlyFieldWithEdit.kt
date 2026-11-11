@@ -56,11 +56,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A text field shown as a row — label, then the value and a pencil — like a Settings row.
- * OK on the row toggles to an editable OutlinedTextField.
- * Pressing Enter confirms, Escape/Back cancels, returning to read-only mode.
- *
- * Designed for TV/D-pad: prevents accidental keyboard trigger on focus.
+ * A text field shown as a row (label, then the value and a pencil), like a Settings row. OK on the
+ * row opens an editable text field; Enter confirms, Escape/Back cancels, back to the row. On TV this
+ * stops focus alone from opening the keyboard.
  */
 @Composable
 fun ReadOnlyFieldWithEdit(
@@ -82,10 +80,9 @@ fun ReadOnlyFieldWithEdit(
     // The first field of a dialog's form takes the dialog's first focus (DialogFirstField).
     val firstFieldFocus = claimFirstField()
 
-    // Committing or cancelling removes the text field from the composition entirely. Without
-    // somewhere to hand focus back to, Compose drops it to the window root and the next D-pad
-    // press restarts from the top of the form — which, in a provider form of six of these inside
-    // one scrolling Column, also scrolls the whole thing back to the start.
+    // Committing or cancelling removes the text field from the composition. With nowhere to hand focus
+    // back to, Compose drops it to the window root and the next D-pad press starts again from the top of
+    // the form.
     val returnFocusRequester = rememberFocusReturn(active = isEditing)
 
     if (isEditing) {

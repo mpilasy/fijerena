@@ -174,8 +174,7 @@ fun TvStatsOverlay(
     }
 
     LaunchedEffect(Unit) {
-        // Persisted across ticks so an unchanged Tracks instance (no track/quality switch)
-        // skips the O(N) group/track scan entirely instead of repeating it every tick.
+        // Kept across ticks, so an unchanged Tracks instance skips the group/track scan.
         var lastTracks: androidx.media3.common.Tracks? = null
         var selectedVideoFormat: androidx.media3.common.Format? = null
         var currentVideoBitrate = 0
@@ -352,19 +351,16 @@ fun TvStatsOverlay(
         Box(
             modifier =
                 Modifier
-                    // Half-width panel in the top-right corner, under the clock: the OSD's progress
-                    // bar, description and buttons fill the bottom, and a panel anchored there was
-                    // drawn over by them. Half the layout's width, not Configuration's, whose dp
-                    // ignore the UI-scale density (it came out a third of the screen).
+                    // Half-width panel in the top-right corner, under the clock: the OSD fills the bottom and drew over
+                    // a panel there. Half the layout's width, not Configuration's, whose dp ignore the UI-scale density.
                     .width(maxWidth * 0.5f)
-                    // As tall as its rows, up to most of the screen: it can't take focus, so rows
-                    // past a fixed height were cut off with no way to scroll to them. The cap comes
-                    // from the layout, not Configuration, whose dp ignore the UI-scale density.
+                    // As tall as its rows, up to most of the screen: it cannot take focus, so rows past a fixed height
+                    // could not be scrolled to. The cap comes from the layout, not Configuration (see above).
                     .heightIn(max = maxHeight * 0.9f)
                     .align(Alignment.TopEnd)
                     .padding(top = Spacing.xxl)
                     .glassCard(),
-            // Not focusable - allows keys to pass to the stream
+            // Not focusable: keys pass on to the stream.
         ) {
             Box(
                 modifier = Modifier.padding(Spacing.lg),
@@ -396,11 +392,9 @@ fun TvStatsOverlay(
                         StatNameRow(stringResource(R.string.player_stats_login), stringResource(R.string.player_stats_login_format, n, of))
                     }
 
-                    // Live-polled (stats.position, updated every tick by the LaunchedEffect above)
-                    // rather than read off playbackState itself: PlaybackState.Playing.position is
-                    // only a snapshot taken when the state object was last (re)created — on a real
-                    // ExoPlayer state transition — so during smooth, uninterrupted playback it
-                    // never changes and this stat looked frozen despite playback actually advancing.
+                    // Polled (stats.position, every tick of the LaunchedEffect above), not read from playbackState:
+                    // PlaybackState.Playing.position is a snapshot from the last state change, so during steady
+                    // playback it looked frozen.
                     val position = stats.position
 
                     val duration =

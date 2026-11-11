@@ -20,10 +20,10 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 
 /**
- * "Shrink Database" — manually sweeps `xtream_v2.db` for rows left behind by a deleted provider
- * and reclaims the freed disk space. See [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData].
- * It asks first (a confirm dialog). [moreRows] follow in the same section (the guide's maintenance row).
- * The last run's figures show only to a Nerd ([nerd]).
+ * "Shrink Database": sweeps `xtream_v2.db` by hand for rows a deleted provider left and reclaims
+ * the disk space (see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]).
+ * It asks first. [moreRows] follow in the same section (the guide's maintenance row). The last
+ * run's figures show only to a Nerd ([nerd]).
  */
 @Composable
 fun DatabaseMaintenanceCard(

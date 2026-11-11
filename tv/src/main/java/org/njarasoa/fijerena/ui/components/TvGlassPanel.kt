@@ -13,10 +13,7 @@ import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
-/**
- * TV-specific GlassPanel with sharp corners (0.dp radius).
- * Delegates to the shared GlassPanel with TV corner radius override.
- */
+/** The shared GlassPanel with the TV's large corner radius. */
 @Composable
 fun TvGlassPanel(
     modifier: Modifier = Modifier,

@@ -34,9 +34,7 @@ import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 
-/**
- * Content card type determines the accent gradient color.
- */
+/** The content type, which picks the accent gradient colour. */
 enum class ContentCardType {
     LIVE_TV,
     MOVIE,
@@ -45,9 +43,8 @@ enum class ContentCardType {
 }
 
 /**
- * AccentBlock - Gradient fill for StandardCardContainer imageCard slot.
- * Provides content-type-aware visual identity.
- * Optional fallbackLetter displays centered large letter over the gradient.
+ * Gradient fill for StandardCardContainer's imageCard slot, with a colour per content type. An
+ * optional fallbackLetter shows large and centred over the gradient.
  */
 @Composable
 fun AccentBlock(
@@ -55,8 +52,7 @@ fun AccentBlock(
     modifier: Modifier = Modifier,
     fallbackLetter: Char? = null,
 ) {
-    // From the theme on every composition (they were built once at class load, so a theme change
-    // left the old colours).
+    // From the theme on every composition, so a theme change takes effect.
     val c = CinemaTheme.colors
     val gradient =
         remember(contentType, c) {

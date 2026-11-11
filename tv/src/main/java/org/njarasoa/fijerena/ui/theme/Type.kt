@@ -17,9 +17,9 @@ import org.njarasoa.fijerena.core.ui.theme.applyUiTitleTokens
 import org.njarasoa.fijerena.core.ui.theme.applyUiTypeTokens
 
 /**
- * Display font for headers only (display and headline styles) — a variable font, sampled at
- * each weight via [FontVariation.Settings]. Body/title/label text keeps [FontFamily.Default]
- * (Roboto) for guaranteed 10-ft legibility.
+ * Display font for headers only (display and headline styles): a variable font, sampled at each
+ * weight with [FontVariation.Settings]. Body/title/label text keeps [FontFamily.Default] (Roboto)
+ * for 10-foot legibility.
  */
 private val CinemaDisplayFontFamily =
     FontFamily(
@@ -29,9 +29,8 @@ private val CinemaDisplayFontFamily =
     )
 
 /**
- * Full 15-style typography scale optimised for 10-foot TV viewing.
- * All body text 18sp minimum, headers 32sp+.
- * Font: Manrope for display/headline styles, Roboto (system default) for title/body/label.
+ * The 15-style typography scale for 10-foot TV viewing: body text 18sp or more. Manrope for the
+ * display/headline styles, Roboto (system default) for title/body/label.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 private val BaseTypography =
@@ -194,12 +193,10 @@ fun cinemaTypography(tokens: UiTypeTokens): Typography {
 }
 
 /**
- * Non-TV Material3 mirror of [cinemaTypography].
- *
- * `androidx.compose.material3` and `androidx.tv.material3` each have their own `Typography` type
- * and their own `MaterialTheme`. TV screens theme the latter, but the dialogs, text fields and
- * selection controls they contain are the former — so without this mirror those components fall
- * back to Material3's stock scale, whose 14sp body text is well under the 18sp TV floor.
+ * Material 3 (not TV) copy of [cinemaTypography]. `androidx.compose.material3` and
+ * `androidx.tv.material3` each have their own `Typography` and `MaterialTheme`. TV screens theme
+ * the TV one, but their dialogs, text fields and selection controls are Material 3, which would
+ * otherwise use its stock scale (14sp body text, under the 18sp TV floor).
  */
 fun cinemaMaterialTypography(source: Typography): androidx.compose.material3.Typography =
     androidx.compose.material3.Typography(

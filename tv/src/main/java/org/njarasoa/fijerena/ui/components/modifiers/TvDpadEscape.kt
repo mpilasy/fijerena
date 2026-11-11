@@ -11,19 +11,15 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 
 /**
- * Lets D-pad Up/Down leave a focused text field.
+ * Lets D-pad Up/Down leave a focused text field. A focused Compose text field uses the direction
+ * keys for its caret; on TV the remote is the only pointer, so focus would go in and never come
+ * out. This sends Up/Down to the focus manager instead.
  *
- * A focused Compose text field consumes the direction keys to move its caret. On a phone that is
- * invisible — you tap somewhere else. On TV the remote is the only pointer, so the field becomes a
- * dead end: focus goes in and never comes out, and everything below it on the screen is
- * unreachable. This forwards Up/Down to the focus manager instead.
+ * Only for **single-line** fields: a multi-line field needs Up/Down for its caret, so keep it out
+ * of the D-pad path (see [org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit]).
  *
- * Only for **single-line** fields. On a multi-line field the caret genuinely needs Up/Down, and
- * the right fix there is to keep the field out of the D-pad path entirely — see
- * [org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit].
- *
- * Left/Right are deliberately untouched: they are caret movement within the line, and call sites
- * that need horizontal escape (the search bar's clear/submit buttons) already handle them.
+ * Left/Right are not touched: they move the caret in the line, and call sites that need to leave
+ * sideways (the search bar's buttons) handle them.
  */
 @Composable
 fun Modifier.tvDpadEscape(): Modifier {
@@ -36,8 +32,7 @@ fun Modifier.tvDpadEscape(): Modifier {
                 event.key == Key.DirectionDown -> FocusDirection.Down
                 else -> null
             }
-        // Report the event as unhandled when there is nowhere to go, so the platform still gets
-        // its chance — swallowing it would make the field feel frozen instead of merely bounded.
+        // Report the event as unhandled when there is nowhere to go, so the platform still gets it.
         direction != null && focusManager.moveFocus(direction)
     }
 }

@@ -9,16 +9,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 
 /**
- * Gives back focus after a transient editor closes.
+ * Gives focus back after a transient editor closes.
  *
  * A composable that swaps an editor in for its trigger control (`if (isEditing) TextField else
- * Row { … pencil }`) destroys the focused node when [active] flips false. Compose has nothing left
- * to restore to, so focus falls to the window root and the next D-pad press lands on the first
- * focusable on the screen — for a settings form, that means jumping back to the top.
+ * Row { … pencil }`) destroys the focused node when [active] goes false. Focus then falls to the
+ * window root, and the next D-pad press lands on the first focusable on the screen (the top of a
+ * settings form).
  *
- * Attach the returned requester to the control the user should land on, and this re-aims focus at
- * it on the [active] `true -> false` edge only. It never steals focus on first composition, and
- * never fires on the way *into* the editor.
+ * Attach the returned requester to the control the user should land on: this focuses it on the
+ * [active] `true -> false` edge only, never on first composition or on the way into the editor.
  *
  * ```
  * val editFocus = rememberFocusReturn(active = isEditing)
@@ -31,9 +30,8 @@ fun rememberFocusReturn(active: Boolean): FocusRequester {
     var wasActive by remember { mutableStateOf(active) }
     LaunchedEffect(active) {
         if (wasActive && !active) {
-            // The target may not be attached yet (the read-only row composes in the same pass that
-            // removes the editor), or ever — a row scrolled out of a lazy list, or a parent that
-            // unmounted along with the editor. Losing the hand-off then is survivable.
+            // The target may not be attached yet (the read-only row composes in the same pass that removes the
+            // editor), or ever (a row scrolled out of a lazy list); losing the hand-off then is acceptable.
             requester.requestFocusWithRetry()
         }
         wasActive = active

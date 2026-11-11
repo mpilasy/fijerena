@@ -53,15 +53,14 @@ import org.robolectric.RobolectricTestRunner
  * `scripts/focus-walks/live-tv-browse.txt` and `live-tv-back.txt` walk it: which row a list opens
  * on, Left and Right between the panes, OK on a category, and where focus lands on Back from the
  * Live TV preview or a film's details. See docs/plans/20260914_codebase-robustness-plan.md, Phase 5.
- * The tab row over the items (the picked category, Recent, Favourites) follows the D-pad map of
- * the TV browse tabs plan. A category's tab and its row share its name: a step
- * after landing on one tells them apart.
+ * The tab row over the items (the picked category, Recent, Favourites) follows the D-pad map of the
+ * TV browse tabs plan. A category's tab and its row share its name: a step after landing on one
+ * tells them apart.
  *
  * The test holds the selection and the rows, as `TvCategoryGridScreen` does with its view model's
- * state, and stands a focusable screen in for the preview or the details, under the same saveable
+ * state, and a focusable screen stands in for the preview or the details, under the same saveable
  * state the screen keeps for the browse layout. The layout's own `CategoryViewModel` is built on a
- * profile with no sources: it lists nothing and reaches no network, and its per-row reads (stars,
- * catch-up days) stay empty.
+ * profile with no sources: it lists nothing, reaches no network, and its per-row reads stay empty.
  */
 @RunWith(RobolectricTestRunner::class)
 class TwoColumnBrowseFocusTest {

@@ -155,7 +155,7 @@ fun SettingsScreen(
 
     var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
 
-    // Export/Import transient state (not in ViewModel yet as it involves SAF Launchers)
+    // Export/Import state, here and not in the ViewModel, as it involves SAF launchers.
     var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportPath by remember { mutableStateOf<String?>(null) }
@@ -174,7 +174,7 @@ fun SettingsScreen(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri -> pendingImportUri = uri }
 
-    // Process export in LaunchedEffect (survives recomposition)
+    // Export in a LaunchedEffect, which survives recomposition.
     LaunchedEffect(pendingExportUri) {
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
@@ -218,7 +218,7 @@ fun SettingsScreen(
         pendingImportPath = null
     }
 
-    // Re-check provider when returning from provider management screens
+    // Check the provider again on return from the provider screens.
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -247,9 +247,9 @@ fun SettingsScreen(
 
     val scale = LocalUiScale.current
 
-    // Two panes (plan Part I, B): a rail of the groups on the left, the selected group's
-    // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
-    // Back round trip from a child screen come back to the same group.
+    // Two panes (plan Part I, B): a rail of the groups on the left, the selected group's rows on the
+    // right. The rail row is saveable, so a language change (Activity recreate) and Back from a child
+    // screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
     // For a profile that is not an Admin, the Admin sections are not listed (a child profile has no
     // Settings); an Admin section left selected when the Admin flag was turned off falls back to Your Profile.
@@ -293,10 +293,10 @@ fun SettingsScreen(
         if (returnFocus.key == null && picker == null) railPane.focusEntry()
     }
 
-    // Choice settings drill into a picker that replaces the group's rows inside the pane. The row
-    // that opened it is recorded like a navigation away, and gets focus back when the picker
-    // closes — that close is not a lifecycle resume, so the hand-back runs here rather than in
-    // NavReturnFocusEffect (which still covers Language's Activity recreate).
+    // Choice settings open a picker in place of the group's rows. The row that opened it is recorded
+    // like a navigation away and gets focus back when the picker closes; that close is not a lifecycle
+    // resume, so the hand-back runs here, not in NavReturnFocusEffect (which still covers Language's
+    // Activity recreate).
     val openPicker: (SettingPicker) -> Unit = { target ->
         returnFocus.leaveFrom(target.returnKey, listState)
         picker = target
@@ -346,10 +346,10 @@ fun SettingsScreen(
         coroutineScope.launch { sectionEntries.getValue(group).requestFocusWithRetry() }
     }
 
-    // Back while in the pane returns to the rail row (Left does the same, via tvPane); Back on
-    // the rail leaves Settings as before. Taken in onPreviewKeyEvent on the root — a BackHandler
-    // misses the first press while a button holds focus (docs/NAVIGATION_GUIDE.md, "TV Back on
-    // Detail Screens"); the BackHandler stays as the fallback. A picker takes its own Back.
+    // Back in the pane returns to the rail row (Left does the same, via tvPane); Back on the rail leaves
+    // Settings. Taken in onPreviewKeyEvent on the root: a BackHandler misses the first press while a
+    // button has focus (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"); the BackHandler stays as
+    // the fallback. A picker takes its own Back.
     var paneHasFocus by remember { mutableStateOf(false) }
     val backToRail = { coroutineScope.launch { railPane.focusEntry() } }
     // Your Profile shows the page of the profile in use, for every profile (an Admin's too, with
@@ -410,7 +410,7 @@ fun SettingsScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // The profile in use, as the subtitle (T-7); there is no source in use any more.
+            // The profile in use, as the subtitle (T-7).
             TvScreenHeader(
                 title = stringResource(R.string.settings_title),
                 subtitle = profiles.firstOrNull { it.isActive }?.name,
@@ -943,9 +943,8 @@ fun SettingsScreen(
             }
         }
 
-        // Import options dialog. The dialog shows what was parsed when it composed; its buttons read
-        // the live state, so a second click (OK auto-repeat) after the first cleared it does
-        // nothing rather than crash or import twice (R-20).
+        // Import options dialog. It shows what was parsed when it composed; its buttons read the live
+        // state, so a second click (OK auto-repeat) after the first cleared it does nothing (R-20).
         val parsedImport = pendingParsedImport
         if (showImportOptionsDialog && parsedImport != null) {
             ImportOptionsDialog(
@@ -1000,16 +999,15 @@ private const val RETURN_GUIDE_SOURCES = "guideSources"
 
 private fun profileReturnKey(profileId: String) = "profile:$profileId"
 
-// Rail ≈ 30 % of the width, pane ≈ 70 % (plan Part I, B).
 private const val MS_PER_MINUTE = 60_000L
 
+// Rail ≈ 30 % of the width, pane ≈ 70 % (plan Part I, B).
 private const val RAIL_WEIGHT = 0.3f
 private const val PANE_WEIGHT = 0.7f
 
 /**
  * The groups of Settings, in rail order (the settings reorg plan): Your Profile (PROFILES), the
- * five Admin sections under an "Admin" heading (the Admin sections plan),
- * and About.
+ * five Admin sections under an "Admin" heading (the Admin sections plan), and About.
  */
 enum class SettingsGroup(
     @StringRes val titleRes: Int,

@@ -91,8 +91,8 @@ fun DiagnosticsScreen() {
         )
     }
 
-    // Entry focus on the first entry, or Refresh when there is none (never Clear), or the screen
-    // opened with nothing focused and the remote did nothing. Once, when the entries first load.
+    // Entry focus on the first entry, or Refresh when there is none (never Clear); else the screen opened
+    // with nothing focused. Once, when the entries first load.
     val firstEntryFocus = remember { FocusRequester() }
     val refreshFocus = remember { FocusRequester() }
     val loadedOnce = entries != null
@@ -172,8 +172,7 @@ fun DiagnosticsScreen() {
             val causes = entry.causes
             // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
             var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
-            // A clickable card so each entry takes D-pad focus (and the list scrolls to it) with
-            // the standard focus border.
+            // A clickable card, so each entry takes D-pad focus (and the list scrolls to it).
             TvCard(
                 onClick = { if (causes != null) expanded = !expanded },
                 modifier =

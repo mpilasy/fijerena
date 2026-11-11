@@ -82,15 +82,15 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A team's page on TV (the sports teams plan → Team page): the logo, the name, the sport and
- * league, a Follow icon action (and, once followed, a bell for every game of the team in a slot
- * to its right that keeps its place, so Follow never moves), then the
- * team's coming games (up to 10) by day in the device's time zone, each with its bell. A game opens its sheet ([GameSheetOverlay]); a channel there opens its preview
- * ([onPlay], as a guide result).
+ * A team's page on TV (the sports teams plan, Team page): the logo, the name, the sport and league,
+ * a Follow icon action (and, once followed, a bell for every game of the team in a slot to its
+ * right that keeps its place, so Follow never moves), then the team's coming games (up to 10) by
+ * day in the device's time zone, each with its bell. A game opens its sheet ([GameSheetOverlay]); a
+ * channel there opens its preview ([onPlay], as a guide result).
  *
- * Focus: the first game once the games come (Follow while they load or when there is none); Up
- * from the first game reaches Follow; Left from a row or Follow opens the rail. Back closes the
- * sheet, then leaves; Back from a channel returns to its row in the sheet.
+ * Focus: the first game once the games come (Follow while they load or when there is none); Up from
+ * the first game reaches Follow; Left from a row or Follow opens the rail. Back closes the sheet,
+ * then leaves; Back from a channel returns to its row in the sheet.
  */
 @Composable
 fun SportsTeamScreen(

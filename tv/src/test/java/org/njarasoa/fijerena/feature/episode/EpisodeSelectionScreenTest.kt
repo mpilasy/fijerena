@@ -39,12 +39,10 @@ import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Regression test for the episode selection fragility plan: playing an episode from a
- * season other than the first, then navigating back, used to silently reset the season tab (and
- * scroll position) to season 1 — twice, both times only caught by a live device repro + logcat,
- * never by a test. [StateRestorationTester] reproduces the exact mechanism (this composable
- * disposed when the player is pushed on top of it, recomposed fresh from the same saved-state
- * registry on return) without needing real navigation or a player.
+ * Regression tests for the episode selection fragility plan: after playing an episode from a later
+ * season, Back reset the season tab (and scroll position) to season 1. [StateRestorationTester]
+ * reproduces the mechanism (the composable disposed while the player is on top, recomposed from
+ * the same saved-state registry on return) without real navigation or a player.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -110,11 +108,10 @@ class EpisodeSelectionScreenTest {
             )
         }
 
-        // Manually pick season 2 and play one of its episodes — the exact interaction that broke:
-        // a season the user picked in-session, not one named by a route argument. The season tab
-        // row sits below the hero (the tv detail hero ui plan Phase 5) and the episode
-        // card below that, both off-screen until scrolled — LazyColumn only composes what's near
-        // the viewport, so each has to be scrolled to before it can be clicked.
+        // Pick season 2 by hand and play one of its episodes: a season picked in-session, not named by a
+        // route argument. The season tabs and the episode card are below the hero (the tv detail hero ui
+        // plan, Phase 5), off-screen, and LazyColumn composes only what is near the viewport, so scroll to
+        // each before clicking it.
         val season2Label = context.getString(R.string.series_season_label, 2)
         composeTestRule
             .onNodeWithTag("episode_list")
@@ -124,10 +121,8 @@ class EpisodeSelectionScreenTest {
             .onNodeWithTag("episode_list")
             .performScrollToNode(hasTestTag("episode_s2e2"))
 
-        // androidx.tv.material3.Card is D-pad-first: it fires onClick on a focused DirectionCenter
-        // press, not on a raw touch tap the way a plain Modifier.clickable does (performClick()
-        // worked fine on the season tab above, which is a plain clickable) — so drive it the same
-        // way a real remote does, not with performClick().
+        // androidx.tv.material3.Card fires onClick on a focused DirectionCenter press, not on a touch tap
+        // as a plain Modifier.clickable does, so drive it as a remote does.
         composeTestRule.onNodeWithTag("episode_s2e2").requestFocus()
         composeTestRule.onNodeWithTag("episode_s2e2").performKeyInput { pressKey(Key.DirectionCenter) }
 
@@ -135,11 +130,11 @@ class EpisodeSelectionScreenTest {
         composeTestRule.onNodeWithText(playLabel, substring = true).requestFocus()
         composeTestRule.onNodeWithText(playLabel, substring = true).performKeyInput { pressKey(Key.DirectionCenter) }
 
-        // Simulates exactly what navigating to the player and coming back does: this composable
-        // disposed, then recomposed fresh from the same saved-state registry.
+        // What navigating to the player and back does: the composable disposed, then recomposed from the
+        // same saved-state registry.
         restorationTester.emulateSavedInstanceStateRestore()
 
-        // Bug behavior: season silently reset to 1, so neither of these would be on screen.
+        // With the bug, the season reset to 1, so neither of these would be on screen.
         val continueWatchingLabel = context.getString(R.string.series_continue_watching_badge)
         composeTestRule.onNodeWithText(continueWatchingLabel).assertExists()
         // The card, not any text: the hero's Next up names the same episode, and the hero can
@@ -148,11 +143,9 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * Regression test for the streamSwitchSignal fix: switching to
-     * an alternate stream source intentionally moves focus off Play/the resume card and onto the
-     * stream-name row, and that must survive the same nav-disposal round trip as the resume
-     * anchor above — a plain `remember` forgot the switch across it and let the resumeEpisodeId
-     * effect steal focus back to Play the moment the composable was restored.
+     * Regression test for streamSwitchSignal: switching to an alternate stream moves focus to the
+     * stream-name row, and that must survive the same disposal round trip as the resume anchor. A plain
+     * `remember` forgot the switch, and the resumeEpisodeId effect took focus back to Play on restore.
      */
     @Test
     fun alternateStreamFocusSurvivesSimulatedNavigationDisposal() {
@@ -193,9 +186,8 @@ class EpisodeSelectionScreenTest {
             )
         }
 
-        // The stream-name row moved into the Details tab (the tv detail hero ui plan
-        // Phase 5) — it's not on the Episodes tab shown by default, and the tab row itself is
-        // below the hero, off-screen (fixed test viewport) until scrolled into view.
+        // The stream-name row is on the Details tab (the tv detail hero ui plan, Phase 5), not the default
+        // Episodes tab, and the tab row is below the hero, off-screen until scrolled into view.
         val detailsTabLabel = context.getString(R.string.details_tab_details)
         composeTestRule
             .onNodeWithTag("episode_list")
@@ -207,10 +199,9 @@ class EpisodeSelectionScreenTest {
             .onNodeWithTag("episode_list")
             .performScrollToNode(hasTestTag("stream_name_picker"))
 
-        // Open the copies picker and pick the alternate with the remote — same interaction as
-        // switching sources on a real device. The row is plain Modifier.clickable, so a raw touch
-        // tap (performClick) opens it, same as the season tab above; the picker opens on this copy,
-        // Down goes to the alternate and OK picks it.
+        // Open the copies picker and pick the alternate with the remote. The row is a plain
+        // Modifier.clickable, so performClick opens it; the picker opens on this copy, Down goes to the
+        // alternate and OK picks it.
         composeTestRule.onNodeWithTag("stream_name_picker").performClick()
         composeTestRule.waitForIdle()
         // The screen behind keeps its own focus (Play): the dialog's focused row is the one in it.
@@ -219,14 +210,12 @@ class EpisodeSelectionScreenTest {
         composeTestRule.onNode(isFocused() and hasText(alternate.name)).performKeyInput { pressKey(Key.DirectionCenter) }
         composeTestRule.waitForIdle()
 
-        // The switch claims focus for the stream-name row, not Play — that's the whole point of
-        // streamSwitchSignal.
+        // The switch puts focus on the stream-name row, not Play: the purpose of streamSwitchSignal.
         composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
 
         restorationTester.emulateSavedInstanceStateRestore()
 
-        // Bug behavior: streamSwitchSignal reset to 0, so the resumeEpisodeId effect saw "no
-        // switch happened" and stole focus back to Play.
+        // With the bug, streamSwitchSignal reset to 0 and the resumeEpisodeId effect took focus back to Play.
         composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
         composeTestRule.onNodeWithTag("hero_play_button").assertIsNotFocused()
     }
@@ -289,9 +278,9 @@ class EpisodeSelectionScreenTest {
 
     /**
      * Opened from Continue Watching on an episode far down a later season (not a return from the
-     * player, so no scroll position to restore): it must land on that season with the episode's
-     * card focused. It used to land on season 1 — the card wasn't composed yet when focus was
-     * requested, focus fell to the first season tab, and a focused season tab selects itself.
+     * player, so no scroll position to restore): it lands on that season with the episode's card
+     * focused, not on season 1 (focus requested before the card was composed fell to the first season
+     * tab, which selects itself).
      */
     @Test
     fun openingOnALaterSeasonEpisodeLandsOnItsCard() {
@@ -302,10 +291,9 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * Back from deep in the episode list goes to the section tabs, then out — it used to be
-     * swallowed for good: the tab row had scrolled out of composition, so focusing it did
-     * nothing while the key still counted as handled. (Down first: before any other key, Back
-     * leaves at once — see the next test.)
+     * Back from deep in the episode list goes to the section tabs, then out, and is never swallowed
+     * (the tab row is out of composition, so focusing it did nothing). Down first: before any other
+     * key, Back leaves at once (see the next test).
      */
     @Test
     fun backFromDeepInTheListIsNeverSwallowed() {
@@ -322,8 +310,8 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * Menu (or a held OK) on an episode row opens its action menu, as on every other row, with
-     * focus on Mark as watched; it used to mark the episode at once with no menu.
+     * Menu (or a held OK) on an episode row opens its action menu, as on every other row, with focus on
+     * Mark as watched.
      */
     @Test
     fun menuOnAnEpisodeOpensItsActionMenu() {
@@ -338,9 +326,8 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * Opened on an episode (an actor's line, Continue Watching), one Back returns to the control
-     * that opened the screen (focus contract, rule 6) while no other key has been pressed; it took
-     * two, the first only moving focus to the tab row.
+     * Opened on an episode (an actor's line, Continue Watching), one Back returns to the control that
+     * opened the screen (focus contract, rule 6) while no other key has been pressed.
      */
     @Test
     fun openedOnAnEpisodeOneBackLeaves() {
@@ -354,8 +341,8 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * A show with many seasons: the tab row scrolls rather than squeezing its last tabs (seen on a
-     * Shield: "Season 12" drawn one letter per line), and opening on a late season shows its tab.
+     * A show with many seasons: the tab row scrolls instead of squeezing its last tabs ("Season 12"
+     * one letter per line), and opening on a late season shows its tab.
      */
     @Test
     fun manySeasonsScrollTheirTabsIntoView() {

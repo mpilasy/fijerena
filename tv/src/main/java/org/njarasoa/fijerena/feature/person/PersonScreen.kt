@@ -77,15 +77,15 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A person's page on TV (the cast tab plan, Design 3): the photo, the name, the
- * birth and death dates and place, the biography (a few lines; OK shows all of it), then the
- * person's Movies and TV Shows that the profile's sources have, as Home's rows. Each row starts with
- * its own switch for the titles no source has (UX-D7: off on each opening, none for a child), and
- * keeps the switch while it has no card, then saying "None in your sources" beside it. A card opens
- * the title on its own source, or a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES`
- * or `TV_SHOWS`). A show card of a role opens the episode, or the list of the person's episodes or
- * seasons in the show ([ShowAppearancesOverlay]), each opening the show there ([onShowSelected];
- * the episode cast plan, EC-D2).
+ * A person's page on TV (the cast tab plan, Design 3): the photo, the name, the birth and death
+ * dates and place, the biography (a few lines; OK shows all of it), then the person's Movies and TV
+ * Shows that the profile's sources have, as Home's rows. Each row starts with its own switch for
+ * the titles no source has (UX-D7: off on each opening, none for a child), and keeps the switch
+ * while it has no card, with "None in your sources" beside it. A card opens the title on its own
+ * source, or a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES` or `TV_SHOWS`). A
+ * show card of a role opens the episode, or the list of the person's episodes or seasons in the
+ * show ([ShowAppearancesOverlay]), each opening the show there ([onShowSelected]; the episode cast
+ * plan, EC-D2).
  *
  * Focus: on the first card on entry, else on the biography, else on a row's switch; Back from a
  * title returns to the card left.
@@ -199,8 +199,8 @@ private fun PersonContent(
             movieSwitch -> movieFocus.requestFocusWithRetry()
             showSwitch -> showFocus.requestFocusWithRetry()
         }
-        // The focused card scrolled the page to it and cut off the name (found in the walk,
-        // 2026-10-30): the page opens at its top, the card still in view below the header.
+        // The focused card scrolled the page to it and cut off the name: the page opens at its top, with
+        // the card still in view below the header.
         withFrameNanos { }
         listState.scrollToItem(0)
     }
@@ -212,9 +212,9 @@ private fun PersonContent(
         prepare = { snapshotFlow { rows != null }.first { it } },
     )
 
-    // Closing the list gives focus back to the show card that opened it. The row's restorer is told
-    // too: after Back from a show a line opened, the page is new, its restorer knows no card, and
-    // its fallback took the request to the row's first card (seen in the walk, 2026-10-30).
+    // Closing the list gives focus back to the show card that opened it. The row's restorer is told too:
+    // after Back from a show, the page is new, its restorer knows no card, and its fallback sent the
+    // request to the row's first card.
     var closedShowKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(closedShowKey) {
         closedShowKey?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = showFocus) }

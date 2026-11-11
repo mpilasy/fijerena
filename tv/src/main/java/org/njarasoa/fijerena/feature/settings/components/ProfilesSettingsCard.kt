@@ -227,20 +227,20 @@ fun ProfilesSettingsCard(
 }
 
 /**
- * A profile's page, in place of the Profiles group's rows (D8): name, colour, its own Admin
- * flag and Play next episode automatically, Sources › (with two or more sources), Content
- * filters › (this profile's, on one of its Xtream sources — picked first when it has several, O4 of
+ * A profile's page, in place of the Profiles group's rows (D8): name, colour, its own Admin flag
+ * and Play next episode automatically, Sources › (with two or more sources), Content filters ›
+ * (this profile's, on one of its Xtream sources, picked first when it has several; O4 of
  * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, and Delete
- * last. Every change applies at once; the name applies when the page is left (Left or Back).
- * Content filters are saved by their own editor's Save.
+ * last. Every change applies at once; the name when the page is left (Left or Back). Content
+ * filters are saved by their own editor's Save.
  *
- * Your Profile shows the profile in use's page: [focusOnOpen] false leaves focus on the Settings
- * rail, and [entryModifier] (on the name row) is where entering the pane lands; [title] reads
- * "Your profile" there. [adminRows] (Child, Admin, Sources, Content filters, a kid's
- * Favourites and Parental controls) shows only in Admin → Profiles (the admin settings plan, AS-D1).
+ * Your Profile shows the page of the profile in use: [focusOnOpen] false leaves focus on the
+ * Settings rail, and entering the pane lands on [entryModifier] (the name row); [title] reads "Your
+ * profile" there. [adminRows] (Child, Admin, Sources, Content filters, a kid's Favourites and
+ * Parental controls) shows only in Admin → Profiles (the admin settings plan, AS-D1).
  *
- * [canAddProfile] (a grown-up's own page, not an Admin) adds an Add profile row at the end,
- * above Switch and Delete; the new profile is not opened, since only an Admin edits another one.
+ * [canAddProfile] (a grown-up's own page, not an Admin) adds an Add profile row above Switch and
+ * Delete; the new profile is not opened, as only an Admin edits another one.
  */
 @Composable
 fun ProfileEditPane(
@@ -473,9 +473,9 @@ fun ProfileEditPane(
         }
 
         // Left and Back leave the page (Left = back one level). Taken in onKeyEvent, after the focused
-        // control: the name's text field keeps Left for its cursor and Back to cancel its edit. A Back
-        // whose press the field took is swallowed on release too, or it would also close the page.
-        // Shown without focus (focusOnOpen false), Back belongs to the Settings rail until the page has it.
+        // control: the name field keeps Left for its cursor and Back to cancel its edit. A Back whose press
+        // the field took is also swallowed on release, or it would close the page too. Shown without focus
+        // (focusOnOpen false), Back belongs to the Settings rail until the page has focus.
         var backPressed by remember { mutableStateOf(false) }
         var pageHasFocus by remember { mutableStateOf(false) }
         BackHandler(enabled = focusOnOpen || pageHasFocus, onBack = leave)
@@ -602,8 +602,8 @@ fun ProfileEditPane(
                     label = stringResource(R.string.settings_autoplay_next_episode_title),
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
                 )
-                // The admin's: Admin for this profile, its sources and its
-                // content filters (the parental control).
+                // The admin's rows: Admin for this profile, its sources and its content filters (the parental
+                // control).
                 if (adminRows) {
                     CinemaText(stringResource(R.string.profile_section_admin), role = TextRole.Heading, tone = TextTone.Primary)
                 }
@@ -722,8 +722,8 @@ fun ProfileEditPane(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    // The profile in use and the last one left can't be deleted (ProfileRepository refuses
-                    // both); not offering the button beats offering it and then explaining why not.
+                    // The profile in use and the last one cannot be deleted (ProfileRepository refuses both), so the
+                    // button is not offered.
                     if (canDelete) {
                         CinemaDangerButton(
                             onClick = { confirmDelete = true },

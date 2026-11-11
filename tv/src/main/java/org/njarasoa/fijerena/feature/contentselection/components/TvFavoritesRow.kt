@@ -70,8 +70,7 @@ fun TvFavoritesRow(
     items: List<MediaItem>,
     thumbnailType: ThumbnailContentType,
     onItemSelected: (MediaItem) -> Unit,
-    /** Long-press OK or the Menu key on a card: its actions menu. */
-    /** Null: the cards have no actions (a child profile's Home). */
+    /** Long-press OK or the Menu key on a card: its actions menu. Null: no actions (a child profile's Home). */
     onOpenActions: ((MediaItem) -> Unit)?,
     firstItemFocus: FocusRequester,
     /** See [HomeRow]: the card Back returns to, while it is pending. */
@@ -186,8 +185,7 @@ private fun TvFavoriteCard(
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()
                 }
-                // One line: the rating, then the title's tags
-                // when [titleBadges] ("+N" for those that do not fit).
+                // One line: the rating, then the title's tags when [titleBadges] ("+N" for those that do not fit).
                 CardBadgeLine(
                     parsed = parsedTitle.takeIf { titleBadges && listTitle == null },
                     rating = item.metadata.rating,

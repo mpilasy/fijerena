@@ -16,9 +16,10 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → Sources & Guide (an Admin section) (`scripts/focus-walks/settings.txt` and
- * `settings-guide.txt`): its rows (Shrink Database last), the guide's maintenance sub-pane (never pressed) and
- * the TMDB key's, each closing on its row in the section. Manage Sources and Guide Sources open other screens (Guide
- * Sources with no source chooser), tested on their own (`SourcesFocusTest`, `GuideSourcesFocusTest`).
+ * `settings-guide.txt`): its rows (Shrink Database last), the guide's maintenance sub-pane (never
+ * pressed) and the TMDB key's, each closing on its row in the section. Manage Sources and Guide
+ * Sources open other screens (Guide Sources with no source chooser), tested on their own
+ * (`SourcesFocusTest`, `GuideSourcesFocusTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsSourcesGuideFocusTest : SettingsFocusTest() {

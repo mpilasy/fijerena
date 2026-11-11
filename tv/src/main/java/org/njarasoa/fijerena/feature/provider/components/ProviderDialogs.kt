@@ -126,8 +126,8 @@ fun CategoryFilterDialog(
     var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
-    // The panel's content is in the dialog's `text` slot, so the default initial-focus target is
-    // the Save/Cancel row at the very bottom. Start on the first real control instead.
+    // The panel's content is in the dialog's `text` slot, so the default first focus is the Save/Cancel
+    // row at the bottom. Start on the first control instead.
     val firstControlFocusRequester = remember { FocusRequester() }
 
     @Composable
@@ -160,9 +160,8 @@ fun CategoryFilterDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        // The panel is sized as a fraction of the screen, which no dp scaling can reach — fold the
-        // UI scale in by hand so the box shrinks with the text inside it instead of framing tiny
-        // controls in a full-screen panel.
+        // The panel is a fraction of the screen, which dp scaling does not reach: apply the UI scale by
+        // hand, so the box shrinks with the text inside it.
         modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
         wide = true,
         title = title,
@@ -310,11 +309,9 @@ fun CategoryFilterDialog(
                     role = TextRole.Heading,
                     tone = TextTone.Primary,
                 )
-                // A live OutlinedTextField sitting in the D-pad path is a dead end on TV: once
-                // focused it swallows every direction key, so the Add button and the entire
-                // script filter below it were unreachable by remote. ReadOnlyFieldWithEdit exists
-                // for exactly this — the field is entered deliberately with OK and left with
-                // Enter or Back, and is an ordinary focus stop the rest of the time.
+                // A live OutlinedTextField in the D-pad path swallows every direction key once focused, so the
+                // controls below it were out of reach. ReadOnlyFieldWithEdit is entered with OK, left with Enter or
+                // Back, and is an ordinary focus stop the rest of the time.
                 ReadOnlyFieldWithEdit(
                     value = addRulesText,
                     onValueChange = { addRulesText = it },
@@ -440,7 +437,7 @@ fun QuickConnectDialog(
         val init = initResult.getOrThrow()
         qcCode = init.code
         qcSecret = init.secret
-        // Poll every 3 s for up to 2 minutes
+        // Poll every 3 s for up to 2 minutes.
         repeat(40) {
             delay(3_000)
             val poll = api.pollQuickConnect(qcSecret)
@@ -553,11 +550,11 @@ fun DuplicateProviderDialog(
 }
 
 /**
- * Overflow menu for a source row's actions, in the shared order of
- * the ux overhaul plan Part I ("Source actions"): Duplicate, Copy to…, then Delete last, as an
- * action menu ([TvActionMenu]). Opens with focus on Duplicate; Back or Cancel closes it — T-10.
- * Delete opens its confirm. Edit is OK on the row and Guide sources is the row's Guide slot, so the
- * menu does not repeat them (the settings flow review, E6).
+ * Overflow menu for a source row's actions, in the shared order of the ux overhaul plan Part I
+ * ("Source actions"): Duplicate, Copy to…, then Delete last, as an action menu ([TvActionMenu]).
+ * Opens with focus on Duplicate; Back or Cancel closes it (T-10). Delete opens its confirm. Edit is
+ * OK on the row and Guide sources is the row's Guide slot, so the menu does not repeat them (the
+ * settings flow review, E6).
  */
 @Composable
 fun ProviderActionsMenuDialog(

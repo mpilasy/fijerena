@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 
-/** The player's Stats button is for every profile, a Nerd or not, as on the phone (user, 2026-11-06). */
+/** The player's Stats button is for every profile, a Nerd or not, as on the phone. */
 @RunWith(RobolectricTestRunner::class)
 class TvPlayerStatsButtonTest {
     @get:Rule

@@ -50,10 +50,10 @@ private const val FOCUS_CLEAR = 1
 private const val FOCUS_DIAGNOSTICS = 2
 
 /**
- * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Focus lands
- * on Continue, and comes back to the action the user left from (the confirmation, Diagnostics).
- * Back has nothing to pop here, so it leaves the app as from home. See
- * the next level rock solid resilience plan → R-10.
+ * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Focus lands on
+ * Continue, and comes back to the action the user left from (the confirmation, Diagnostics). Back
+ * has nothing to pop here, so it leaves the app as from home. See the next level rock solid
+ * resilience plan, R-10.
  */
 @Composable
 fun SafeModeScreen(onShowDiagnostics: () -> Unit) {

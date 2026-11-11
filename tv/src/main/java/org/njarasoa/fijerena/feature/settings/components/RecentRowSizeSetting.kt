@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.ui.R
 // The 25 default (AppSettings.DEFAULT_WATCH_HISTORY_SIZE) is one of them, so a fresh install shows it selected.
 private val RECENT_ROW_SIZES = listOf(5, 10, 15, 20, 25, 30, 40, 50, 75, 100)
 
-/** The stored size as shown: a preset as is, anything else (from a source before the move, 1–100) marked custom. */
+/** The stored size as shown: a preset as is, anything else (1–100) marked custom. */
 @Composable
 private fun recentRowSizeLabel(size: Int): String =
     if (size in RECENT_ROW_SIZES) size.toString() else stringResource(R.string.settings_custom_value_format, size.toString())

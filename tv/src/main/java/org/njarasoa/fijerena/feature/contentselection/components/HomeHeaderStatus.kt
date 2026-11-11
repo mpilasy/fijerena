@@ -112,9 +112,8 @@ private fun StatusLine(
 
 /**
  * The summary line's sheet: each of the profile's sources with its status and, after a failed
- * update, its reason — already with the raw detail for a Nerd (ProviderSyncRunner). One
- * focus stop per source (the information is reachable by D-pad), focus on the first; OK and Back
- * close it.
+ * update, its reason (with the raw detail for a Nerd, ProviderSyncRunner). One focus stop per
+ * source (the information is reachable by D-pad), focus on the first; OK and Back close it.
  */
 @Composable
 internal fun SourcesStatusSheet(

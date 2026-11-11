@@ -101,14 +101,14 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  *   top safe margin down, so the avatar lines up with the screens' headers; Settings sits at the
  *   bottom. [TvNavRailState.current] is white with the accent bar (`Modifier.currentIndicator`).
  * - **Focused** (focus anywhere in it sets [TvNavRailState.expanded]): slides out over the content
- *   to [TvNavRailDefaults.expandedWidth], icons and labels on an opaque surface, and a scrim
- *   dims the rest of the screen. Focus enters at [TvNavRailState.entry], on the current item (the
- *   first when there is none); a geometric Left into the rail is sent there too, and Up / Down from
- *   the content never enter it. Up / Down stop at
- *   the ends, Left does nothing, **Right** returns to [TvNavRailState.returnTo] (or moves Right when
- *   it can't take focus), **Back** goes Home ([onSelect] with [RailItem.HOME]) or, on Home, back to
- *   the content. **OK** calls [onSelect]; the new screen takes focus itself, and if focus is still
- *   in the rail about half a second later the rail moves it Right.
+ *   to [TvNavRailDefaults.expandedWidth], icons and labels on an opaque surface, and a scrim dims
+ *   the rest of the screen. Focus enters at [TvNavRailState.entry], on the current item (the first
+ *   when there is none); a geometric Left into the rail goes there too, and Up / Down from the
+ *   content never enter it. Up / Down stop at the ends, Left does nothing, **Right** returns to
+ *   [TvNavRailState.returnTo] (or moves Right when it cannot take focus), **Back** goes Home
+ *   ([onSelect] with [RailItem.HOME]) or, on Home, back to the content. **OK** calls [onSelect];
+ *   the new screen takes focus itself, and if focus is still in the rail about half a second later
+ *   the rail moves it Right.
  * - **First launch:** once per device, the first time it shows, it slides out on its own without
  *   taking focus, with "Press Left for sections" beside it, for [TvNavRailDefaults.hintDurationMs].
  * - Draws nothing while [TvNavRailState.visible] is false.
@@ -175,8 +175,8 @@ private fun RailOverlay(
         if (target == null || !target.requestFocus()) focusManager.moveFocus(FocusDirection.Right)
     }
 
-    // After a pick, the new screen lands focus itself; if it hasn't once the screen transition is
-    // over (growing gaps, as requestFocusWithRetry), focus is moved off the rail to the content.
+    // After a pick the new screen focuses itself; if it has not once the screen transition is over
+    // (growing gaps, as requestFocusWithRetry), focus moves off the rail to the content.
     var leaveRequests by remember { mutableIntStateOf(0) }
     LaunchedEffect(leaveRequests) {
         if (leaveRequests > 0) {

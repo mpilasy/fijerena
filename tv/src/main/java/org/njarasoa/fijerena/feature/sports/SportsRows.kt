@@ -183,11 +183,11 @@ fun TvBestTeamRow(
 }
 
 /**
- * Follow (a star) and, for a team ([team] set), the slot of its bell for every game, shown once
- * the profile follows it (the sports teams plan → Reminders). The bell's slot keeps its width while
- * the bell is hidden, so the star never moves when it comes or goes, and a second press lands on
- * the star again. A league page passes no [team]: Follow alone. [modifier] (Follow's) and [bellModifier]
- * are the actions' own (focus requester, focus moves).
+ * Follow (a star) and, for a team ([team] set), the slot of its bell for every game, shown once the
+ * profile follows it (the sports teams plan, Reminders). The bell's slot keeps its width while the
+ * bell is hidden, so the star never moves and a second press lands on it again. A league page
+ * passes no [team]: Follow alone. [modifier] (Follow's) and [bellModifier] are the actions' own
+ * (focus requester, focus moves).
  */
 @Composable
 fun TvFollowActions(
@@ -236,11 +236,11 @@ fun TvSportsHeading(
 }
 
 /**
- * A game: both teams, the home team first, with both logos (on a team page, the opponent's alone), the competition
- * and time, and its best channel
- * ([channels]' first: logo, name, "In the guide", "Event channel" or "On ESPN"; "Looking for
- * channels…" while [channels] is null, "Not found on your channels" when it is empty). [trailing]: a fixed slot after the row, outside it, for an action of its own
- * ([TvGameBell]): Right from the row reaches it, Left goes back, Up/Down keep the column.
+ * A game: both teams, the home team first, with both logos (on a team page, the opponent's alone),
+ * the competition and time, and its best channel ([channels]' first: logo, name, "In the guide",
+ * "Event channel" or "On ESPN"; "Looking for channels…" while [channels] is null, "Not found on your
+ * channels" when it is empty). [trailing]: a fixed slot after the row, outside it, for an action of
+ * its own ([TvGameBell]): Right from the row reaches it, Left goes back, Up/Down keep the column.
  * [modifier] is the row's own (its focus requester, its Back target).
  */
 @Composable

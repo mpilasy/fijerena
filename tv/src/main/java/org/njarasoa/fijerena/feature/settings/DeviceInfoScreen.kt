@@ -58,8 +58,8 @@ fun DeviceInfoScreen() {
     val failed by viewModel.failed.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
 
-    // Entry focus on the first section, or Refresh when none loaded, or the screen opened with
-    // nothing focused and the remote did nothing. Once, when the sections first load (or fail).
+    // Entry focus on the first section, or Refresh when none loaded; else the screen opened with nothing
+    // focused. Once, when the sections first load (or fail).
     val firstSectionFocus = remember { FocusRequester() }
     val refreshFocus = remember { FocusRequester() }
     val loadedOnce = sections != null || failed
@@ -108,8 +108,7 @@ fun DeviceInfoScreen() {
             }
         }
         itemsIndexed(sections.orEmpty()) { index, section ->
-            // A no-op clickable card only so each section takes D-pad focus (and the list
-            // scrolls to it) with the standard focus border.
+            // A clickable card that does nothing, so each section takes D-pad focus (and the list scrolls to it).
             TvCard(
                 onClick = {},
                 modifier =

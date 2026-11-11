@@ -20,18 +20,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
- * TV Focus & Interaction Tokens
- * Scale, border, and glow values for D-pad focus states, driven by the active look-and-feel
- * style's [org.njarasoa.fijerena.core.ui.theme.UiGridTokens] where the style expresses an opinion
- * (focus scale, outline weight) — press feedback and elevation stay fixed across styles.
+ * TV focus and interaction tokens: scale, border and glow for D-pad focus. Focus scale and outline
+ * weight come from the active style's [org.njarasoa.fijerena.core.ui.theme.UiGridTokens]; press
+ * feedback and elevation are the same in every style.
  *
- * Focus and selection are two independent channels and must stay simultaneously legible: a focused
- * row that happens to be unselected, and a selected row that happens to be unfocused, both have to
- * read from ten feet. Focus lifts the element (scale, outline, [focusedContainer]); "selected" or
- * "current" (the category being browsed, the channel playing, the episode to continue, the active
- * Settings group or source, a checked option) keeps the resting container and adds a
- * [currentBarWidth] bar in [currentAccent] on the leading edge plus [currentText] for the title
- * (UX overhaul plan Part II P5) — never a fill or a full outline, which read as a second focus.
+ * Focus and selection are two separate channels and must both read from ten feet at the same time.
+ * Focus lifts the element (scale, outline, [focusedContainer]); "selected" or "current" (the
+ * category being browsed, the channel playing, the episode to continue, the active Settings group
+ * or source, a checked option) keeps the resting container and adds a [currentBarWidth] bar in
+ * [currentAccent] on the leading edge plus [currentText] for the title (UX overhaul plan Part II
+ * P5). Never a fill or a full outline: those read as a second focus.
  */
 object TvFocusTokens {
     val focusedScale: Float
@@ -79,9 +77,8 @@ object TvFocusTokens {
         get() = CinemaTheme.colors.surfaceRaised
 
     /**
-     * Container behind the focused row or button. Must stay *lighter* than [restingContainer]:
-     * focus should lift an element toward the viewer, and the previous mapping (`CinemaSurface`)
-     * was darker than rest on every palette, which read as the element receding.
+     * Container behind the focused row or button. It must stay lighter than [restingContainer]: focus
+     * lifts an element toward the viewer, and a darker container reads as the element going back.
      */
     val focusedContainer: Color
         @Composable @ReadOnlyComposable
@@ -97,8 +94,8 @@ object TvFocusTokens {
         get() = CinemaTheme.colors.textPrimary
 
     /**
-     * The fill of a focused button, tab or chip (TV visual refresh, 2026-10-17): solid white (the
-     * text colour) unless the theme states its own (Console's cream), its content in [onFocusFill]; no ring.
+     * The fill of a focused button, tab or chip (TV visual refresh): solid white (the text colour)
+     * unless the theme sets its own (Console's cream), its content in [onFocusFill]; no ring.
      */
     val focusFill: Color
         @Composable @ReadOnlyComposable
@@ -152,9 +149,9 @@ object TvFocusTokens {
             }
 
     /**
-     * Ambient glow for elements that should read as raised even before focus — hero cards, not
-     * list rows (those already lift on [focusedGlow] alone). Same style opt-out as [focusedGlow]
-     * and a dimmer, constant elevation since it must never outshine the focus state.
+     * Ambient glow for elements that read as raised before focus (hero cards, not list rows, which
+     * lift on [focusedGlow] alone). Same style opt-out as [focusedGlow], and dimmer, so it never
+     * outshines the focus state.
      */
     val restingGlow: Glow
         @Composable @ReadOnlyComposable
@@ -169,10 +166,9 @@ object TvFocusTokens {
             }
 
     /**
-     * Weight for text that carries selection. Taken from the active style rather than a literal
-     * [FontWeight.Bold] so Roku's heavier emphasis (800) and Cupertino's lighter one (500) both
-     * come through — the typography scale gets the same treatment in `Type.kt`, and a raw literal
-     * here would opt this text out of it.
+     * Weight for text that carries selection, from the active style and not a literal
+     * [FontWeight.Bold], so Roku's heavier (800) and Cupertino's lighter (500) emphasis come through,
+     * as the typography scale does in `Type.kt`.
      */
     val emphasisWeight: FontWeight
         @Composable @ReadOnlyComposable
@@ -183,8 +179,8 @@ object TvFocusTokens {
         get() = FontWeight(LocalUiStyle.current.type.weightRegular)
 
     /**
-     * A focused card's lift (TV visual refresh, 2026-10-17): a soft glow in the theme's accent, or its
-     * own colour (Indigo's yellow), in every Look, with the Look's focus scale and no ring.
+     * A focused card's lift (TV visual refresh): a soft glow in the theme's accent, or its own colour
+     * (Indigo's yellow), in every Look, with the Look's focus scale and no ring.
      */
     val cardFocusGlow: Glow
         @Composable @ReadOnlyComposable

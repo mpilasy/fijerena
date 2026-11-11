@@ -55,9 +55,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * "Who's watching?" — pick the profile this TV uses. See the live sync plan
- * → User profiles. [onProfileChosen] runs once the switch has happened; the caller rebuilds the
- * back stack from home.
+ * "Who's watching?": pick the profile this TV uses (the live sync plan, User profiles).
+ * [onProfileChosen] runs once the switch has happened; the caller rebuilds the back stack from home.
  */
 @Composable
 fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
@@ -69,10 +68,9 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val activeFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
 
-    // Land on this device's current profile once the list has loaded — OK then keeps it. Scrolled
-    // to first only when it is off screen: a lazy row only composes what's on screen, and focus
-    // can't reach a card that isn't. A row that fits stays put (scrolling it anyway pushed the
-    // first profiles off the left edge, phone-a).
+    // Land on this device's current profile once the list has loaded, so OK keeps it. Scrolled to first
+    // only when off screen: a lazy row composes only what is on screen, and focus cannot reach a card
+    // that is not. A row that fits stays (scrolling it pushed the first profiles off the left edge).
     LaunchedEffect(profiles.isNotEmpty()) {
         val activeIndex = profiles.indexOfFirst { it.isActive }
         if (activeIndex >= 0) {
@@ -86,8 +84,8 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         modifier =
             Modifier
                 .fillMaxSize()
-                // Only the top and bottom margins here: the row runs the full width, its own padding
-                // keeping the cards inside the safe area, so a scrolled row isn't cut off mid-screen.
+                // Only top and bottom margins: the row runs the full width, its own padding keeping the cards in the
+                // safe area, so a scrolled row is not cut off mid-screen.
                 .padding(vertical = Spacing.tvSafeMarginVertical),
         contentAlignment = Alignment.Center,
     ) {
@@ -99,8 +97,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(Spacing.xxl))
             switchingTo?.let { name ->
-                // A switch can take a while (it re-applies the profile's category filters): say so,
-                // instead of a list that looks like it ignored the pick.
+                // A switch can take a while (it applies the profile's category filters again): say so.
                 CinemaSpinner()
                 Spacer(modifier = Modifier.height(Spacing.md))
                 CinemaText(
@@ -110,8 +107,8 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 )
                 return@Column
             }
-            // Lazy and scrollable: a household with many profiles would otherwise run off the screen,
-            // with D-pad focus moving onto cards nobody can see.
+            // Lazy and scrollable: many profiles would otherwise run off the screen, with focus on cards nobody
+            // can see.
             LazyRow(
                 state = listState,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xl),

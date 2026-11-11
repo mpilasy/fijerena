@@ -23,8 +23,7 @@ fun ChapterSelectorDialog(
             is PlaybackState.Paused -> state.position
             else -> 0L
         }
-    // "Selected" here means the chapter actually playing, which moves with the playhead — it is
-    // not a stored choice like a track selection.
+    // "Selected" is the chapter playing now, which moves with the playhead, not a stored choice.
     val currentChapterIndex = chapters.indexOfLast { it.startTimeMs <= currentPosition }.coerceAtLeast(0)
 
     TvSelectorDialog(

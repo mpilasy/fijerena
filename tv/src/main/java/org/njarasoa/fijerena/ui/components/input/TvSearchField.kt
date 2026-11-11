@@ -67,20 +67,19 @@ import org.njarasoa.fijerena.ui.theme.scaled
 /**
  * TV search field that opens the keyboard only on OK (UX overhaul plan Part II P4, R7).
  *
- * A focused Compose text field starts an input session, so on TV merely moving focus onto it —
- * Up from the results, entry focus — popped the keyboard, and the keyboard then took every D-pad
- * key: the buttons beside the field and the recent searches below it were out of reach.
+ * A focused Compose text field starts an input session, so on TV moving focus onto it (Up from the
+ * results, entry focus) opened the keyboard, which then took every D-pad key: the buttons beside
+ * the field and the recent searches below it were out of reach.
  *
- * At rest ([editing] false) the field is a plain focus stop showing the query or [placeholder]:
- * Up/Down/Left/Right move focus like on any other control, so Right reaches the clear (×) button,
- * an ordinary stop in the same row (no separate search button: the field searches on its own,
- * TV UI audit #14). **OK** asks for [editing]; the field
- * becomes a text field, takes focus and opens the keyboard. **IME Search/Done** submits; **Back**
- * submits too when the text changed. Either way the keyboard closes and focus comes back to the
- * resting field. Back is taken before the keyboard sees it ([onInterceptKeyBeforeSoftKeyboard]):
- * a TV keyboard otherwise eats it to hide itself and leaves focus in a text field with nothing on
- * screen. Moving focus out of the text field by any other way (Up/Down with no keyboard showing)
- * also ends editing, without pulling focus back.
+ * At rest ([editing] false) the field is a plain focus stop showing the query or [placeholder]: the
+ * D-pad moves focus as on any other control, so Right reaches the clear (×) button, an ordinary
+ * stop in the same row (no search button: the field searches on its own, TV UI audit #14). **OK**
+ * asks for [editing]; the field becomes a text field, takes focus and opens the keyboard. **IME
+ * Search/Done** submits; **Back** submits too when the text changed. Either way the keyboard closes
+ * and focus comes back to the resting field. Back is taken before the keyboard sees it
+ * ([onInterceptKeyBeforeSoftKeyboard]): a TV keyboard otherwise eats it to hide itself and leaves
+ * focus in a text field with nothing on screen. Focus leaving the text field any other way
+ * (Up/Down with no keyboard showing) also ends editing, without pulling focus back.
  *
  * [editing] is hoisted so a screen can open on the keyboard (a first search with no history).
  * [focusRequester] targets the resting field; the caller's [modifier] goes on the whole row, so
@@ -90,9 +89,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * [leadingIcon] says what the field does: Search, or Add for a field that adds what is typed.
  *
  * One TV text field look (consistency round 2, finding 32): at rest it is drawn as the open field
- * ([CinemaTextField], as every TV field while it is edited) is: the field's corner, the theme's
- * outline and no fill, with the white focus outline of every TV row while focused (one TV focus
- * look); the open field keeps the accent outline, so typing reads as a different state.
+ * ([CinemaTextField]): the field's corner, the theme's outline and no fill, with the white focus
+ * outline of every TV row while focused; the open field keeps the accent outline, so typing reads
+ * as a different state.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -254,7 +253,7 @@ fun TvSearchField(
             CinemaIconButton(
                 onClick = {
                     onClear()
-                    // The button usually disappears with the text; don't let focus fall to the root.
+                    // The button usually goes with the text: do not let focus fall to the root.
                     focusRequester.requestFocus()
                 },
                 icon = {

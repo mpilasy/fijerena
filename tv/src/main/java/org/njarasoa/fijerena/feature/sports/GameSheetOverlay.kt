@@ -87,21 +87,20 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * A game's sheet over its page (the sports teams plan → Game sheet): the game, its competition, day
- * and time; then only the profile's channels that show it, in the matcher's order (guide
- * programmes first, then event channels, then networks' channels); "Not found on your channels"
- * when there is none. OK on a channel calls [onPlay] (the channel's preview, as a guide result);
- * before the game starts, it asks first: Watch now, Remind Me ([bells]) or Add to calendar, as a
- * guide result that is not on yet. Long-press OK or the Menu key on a channel opens its action
- * menu (Watch now, Remind me, Add to calendar), as on every other channel row; a "⋮" on the
- * focused row is the hint.
+ * A game's sheet over its page (the sports teams plan, Game sheet): the game, its competition, day
+ * and time; then only the profile's channels that show it, in the matcher's order (guide programmes
+ * first, then event channels, then networks' channels); "Not found on your channels" when there is
+ * none. OK on a channel calls [onPlay] (the channel's preview, as a guide result); before the game
+ * starts it asks first: Watch now, Remind Me ([bells]) or Add to calendar, as a guide result that
+ * is not on yet. Long-press OK or the Menu key on a channel opens its action menu (Watch now,
+ * Remind me, Add to calendar), as on every other channel row; a "⋮" on the focused row is the hint.
  * Back calls [onClose], and the page gives focus back to the game. An in-tree overlay: focus stays
  * in it.
  *
  * [contentPadding]: the safe margins on a page of its own; none inside a screen that has them
- * (Search). [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the first row
- * reaches them. Focus: the first row on opening, and again when the channels come; Back from a channel
- * returns to its row ([returnFocus]).
+ * (Search). [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the
+ * first row reaches them. Focus: the first row on opening, and again when the channels come; Back
+ * from a channel returns to its row ([returnFocus]).
  */
 @Composable
 fun GameSheetOverlay(

@@ -79,11 +79,10 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Every guide source on one page (A-9, T6; the one guide source per URL plan, OG-D11): the bulk
- * actions, one card for each guide source with the sources it is used for, then the sources with
- * no guide source, each with its own Add; an empty state that offers to add one. Each card shows
- * its own auto-refresh, and its Auto-refresh button drills into a picker in place of the list
- * (P5b). Guide maintenance is device-wide: its row is at the foot of this list and in Settings
- * (Sources & guide).
+ * actions, one card per guide source with the sources it is used for, then the sources with no
+ * guide source, each with its own Add; an empty state offers to add one. Each card's Auto-refresh
+ * button opens a picker in place of the list (P5b). Guide maintenance is device-wide: its row is
+ * at the foot of this list and in Settings (Sources & guide).
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -136,10 +135,9 @@ fun TvEpgManagementScreen(
     val withoutGuide = page?.sourcesWithoutGuide.orEmpty()
     val guideProviders = page?.providers.orEmpty()
 
-    // Entry focus, once the list has loaded: opened on a source ([providerId]), the first card it
-    // uses (scrolled into view), else its Add under Sources Without a Guide Source; opened at the
-    // top, the first card. TvEmptyState focuses its action itself (the TV focus contract, plan
-    // Part I, B).
+    // Entry focus once the list has loaded: opened on a source ([providerId]), the first card it uses
+    // (scrolled into view), else its Add under Sources Without a Guide Source; opened at the top, the
+    // first card. TvEmptyState focuses its action itself (the TV focus contract, plan Part I, B).
     val entryRowFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
     val entryAddRowFocus = remember { FocusRequester() }
@@ -310,9 +308,8 @@ fun TvEpgManagementScreen(
                         // Indexing waits until video stops playing.
                         val indexingWaits = indexing && (processingState as? MultiSourceState.Finalizing)?.waitingForPlayback == true
 
-                        // Whether the run that just finished confirmed this source's data hadn't
-                        // changed (304, or a matching content hash) — true only right after that run,
-                        // resets once the next processing state replaces this one.
+                        // Whether the run that just finished found this source's data unchanged (304, or the same content
+                        // hash). True only until the next processing state.
                         val wasUnchanged =
                             (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
 
@@ -532,10 +529,8 @@ fun TvEpgManagementScreen(
 
                                         SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
                                         if (wasUnchanged) {
-                                            // The last run confirmed no change and skipped parsing —
-                                            // the stored download/ingest durations are from whenever
-                                            // it last actually ran, so showing them here would read
-                                            // as work that didn't happen this time.
+                                            // The last run found no change and skipped parsing: the stored download/ingest times are from an
+                                            // older run and would read as work done now.
                                             CinemaText(
                                                 text = stringResource(R.string.epg_source_stat_unchanged),
                                                 role = TextRole.Caption,

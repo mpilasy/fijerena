@@ -88,11 +88,9 @@ fun TvOverlayPanel(
             Column(
                 modifier =
                     Modifier
-                        // Keep focus inside the panel. It is in the screen's own tree, not a Dialog
-                        // window, so without the cancelled exit a D-pad press past the first or last
-                        // row, or Left/Right, moves on to the controls behind it. focusProperties
-                        // must sit right before focusGroup so the exit belongs to the group: without
-                        // the group it froze focus on the row the panel opened on.
+                        // Keep focus inside the panel: it is in the screen's own tree, not a Dialog window, so a D-pad
+                        // press past its edge would move to the controls behind it. focusProperties sits right before
+                        // focusGroup so the exit belongs to the group; without the group, focus froze on the first row.
                         .focusProperties { onExit = { cancelFocusChange() } }
                         .focusGroup(),
             ) {

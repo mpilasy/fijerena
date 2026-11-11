@@ -73,8 +73,7 @@ fun TvLiveRow(
     entries: List<LiveRowEntry>,
     nowPlaying: Map<String, EpgProgram>,
     onEntrySelected: (LiveRowEntry) -> Unit,
-    /** Long-press OK or the Menu key on a card: its actions menu. */
-    /** Null: the cards have no actions (a child profile's Home). */
+    /** Long-press OK or the Menu key on a card: its actions menu. Null: no actions (a child profile's Home). */
     onOpenActions: ((LiveRowEntry) -> Unit)?,
     firstItemFocus: FocusRequester,
     /** See [HomeRow]: the card Back returns to, while it is pending. */

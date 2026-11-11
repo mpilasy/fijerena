@@ -31,9 +31,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * Guide, for a source with live channels: an Xtream source's **Provides a guide** switch (plan
- * D1), showing the effective value — detected, or the viewer's; flipping it is the viewer's choice
- * and applies at once. Then **Guide sources ›** (D3), its value the count and last refresh, opening
+ * Guide, for a source with live channels: an Xtream source's **Provides a guide** switch (plan D1),
+ * showing the effective value (detected, or the viewer's); flipping it is the viewer's choice and
+ * applies at once. Then **Guide sources ›** (D3), its value the count and last refresh, opening
  * this source's guide sources; [guideSourcesModifier] carries its Back focus target. Rows of
  * [pane], the settings column of Edit Source.
  */

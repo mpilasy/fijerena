@@ -119,12 +119,10 @@ internal fun CategoryList(
         preferSelected = true,
     )
 
-    // Focus follows the selection: on open, and when it changes under the list (a "Recent
-    // Categories" row, a deep link). Keyed on the selection's position, not the list itself, so a
-    // re-emitted category list doesn't relaunch a focus attempt that can keep failing (and
-    // flooding logcat) while the list is hidden — see StreamList's identical effect. The pane
-    // scrolls only when the row isn't composed, so OK on a visible category no longer jumps it
-    // to the top.
+    // Focus follows the selection: on open, and when it changes under the list (a "Recent Categories"
+    // row, a deep link). Keyed on the selection's position, not the list, so a list emitted again does
+    // not relaunch a focus attempt that keeps failing while the list is hidden (see StreamList). The
+    // pane scrolls only when the row is not composed, so OK on a visible category does not move the list.
     val selectedIndex =
         remember(regularCategories, selectedCategoryKey) { regularCategories.indexOfFirst { it.key == selectedCategoryKey } }
     var skipFirstSelection by remember { mutableStateOf(!focusSelectedOnOpen) }
@@ -139,8 +137,8 @@ internal fun CategoryList(
     // Built once per list, not once per row (CardDefaults calls are @Composable).
     val cardStyle = TvCardLooks.listRow()
 
-    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a category opens
-    // this menu, in place of the hidden ★ that was an extra Right stop before the items (F-C-5).
+    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a category opens this
+    // menu (F-C-5).
     var actionsCategory by remember { mutableStateOf<MediaCategory?>(null) }
     actionsCategory?.let { category ->
         FavoriteContextMenuDialog(
@@ -155,7 +153,7 @@ internal fun CategoryList(
                 // On the category's own source.
                 val removing = category.key in favoriteCategoryIds
                 categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
-                // Not confirmed any more: removed at once, with an Undo.
+                // Removed at once, with an Undo, no confirmation.
                 if (removing) {
                     undoBar.show(category.name) {
                         if (!categoryViewModel.isFavoriteCategory(category.id, contentType, category.providerId)) {
@@ -168,11 +166,9 @@ internal fun CategoryList(
         )
     }
 
-    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
-    // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
-    // guard the fade/slide replays on every focus move instead of just on first appearance.
-    // Keyed to categories so it resets (bounded) on category-list change instead of growing
-    // unbounded for the composable's whole lifetime.
+    // The entrance animation plays once per item: D-pad scrolling recycles item compositions all the
+    // time, so without this guard it replays on every focus move. Keyed on categories, so the set
+    // resets on a list change and stays small.
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
     Column(modifier = modifier) {
@@ -217,8 +213,8 @@ internal fun CategoryList(
                             onOpenActions = { actionsCategory = category },
                             cardModifier = Modifier.paneItem(paneFocus, category.key).leftToRail(),
                             modifier =
-                                // See StreamList: remember-scoped so recomposition of a visible row
-                                // doesn't drop the modifier and cancel the animation mid-flight.
+                                // See StreamList: remembered, so a recomposition of a visible row does not drop the modifier in
+                                // mid-animation.
                                 if (remember(category.key) { enteredCategoryIds.add(category.key) }) {
                                     Modifier.staggeredEntrance(index)
                                 } else {
@@ -248,11 +244,8 @@ private fun CategoryItem(
     cardModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
 ) {
-    // Marquee only while focused — same reasoning as StreamItem: BounceMarqueeNode runs a
-    // withFrameNanos loop that invalidates draw every frame for as long as its text overflows, and
-    // IPTV category names overflow constantly, so unconditionally every visible row kept its own
-    // loop running. At rest the two look identical: fraction is 0, so the node draws the same
-    // clipped text a plain Text does.
+    // Marquee only while focused, as in StreamItem: BounceMarqueeNode invalidates draw every frame while
+    // its text overflows, and IPTV category names often overflow. At rest both look the same.
     var isFocused by remember { mutableStateOf(false) }
 
     TvCard(

@@ -254,17 +254,16 @@ fun ContentTypeSelectionScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
-    // A child profile's Home (the kids' Home plan, Phase 1): their name in the
-    // header, only what a parent put there, bigger cards, no card menus. Read once: a profile
-    // switch builds Home again.
+    // A child profile's Home (the kids' Home plan, Phase 1): their name in the header, only what a
+    // parent put there, bigger cards, no card menus. Read once: a profile switch builds Home again.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val profiles by remember {
         org.njarasoa.fijerena.core.network.profile
             .ProfileRepository(context.applicationContext)
             .observeProfiles()
     }.collectAsStateWithLifecycle(initialValue = emptyList())
-    // What the profile browses (multi-source plan, Phase 6): its Xtream sources' sections, merged,
-    // and a Browse entry per other source; null until read. There is no source in use.
+    // What the profile browses (multi-source plan, Phase 6): its Xtream sources' sections, merged, and
+    // a Browse entry per other source; null until read.
     var sections by remember { mutableStateOf<ProfileSections?>(null) }
     val supportedContentTypes = sections?.merged.orEmpty()
 
@@ -346,12 +345,12 @@ fun ContentTypeSelectionScreen(
     val wantedState by wantedTitles.state.collectAsStateWithLifecycle()
     var wantedCards by remember { mutableStateOf<List<WantedCard>>(emptyList()) }
     var wantedMenu by remember { mutableStateOf<WantedCard?>(null) }
-    // Home is for what can be played: only the titles a source has (user, 2026-10-22); the
-    // others wait in the sections' Wishlist lists.
+    // Home is for what can be played: only the titles a source has; the others wait in the sections'
+    // Wishlist lists.
     LaunchedEffect(wantedState) { wantedCards = if (child) emptyList() else wantedState.cards().filter { it.isAvailable } }
-    // What the banner announces: available titles no banner has told about yet. They are marked
-    // told (on every device) only once the banner was on screen: on OK, or when Home is left
-    // after showing it — not when Home is built behind the profile picker.
+    // What the banner announces: available titles no banner has told about yet. They are marked told
+    // (on every device) only once the banner was on screen: on OK, or when Home is left after showing
+    // it, not when Home is built behind the profile picker.
     val announced = remember(wantedState) { if (child) emptyList() else wantedState.toAnnounce() }
     val currentAnnounced by rememberUpdatedState(announced)
     val homeLifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow
@@ -389,9 +388,8 @@ fun ContentTypeSelectionScreen(
         newEpisodesBannerSeen = false
     }
 
-    // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
-    // `remember`) so a source that finishes indexing while this screen is on-screen shows the
-    // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
+    // Show the EPG Browser button when the EPG index has data. Collected live, so a source that
+    // finishes indexing while this screen shows gets the icon at once.
     val epgIndexState by remember {
         org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
             .getInstance(context.applicationContext)
@@ -399,9 +397,8 @@ fun ContentTypeSelectionScreen(
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
-    // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
-    // gradient (AmbientBackdrop's default) if there's no watch history yet or the provider
-    // doesn't support it. From the profile's first Xtream source.
+    // A recently watched poster for the backdrop wash, from the profile's first Xtream source; else
+    // AmbientBackdrop's plain gradient.
     LaunchedEffect(mergedLists) {
         val mp = mergedLists?.primary?.getProvider() ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
@@ -416,8 +413,8 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
-    // on every ON_RESUME, so returning from playback immediately reflects updated progress.
+    // The "Jump Back In" shelf: loaded again on a provider switch and on every ON_RESUME, so a return
+    // from playback shows the new progress.
     LaunchedEffect(mergedLists) {
         // A removal's Undo belongs to the source it was made on.
         undoBar.dismiss()
@@ -441,11 +438,10 @@ fun ContentTypeSelectionScreen(
         snapshotFlow { liveRowLoaded }.first { it }
         upcomingGames = loadUpcomingGames(context.applicationContext, child)
     }
-    // The chart rows after the other rows, so their TMDB calls never hold those up. Again when the
-    // Admin switch changes. All six at once: a later second update recomposed the rows under a
-    // card focus had just come back to (Back from a chart card), and focus jumped to a first card.
-    // Again when a Trending row's switch flips.
-    // Admin → Refresh Charts: read again.
+    // The chart rows after the other rows, so their TMDB calls never hold those up. Read again when the
+    // Admin switch changes, a Trending row's switch flips, or Admin → Refresh Charts runs. All six at
+    // once: a later second update recomposed the rows under the card focus had just come back to, and
+    // focus jumped to a first card.
     val chartRefreshes by ChartRows.refreshes.collectAsStateWithLifecycle()
     LaunchedEffect(mergedLists, supportedContentTypes, showCharts, chartsShowMissing, chartRefreshes) {
         val merged = mergedLists ?: return@LaunchedEffect
@@ -504,10 +500,9 @@ fun ContentTypeSelectionScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Back from whatever a card or header button opened lands on that card or button, not on the
-    // first focusable (the "Switch Source" chip). A Continue Watching card waits for the shelf to
-    // reload and is scrolled into view first; a card that left the shelf (finished) falls back to
-    // the first hero card.
+    // Back from what a card or header button opened lands on that card or button, not on the first
+    // focusable. A Continue Watching card waits for the shelf to load and is scrolled into view first;
+    // a card that left the shelf falls back to the first hero card.
     val returnFocus = rememberNavReturnFocus()
     // Once, in composition, so the entry focus below already sees no return key.
     remember {
@@ -565,11 +560,9 @@ fun ContentTypeSelectionScreen(
         }
     }
     // The first card of the first row that has one: where focus opens and where Down from the header
-    // goes. Null with no row at all; the sections are on the navigation rail then.
-    // Derived, so the entry focus below reads the rows as they are now. A value read through
-    // rememberUpdatedState catches up only at the next recomposition: a row that had just loaded
-    // (Continue Watching) was not the first yet, focus went to a lower row's card, and the rows
-    // loading above it pushed that card out of view, so nothing had focus (Back from Settings).
+    // goes. Null with no row; the sections are on the navigation rail then. Derived, so the entry focus
+    // reads the rows as they are now: a value read through rememberUpdatedState is one recomposition
+    // late, so focus went to a lower row's card that the rows loading above then pushed out of view.
     val firstRowFocusState =
         remember(announced, newEpisodesAnnounced) {
             derivedStateOf {
@@ -618,11 +611,9 @@ fun ContentTypeSelectionScreen(
             }
             return@LaunchedEffect
         }
-        // No row at all (a new source, nothing watched yet): the sections are on the rail, so
-        // focus starts there.
-        // After a profile or source switch the rows can come later than that wait: keep waiting
-        // for one, then the rail (hidden by the profile picker a moment ago, so retried until it
-        // is back).
+        // No row at all (a new source, nothing watched yet): the sections are on the rail, so focus starts
+        // there. After a profile or source switch the rows can come later: keep waiting for one, then the
+        // rail (hidden by the profile picker a moment ago, so retried until it is back).
         val target =
             currentFirstRowFocusState.value
                 ?: withTimeoutOrNull(LATE_ROWS_WAIT_MS) { snapshotFlow { currentFirstRowFocusState.value }.first { it != null } }
@@ -746,14 +737,12 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    // Hold OK / Menu on a card (the tv recents favorites plan → A, "Home's
-    // cards"): the list rows' menu. A removal takes the card out of its row at once, focus going
-    // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
-    // puts the card back, focus on it.
+    // Hold OK / Menu on a card (the tv recents favorites plan, A, "Home's cards"): the list rows' menu.
+    // A removal takes the card out of its row at once, with focus on the card that took its place
+    // (cardAfterChange) and the Undo bar; Menu while the bar shows puts the card back, with focus on it.
     var cardMenu by remember { mutableStateOf<HomeCardMenu?>(null) }
-    // One requester per card, attached for good: attaching one only while a request was pending,
-    // then taking it off, changed the focused card's modifiers and focus fell back to the row's
-    // first card (the removal's neighbour got focus, then lost it).
+    // One requester per card, attached for good: attaching one only while a request was pending changed
+    // the focused card's modifiers, and focus fell back to the row's first card.
     val cardFocus = remember { mutableMapOf<HomeCard, FocusRequester>() }
     var cardFocusRequest by remember { mutableStateOf<CardFocusRequest?>(null) }
     val shelfKeys: (HomeShelf) -> List<String> = { shelf ->
@@ -854,9 +843,9 @@ fun ContentTypeSelectionScreen(
             if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
             val requester = cardFocus.getOrPut(card) { FocusRequester() }
             requester.requestFocusWithRetry(fallback = rail?.entry)
-            // Coming from outside the row (the menu had focus), the request enters the row's
-            // focusRestorer, which hands it to the card it remembers — the one just removed — or
-            // the first card. Asked again from inside the row, it lands on the card.
+            // From outside the row (the menu had focus) the request enters the row's focusRestorer, which picks
+            // the card it remembers (the removed one) or the first card. Asked again from inside the row, it
+            // lands on the card.
             withFrameNanos { }
             requester.requestFocus()
         }
@@ -995,9 +984,8 @@ fun ContentTypeSelectionScreen(
                                 true
                         }
                     }
-                // A show's "Mark show watched / unwatched" (the season show watched plan Phase 3),
-                // on every card that stands for a show, as in the lists: null hides it, as on a
-                // source that keeps watched state on its server.
+                // A show's "Mark show watched / unwatched" (the season show watched plan, Phase 3), on every card
+                // that stands for a show; null hides it, as on a source that keeps watched state on its server.
                 val isShowWatched =
                     ref.showSeriesId?.takeIf { repo.supportsMarkWatched }?.let { seriesId ->
                         repo.episodesWatchState(seriesId, null) == true
@@ -1231,7 +1219,7 @@ fun ContentTypeSelectionScreen(
     }
 
     val scale = LocalUiScale.current
-    // A section's Wishlist row: the titles a source has (user, 2026-10-22).
+    // A section's Wishlist row: the titles a source has.
     val wantedRow: @Composable (HomeShelf) -> Unit = { shelf ->
         val cards = wantedOf(shelf)
         if (cards.isNotEmpty()) {
@@ -1320,10 +1308,9 @@ fun ContentTypeSelectionScreen(
             )
         }
     }
-    // A TMDB chart row, in its section's group. Cards as on
-    // the favourite rows; their menu has the favourite toggle and no removal.
-    // A Trending row starts with its switch: OK also shows the titles no source
-    // has (TMDB-only cards, which open their TMDB page), or hides them again.
+    // A TMDB chart row, in its section's group. Cards as on the favourite rows; their menu has the
+    // favourite toggle and no removal. A Trending row starts with its switch: OK shows or hides the
+    // titles no source has (TMDB-only cards, which open their TMDB page).
     val chartRow: @Composable (HomeShelf) -> Unit = { shelf ->
         val chart = shelf.chart
         if (chart != null && chartShows(shelf)) {
@@ -1426,9 +1413,8 @@ fun ContentTypeSelectionScreen(
                     }
                     if (!child) {
                         Row(
-                            // Applies to every button in the row (none is a focus group). The leftover
-                            // width, end-aligned: at a large Text & grid size the source pill gives way
-                            // (ellipsised) and the icon buttons always stay on screen.
+                            // Applies to every button in the row (none is a focus group). Takes the leftover width, end-aligned:
+                            // at a large Text & grid size the source pill gets an ellipsis and the icon buttons stay on screen.
                             modifier =
                                 Modifier
                                     .weight(1f)
@@ -1444,10 +1430,9 @@ fun ContentTypeSelectionScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                         ) {
-                            // One line for all the profile's sources (O3): focusable, opening the sources
-                            // sheet, only when there is something to say. The header's first focusable
-                            // item hands Left to the navigation rail: the line when it opens, else
-                            // Search the guide.
+                            // One line for all the profile's sources (O3): focusable, opening the sources sheet, only when it
+                            // has something to say. The header's first focusable hands Left to the navigation rail: this line
+                            // when it opens, else Search the guide.
                             val summaryOpens = syncSummary.opensSheet
                             if (summaryOpens) {
                                 var summaryFocused by remember { mutableStateOf(false) }
@@ -1540,11 +1525,10 @@ fun ContentTypeSelectionScreen(
                         modifier = Modifier.weight(1f),
                     )
                 } else {
-                    // The rows (TV home overhaul plan, Phase 2; the section tiles went 2026-10-09, the
-                    // navigation rail opens the sections). Scrollable: on a lower-density TV the rows
-                    // can run past the bottom edge. Scrolled only as far as the focused card needs:
-                    // Android TV's default pulls it a third of the way down.
-                    // A child's cards one size up (TvDimensions.kidsHomeScale), text and art alike.
+                    // The rows (TV home overhaul plan, Phase 2; the navigation rail opens the sections). Scrollable: on
+                    // a lower-density TV the rows can pass the bottom edge. Scrolled only as far as the focused card
+                    // needs: Android TV's default pulls it a third of the way down.
+                    // A child's cards are one size up (TvDimensions.kidsHomeScale), text and art alike.
                     val density = LocalDensity.current
                     CompositionLocalProvider(
                         LocalBringIntoViewSpec provides MinimalBringIntoView,
@@ -1626,7 +1610,7 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
-                            // Recent channels second, alone like Continue Watching (user, 2026-10-30).
+                            // Recent channels second, alone like Continue Watching.
                             if (liveRowEntries.isNotEmpty()) {
                                 TvLiveRow(
                                     title = stringResource(R.string.home_live_row_title),
@@ -1664,8 +1648,7 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
-                            // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on
-                            // its section's tint, its favourites first.
+                            // A group per section: Channels, TV Shows, Movies, each on its section's tint, its favourites first.
                             if (favoriteChannelEntries.isNotEmpty() || upcomingGames.isNotEmpty()) {
                                 SectionPanel(
                                     section = ThumbnailContentType.LIVE_TV,
@@ -1681,7 +1664,7 @@ fun ContentTypeSelectionScreen(
                                             bottom = Spacing.xl.scaled(scale),
                                         ),
                                 ) {
-                                    // Upcoming games before the favourite channels (user, 2026-11-01).
+                                    // Upcoming games before the favourite channels.
                                     if (upcomingGames.isNotEmpty()) {
                                         TvUpcomingGamesRow(
                                             title = stringResource(R.string.home_upcoming_games),
@@ -1894,9 +1877,9 @@ fun ContentTypeSelectionScreen(
                 SourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
             }
         }
-        // A game card's sheet, over Home (the sports teams plan → Game sheet): a channel opens as a
-        // guide result; Back closes it onto the card.
-        // The sheet keeps the channels it opened with: a later read of the row (a return to Home) does not reorder them.
+        // A game card's sheet over Home (the sports teams plan, Game sheet): a channel opens as a guide
+        // result; Back closes it onto the card. The sheet keeps the channels it opened with: a later read
+        // of the row does not reorder them.
         val liveSheetGame = openGame?.let { key -> upcomingGames.firstOrNull { it.game.key == key } }
         val sheetGame = remember(openGame, liveSheetGame != null) { liveSheetGame }
         if (sheetGame != null) {
@@ -2049,10 +2032,10 @@ private data class HomeArt(
 
 /**
  * Home's backdrop: the focused card's art once focus has rested on it for [BACKDROP_SETTLE_MS]
- * (so scrolling along a row doesn't flash every card's art), else [fallbackUrl], as the blurred
- * wash; a film's or show's art also shows crisp in the top right, fading into the ground to the
- * left and below (TV visual refresh, Phase 4), crossfading from one title to the next.
- * [focused] is read here, not by the caller, so only this recomposes when focus moves.
+ * (so scrolling along a row does not flash every card's art), else [fallbackUrl], as the blurred
+ * wash. A film's or show's art also shows crisp in the top right, fading into the ground (TV
+ * visual refresh, Phase 4). [focused] is read here, not by the caller, so only this recomposes
+ * when focus moves.
  */
 @Composable
 private fun HomeBackdrop(

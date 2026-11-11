@@ -18,12 +18,11 @@ import kotlinx.coroutines.launch
 
 /**
  * CH+ / CH- and Page Up / Page Down in a long TV list (UX-D9): focus moves one screen of rows up or
- * down, and the list scrolls the same screen, so the focused row stays where it was on the screen
- * and never leaves the view. Put it on the pane that holds the list's `LazyColumn` (outside the
- * column: the column's own scrolling took Page Down and left focus behind, off screen). [keyAt]
- * gives the row key at an index (the key `paneItem` registers), or null for a row that never takes
- * focus (a separator heading). The full-screen player's zap does not pass here: focus is not in a
- * list there.
+ * down, and the list scrolls the same screen, so the focused row keeps its place on the screen. Put
+ * it on the pane that holds the list's `LazyColumn`, outside the column: the column's own scrolling
+ * took Page Down and left focus behind, off screen. [keyAt] gives the row key at an index (the key
+ * `paneItem` registers), or null for a row that never takes focus (a separator heading). The
+ * full-screen player's zap does not come here: focus is not in a list there.
  */
 @Composable
 fun Modifier.pageKeys(

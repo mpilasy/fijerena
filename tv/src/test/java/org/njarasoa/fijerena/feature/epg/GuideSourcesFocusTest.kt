@@ -14,9 +14,9 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Guide Sources, one card for each guide source (`scripts/focus-walks/epg-management.txt`;
+ * TV Settings → Guide Sources, one card per guide source (`scripts/focus-walks/epg-management.txt`;
  * the one guide source per URL plan, Design U), on Source One's one weekly guide source: the
- * switch, the card's buttons, the auto-refresh picker and the way back to its button; Source Two
+ * switch, the card's buttons, the auto-refresh picker and the way back to its button. Source Two
  * has no guide source, so it has its own Add under "Sources Without a Guide Source". Nothing is
  * refreshed, saved or deleted.
  */

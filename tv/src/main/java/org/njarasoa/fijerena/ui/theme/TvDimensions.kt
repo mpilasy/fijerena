@@ -3,10 +3,7 @@ package org.njarasoa.fijerena.ui.theme
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * TV-Specific Dimensions
- * Component sizes optimized for 10-foot viewing distance.
- */
+/** TV component sizes for a 10-foot viewing distance. */
 object TvDimensions {
     val safeMarginHorizontal: Dp = 56.dp
     val safeMarginVertical: Dp = 32.dp
@@ -24,8 +21,8 @@ object TvDimensions {
 
     /**
      * Episode rows are taller than [cardHeight]: they carry a [posterHeight] thumbnail plus the
-     * continue-watching badge, the title and a plot line. At 80.dp the poster was squeezed and the
-     * plot was clipped mid-sentence on exactly the row the viewer is most likely reading.
+     * continue-watching badge, the title and a plot line. At 80.dp the poster was squeezed and the plot
+     * was clipped.
      */
     val episodeCardHeight: Dp = 122.dp
     val trackItemHeight: Dp = 56.dp
@@ -37,31 +34,27 @@ object TvDimensions {
     val iconLarge: Dp = 48.dp
     val iconXLarge: Dp = 64.dp
 
-    // Icon button containers (for player controls)
+    // Icon button containers (player controls).
     val iconButtonSize: Dp = 72.dp
 
     /** An avatar on "Who's watching?": the screen's only content, so sized to be read across the room. */
     val profilePickerAvatarSize: Dp = 160.dp
 
-    // Height of the TMDB logo art rendered in place of the OSD's big title text.
+    // Height of the TMDB logo art shown in place of the OSD's title text.
     val osdLogoHeight: Dp = 56.dp
 
-    // Detail hero (the tv detail hero ui plan). The reference logo art reads much
-    // larger than the OSD's — a plain title-logo swap at osdLogoHeight looked undersized here.
+    // Detail hero (the tv detail hero ui plan): its logo art reads larger than the OSD's.
     val heroLogoHeight: Dp = 96.dp
 
-    // Fraction of the hero's width the text column occupies, left-aligned — stays inside the
-    // scrim's opaque region (see CinemaAlpha.heroScrimFadeStop) instead of running under the
-    // backdrop image, where legibility depends on what that frame happens to show.
+    // Share of the hero's width the text column takes, left-aligned: it stays inside the scrim's opaque
+    // part (see CinemaAlpha.heroScrimFadeStop), not over the backdrop image.
     const val heroContentWidthFraction: Float = 0.55f
 
-    // Height of the hero band as a fraction of its width (Modifier.aspectRatio) — the TV screen's
-    // own aspect ratio, so the "full-bleed" reference look reads as filling the viewport rather
-    // than a bounded strip above a visible page break.
+    // The hero backdrop's aspect ratio: the TV screen's own. TvDetailHero's minimum height is a share
+    // of the height it gives.
     const val heroBackdropAspect: Float = 16f / 9f
 
-    // Width of the hero's sideSlot (the series "Next Up" card) — wide enough for a thumbnail plus
-    // two lines of plot text without crowding the backdrop's opaque-to-transparent scrim.
+    // Width of the hero's side slot (the series "Next Up" note), clear of the backdrop's scrim.
     val heroSideSlotWidth: Dp = 340.dp
 
     val progressIndicator: Dp = 48.dp
@@ -98,6 +91,5 @@ object TvDimensions {
     val borderFocusedStats: Dp = 3.dp
     val borderThin: Dp = 0.5.dp
 
-    // Design system: sizes that were literals in component code.
     val detailLabelWidth: Dp = 180.dp
 }

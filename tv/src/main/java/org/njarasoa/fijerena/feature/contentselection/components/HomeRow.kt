@@ -48,7 +48,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  *
  * [restoreFocus]: the card Back returns to, while that hand-back is pending and the card is in this
  * row (`NavReturnFocus.requesterWhere`). Back rebuilds Home, so the restorer remembers no card, and
- * its fallback took the hand-back from the card to the row's first card.
+ * its fallback would send the hand-back to the row's first card.
  *
  * [leading]: a control in the row's header, after its title (a Trending chart row's switch), so
  * the cards start where every other row's cards start. It takes the rail's Left, Left on the first

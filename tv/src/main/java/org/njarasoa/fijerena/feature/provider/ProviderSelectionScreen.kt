@@ -104,7 +104,7 @@ fun TvProviderSelectionScreen(
     var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var actionsMenuProvider by remember { mutableStateOf<ProviderEntity?>(null) }
 
-    // Refresh provider list when screen is shown (e.g., after adding a provider)
+    // Load the provider list again when the screen shows (after adding a provider).
     LaunchedEffect(Unit) {
         viewModel.loadProviders()
     }
@@ -278,7 +278,7 @@ private fun ProviderList(
     entryRowFocusRequester: FocusRequester,
 ) {
     val scale = LocalUiScale.current
-    // Focus opens on the first row: there is no source in use to land on (multi-source plan, Phase 6).
+    // Focus opens on the first row (multi-source plan, Phase 6).
     val entryId = providers.firstOrNull()?.id
     LazyColumn(
         state = listState,
@@ -288,14 +288,11 @@ private fun ProviderList(
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             val status = statuses[provider.id]
-            // One focus stop per row, OK = Edit; the trailing actions sit in a fixed-width slot that
-            // stays in place when empty (Guide on a source without live channels), so Up/Down from
-            // a slot lands on the same slot of the next row and Right from the row walks Guide → ⋮
-            // (TV focus contract, rule 1; A-10).
-            // The row's resting surface spans the whole width, slots included, so a row reads as
-            // one full-width row whatever buttons it shows (TV UI audit #18).
-            // The focus ring goes round the whole row (slots included) while the row's main stop has
-            // focus, not round the main stop alone (consistency round 2, finding 36).
+            // One focus stop per row, OK = Edit. The trailing actions sit in a fixed-width slot that stays when
+            // empty (Guide on a source without live channels), so Up/Down from a slot lands on the same slot of
+            // the next row and Right from the row walks Guide → ⋮ (TV focus contract, rule 1; A-10). The
+            // row's resting surface spans the whole width, slots included (TV UI audit #18), and so does
+            // its focus ring while the main stop has focus (consistency round 2, finding 36).
             var rowFocused by remember { mutableStateOf(false) }
             Row(
                 modifier =
@@ -341,7 +338,7 @@ private fun ProviderList(
                 // Icons at the slot's end: the focused one's name grows into the slot, so nothing
                 // beside it moves (icon-buttons plan).
                 Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
-                    // Guide sources only apply to sources that carry live channels
+                    // Guide sources apply only to sources with live channels.
                     if (MediaProviderFactory.hasLiveTv(provider)) {
                         TvIconAction(
                             onClick = { onManageEpg(provider.id) },
@@ -351,8 +348,8 @@ private fun ProviderList(
                         )
                     }
                 }
-                // Duplicate / Copy to… / Delete with real text labels —
-                // see ProviderActionsMenuDialog. White like the slots' icons, not the accent.
+                // Duplicate / Copy to… / Delete with text labels (see ProviderActionsMenuDialog). White like the
+                // slots' icons, not the accent.
                 CinemaIconButton(
                     onClick = { onMoreActions(provider) },
                     icon = {

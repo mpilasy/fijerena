@@ -134,10 +134,10 @@ internal fun NavController.selectRailItem(
             }
         }
 
-        // From Settings or Search opened over a section, that section's item goes back to where
-        // you were in it — the film, not the section's start. Both go, also when one was opened
-        // over the other: popping only the top one showed the other (TV walk C2). Another
-        // screen lit elsewhere (a team's page) is popped, as before.
+        // From Settings or Search opened over a section, that section's item goes back to where you were
+        // in it (the film, not the section's start). Both go, also when one was opened over the other:
+        // popping only the top one showed the other (TV walk C2). Another lit screen (a team's page) is
+        // popped.
         section != null && section == currentSection() && current != item -> {
             if (!dropSearchAndSettings()) popBackStack()
         }

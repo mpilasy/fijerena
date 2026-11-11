@@ -23,17 +23,17 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * The one TV screen header (TV UI audit, X6): [title] with an optional one-line [subtitle] on the
  * left, the screen's icon [actions] on the right, all on one row. Same title style and size as
- * Settings' "Settings" (`displaySmall`), and the same gap ([Spacing.lg]) to the content below, so
- * every screen's header sits and reads the same.
+ * Settings' "Settings" (`displaySmall`) and the same gap ([Spacing.lg]) to the content below, so
+ * every screen's header looks the same.
  *
- * It adds no safe-area padding of its own: put it first inside the screen's root, which carries
+ * It adds no safe-area padding: put it first inside the screen's root, which carries
  * `Spacing.tvSafeMarginHorizontal` / `tvSafeMarginVertical` as every TV screen does.
  *
  * [actions] holds the screen's icon buttons ([org.njarasoa.fijerena.ui.components.buttons.TvIconAction],
  * which name themselves while focused), spaced for you; never text buttons. [leading] is for what
- * sits before the title, and is usually left out. The header
- * itself is not focusable: focus moves between the buttons in it, and the screen decides how
- * Down / Up cross between the header and its content (CONTRIBUTING.md → focus contract).
+ * sits before the title, usually left out. The header is not focusable: focus moves between its
+ * buttons, and the screen decides how Down / Up cross between the header and its content
+ * (CONTRIBUTING.md → focus contract).
  *
  * ```
  * Column(

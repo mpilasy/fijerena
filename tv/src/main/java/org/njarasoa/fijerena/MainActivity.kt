@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.autoUiScale
 
 class MainActivity : ComponentActivity() {
-    /** Read once — a SharedPreferences hit per key event would be its own problem. */
+    /** Read once: a SharedPreferences read per key event would cost too much. */
     private val logKeyEvents by lazy { AppSettings(applicationContext).isAdmin }
 
     override fun attachBaseContext(newBase: android.content.Context) {
@@ -33,13 +33,13 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Must run before super.onCreate() — this is what paints the marble over the cold-start
-        // window instead of leaving it bare black until Compose's first frame.
+        // Must run before super.onCreate(): it paints the marble over the cold-start window instead of
+        // black until Compose's first frame.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Hold the splash until Compose has actually drawn, then hand off to AppLoadingScreen,
-        // which carries the same marble on the same black while the nav host finishes init.
+        // Hold the splash until Compose has drawn, then hand off to AppLoadingScreen, which shows the same
+        // marble on the same black while the nav host finishes init.
         var contentReady = false
         splash.setKeepOnScreenCondition { !contentReady }
         splash.setOnExitAnimationListener { provider ->
@@ -57,8 +57,8 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) GameReminderAlerts.handleLaunchIntent(intent)
 
         val appSettings = AppSettings(applicationContext)
-        // The active profile's colour theme, Look and Feel and poster background: follows a profile switch, a change in
-        // Settings and one received from another device. Before a profile is picked, the last one used.
+        // The active profile's colour theme, Look and Feel and poster background: follows a profile switch,
+        // a change in Settings and one from another device. Before a profile is picked, the last one used.
         val look = appSettings.observeLook()
         val initialLook = appSettings.look(appSettings.activeProfileId)
         var uiScale by mutableStateOf(appSettings.uiScaleChoice ?: autoUiScale(this))
@@ -66,9 +66,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val (themeId, uiStyleId, posterBackdrop) = look.collectAsState(initial = initialLook).value
             val currentDensity = LocalDensity.current
-            // Create a scaled density based on the user's preference.
-            // This ensures that all dp and sp values are automatically scaled.
-            // We only scale the base density, not fontScale, to avoid double-scaling text.
+            // Scale the base density by the user's choice, so every dp and sp scales. Not fontScale: that would
+            // scale text twice.
             val scaledDensity =
                 Density(
                     density = currentDensity.density * uiScale,
@@ -104,12 +103,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Unlike mobile, TV has no background-playback feature (PiP is mobile-only — see
-    // docs/RELEASE_NOTES.md) — leaving to the launcher has no reason to leave the stream, the
-    // decoder, and the wake lock running. isChangingConfigurations guards the (currently
-    // theoretical, TV is fixed-orientation) config-change case. stopAndRelease (not stop) fully
-    // tears down the native player/decoder buffers instead of just halting playback — see its
-    // kdoc for why leaving them resident caused freezes browsing categories afterward.
+    // TV has no background playback (PiP is mobile-only), so leaving to the launcher stops the stream,
+    // the decoder and the wake lock. isChangingConfigurations guards a config change (theoretical: TV is
+    // fixed-orientation). stopAndRelease, not stop, tears down the native player/decoder buffers (see
+    // its KDoc: leaving them caused freezes while browsing).
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations) {
@@ -140,11 +137,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Every D-pad press, including the repeat stream from a held key, used to log unconditionally —
-     * with string interpolation — on the one path where latency is most visible. Kept behind dev
-     * mode because the timestamps are genuinely useful: comparing them against injected key events
-     * is how the "cursor dead then replays" stall was shown to be a rendering backlog rather than
-     * lost input.
+     * Key events are logged only for an Admin ([logKeyEvents]): logging every D-pad press (and a held
+     * key's repeats) adds latency on this path. The timestamps showed that the "cursor dead then
+     * replays" stall was a rendering backlog, not lost input.
      */
     // RestrictedApi is a false positive here: lint resolves the override to androidx.core's
     // @RestrictTo ComponentActivity.dispatchKeyEvent, but this overrides Activity's public one.

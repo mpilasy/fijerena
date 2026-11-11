@@ -49,22 +49,20 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * One row of section-tab pills (Cast / Details / Similar / ...), TV detail screens' equivalent of
- * [EpisodeSelectionScreen][org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen]'s season
- * tabs — same focus/selection shape, generalised to plain labels instead of `SeasonInfo`. See
- * the tv detail hero ui plan Phase 4.
+ * One row of section-tab pills (Cast / Details / Similar / ...) for TV detail screens, with the
+ * same focus/selection shape as [EpisodeSelectionScreen][org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen]'s
+ * season tabs (the tv detail hero ui plan, Phase 4).
  *
- * D-pad left/right moves focus between tabs via Compose's default focus search inside this Row —
- * each tab selects as soon as it receives focus, so movement alone switches the visible section.
+ * D-pad left/right moves focus between tabs, and each tab selects when it gets focus, so moving
+ * alone switches the visible section.
  *
- * [entryFocusRequester], if given, is attached to whichever tab is currently selected — the same
- * requester a caller uses both to send D-pad Down from above into this row (landing on the
- * selected tab, not whichever one default geometry search prefers) and, later, to send Back from
- * inside the open section back to this row rather than out of the screen.
+ * [entryFocusRequester], if given, is attached to the selected tab: a caller uses it to send D-pad
+ * Down from above into this row (on the selected tab, not where geometry search prefers) and Back
+ * from inside the open section back to this row instead of out of the screen.
  *
- * Right on the last tab goes to [endFocusRequester] when given (a control at the end of the
- * row), else stays put: left to geometric search it escaped the row — on a movie with only a
- * Details tab it jumped up to Play. *
+ * Right on the last tab goes to [endFocusRequester] when given (a control at the end of the row),
+ * else stays: with geometric search it left the row (with only a Details tab it jumped to Play).
+ *
  * [firstTabModifier] goes on the first tab only: a screen whose tab row starts at its left edge
  * passes `Modifier.leftToRail()` there, so Left from the first tab opens the TV navigation rail.
  */
@@ -85,10 +83,8 @@ fun TvSectionTabs(
     icons: List<ImageVector?> = emptyList(),
 ) {
     val scale = LocalUiScale.current
-    // One FocusRequester per tab, explicitly wired to its left/right neighbor below — Compose's
-    // default geometry-based focus search proved unreliable for this exact row shape on real
-    // hardware (see SeasonTabs in EpisodeSelectionScreen.kt for the original finding); explicit
-    // wiring makes it deterministic here too.
+    // One FocusRequester per tab, wired to its left/right neighbour below: default geometric search is
+    // not reliable for this row shape on real hardware (see SeasonTabs in EpisodeSelectionScreen.kt).
     val focusRequesters = remember(tabs) { tabs.map { FocusRequester() } }
 
     Row(
@@ -102,9 +98,9 @@ fun TvSectionTabs(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // When the row is too narrow, the longest label gives way (one line, "…") instead of the
-        // tabs after it: a long category tab ("FR| FRANCE SPORT VIP RAW") left Favorites a column one
-        // letter wide in the Live TV panel. Weighted children are measured after the others.
+        // When the row is too narrow, the longest label gives way (one line, "…"), not the tabs after it: a
+        // long category tab left Favourites a column one letter wide in the Live TV panel. Weighted children
+        // are measured after the others.
         val longest = tabs.indices.maxByOrNull { tabs[it].length } ?: -1
         tabs.forEachIndexed { index, label ->
             val giveWay = if (index == longest) Modifier.weight(1f, fill = false) else Modifier
@@ -116,8 +112,7 @@ fun TvSectionTabs(
                 focusRequester = focusRequesters[index],
                 previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
                 nextTabFocusRequester = focusRequesters.getOrNull(index + 1) ?: endFocusRequester ?: FocusRequester.Cancel,
-                // Second requester on the same node, alongside `focusRequester` above — only the
-                // selected tab gets it, and it moves with selection as `selectedIndex` changes.
+                // Second requester on the same node, only on the selected tab; it moves with the selection.
                 entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
                 modifier = giveWay.then(if (index == 0) firstTabModifier else Modifier),
             )
@@ -145,10 +140,8 @@ private fun SectionTab(
         label = "section_tab_focus_scale",
     )
 
-    // Focus-follow-select, not a separate OK press — same rationale as SeasonTab: a tab row this
-    // immediate reads better than requiring an extra confirm. Deferred to LaunchedEffect rather
-    // than called straight from onFocusChanged, so the state write happens after Compose's own
-    // focus-transfer transaction settles, not in the middle of it.
+    // Focus-follow-select, as in SeasonTab. Called from a LaunchedEffect, not from onFocusChanged, so the
+    // state write happens after Compose's focus transfer, not in the middle of it.
     LaunchedEffect(isFocused) {
         if (isFocused) onSelected()
     }

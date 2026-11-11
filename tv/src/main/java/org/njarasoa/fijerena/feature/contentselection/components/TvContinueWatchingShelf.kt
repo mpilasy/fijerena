@@ -71,16 +71,12 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
-/**
- * Home-screen "Jump Back In" row — see the ui ux transitions flow uplift plan,
- * Phase 3.
- */
+/** Home's "Jump Back In" row (the ui ux transitions flow uplift plan, Phase 3). */
 @Composable
 fun TvContinueWatchingShelf(
     items: List<ContinueWatchingItem>,
     onItemSelected: (ContinueWatchingItem) -> Unit,
-    /** Long-press OK or the Menu key on a card: its actions menu. */
-    /** Null: the cards have no actions (a child profile's Home). */
+    /** Long-press OK or the Menu key on a card: its actions menu. Null: no actions (a child profile's Home). */
     onOpenActions: ((ContinueWatchingItem) -> Unit)?,
     firstItemFocus: FocusRequester,
     /** See [HomeRow]: the card Back returns to, while it is pending. */
@@ -166,9 +162,9 @@ private fun TvContinueWatchingCard(
                     // The row-actions hint, as on the focused list row.
                     if (isFocused && onOpenActions != null) RowActionsHint()
                 }
-                // An episode's title repeats the series' raw name, which the line above already shows;
-                // on a card's width only its number fits beside the time left ("S18E01 • 35m left",
-                // TV UI audit X4), so the number stands for it when there is one.
+                // An episode's title repeats the series' raw name, which the line above shows; on a card's width
+                // only its number fits beside the time left ("S18E01 • 35m left", TV UI audit X4), so the number
+                // stands for it when there is one.
                 val episode =
                     item.subtitle?.let { subtitle ->
                         val own = episodeTitleWithoutSeries(subtitle, item.name)

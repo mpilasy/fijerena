@@ -217,11 +217,10 @@ fun TvNavHost(
     // by the section's first composition. Lost with the process, which only means browse instead.
     var liveTvOpenOn by remember { mutableStateOf<MediaItem?>(null) }
 
-    // Live TV opened fresh is the browse screen with the preview as a layer over it, open on the
-    // last channel (LT7) — so Back from the preview lands on a real browse screen, same as Movies
-    // and TV Shows. A restored Live TV ignores it: coming back never starts video on its own.
-    // No last channel, no preview: it would render an empty pane with no way to reach the
-    // categories, stranding a first-run user; OK on a channel in browse opens it anyway.
+    // Live TV opened fresh is the browse screen with the preview as a layer over it, open on the last
+    // channel (LT7), so Back from the preview lands on a real browse screen. A restored Live TV ignores
+    // it: coming back never starts video on its own. No last channel, no preview: an empty pane would
+    // give a first-run user no way to the categories.
     fun openSection(section: TvSection) {
         if (section == TvSection.LIVE_TV) {
             coroutineScope.launch {
@@ -275,20 +274,17 @@ fun TvNavHost(
         }
     }
 
-    // Async initialization — use cached provider flag for instant start destination,
-    // then verify with Room DB in background
+    // Start from the cached provider flag at once, then check it against Room.
     suspend fun initializeStartup() {
         val providerRepo = ProviderRepository(context.applicationContext)
         val cachedHasProvider = appSettings.hasProviderCache
 
         if (cachedHasProvider) {
-            // Fast path: trust cache for immediate UI, verify with DB
             val providerCount = providerRepo.getProviderCount()
             hasProvider = providerCount > 0
             appSettings.hasProviderCache = providerCount > 0
         } else {
-            // Cold start or no providers — check DB
-            // Migrate legacy AccountManager credentials to Room if needed
+            // No cached provider: check the DB, and move legacy AccountManager credentials to Room if needed.
             if (providerRepo.getProviderCount() == 0) {
                 val legacyCreds = accountManager.exportForMigration()
                 if (legacyCreds != null) {
@@ -315,9 +311,8 @@ fun TvNavHost(
     LaunchedEffect(Unit) {
         // A providers.db from a newer build can't be opened: same skip, its own screen.
         if (SafeMode.isActive || ProvidersDbGuard.isBlocked) {
-            // Crash-loop safe mode: none of initializeStartup()'s provider lookups, migration or
-            // orphan sweep — any of them may be what kept crashing. The safe-mode screen is the
-            // start destination.
+            // Crash-loop safe mode: skip initializeStartup()'s provider lookups, migration and orphan sweep,
+            // as any of them may be the crash. The safe-mode screen is the start destination.
             initializationComplete = true
         } else {
             initializeStartup()
@@ -391,9 +386,8 @@ fun TvNavHost(
                 // A merged Recent / Favourites row opens on its own source (multi-source plan, Phase 4).
                 val source = rowSource.takeIf { it != 0L } ?: providerId
                 when (target) {
-                    // Continue Watching: the card represents the show, not the
-                    // episode — open episode selection with the last-watched
-                    // episode's detail/resume panel already up.
+                    // Continue Watching: the card stands for the show, so open episode selection with the
+                    // last-watched episode's panel already open.
                     is BrowseTarget.Series -> {
                         navController.navigateOnce(
                             Screen.EpisodeSelection(
@@ -406,8 +400,7 @@ fun TvNavHost(
                         )
                     }
 
-                    // The card represents one episode — play it, whether or not it
-                    // can name the show it belongs to.
+                    // The card stands for one episode: play it, also when it cannot name its show.
                     is BrowseTarget.Episode -> {
                         navController.navigateOnce(
                             Screen.Player(
@@ -435,9 +428,9 @@ fun TvNavHost(
                         )
                     }
 
-                    // Live TV: land on the preview pane, not full-screen. Browse opens
-                    // its preview as a layer itself (TvCategoryGridScreen, LT7); this
-                    // is only the channel panel's fallback for a row it cannot resolve.
+                    // Live TV: the preview pane, not full screen. Browse opens its preview as a layer itself
+                    // (TvCategoryGridScreen, LT7); this is only the channel panel's fallback for a row it cannot
+                    // resolve.
                     is BrowseTarget.Channel -> {
                         navController.navigateOnce(
                             Screen.CategoryList(
@@ -482,10 +475,9 @@ fun TvNavHost(
                 navController.navigateOnce(catchupRoute(program, channel, channel.providerId.takeIf { it != 0L } ?: providerId))
             },
             onBack = {
-                // A single pop always lands on whatever pushed this entry — Home under a
-                // section's browse, or the search/EPG screen underneath a
-                // search/EPG-originated preview. Live TV browse's own preview layer
-                // closes back to browse before this is reached (LT7).
+                // A single pop lands on what pushed this entry: Home under a section's browse, or the search/EPG
+                // screen under a preview it opened. Live TV browse's preview layer closes to browse before this
+                // (LT7).
                 navController.popBackStack()
             },
             onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
@@ -539,20 +531,16 @@ fun TvNavHost(
                     NavHost(
                         navController = navController,
                         startDestination = startDestination,
-                        // Declared, not inherited: with none of these set, navigation-compose applies its
-                        // own default of fadeIn/fadeOut over 700ms, during which both the outgoing and
-                        // incoming screen are composed and drawn at once. That is a long time to hold two
-                        // full screens live on a Shield, and Live TV pushes two entries back to back so it
-                        // paid for it twice. Fade rather than mobile's slide: a slide has to lay out both
-                        // screens off-axis, and on a 10-foot D-pad UI it reads as drift rather than
-                        // direction.
+                        // Declared, not inherited: navigation-compose's default is a 700 ms fade with both screens composed
+                        // and drawn, a heavy cost on a Shield (Live TV pushes two entries back to back). A fade, not
+                        // mobile's slide: on a D-pad UI a slide reads as drift.
                         enterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                         exitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                         popEnterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                         popExitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                     ) {
                         composable<Screen.ContentTypeSelection> { homeEntry ->
-                            // Prevent back button from exiting the app on the root screen
+                            // Back must not leave the app from the root screen.
                             BackHandler {}
                             val openOnFirstCard = remember { homeEntry.savedStateHandle.remove<Boolean>(OPEN_HOME_ON_FIRST_CARD) == true }
                             // A tile opens its section where it was left — the rail's place for it too.
@@ -564,10 +552,8 @@ fun TvNavHost(
                                 onWantedSelected = { navController.navigateOnce(it) },
                                 onGameChannelSelected = { navController.navigateOnce(it) },
                                 onCapabilitiesResolved = { mergedTypes ->
-                                    // Skip the picker tap entirely when the profile has one section,
-                                    // but only on the very first resolve per NavHost lifetime, so
-                                    // Back-navigation into this screen later still lands on a real,
-                                    // interactive Home.
+                                    // Skip Home when the profile has one section, but only on the first resolve per NavHost, so Back
+                                    // to this screen later lands on a real Home.
                                     if (!hasAutoSkippedSingleContentType) {
                                         hasAutoSkippedSingleContentType = true
                                         if (mergedTypes.size == 1) {
@@ -633,8 +619,7 @@ fun TvNavHost(
                                     )
                                 },
                                 onContinueWatchingSelected = { item ->
-                                    // Same dispatch as CategoryList's Recent row (below) — a shelf card is
-                                    // just another resumable entry, and should route exactly like one.
+                                    // Same dispatch as CategoryList's Recent row (below): a shelf card is another resumable entry.
                                     when (val target = item.target) {
                                         is BrowseTarget.Series -> {
                                             navController.navigateOnce(
@@ -747,9 +732,8 @@ fun TvNavHost(
                                     )
                                 },
                                 onNavigateToPlayer = { matched ->
-                                    // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
-                                    // Pushing (not popUpTo) a new CategoryList entry means Back from the
-                                    // preview pops back here for free via normal nav-stack semantics.
+                                    // The preview pane, not full screen (see LiveTvSplitLayout). A pushed CategoryList entry, so Back
+                                    // from the preview pops back here.
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = ContentType.LIVE_TV,
@@ -983,9 +967,8 @@ fun TvNavHost(
                                         }
 
                                         else -> {
-                                            // Live TV: land on the preview pane, not full-screen. Pushing
-                                            // (not popUpTo) means Back from the preview pops back to these
-                                            // search results for free via normal nav-stack semantics.
+                                            // Live TV: the preview pane, not full screen. A pushed entry, so Back from the preview pops back
+                                            // to these search results.
                                             navController.navigateOnce(
                                                 Screen.CategoryList(
                                                     contentType = streamContentType,
@@ -1140,8 +1123,7 @@ fun TvNavHost(
                                 providerId = epgScreen.providerId,
                                 // Each row on its own source: a Recent or Favourites guide lists every source's.
                                 onProgramSelected = { _, channel ->
-                                    // Land on the preview pane, not full-screen. Pushing (not popUpTo)
-                                    // means Back from the preview pops back to the EPG guide for free.
+                                    // The preview pane, not full screen. A pushed entry, so Back from the preview pops back to the guide.
                                     navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
                                 },
                                 // Catch-up: the programme from the channel's archive, full screen.
@@ -1260,8 +1242,8 @@ fun TvNavHost(
 
                         composable<Screen.ProfilePicker> {
                             HideTvNavRail()
-                            // The launch picker is the first screen: Back there doesn't leave the
-                            // app (household UX plan, 2026-10-19). From the rail, Back returns.
+                            // The launch picker is the first screen: Back there does not leave the app (household UX plan).
+                            // From the rail, Back returns.
                             BackHandler(enabled = navController.previousBackStackEntry == null) {}
                             ProfilePickerScreen(
                                 onProfileChosen = {
@@ -1276,7 +1258,7 @@ fun TvNavHost(
                         }
 
                         composable<Screen.Settings> {
-                            // Prevent back from exiting if Settings is the start destination (no provider)
+                            // Back must not leave the app when Settings is the start destination (no provider).
                             BackHandler(enabled = navController.previousBackStackEntry == null) {}
                             SettingsScreen(
                                 onBack = {
@@ -1348,11 +1330,8 @@ fun TvNavHost(
                 }
                 // The app's plain messages (AppNotices), over the screens; never focused.
                 TvNoticeHost()
-                // A game reminder while the app is on screen, over everything; it takes the remote's
-                // keys until it closes, and focus stays where it is. Watch tunes as a tapped reminder notification does (below);
-                // Manage reminders opens the Reminders page.
-                // A phone of the sync group sends something: asks first, then plays it. Waits behind the
-                // reminder banner and any dialog. See the send to TV plan.
+                // A phone of the sync group sends something: ask first, then play it. Waits behind the reminder
+                // banner and any dialog. See the send to TV plan.
                 TvSendToTvHost(
                     state = sendBanner,
                     isBusy = { navController.currentDestination?.isBusyForSend() != false },
@@ -1383,6 +1362,9 @@ fun TvNavHost(
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
+                // A game reminder while the app is on screen, over everything. It takes the remote's
+                // keys until it closes, and focus stays where it is. Watch tunes as a tapped reminder
+                // notification does (below); Manage reminders opens the Reminders page.
                 TvGameReminderBanner(
                     state = reminderBanner,
                     onWatch = { alert -> alert.channel?.let { GameReminderAlerts.requestTune(ReminderTune(alert.profileId, it)) } },
@@ -1412,8 +1394,7 @@ fun TvNavHost(
                 }
             }
         } else {
-            // Provider lookup / credential migration / session restore — used to be a blank
-            // window for however long that took.
+            // Provider lookup, credential migration and session restore run meanwhile.
             AppLoadingScreen()
         }
     }

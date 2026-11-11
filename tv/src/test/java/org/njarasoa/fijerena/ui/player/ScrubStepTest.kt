@@ -31,8 +31,8 @@ class ScrubStepTest {
             total += scrubStepMs(repeat++, t)
             t += 50L
         }
-        // ~1.5 min + 10 min + ~50 min: a 2h film's end is reachable in ~15s, but no
-        // 40-min-per-second runaway like the old repeatCount tiers.
+        // ~1.5 min + 10 min + ~50 min: a 2 h film's end is reachable in ~15 s, with no 40-min-per-second
+        // runaway.
         assertTrue("total=$total", total in 3_000_000L..4_000_000L)
     }
 

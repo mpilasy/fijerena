@@ -36,13 +36,12 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * D-pad toggle rows.
  *
- * Each row is a single focus target: the row itself owns the click and the focus, and the
- * checkbox / radio / switch inside it is an inert indicator (`onCheckedChange = null`). The
- * previous shape — a `Modifier.focusable()` wrapper around an independently focusable Material3
- * control — produced two D-pad stops per item, only one of which responded to OK.
+ * Each row is one focus target: the row owns the click and the focus, and the checkbox / radio /
+ * switch inside it is an inert indicator (`onCheckedChange = null`). A focusable wrapper around a
+ * focusable Material3 control gave two D-pad stops per item, only one of which took OK.
  *
- * These use the TV flavours of the controls (`androidx.tv.material3`), not the touch ones, so the
- * indicator sizing and colours match the rest of the 10-foot UI.
+ * They use the TV controls (`androidx.tv.material3`), not the touch ones, so the indicator sizes
+ * and colours match the rest of the 10-foot UI.
  *
  * The check and radio rows are the options of a list (a filter, a picker), as the phone's
  * `CinemaCheckRow` and `CinemaRadioRow`: the label is Body, Heading when it is a name (a source, a

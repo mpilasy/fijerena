@@ -34,10 +34,10 @@ object TvButtonStyle : ButtonStyle() {
     const val AREA_WIDTH_FRACTION = 0.5f
 
     /**
-     * Focus (TV visual refresh, 2026-10-17): every focused button, whatever its kind, turns solid
-     * [TvFocusTokens.focusFill] (white unless the theme states its own) with the Display style's
-     * focus scale and no ring; the label goes dark, or the danger colour on a deleting button. On
-     * a theme's own fill a deleting button's label stays dark: red does not read on Indigo's yellow.
+     * Focus (TV visual refresh): every focused button turns solid [TvFocusTokens.focusFill] (white
+     * unless the theme sets its own) with the Display style's focus scale and no ring; the label goes
+     * dark, or the danger colour on a deleting button. On a theme's own fill a deleting button's label
+     * stays dark: red does not read on Indigo's yellow.
      */
     val focusedContainer: Color
         @Composable @ReadOnlyComposable

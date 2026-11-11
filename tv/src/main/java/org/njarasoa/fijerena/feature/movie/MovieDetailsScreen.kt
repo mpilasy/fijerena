@@ -162,8 +162,8 @@ fun MovieDetailsScreen(
         viewModel.refreshResumeState()
         onPauseOrDispose {}
     }
-    // A child profile's (the kids' Home plan, Phase 2): no way on to the category,
-    // and no favourite to undo — it reached this film from its Home. More Like This stays, filtered.
+    // Child profile (the kids' Home plan, Phase 2): no Category button and no favourite undo.
+    // More Like This stays, filtered.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
@@ -280,10 +280,8 @@ private fun MovieDetailsContent(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf(appSettings.providerName) }
-    // AppSettings.providerName is the legacy single-provider key and is never written once a
-    // provider lives in Room — it stays "My Provider" (its hardcoded default) for every provider
-    // added since. Same fix as TwoColumnLayout.kt's category grid: read the route's source's
-    // name from the DB and use that instead.
+    // AppSettings.providerName is the legacy single-provider key: it stays "My Provider" for every
+    // Room provider. Read the route's source's name from the DB instead, as TwoColumnLayout.kt does.
     LaunchedEffect(providerId) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
@@ -300,36 +298,24 @@ private fun MovieDetailsContent(
     // True once the row actually reports itself focused — lets the reassertion loop below stop
     // as soon as it has actually won, instead of guessing how many frames that takes.
     var streamRowFocused by remember { mutableStateOf(false) }
-    // Bumped in onSelect, independent of resumePositionMs: selecting a dropdown item destroys
-    // that focused node, and Compose has nothing left to restore to, so focus falls to the
-    // window root and D-pad input goes nowhere until this claims it back for the row. Also
-    // doubles as "a switch has happened this screen instance" — see the resumePositionMs effect
-    // below, which reads it as a sticky flag, not a one-shot: a single-shot flag consumed by the
-    // first post-switch resumePositionMs change would leave a later one (e.g. a slow network
-    // fetch resolving after a fast cache draw) free to steal focus back to Play. See the same
-    // fix on EpisodeSelectionScreen's stream picker for the case that actually double-fires.
-    // rememberSaveable, not remember: this composable is disposed when Play navigates to the
-    // player and recomposed fresh on return, same as EpisodeSelectionScreen's identical signal —
-    // a plain remember forgot the switch across that trip and stole focus back to Play. See
-    // the episode selection fragility plan.
+    // Bumped in onSelect: selecting a dropdown item destroys the focused node, so focus falls to the
+    // window root and the D-pad does nothing until this claims it back for the row. The
+    // resumePositionMs effect below also reads it as a sticky "a switch happened" flag: a later
+    // resumePositionMs change (a slow network fetch after a fast cache draw) must not take focus back
+    // to Play. rememberSaveable, because the screen is disposed while the player is open (see
+    // EpisodeSelectionScreen's identical signal and the episode selection fragility plan).
     var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }
 
-    // Phase 4 tab shell (the tv detail hero ui plan): one FocusRequester, attached by
-    // TvSectionTabs to whichever tab is currently selected, serves both directions — D-pad Down
-    // from the action row into the tab row, and Back from inside the open section back to the
-    // tab row instead of out of the screen.
+    // One FocusRequester on the selected tab (the tv detail hero ui plan, Phase 4): D-pad Down from
+    // the action row and Back from inside a section both go to it.
     val tabRowFocusRequester = remember { FocusRequester() }
     // True while focus is anywhere inside the selected tab's section content — read by the
     // LazyColumn's onPreviewKeyEvent below to decide what Back does.
     var focusInSection by remember { mutableStateOf(false) }
 
-    // Fallback for any state where the LazyColumn's onPreviewKeyEvent below isn't in the tree
-    // yet (e.g. very first composition) — the real fix, and the one actually exercised in
-    // practice, is that onPreviewKeyEvent. Must apply the same focusInSection branch as that
-    // handler: confirmed on the TV emulator that a Back press can reach *this* fallback instead
-    // of onPreviewKeyEvent even when the latter is very much in the tree (not just the "very
-    // first composition" case above) — an unconditional onBack() here exited the screen straight
-    // past an open tab section, silently overriding the onPreviewKeyEvent branch below.
+    // Fallback while the LazyColumn's onPreviewKeyEvent is not in the tree yet. It must apply the same
+    // focusInSection branch: on the TV emulator a Back press can reach this fallback even with that
+    // handler in the tree, and an unconditional onBack() here left the screen past an open section.
     BackHandler {
         if (focusInSection) {
             tabRowFocusRequester.requestFocus()
@@ -338,10 +324,8 @@ private fun MovieDetailsContent(
         }
     }
 
-    // Tabbed sections (Phase 4, the tv detail hero ui plan): built from what this movie
-    // actually has, never a fixed list. Only the selected tab's content composes below — the old
-    // single-column screen composed cast, tech rows and up to three related rows on every visit,
-    // whether on screen or not.
+    // Tabs are built from what this movie has (the tv detail hero ui plan, Phase 4), and only the
+    // selected tab's content composes.
     // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
     val tmdbCredits = credits?.takeUnless { it.isEmpty }
     val hasCast = tmdbCredits != null || !movieDetail.metadata.cast.isNullOrBlank()
@@ -361,9 +345,9 @@ private fun MovieDetailsContent(
     val safeTabIndex = tabs.indexOfFirst { it.name == selectedTabName }.takeIf { it >= 0 } ?: 0
     val tabLabels = tabs.map { movieDetailTabLabel(it) }
 
-    // Back from what Start Over, the Category button or a related title opened lands on that
-    // control. Play/Resume needs none of this: the effect below lands there anyway. The category
-    // button and related cards live in the tab section (item 2), so it is scrolled in first.
+    // Back from what Start Over, the Category button or a related title opened lands on that control.
+    // Play/Resume needs none: the effect below focuses it anyway. The category button and related cards
+    // are in the tab section (item 2), so it is scrolled in first.
     val returnFocus = rememberNavReturnFocus()
     val movieListState = rememberLazyListState()
     NavReturnFocusEffect(returnFocus, fallback = playButtonFocusRequester) { key ->
@@ -375,10 +359,9 @@ private fun MovieDetailsContent(
         onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
     }
 
-    // Request focus on Play/Resume button when screen loads or resume data arrives — unless the
-    // user has switched to an alternate stream at some point on this screen, in which case focus
-    // stays on the stream name row so the D-pad doesn't silently land on Play — or Back is about
-    // to hand focus to another control (above).
+    // Focus Play when the screen loads or resume data arrives, unless the user switched to an alternate
+    // stream on this screen (focus stays on the stream name row) or Back is about to focus another
+    // control (above).
     LaunchedEffect(resumePositionMs) {
         if (streamSwitchSignal == 0 && returnFocus.key == null) {
             playButtonFocusRequester.requestFocusWithRetry()
@@ -387,10 +370,8 @@ private fun MovieDetailsContent(
 
     LaunchedEffect(streamSwitchSignal) {
         if (streamSwitchSignal == 0) return@LaunchedEffect
-        // The dropdown's own dismissal falls back to focusing the window root, asynchronously,
-        // on its own timeline that can outlast a fixed number of frames on real hardware (a
-        // guessed frame count is what left focus dead on a real Shield after this looked fixed
-        // in testing) — poll instead, and stop the instant the row actually reports focused.
+        // The dropdown's dismissal focuses the window root asynchronously, later than a fixed frame count
+        // on real hardware. Poll, and stop as soon as the row reports focus.
         var attempts = 0
         while (!streamRowFocused && attempts < 90) {
             streamNameFocusRequester.requestFocus()
@@ -427,28 +408,18 @@ private fun MovieDetailsContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
-        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
-        // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
-        // measure pass on every rebuild of this screen, which is why backing out of the player was
-        // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
+        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, and the off-screen
+        // Similar Titles row took 85 ms of a 215 ms measure pass on each rebuild (slow Back from the player).
         KeepHeroInView(scrollToTop = { movieListState.animateScrollToItem(0) }) { heroModifier ->
             LazyColumn(
                 state = movieListState,
-                // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
-                // has focus reaches Compose's key dispatch fine (a non-consuming onPreviewKeyEvent here
-                // logs it), but something between here and the BackHandler/OnBackPressedDispatcher
-                // bridge marks it handled — BackHandler never fires on that first press, only the
-                // second. Rather than chase the exact consumer, intercept here instead: onPreviewKeyEvent
-                // runs top-down, before any descendant (including the focused Button) gets a look, so
-                // this always wins the race. Matches the same pattern TvDpadEscape.kt uses for the same
-                // class of problem.
+                // On a Shield the first Back press while a TV Button has focus never reaches BackHandler; only the
+                // second does. onPreviewKeyEvent runs top-down, before the focused Button, so it always wins. Same
+                // pattern as TvDpadEscape.kt.
                 modifier =
                     Modifier.fillMaxSize().focusable().onPreviewKeyEvent { event ->
                         if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                            // Phase 4: Back out of an open tab section goes to the tab row, not out of the
-                            // screen — same interception point as the screen-exit case below, since this
-                            // handler already runs before any descendant (the tab row's own handling would
-                            // never get a look otherwise).
+                            // Back from an open tab section goes to the tab row, not out of the screen.
                             if (focusInSection) {
                                 tabRowFocusRequester.requestFocus()
                             } else {
@@ -459,14 +430,13 @@ private fun MovieDetailsContent(
                             false
                         }
                     },
-                // No horizontal margin here: the hero backdrop below must run edge to edge. Every other
-                // item applies Spacing.tvSafeMarginHorizontal to itself instead (see "details" below).
+                // No horizontal margin here: the hero backdrop must run edge to edge. Every other item applies
+                // Spacing.tvSafeMarginHorizontal itself (see "details" below).
                 contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
             ) {
                 item(key = "hero") {
-                    // TMDB's branded logo art when it has one, else TMDB's original title falling back
-                    // to the provider's own stream name (when TMDB has no match, or the lookup hasn't
-                    // come back yet).
+                    // TMDB's logo art when it has one, else TMDB's original title, else the provider's stream name (no
+                    // TMDB match, or the lookup has not come back yet).
                     val titleText = tmdbTitle ?: cleanTitle(movieDetail.name.ifEmpty { movieName })
                     val year =
                         extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
@@ -500,11 +470,9 @@ private fun MovieDetailsContent(
                         note = if (movieDetail.isSavedCopy) stringResource(R.string.details_saved_copy_tv) else null,
                         modifier = heroModifier,
                     ) {
-                        // Phase 4: D-pad Down from any action button lands on the tab row below, not
-                        // wherever default geometry search prefers. focusProperties { down = ... } was
-                        // tried for the equivalent transition on EpisodeSelectionScreen's season tabs and
-                        // never took there (see its comment on the category button) — intercepting the
-                        // key and requesting focus directly is the proven fix, reused here.
+                        // D-pad Down from any action button goes to the tab row, not where geometry search prefers.
+                        // focusProperties { down = ... } did not work for the same move on EpisodeSelectionScreen, so the
+                        // key is intercepted and focus requested directly.
                         val downToTabRow =
                             Modifier.onPreviewKeyEvent { event ->
                                 if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
@@ -521,11 +489,8 @@ private fun MovieDetailsContent(
                                     false
                                 }
                             }
-                        // D-pad Up from the hero action row — same fix, same reason as
-                        // EpisodeSelectionScreen's identical addition: these buttons are the topmost
-                        // focusable in the screen, so default focus search has nowhere to go and the
-                        // LazyColumn never scrolls back up once a tall plot has pushed the title above
-                        // the viewport. Force it back to the top explicitly instead.
+                        // D-pad Up from the hero action row (the topmost focusables) scrolls the list to the top, as on
+                        // EpisodeSelectionScreen: else a tall plot keeps the title above the viewport with no way back.
                         val upScrollToTop =
                             Modifier.onPreviewKeyEvent { event ->
                                 if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
@@ -572,8 +537,8 @@ private fun MovieDetailsContent(
                                         .leftToRail(),
                             )
                         }
-                        // Labelled, not bare icons (UX overhaul Part II Phase 6, F-MD-2): the icon carries
-                        // the state (filled star, check), the word says what the button is.
+                        // The icon carries the state (filled star, check); the label says what the button is (UX overhaul
+                        // Part II Phase 6, F-MD-2).
                         if (onToggleFavorite != null) {
                             TvIconAction(
                                 onClick = onToggleFavorite,
@@ -612,8 +577,8 @@ private fun MovieDetailsContent(
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
                         }
-                        // Refresh info is maintenance, not something to watch: it lives behind "More" at
-                        // the end of the row, out of the path between Play and the tabs (F-MD-2, R5).
+                        // Refresh info is maintenance: it is behind "More" at the end of the row, out of the path between
+                        // Play and the tabs (F-MD-2, R5).
                         TvIconAction(
                             onClick = { showMoreMenu = true },
                             icon = CinemaIcons.MoreVert,
@@ -629,9 +594,8 @@ private fun MovieDetailsContent(
                         selectedIndex = safeTabIndex,
                         onTabSelected = {
                             selectedTabName = tabs.getOrNull(it)?.name
-                            // A tab regaining focus — whether from Left/Right, the initial Down from the
-                            // action row, or our own Back-triggered tabRowFocusRequester.requestFocus()
-                            // below — means focus is on the tab row, not in a section.
+                            // A tab that gets focus (Left/Right, Down from the action row, or our own Back request) means focus
+                            // is on the tab row, not in a section.
                             focusInSection = false
                         },
                         modifier =
@@ -639,11 +603,9 @@ private fun MovieDetailsContent(
                                 .fillMaxWidth()
                                 .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                                 .padding(top = Spacing.xl.scaled(scale))
-                                // Up from any tab → Play (F-MD-3), not whichever action button sits
-                                // above the tab by geometry (it was Mark as watched). A key intercept,
-                                // like downToTabRow above: focusProperties on this modifier stops at
-                                // TvSectionTabs' own focusGroup and never reaches the tabs. The hero is
-                                // scrolled back to its top first, so Play lands with the title in view.
+                                // Up from any tab goes to Play (F-MD-3), not to the action button above it by geometry. A key
+                                // intercept, like downToTabRow: focusProperties here stops at TvSectionTabs' own focusGroup. The
+                                // hero scrolls to its top first, so the title shows.
                                 .onPreviewKeyEvent { event ->
                                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
                                         refreshScope.launch {
@@ -660,9 +622,8 @@ private fun MovieDetailsContent(
                     )
                 }
 
-                // Keyed by the selected tab: switching tabs is a fresh item, so a tab whose content
-                // scrolls (a related-titles row) resets that scroll instead of keeping the last tab's
-                // position — "switching resets the section's own scroll" from the plan's focus rules.
+                // Keyed by the selected tab: a tab switch makes a new item, so a scrolling section (a related-titles
+                // row) starts at its start (the plan's focus rules).
                 item(key = "tab-section-${tabs.getOrNull(safeTabIndex)}") {
                     Box(
                         modifier =
@@ -671,14 +632,9 @@ private fun MovieDetailsContent(
                                 .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                                 .padding(top = Spacing.md.scaled(scale))
                                 .focusRestorer()
-                                // Only the true transition is trusted: the physical Back key itself was
-                                // found (on the TV emulator, not just real hardware — see the codebase's
-                                // other "unconfirmed root cause" back-key notes) to fire a spurious false
-                                // here moments before the key event reaches onPreviewKeyEvent below, which
-                                // would otherwise read focusInSection as already false and exit the screen
-                                // instead of returning to the tab row. The false transition is instead
-                                // driven explicitly by onTabSelected (a tab regaining focus, including via
-                                // this same Back path) — see TvSectionTabs' entryFocusRequester usage below.
+                                // Only the true transition is trusted: the Back key fires a false focus change here just before the
+                                // key reaches onPreviewKeyEvent, which would then leave the screen instead of going to the tab row.
+                                // onTabSelected sets it false (a tab that gets focus, also by this Back path).
                                 .onFocusChanged { if (it.hasFocus) focusInSection = true },
                     ) {
                         when (tabs.getOrNull(safeTabIndex)) {
@@ -797,8 +753,7 @@ private fun LoadingScreen() {
     }
 }
 
-/** Section tabs built from what a movie actually has (the tv detail hero ui plan
- * Phase 4) — [DETAILS] is the only one always present. */
+/** Section tabs built from what a movie has (the tv detail hero ui plan, Phase 4); [DETAILS] is always there. */
 private enum class MovieDetailTab { DETAILS, CAST, MORE_LIKE_THIS }
 
 @Composable
@@ -827,9 +782,9 @@ internal fun CastTabContent(cast: String) {
 }
 
 /**
- * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — release date,
- * director, technical stream info, the stream-name picker, TMDB id and the source last — then the
- * category button. Cast lives in its own tab ([CastTabContent]), not repeated here.
+ * Details tab: full synopsis, then one label/value row each: release date, director, technical
+ * stream info, the stream-name picker, TMDB id and the source last; then the category button. Cast
+ * has its own tab ([CastTabContent]).
  */
 @Composable
 private fun DetailsTabContent(
@@ -939,14 +894,13 @@ private fun DetailsTabContent(
             TvDetailRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
         }
 
-        // The provider's own (often raw) stream name, now that the headline is TMDB's title. A
-        // dropdown when the local catalogue holds other instances of the same TMDB title.
+        // The provider's own (often raw) stream name, as the headline is TMDB's title. A picker when the
+        // catalogue holds other entries with the same TMDB title.
         if (!child) {
             TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
                 StreamNamePicker(
-                    // The catalogue's raw name, not movieDetail.name — some providers' detail API
-                    // returns a cleaned-up name inconsistent with the raw name alternates are listed
-                    // under, so use the same source as alternates.
+                    // The catalogue's raw name, not movieDetail.name: some providers' detail API returns a cleaned name
+                    // that does not match the raw name the alternates are listed under.
                     currentName = movieName,
                     alternates = alternateStreams,
                     sourceNames = sourceNames,
@@ -978,9 +932,8 @@ private fun DetailsTabContent(
 
 /**
  * The stream name, the value of the Details tab's "Stream name" row. Plain text when [alternates]
- * is empty — most titles have no other cached instance. Becomes a tappable dropdown once there is
- * at least one other local catalogue entry sharing the same TMDB id, letting the user switch to
- * that instance's detail screen.
+ * is empty. Otherwise a picker of the other catalogue entries with the same TMDB id, which opens
+ * that entry's detail screen.
  */
 @Composable
 private fun StreamNamePicker(

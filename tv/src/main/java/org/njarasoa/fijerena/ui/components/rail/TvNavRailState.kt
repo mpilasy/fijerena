@@ -62,8 +62,8 @@ class TvNavRailState {
 
     /**
      * The active profile's name and colour, for [RailItem.PROFILE]'s label, content description and
-     * avatar colour. Optional: without them the rail labels the avatar with the name it is given and draws it
-     * in the first profile colour.
+     * avatar colour. Optional: without them the rail uses the name it is given and the first profile
+     * colour.
      */
     var profileName by mutableStateOf<String?>(null)
     var profileColorIndex by mutableIntStateOf(0)

@@ -49,12 +49,12 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * "Up next" card shown over the playing episode near its end (autoplay next episode): one line
- * naming [episode] and the playback time left, with Play now / Cancel beside it. A small
- * translucent panel in the top-right corner inside the TV-safe margins, [belowClock] pushing it
- * under the controls' clock while they are up. While focus is inside the card a second panel of
- * the same width under it gives the episode's title and synopsis, when known. The player owns its
- * focus ([playNowFocus], moved here as the card appears) and its keys — see PlayerScreen;
+ * "Up next" card over the playing episode near its end (autoplay next episode): one line naming
+ * [episode] and the playback time left, with Play now / Cancel beside it. A small translucent panel
+ * in the top-right corner inside the TV-safe margins; [belowClock] moves it under the controls'
+ * clock while they are up. While focus is inside the card, a second panel of the same width under
+ * it gives the episode's title and synopsis, when known. The player owns its focus
+ * ([playNowFocus], moved here as the card appears) and its keys (see PlayerScreen);
  * [onFocusChanged] reports whether focus is inside the card.
  */
 @Composable

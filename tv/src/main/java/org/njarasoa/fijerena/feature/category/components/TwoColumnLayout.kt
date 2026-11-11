@@ -152,9 +152,9 @@ internal fun TwoColumnLayout(
         )
     }
 
-    // Back from the TV Guide lands on the header button that opened it. Runs once the
-    // screen is RESUMED, after CategoryList's and StreamList's own focus effects, so it has the
-    // last word. Rows opened from the stream list are StreamList's own business (openedItemId).
+    // Back from the TV Guide lands on the header button that opened it. Runs once the screen is
+    // RESUMED, after CategoryList's and StreamList's own focus effects, so it has the last word. Rows
+    // opened from the stream list are StreamList's job (openedItemId).
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus)
 
@@ -164,19 +164,17 @@ internal fun TwoColumnLayout(
     val categoriesPane = rememberPaneFocus()
     val itemsPane = rememberPaneFocus()
 
-    // Back from the Live TV preview (LT6): the channel it was playing is the current channel here
-    // — lastPlayedItemId only moves once a channel has been watched past the watch delay, so it
-    // still names the one that opened the preview. When the list on screen has it, the items pane
-    // lands on that row and remembers it; when it does not (the channel was played from another
-    // list, or Recent has not recorded it yet), focus stays on the selected category.
+    // Back from the Live TV preview (LT6): the channel it was playing is the current channel here;
+    // lastPlayedItemId moves only after the watch delay, so it still names the one that opened the
+    // preview. When the list has that channel, the items pane lands on its row and remembers it; when
+    // it does not (played from another list, or not in Recent yet), focus stays on the selected category.
     val currentItemId = returnedPlayingId ?: lastPlayedItemId
     val playingNotListed =
         remember(returnedPlayingId, streams, streamsLoading) {
             returnedPlayingId != null && !streamsLoading && streams != null && streams.none { it.id == returnedPlayingId }
         }
 
-    // One Refresh for the screen (TV UI audit #5), in the header: the categories and the list on
-    // screen, which the two panes' own Refresh icons used to do one at a time.
+    // One Refresh for the screen (TV UI audit #5), in the header: the categories and the list on screen.
     val refreshing = categoriesRefreshing || streamsLoading
     var targetRotation by remember { mutableStateOf(0f) }
     // Keyed on the flag: the loop never returns, so a false value has to cancel it.
@@ -206,10 +204,9 @@ internal fun TwoColumnLayout(
             (selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID && categoryViewModel.supportsRemoveFromRecent)
     var editMode by remember(selectedCategoryId) { mutableStateOf(false) }
     var confirmClearRecent by remember { mutableStateOf(false) }
-    // Clear Recent exists only in edit mode: ending the mode while it has focus (Back, from the
-    // header) removed the focused button and left nothing focused. Focus goes to the pencil then.
-    // Read at the Back press: the button's own focus callback has already said "not focused" by
-    // the time an effect could look.
+    // Clear Recent exists only in edit mode: ending the mode while it has focus (Back, from the header)
+    // removes the focused button, so focus goes to the pencil then. Read at the Back press: the
+    // button's focus callback has already said "not focused" by the time an effect could look.
     var clearRecentFocused by remember { mutableStateOf(false) }
     var refocusEditAction by remember { mutableStateOf(false) }
     val editActionFocus = remember { FocusRequester() }
@@ -247,10 +244,10 @@ internal fun TwoColumnLayout(
                 },
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // TV UI audit X6: the section is the title, the source and its category count the
-            // subtitle (the source no longer repeated at the far right), the icon actions at the end.
-            // The source: the list's own with one; the selected category's own while the list mixes
-            // several (Phase 6), none on a virtual list (Recent, Favourites) — the count stays.
+            // TV UI audit X6: the section is the title, the source and its category count the subtitle, the
+            // icon actions at the end. The source: the list's own with one source; the selected category's
+            // while the list mixes several (Phase 6); none on a virtual list (Recent, Favourites). The count
+            // stays.
             val headerSource =
                 if (sourceNames.isEmpty()) providerName.ifEmpty { null } else selectedCategory?.let { sourceNames[it.providerId] }
             TvScreenHeader(
@@ -370,9 +367,8 @@ internal fun TwoColumnLayout(
                     watchProgress = watchProgress,
                     watchedIds = watchedIds,
                     onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
-                        // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play,
-                        // on its own source; one of a source this list doesn't hold opens on that
-                        // source (its own route).
+                        // A row of "Recent Categories"/"Favourite Categories" browses, it does not play, on its own source;
+                        // one of a source this list does not hold opens on that source (its own route).
                         if (target is BrowseTarget.CategoryRef && !categoryViewModel.isOtherSource(providerId)) {
                             onCategorySelected(target.categoryId, providerId)
                         } else {

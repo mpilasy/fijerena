@@ -21,27 +21,20 @@ fun handlePlayerKeyEvent(
     onPreviousChannel: () -> Unit,
     hasChannelPanel: Boolean,
 ): Boolean {
-    // suppressNextCenterKeyUp is only ever set true from the Center/Enter KeyDown branch in
-    // handleKeyDown, which is gated on `!state.isModalOpen` — so it can never be set true while
-    // a modal is already open. Observing
-    // both true at once here means a dialog/overlay opened *between* that KeyDown and its own
-    // KeyUp arriving: that KeyUp went to the new modal's own focus target instead of back here,
-    // so nothing would ever clear the flag — leaving it to silently eat the next legitimate
-    // center click once the modal closes. Checked on every event, not just Center/Enter KeyUp,
-    // so it clears as soon as anything else reaches this handler instead of staying stuck for
-    // the rest of the session.
+    // suppressNextCenterKeyUp is set only by the Center/Enter KeyDown branch, which requires
+    // `!state.isModalOpen`. Both true here means a modal opened between that KeyDown and its KeyUp,
+    // which went to the modal, so nothing would clear the flag and it would eat the next centre click.
+    // Checked on every event, so it clears as soon as anything reaches this handler.
     if (state.suppressNextCenterKeyUp && state.isModalOpen) {
         state.suppressNextCenterKeyUp = false
     }
 
     val handled =
         when {
-            // KeyUp: a Center/Enter KeyUp must be consumed when its own KeyDown just revealed the
-            // OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it falls through to the
-            // button focus just landed on and activates it — a single press should only open
-            // the OSD, never also toggle favourite or pause.
-            // VOD with the OSD hidden: releasing Left/Right seeks to the scrub cursor (U-M7), so
-            // a tap jumps 10 s and a hold scrubs, then seeks on release.
+            // KeyUp: a Center/Enter KeyUp whose KeyDown just revealed the OSD is consumed (see
+            // suppressNextCenterKeyUp); else it would also activate the button that just got focus.
+            // VOD with the OSD hidden: releasing Left/Right seeks to the scrub cursor (U-M7), so a tap jumps
+            // 10 s and a hold scrubs, then seeks on release.
             keyEvent.type == KeyEventType.KeyUp -> {
                 if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
                     state.suppressNextCenterKeyUp = false
@@ -81,9 +74,8 @@ private fun handleKeyDown(
     val handled =
         when (keyEvent.key) {
             Key.DirectionCenter, Key.Enter -> {
-                // Let D-pad OK activate whatever's focused inside an open modal (e.g. tune a
-                // channel in the channel panel) instead of revealing the OSD —
-                // mirrors the isModalOpen guard on Up/Down/Left/Right below.
+                // In an open modal, OK activates what is focused (tunes a channel in the channel panel) instead of
+                // revealing the OSD, as for Up/Down/Left/Right below.
                 if (state.isModalOpen) {
                     false
                 } else {
@@ -96,11 +88,11 @@ private fun handleKeyDown(
                         state.showStreamInfo = true
                         true
                     } else if (isDoubleClick && state.showStats) {
-                        // Double-click ONLY dismisses stats if they are already showing
+                        // A double click only closes the stats when they show.
                         state.showStats = false
                         true
                     } else if (state.showStats) {
-                        // Single-click while stats are showing: pass to player/controls
+                        // Single click while the stats show: pass it on to the player/controls.
                         if (state.showControls) {
                             false
                         } else {
@@ -110,8 +102,7 @@ private fun handleKeyDown(
                             true
                         }
                     } else {
-                        // Single-click (or double-click when stats are NOT showing):
-                        // Let it pass if controls are visible, or show controls if not
+                        // Single click, or a double click with no stats: pass it on when the controls show, else show them.
                         if (state.showControls) {
                             false
                         } else {
@@ -125,13 +116,13 @@ private fun handleKeyDown(
             }
 
             Key.DirectionUp -> {
-                // Let D-pad navigate inside anything modal that is open
+                // Let the D-pad move inside an open modal.
                 if (state.isModalOpen) {
                     false
                 } else if (currentMetadata.isLive) {
-                    // Live: Up/Down zap whether or not the OSD is up (LT4) — its buttons are one
-                    // row, moved through with Left/Right. A zap with the OSD up keeps it up.
-                    // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                    // Live: Up/Down zap whether or not the OSD shows (LT4); its buttons are one row, moved through with
+                    // Left/Right. A zap with the OSD up keeps it up. The first tap fires at once; auto-repeat ticks are
+                    // coalesced (see PlayerEffects).
                     if (keyEvent.nativeKeyEvent.repeatCount == 0) {
                         onPreviousChannel()
                     } else {
@@ -149,12 +140,11 @@ private fun handleKeyDown(
             }
 
             Key.DirectionDown -> {
-                // Let D-pad navigate inside anything modal that is open
+                // Let the D-pad move inside an open modal.
                 if (state.isModalOpen) {
                     false
                 } else if (currentMetadata.isLive) {
-                    // Live: zap, OSD up or not (see Up).
-                    // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                    // Live: zap, OSD up or not (see Up). The first tap fires at once; auto-repeat ticks are coalesced.
                     if (keyEvent.nativeKeyEvent.repeatCount == 0) {
                         onNextChannel()
                     } else {
@@ -185,7 +175,7 @@ private fun handleKeyDown(
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
                     true
                 } else {
-                    // When controls are visible, let D-pad navigate between buttons
+                    // Controls visible: the D-pad moves between buttons.
                     false
                 }
             }
@@ -203,15 +193,14 @@ private fun handleKeyDown(
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
                     true
                 } else {
-                    // When controls are visible, let D-pad navigate between buttons
+                    // Controls visible: the D-pad moves between buttons.
                     false
                 }
             }
 
-            // Key.Back is intentionally NOT handled here — see the BackHandler in PlayerScreen.kt.
-            // A raw onKeyEvent consume doesn't stop the separate OnBackPressedDispatcher chain, so
-            // handling it in both places raced an outer BackHandler (e.g. LiveTvSplitLayout's) into
-            // seeing already-mutated state and double-popping past it.
+            // Key.Back is not handled here (see the BackHandler in PlayerScreen.kt): consuming a raw key event
+            // does not stop the OnBackPressedDispatcher chain, so an outer BackHandler (LiveTvSplitLayout's)
+            // also ran on changed state and popped twice.
             Key(AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
                 if (!currentMetadata.isLive) {
                     when (playbackState) {
@@ -248,9 +237,8 @@ private fun handleKeyDown(
 }
 
 /**
- * Move the scrub cursor one step. Initializes the cursor at the current playback position
- * when scrubbing starts. The actual seek happens only on [commitScrub]: on the release of
- * D-pad Left/Right, or on OK/Center (FF/REW).
+ * Moves the scrub cursor one step, starting it at the playback position. The seek happens only on
+ * [commitScrub]: on the release of D-pad Left/Right, or on OK/Center (FF/REW).
  */
 internal fun stepScrubCursor(
     state: PlayerScreenState,
@@ -258,13 +246,10 @@ internal fun stepScrubCursor(
     nativeEvent: AndroidKeyEvent,
     forward: Boolean,
 ) {
-    // Use the live-polled position/duration (state.livePosition/liveDuration, refreshed every
-    // 500ms in PlayerEffects), not playbackState.position/duration: that PlaybackState only
-    // updates on discrete Player.Listener events, so during steady playback it stays frozen at
-    // whatever it was minutes ago. Starting the scrub cursor from that stale value threw the
-    // seek destination off by however long playback had been running.
-    // A new cursor reads the player itself: the poll stops while Buffering, and ExoPlayer
-    // already reports a pending seek's target, so taps in quick succession add up.
+    // Use the polled position/duration (state.livePosition/liveDuration, every 500 ms in PlayerEffects),
+    // not playbackState.position/duration, which updates only on Player.Listener events and is stale
+    // during steady playback. A new cursor reads the player itself: the poll stops while Buffering, and
+    // ExoPlayer reports a pending seek's target, so quick taps add up.
     if (state.scrubPositionMs == null) {
         StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
             state.livePosition = player.currentPosition
@@ -299,10 +284,9 @@ internal fun canScrub(
 }
 
 /**
- * Cursor step for one key event. A tap moves 10s. Holding ramps by how long the key has been
- * held, not by repeatCount: auto-repeat fires every ~50ms, so the old repeatCount tiers hit
- * 2-minute steps (~40 min/s) within 1.5s and overshot every time.
- * At ~20 repeats/s: ~1 min/s for the first 2s, ~3 min/s up to 5s, then ~10 min/s.
+ * Cursor step for one key event. A tap moves 10 s. A hold ramps by how long the key has been held,
+ * not by repeatCount: auto-repeat fires every ~50 ms, so repeatCount tiers overshot. At ~20
+ * repeats/s: ~1 min/s for the first 2 s, ~3 min/s up to 5 s, then ~10 min/s.
  */
 internal fun scrubStepMs(
     repeatCount: Int,

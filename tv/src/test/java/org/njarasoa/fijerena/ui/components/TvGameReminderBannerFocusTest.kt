@@ -40,11 +40,11 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The TV game reminder banner takes the remote's keys, never focus (the Nerd role plan → R): it
+ * The TV game reminder banner takes the remote's keys, never focus (the Nerd role plan, R): it
  * shows with Watch chosen (Dismiss without a channel), Left and Right choose (Watch, Dismiss,
- * Manage reminders), OK acts, Back closes
- * it, and no key reaches the screen under it. The control under it, here nested in a list row,
- * keeps focus through it all. Under a Dialog window it waits for the dialog to close.
+ * Manage reminders), OK acts, Back closes it, and no key reaches the screen under it. The control
+ * under it, here nested in a list row, keeps focus through it all. Under a Dialog window it waits
+ * for the dialog to close.
  */
 @RunWith(RobolectricTestRunner::class)
 class TvGameReminderBannerFocusTest {

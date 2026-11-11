@@ -130,8 +130,8 @@ private fun CastCardRow(
     // kept while the page is open (also over a person page and Back), not stored.
     var shownCount by rememberSaveable { mutableIntStateOf(MAX_CAST_CARDS) }
     val collapsed = cast.size > shownCount
-    // Collapsed, the card after the shown ones is the More card. It is the same card as
-    // the actor that takes its place, so OK on it keeps the focus there: on the first actor it adds.
+    // Collapsed, the card after the shown ones is the More card. It is the same card as the actor that
+    // takes its place, so OK on it keeps focus there, on the first actor it adds.
     val shown = if (collapsed) cast.take(shownCount + 1) else cast
     // Back from a person page: the card that opened it is scrolled in, so its requester attaches.
     val returnId = returnFocus.key?.takeIf { it.startsWith(RETURN_CAST_PREFIX) }?.removePrefix(RETURN_CAST_PREFIX)

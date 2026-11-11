@@ -159,16 +159,14 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
 
-    // TV (uses androidx.tv.material instead of material3)
+    // TV Material (androidx.tv.material); Material 3 for dialogs and controls inside TV screens.
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
-    // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform) transitively, which
-    // ships its own copy of androidx.compose.foundation.layout classes (e.g. FlowRow) under an
-    // older Compose version than this app's real androidx BOM. The duplicate class wins at dex
-    // time in some builds, causing NoSuchMethodError at runtime — exclude it, this app is
-    // Android-only and already gets the real foundation-layout from the androidx BOM directly.
+    // coil-compose pulls in Compose Multiplatform (org.jetbrains.compose.*), which ships its own older
+    // copy of androidx.compose.foundation.layout classes (FlowRow). That copy can win at dex time and
+    // cause NoSuchMethodError, so exclude it: this Android-only app gets foundation-layout from the BOM.
     implementation(libs.coil.compose) {
         exclude(group = "org.jetbrains.compose.foundation")
         exclude(group = "org.jetbrains.compose.animation")
@@ -178,7 +176,7 @@ dependencies {
         exclude(group = "org.jetbrains.compose.material")
         exclude(group = "org.jetbrains.compose.components")
     }
-    // Dominant-color extraction for AmbientBackdrop's pre-API-31 fallback (no RenderEffect blur)
+    // Dominant colour for AmbientBackdrop's fallback below API 31 (no RenderEffect blur).
     implementation(libs.androidx.palette)
 
     implementation(libs.androidx.navigation.compose)

@@ -221,11 +221,10 @@ internal fun StreamList(
     val rowStatus by categoryViewModel.rowStatus.collectAsStateWithLifecycle()
     val goneLabel = stringResource(R.string.favorite_gone_from_source)
 
-    // Separator rows from the provider ("####### ETHIOPIA VIP #######", TV UI audit #24) are
-    // headings, not channels: drawn as non-focusable section headers, never a focus or play
-    // target. Up/Down pass over them, as over any non-focusable item.
-    // Rows are keyed by source and id (sourceKey): Recent and Favourites mix the profile's sources,
-    // and the same id on two of them is two rows (multi-source plan, Phase 4).
+    // Separator rows from the provider ("####### ETHIOPIA VIP #######", TV UI audit #24) are headings,
+    // not channels: non-focusable section headers that Up/Down pass over, never played.
+    // Rows are keyed by source and id (sourceKey): Recent and Favourites mix the profile's sources, and
+    // the same id on two of them is two rows (multi-source plan, Phase 4).
     val markerIds =
         remember(streams) {
             streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.sourceKey }.orEmpty()
@@ -240,10 +239,9 @@ internal fun StreamList(
         value = streams?.let { categoryViewModel.catchupDays(it) }.orEmpty()
     }
 
-    // A removal (the tv recents favorites plan → A): done at once, with an Undo
-    // bar instead of a confirmation. When the row leaves this list, focus goes to the row that took
-    // its place once the new list is on screen (rowFocusAfterChange below); the Undo brings the
-    // row back in its place and focus to it.
+    // A removal (the tv recents favorites plan, A) happens at once, with an Undo bar instead of a
+    // confirmation. When the row leaves the list, focus goes to the row that took its place once the
+    // new list shows (rowFocusAfterChange below); the Undo brings the row back, with focus on it.
     val currentStreams by rememberUpdatedState(streams)
     var rowFocusAfterChange by remember { mutableStateOf<RowFocusAfterChange?>(null) }
     val rowKeys: (ImmutableMediaList?) -> List<String> = { list ->
@@ -296,9 +294,8 @@ internal fun StreamList(
         )
     }
 
-    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a row opens this
-    // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
-    // stops. The target is rebuilt from the live sets so the menu shows the row's current state.
+    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key opens this menu for the
+    // row. The target is built from the live sets, so the menu shows the row's current state.
     var actionsItem by remember { mutableStateOf<MediaItem?>(null) }
     // The favourite whose tag dialog is open (favourite tags plan, FT2).
     var tagsTarget by remember { mutableStateOf<FavoriteTagTarget?>(null) }
@@ -318,9 +315,9 @@ internal fun StreamList(
         // the browse list's favoriteIds may not cover) the repository says.
         val isFavorite =
             isFavoritesList || item.sourceKey in favoriteIds || categoryViewModel.isFavorite(item.id, contentType, item.providerId)
-        // A show row (the season show watched plan Phase 3) offers "Mark show
-        // watched / unwatched" for all its episodes instead of the one-item toggle, except where
-        // the source keeps watched state on its server. The menu opens once its wording is known.
+        // A show row (the season show watched plan, Phase 3) offers "Mark show watched / unwatched" for all
+        // its episodes instead of the one-item toggle, except where the source keeps watched state on its
+        // server. The menu opens once its wording is known.
         val showSeriesId = item.showSeriesId(contentType)
         val showMarkId = showSeriesId?.takeIf { categoryViewModel.supportsWatchedMark }
         val canMarkItem = isWatchable && showSeriesId == null && categoryViewModel.supportsWatchedMark
@@ -384,54 +381,43 @@ internal fun StreamList(
         }
     }
 
-    // Auto-scroll and focus on the opened or last played item (on initial load and when returning
-    // from details/player).
-    // Without a pane, keyed to selectedCategoryId so a list switch resets it — otherwise, when
-    // lastPlayedItemId stays the same across the switch, the guard below would treat a *second*
-    // visit to an already-visited list as already handled and skip re-focusing, leaving focus
-    // wherever it landed after the previously-focused Card was disposed by the switch away. In a
-    // pane, not keyed: OK on a category keeps focus on the category, and Right enters the list on
-    // its remembered row (F-C-5); the Live TV preview panel's tabs switch its list without
-    // taking focus off the tab row (LT2).
+    // Scroll to and focus the opened or last played item, on first load and on return from
+    // details/player. Without a pane, keyed on the list, so a list switch resets it: else a second visit
+    // to a list with the same lastPlayedItemId counted as handled and focus stayed where the disposed
+    // card left it. In a pane, not keyed: OK on a category keeps focus there, Right enters the list on
+    // its remembered row (F-C-5), and the Live TV panel's tabs switch the list without taking focus off
+    // the tab row (LT2).
     var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryKey else null) { mutableStateOf<String?>(null) }
 
-    // Movie/series row last opened from this list. Opening details doesn't play anything, so
-    // lastPlayedItemId never points at it, and on Back the whole destination recomposes from
-    // scratch — CategoryList's own "focus the selected category" effect then won and focus landed
-    // in the left pane. Saveable so it survives the nav round-trip (NavHost keeps each back-stack
-    // entry's saved state); keyed to the category so another list doesn't inherit it. Movies and
-    // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
-    // player.
+    // Film/show row last opened from this list. Opening details plays nothing, so lastPlayedItemId
+    // never points at it, and on Back CategoryList's "focus the selected category" effect won.
+    // Saveable, so it survives the navigation round trip; keyed on the list. Live TV keeps following
+    // lastPlayedItemId, which follows channel zapping in the player.
     var openedItemId by rememberSaveable(selectedCategoryKey) { mutableStateOf<String?>(null) }
-    // A separator is never a focus target, even when it was once played (before #24). The last
-    // played item is an id: its row's key is the first row with that id.
+    // A separator is never a focus target, even when played once. The last played item is an id: its
+    // row's key is the first row with that id.
     val lastPlayedKey =
         remember(streams, lastPlayedItemId, lastPlayedSource) {
             streams?.firstOrNull { it.isLastPlayed(lastPlayedItemId, lastPlayedSource) }?.sourceKey
         }
-    // Films and shows: the last played item as the list first had it this visit, so only one played
-    // since is a target — a first entry opens at the top, not mid-list on whatever was played last
-    // in the section (Recent's newest rows were out of sight). Live TV keeps following the playing
-    // channel: Back from the preview hands focus to this list for it (the categories pane stays
-    // out of the way), and a list rebuilt on that return took it for the entry value — nothing had
-    // focus until Back.
+    // Films and shows: the last played item as the list first had it this visit, so only an item played
+    // since is a target; a first entry opens at the top, not mid-list. Live TV keeps following the
+    // playing channel: Back from the preview hands focus to this list for it, and a list rebuilt on that
+    // return took it for the entry value, so nothing had focus.
     val listReady = !streamsLoading && !streams.isNullOrEmpty()
     val entryLastPlayedKey by rememberSaveable(selectedCategoryKey, listReady) { mutableStateOf(if (listReady) lastPlayedKey else null) }
     val playedThisVisit =
         if (contentType == ContentType.LIVE_TV) lastPlayedKey else lastPlayedKey?.takeIf { listReady && it != entryLastPlayedKey }
     val focusTargetId = (openedItemId ?: playedThisVisit)?.takeUnless { it in markerIds }
 
-    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
-    // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
-    // guard the fade/slide replays on every focus move instead of just on first appearance.
-    // Keyed to streams so it resets (bounded) on category switch instead of growing unbounded
-    // across every stream id seen this session.
+    // The entrance animation plays once per item: D-pad scrolling recycles item compositions all the
+    // time, so without this guard it replays on every focus move. Keyed on streams, so the set resets on
+    // a category switch and stays small.
     val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
 
-    // Keyed on the target's position, not on `streams` itself: with a guide source the list is
-    // re-emitted again and again as programme info arrives, and each emission relaunched this
-    // effect. When the target can't take focus (a hidden list behind the full-screen player, a row
-    // never composed) every relaunch failed again — a log flood that never stopped while watching.
+    // Keyed on the target's position, not on `streams`: a guide source emits the list again and again
+    // as programme info arrives. When the target cannot take focus (a list hidden behind the full-screen
+    // player), every relaunch failed again and flooded the log.
     val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.sourceKey == focusTargetId } ?: -1 }
     val pane = paneFocus ?: rememberPaneFocus()
     pane.bind(
@@ -445,12 +431,8 @@ internal fun StreamList(
     // even with no target — on the remembered row (a Back return), else the first.
     var entryPending by remember { mutableStateOf(paneFocus != null) }
     LaunchedEffect(selectedCategoryKey, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty(), takeEntryFocus) {
-        // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
-        // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
-        // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
-        // actually finished loading a moment later the guard below was already tripped and this
-        // never got a second chance. Focus was left stuck on the header's refresh button (the
-        // first focusable in the composed tree) for good.
+        // Skip while loading: a spinner shows, so no Card exists for the FocusRequester, and a failed
+        // attempt that still marked the target as handled left focus on the header's Refresh for good.
         if (streamsLoading || streams.isNullOrEmpty()) return@LaunchedEffect
         if (!takeEntryFocus) {
             // The other pane has focus on this open (LT6): count it as handled, so a later list
@@ -463,9 +445,7 @@ internal fun StreamList(
             // The playing channel moved to the top of Recent (the live recent order plan): its row
             // is still composed above the view, and focusing it alone would not scroll it in.
             if (focusTargetIndex == 0) listState.scrollToItem(0)
-            // Only mark handled on success, so a failed attempt (e.g. still racing
-            // composition) gets another go when the effect's keys change instead of being
-            // silently given up on forever.
+            // Mark handled only on success, so a failed attempt tries again when the keys change.
             if (pane.focusKey(focusTargetId)) {
                 lastFocusedItemId = focusTargetId
                 entryPending = false
@@ -542,14 +522,10 @@ internal fun StreamList(
                 }
 
                 streams.isNullOrEmpty() -> {
-                    // Removing the last item from an already-loaded category (e.g. unfavoriting
-                    // the only favorite) left D-pad focus with nowhere to land: the focused Card
-                    // was gone, nothing here claimed it, so it fell to the window root and stopped
-                    // responding to D-pad input. The empty state's Refresh takes focus — on each
-                    // category (keyed) — which both fixes that and gives an actionable retry for
-                    // a genuinely empty category.
-                    // An empty Recent or Favourites says what fills it, and its button goes to the
-                    // categories: refreshing it would find nothing more (household UX plan, K2).
+                    // The empty state's Refresh takes focus (on each category, keyed): when the last item goes (the only
+                    // favourite removed), focus has nowhere else to land and falls to the window root, where the D-pad
+                    // does nothing. An empty Recent or Favourites says what fills it, and its button goes to the
+                    // categories: a refresh would find nothing more (household UX plan, K2).
                     val virtualList =
                         streams != null &&
                             categoriesPane != null &&
@@ -686,10 +662,8 @@ internal fun StreamList(
                                         thumbnailScale = thumbnailScale,
                                         cardStyle = cardStyle,
                                         modifier =
-                                            // remember-scoped so a recomposition of an already-visible item
-                                            // reuses the same answer. Called bare, add() returned false on
-                                            // the first recomposition and dropped staggeredEntrance from the
-                                            // chain mid-animation, detaching the node.
+                                            // Remembered per item, so a recomposition of a visible item gets the same answer. Called bare, add()
+                                            // returned false on the first recomposition and dropped staggeredEntrance in mid-animation.
                                             if (remember(item.sourceKey) { enteredStreamIds.add(item.sourceKey) }) {
                                                 Modifier.staggeredEntrance(index)
                                             } else {
@@ -823,12 +797,9 @@ internal fun StreamItem(
     cardStyle: TvCardLook,
     modifier: Modifier = Modifier,
 ) {
-    // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
-    // draw every frame for as long as its text overflows, and IPTV channel names overflow
-    // constantly — with it applied unconditionally, every visible row kept two such loops running
-    // (title + "Now:"), so a dozen on-screen rows meant ~24 concurrent per-frame animations
-    // competing with the scroll itself. At rest the two look identical: fraction is 0, so the
-    // node draws the same clipped text a plain Text does.
+    // Marquee only while focused: BounceMarqueeNode invalidates draw every frame while its text
+    // overflows, and IPTV names often overflow, so every visible row ran two per-frame loops (title +
+    // "Now:"). At rest both look the same: fraction 0 draws the clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
     // A TMDB title no source has (the Charts list's Trending): marked, and no ⋮, as it has no action.
     val tmdbOnly = item.isTmdbOnly
@@ -897,10 +868,10 @@ internal fun StreamItem(
                     listOfNotNull(metaLine.ifEmpty { null }, categoryText).joinToString(" · ").ifEmpty { null }
                 }
             }
-        // One accessibility node for the row's content, read as its parts were. With an
-        // accessibility service on (Button Mapper on a Shield), Compose walks and diffs every
-        // semantics node on scroll; a node per text and badge made that the biggest cost of a
-        // frame (docs/plans/20260914_codebase-robustness-plan.md, Phase 4 measurement).
+        // One accessibility node for the row's content, read as its parts were. With an accessibility
+        // service on (Button Mapper on a Shield), Compose diffs every semantics node on scroll, and a node per
+        // text and badge was the biggest cost of a frame (docs/plans/20260914_codebase-robustness-plan.md,
+        // Phase 4 measurement).
         val description =
             listOfNotNull(
                 "★".takeIf { isFavorite },
@@ -929,9 +900,9 @@ internal fun StreamItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit
-            // #11) — under the row it read as the next row's. A category (Recent and Favourite
-            // Categories) has no artwork: no tile, as in the categories pane.
+            // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit #11): under the
+            // row it read as the next row's. A category row (Recent and Favourite Categories) has no artwork, so
+            // no tile.
             val thumbnailShape = CinemaTheme.shapes.card
             if (item.target !is BrowseTarget.CategoryRef) {
                 Box(
@@ -992,8 +963,7 @@ internal fun StreamItem(
                     }
 
                     TvRowTitle(
-                        // See mobile's StreamCard — provider data occasionally sends a blank
-                        // name (e.g. "EN -  (US)" with nothing between the dashes).
+                        // Provider data sometimes sends a blank name ("EN -  (US)"); see mobile's StreamCard.
                         text = displayTitle,
                         isCurrent = isCurrent,
                         isFocused = isFocused,
@@ -1006,10 +976,9 @@ internal fun StreamItem(
                     // The source (Nerd) ends the first line, in the same place on every row.
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
-                // The second line: the catch-up badge and the title's badges, then the category,
-                // year · length · rating or the Now line. The catch-up badge is not on the first
-                // line: in the preview pane's narrow list it left the focused channel's name a
-                // few letters, which the marquee then scrolled to their end (TV walk C2).
+                // The second line: the catch-up badge and the title's badges, then the category, year · length ·
+                // rating or the Now line. The catch-up badge is not on the first line: in the preview pane's narrow
+                // list it left the focused name only a few letters (TV walk C2).
                 val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
                 if (sourceLine != null || lineText != null || parsedTitle.hasBadges || categoryTag != null || catchupDays > 0) {
                     Row(
@@ -1042,8 +1011,7 @@ internal fun StreamItem(
                 }
             }
 
-            // Discoverability hint for the action menu: a glyph, not a focus stop, on the
-            // focused row only (plan Decisions 1).
+            // The action menu hint: a glyph on the focused row only, not a focus stop (plan Decisions 1).
             when {
                 isFocused && editMode -> RowRemoveHint()
                 isFocused && !tmdbOnly -> RowActionsHint()

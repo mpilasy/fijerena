@@ -25,16 +25,15 @@ import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Live TV zap feedback (LT5, the ux overhaul plan → L-7): from the moment a channel is chosen until
+ * Live TV zap feedback (LT5, the ux overhaul plan, L-7): from the moment a channel is chosen until
  * it plays, the wait ring with the channel's logo in it ([channelName] when it has none), centred
- * over a dimmed picture. Drawn over whatever the surface shows — the engine's `stop()` + new media
- * source closes PlayerView's shutter, so after the first moment of a zap that is black, not the
- * last frame. Not focusable; the remote keeps zapping. The ring is full size in the preview pane too,
- * so a wide logo stays readable. [compact] is the preview pane; full screen shows the Nerd's
- * [BufferingDetails] under the ring, as the loading indicator does.
- * [unavailable]: the screen gave up on the channel (its load failed, or no picture in 10 s) — no
- * ring, and a pill says "<name> is not available right now" rather than tuning for ever; OK then
- * goes to the next channel (UX audit fixes plan, UX-D2).
+ * over a dimmed picture. The engine's `stop()` + new media source closes PlayerView's shutter, so
+ * after the first moment of a zap the picture under it is black, not the last frame. Not
+ * focusable; the remote keeps zapping. The ring is full size in the preview pane too, so a wide
+ * logo stays readable. [compact] is the preview pane; full screen shows the Nerd's
+ * [BufferingDetails] under the ring, as the loading indicator does. [unavailable]: the screen gave
+ * up on the channel (its load failed, or no picture in 10 s): no ring, and a pill says "<name> is
+ * not available right now"; OK then goes to the next channel (UX audit fixes plan, UX-D2).
  */
 @Composable
 fun TvTuningOverlay(

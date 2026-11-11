@@ -276,10 +276,9 @@ fun SearchScreen(
         )
     }
 
-    // Catalogue | People | Guide (search guide tab plan, D1/O1; people search plan, PS-D1). Back from
-    // a result's page comes back to the type it was found in.
-    // The app's one search (SearchSession), shared by both tabs and every Search screen: Back to any
-    // of them shows the latest.
+    // Catalogue | People | Guide (search guide tab plan, D1/O1; people search plan, PS-D1). Back from a
+    // result's page comes back to the type it was found in. The app's one search (SearchSession) is
+    // shared by every tab and Search screen: Back to any of them shows the latest.
     val profileId = remember { AppSettings(context.applicationContext).activeProfileId }
     // A child profile finds films and shows only, each opening its page: no channels (its Live TV
     // is its favourites), categories, Guide tab or menus (the kids' Home plan, K-D7).
@@ -291,9 +290,9 @@ fun SearchScreen(
     val tabs = searchTabs(contentType, hasGuide, hasTmdbKey, child = child, guideAllowed = !child, sportsOn = sportsOn)
     val showsTabs = tabs.isNotEmpty()
     SearchSession.forProfile(profileId)
-    // A screen opened anew starts on the type and pill its route brings (the catalogue, no pill, when
-    // none), with no source, decade or genre left from an earlier Search; Back to it keeps what was
-    // chosen (SearchSession.arrive).
+    // A new screen starts on the type and pill of its route (the catalogue, no pill, when none), with
+    // no source, decade or genre from an earlier Search; Back to it keeps what was chosen
+    // (SearchSession.arrive).
     var arrived by rememberSaveable { mutableStateOf(false) }
     if (!arrived) {
         arrived = true
@@ -325,9 +324,8 @@ fun SearchScreen(
             Modifier
         }
 
-    // Arrived from a "more like this" card: run its title straight away, once — run again when the
-    // screen was rebuilt, it replaced a search typed since. The text field picks the term up from
-    // the ViewModel's state on its own.
+    // Arrived from a "more like this" card: run its title at once, only once, as a rebuilt screen would
+    // replace a search typed since. The field gets the term from the ViewModel's state.
     var initialQueryApplied by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialQuery) {
         if (!initialQueryApplied && !initialQuery.isNullOrBlank()) {
@@ -354,8 +352,8 @@ fun SearchScreen(
     var favoriteMenuSource by remember { mutableLongStateOf(0L) }
     val longPressScope = rememberCoroutineScope()
 
-    // A favourite removed from a result's menu: at once, with an Undo (plan → A) — Menu undoes
-    // while the bar shows.
+    // A favourite removed from a result's menu goes at once, with an Undo (plan, A); Menu undoes while
+    // the bar shows.
     val undoBar = rememberUndoBarState()
     favoriteMenuTarget?.let { target ->
         val source = favoriteMenuSource
@@ -600,8 +598,8 @@ fun SearchScreen(
                                 },
                                 onResultLongPress = { result ->
                                     if (child) return@SearchContent
-                                    // Favourite, Mark watched (a film or an episode) or Mark show watched (a
-                                    // show), on the result's own source: the menu waits for one watch-state read.
+                                    // Favourite, Mark watched (a film or an episode) or Mark show watched (a show), on the result's own
+                                    // source: the menu waits for one watch-state read.
                                     longPressScope.launch {
                                         val target = viewModel.menuTarget(result)
                                         favoriteMenuSource = result.providerId
@@ -678,11 +676,11 @@ private fun SearchTabRow(
 
 /**
  * The type pills, as the phone's chips (All, then each kind of result and "Not in your sources",
- * with their counts; OK on the chosen one goes back to All), then the filter icon
- * (the search decade genre filter plan, Phase 3) with the active choices
- * beside it: OK opens [TvSearchFilterDialog]. [focusRequester] is the chosen pill, else the icon:
- * Down from the field lands there. Up goes to the field (not the Catalogue tab, whose centre is
- * closer), Left from the first item to the rail, Down to the results.
+ * with counts; OK on the chosen one goes back to All), then the filter icon (the search decade
+ * genre filter plan, Phase 3) with the active choices: OK opens [TvSearchFilterDialog].
+ * [focusRequester] is the chosen pill, else the icon: Down from the field lands there. Up goes to
+ * the field (not the Catalogue tab, whose centre is closer), Left from the first item to the rail,
+ * Down to the results.
  */
 @Composable
 private fun SearchFilterRow(
@@ -836,11 +834,9 @@ private fun SearchContent(
 ) {
     val searchFocusRequester = remember { FocusRequester() }
 
-    // Down from the search field should reach the first recent-search chip. Left to a spatial
-    // focus search it lands on the "Recent Searches" header's clear-all button instead, which sits
-    // between the field and the chips. Hoisted so the field can point at it; only wired up while
-    // the history is actually on screen, since aiming `down` at an unattached requester would stop
-    // Down working at all.
+    // Down from the field goes to the first recent-search chip; spatial search picked the header's
+    // clear-all button between them. Wired only while the history shows: a `down` aimed at an
+    // unattached requester stops Down working at all.
     val historyFocusRequester = remember { FocusRequester() }
     // The chosen type pill, else the filter icon: Down from the field lands there while the row shows.
     val filterFocusRequester = remember { FocusRequester() }
@@ -851,14 +847,14 @@ private fun SearchContent(
     var filterOpen by remember { mutableStateOf(false) }
     var filterClosed by remember { mutableStateOf(false) }
 
-    // Sync with incoming query only if local is empty (prevents erasing user input)
+    // Take the incoming query only while the field is empty, so user input is never erased.
     LaunchedEffect(query) {
         if (fieldText.isEmpty() && query.isNotEmpty()) {
             onFieldTextChange(query)
         }
     }
 
-    // Results or empty state — show results whenever they exist, even if text field is cleared
+    // Show results whenever they exist, also when the field was cleared.
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || notInSources.isNotEmpty() || isSearching
     val showsHistory = !hasResults && query.isEmpty() && searchHistory.isNotEmpty()
     // Results from two or more sources, or with decades or genres (never with the recent searches,
@@ -878,8 +874,8 @@ private fun SearchContent(
     val showsRow = showsFilter || showsTypes
 
     // Entry (Part II Phase 7, F-S-1/F-S-2): the field without the keyboard when there are recent
-    // searches, so Down reaches them; straight into the keyboard for a first search. Not on a
-    // Back from a result — NavReturnFocusEffect lands on that result instead.
+    // searches, so Down reaches them; the keyboard at once for a first search. Not on Back from a
+    // result: NavReturnFocusEffect focuses that result.
     var editing by remember {
         mutableStateOf(
             mayOpenKeyboard && !holdFocus && returnFocus.key == null && query.isEmpty() && !hasResults && searchHistory.isEmpty(),
@@ -1042,8 +1038,8 @@ private fun SearchHistorySection(
     firstItemFocusRequester: FocusRequester? = null,
     fieldFocusRequester: FocusRequester? = null,
 ) {
-    // Clear all sits between the field and the chips: Up from the chips reaches it, Up again the
-    // field, Down the first chip. It was reached only with Right past the last chip.
+    // Clear all sits between the field and the chips: Up from the chips reaches it, Up again the field,
+    // Down the first chip.
     val clearFocus = remember { FocusRequester() }
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -1070,12 +1066,10 @@ private fun SearchHistorySection(
                 )
             },
         )
-        // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
-        // and a D-pad user should not have to scroll a rail to reach the last entry.
+        // Wraps instead of scrolling sideways, so the whole history shows at once.
         FlowRow(
-            // Up out of the first line goes to Clear all, then the field. Left to the geometric
-            // search, a chip at the left edge picks the Catalogue tab over the far wider field
-            // (closer centres).
+            // Up from the first line goes to Clear all, then the field. With geometric search, a chip at the
+            // left edge picked the Catalogue tab (closer centre) over the much wider field.
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -1169,10 +1163,8 @@ private fun SearchResultsList(
         }
     }
 
-    // Stable within a query's results — only add missing keys, never discard existing
-    // FocusRequesters, so focus targeting survives recomposition mid-query. Keyed to
-    // categoryResults/results so a new query drops the old query's requesters instead of
-    // accumulating one per result id ever seen this session.
+    // Requesters are only added within a query's results, never dropped, so focus targets survive
+    // recomposition. Keyed on the results, so a new query drops the old requesters.
     val focusRequesters = remember(categoryResults, results) { java.util.concurrent.ConcurrentHashMap<String, FocusRequester>() }
     val firstItemFocusRequester = remember { FocusRequester() }
 
@@ -1180,10 +1172,9 @@ private fun SearchResultsList(
     // The content rows' focus look, built once per results list rather than once per row.
     val rowStyle = TvCardLooks.listRow()
 
-    // Auto-focus logic: when results appear for the first time for a new query, focus the first item
-    // — not when Back has just rebuilt the list and NavReturnFocusEffect is about to hand focus to
-    // the result that was opened.
-    // TMDB's section arrives after the catalogue's: it takes the first focus only when the catalogue found nothing.
+    // First focus on the first item when a new query's results appear, not when Back rebuilt the list
+    // (NavReturnFocusEffect focuses the opened result). TMDB's section arrives after the catalogue's: it
+    // takes the first focus only when the catalogue found nothing.
     val catalogueEmpty = categoryResults.isEmpty() && results.isEmpty()
     LaunchedEffect(categoryResults, results, isSearching, notInSources.isNotEmpty()) {
         if (returnFocus.key == null && !holdFocus && !isSearching && (!catalogueEmpty || notInSources.isNotEmpty())) {
@@ -1255,7 +1246,7 @@ private fun SearchResultsList(
                 )
             }
 
-            // Pre-compute grouped results outside LazyColumn to avoid O(N×types) per recomposition
+            // Group the results once, outside the LazyColumn, not on every recomposition.
             val groupedByType =
                 remember(categoryResults, results) {
                     buildGroupedSearchResults(categoryResults, results)
@@ -1338,7 +1329,7 @@ private fun SearchResultsList(
                         }
                     }
                 } else {
-                    // Specific content type search - no need for collapsible groups
+                    // One content type: no collapsible groups.
                     if (categoryResults.isNotEmpty()) {
                         item(key = "category_header", contentType = "header") {
                             SearchSectionHeader(
@@ -1576,8 +1567,7 @@ internal fun SearchResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // A channel's logo is drawn whole (see StreamList). 16:9 at the row's height, not a
-            // poster-width strip squashed into it (TV UI audit #14).
+            // A channel's logo is drawn whole (see StreamList), 16:9 at the row's height (TV UI audit #14).
             val isChannel = result.contentType == ContentType.LIVE_TV
             // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
             val parsedTitle =
@@ -1638,14 +1628,10 @@ internal fun SearchResultItem(
     }
 }
 
-/**
- * TV-specific long press modifier for D-pad Center key.
- * Triggers onKeyUp ONLY if a long-press was detected via onKeyDown repeat counts.
- */
-
 /** The focus requester of the result row [key], made on first use; the map is remembered by the screen. */
 private fun MutableMap<String, FocusRequester>.requesterFor(key: String): FocusRequester = getOrPut(key) { FocusRequester() }
 
+/** Long press of the D-pad centre: [onLongPress] runs on the key-up of a press that repeated as a long press. */
 private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
     composed {
         var longPressDetected by remember { mutableStateOf(false) }

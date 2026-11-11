@@ -137,13 +137,12 @@ private const val KEY_SAVE = "save"
  * Add Source (one centred form) and Edit Source (edit mode: two columns, plan Part I T5).
  *
  * Edit Source: the Connection column on the left (read-only type, the login fields, Cancel and
- * Save connection right under them — the only part that needs saving) and a scrolling column on
- * the right with Behaviour (applies immediately), Logins (Xtream: the main and extra logins,
- * changed at once), Guide (sources with live channels: Provides a guide for Xtream, Guide
- * sources › opening [onGuideSources]), Library data and the Danger zone.
- * Each column is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the
- * Name edit button; Back from the guide sources returns to Guide sources. Content filters are
- * edited on each profile's page (D8), not here.
+ * Save connection under them: the only part that needs saving) and a scrolling column on the right
+ * with Behaviour (applies at once), Logins (Xtream: the main and extra logins, changed at once),
+ * Guide (sources with live channels: Provides a guide for Xtream, Guide sources › opening
+ * [onGuideSources]), Library data and the Danger zone. Each column is a `tvPane`: Left/Right move
+ * between them, Up/Down stay inside. First focus is the Name edit button; Back from the guide
+ * sources returns to Guide sources. Content filters are edited on each profile's page (D8).
  */
 @Composable
 fun TvAddProviderScreen(
@@ -175,9 +174,8 @@ fun TvAddProviderScreen(
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val providers by viewModel.providers.collectAsStateWithLifecycle()
-    // A background data sync must never block saving or leaving this screen — it runs
-    // independently of the form (ProviderSyncManager's own scope), so it isn't disturbed by
-    // either.
+    // A background data sync never blocks saving or leaving this screen: it runs in
+    // ProviderSyncManager's own scope, apart from the form.
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // The connection as loaded (edit mode): Back with anything different asks before dropping it.
@@ -234,7 +232,7 @@ fun TvAddProviderScreen(
         }
     }
 
-    // A sync started here outlives this screen, so pick it back up when we come back to it
+    // A sync started here outlives this screen, so pick it up again on return.
     LaunchedEffect(editId) {
         if (isEditMode) viewModel.observeRunningSync(editId)
     }
@@ -245,7 +243,7 @@ fun TvAddProviderScreen(
         }
     }
 
-    // Load existing provider data in edit mode directly from the repository
+    // Edit mode: load the provider from the repository.
     LaunchedEffect(editId) {
         if (isEditMode) {
             val provider = providerRepo.getProviderById(editId)
@@ -396,9 +394,8 @@ fun TvAddProviderScreen(
     // fields sit in one focus stop of the Connection pane ([fieldsModifier]).
     val nameFocusRequester = remember { FocusRequester() }
     val connectionFields: @Composable (Modifier, Modifier?) -> Unit = { nameModifier, fieldsModifier ->
-        // Provider type dropdown (D-pad friendly). Read-only and skipped by focus
-        // when editing: the type of an existing source cannot change, so the first
-        // D-pad stop is the Name field's edit button.
+        // Provider type dropdown (D-pad friendly). Read-only and skipped by focus when editing: the type of
+        // a source cannot change, so the first D-pad stop is the Name field's edit button.
         ProviderTypeDropdown(
             types = addSourceTypes(BuildConfig.DEBUG, editedType),
             selectedType = selectedType,
@@ -469,7 +466,7 @@ fun TvAddProviderScreen(
                 }
 
                 ProviderType.LOCAL -> {
-                    // LOCAL type only requires name - folder/file picker will be added later
+                    // LOCAL needs only a name; a folder/file picker is still to come.
                 }
 
                 ProviderType.REMOTE_M3U -> {
@@ -497,10 +494,9 @@ fun TvAddProviderScreen(
 
     TvPanel(modifier = Modifier.fillMaxSize()) {
         if (isEditMode) {
-            // Back with unsaved connection edits asks first. Taken at the root
-            // (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"): the press is claimed
-            // on its way back up (onKeyEvent), so a field being edited still gets it first
-            // and cancels its edit, and acted on in onPreviewKeyEvent on release, before
+            // Back with unsaved connection edits asks first. Taken at the root (docs/NAVIGATION_GUIDE.md, "TV
+            // Back on Detail Screens"): the press is claimed on its way up (onKeyEvent), so a field being edited
+            // still gets it first and cancels its edit, and acted on in onPreviewKeyEvent on release, before
             // anything below can swallow it. The BackHandler stays as the fallback.
             var backClaimed by remember { mutableStateOf(false) }
             BackHandler(enabled = hasUnsavedConnectionEdits) { showDiscardDialog = true }
@@ -512,9 +508,8 @@ fun TvAddProviderScreen(
             val cancelFocusRequester = remember { FocusRequester() }
             val saveFocusRequester = remember { FocusRequester() }
 
-            // A Behaviour choice's picker, drawn in place of the settings column (as Settings'
-            // pickers replace the group's rows); on close, focus goes back to the row that opened
-            // it, and the column keeps its scroll.
+            // A Behaviour choice's picker, drawn in place of the settings column (as in Settings); on close,
+            // focus goes back to the row that opened it, and the column keeps its scroll.
             var settingsPicker by remember { mutableStateOf<EditSourcePicker?>(null) }
             var pickerReturn by remember { mutableStateOf<EditSourcePicker?>(null) }
             val pickerRowFocus = remember { EditSourcePicker.entries.associateWith { FocusRequester() } }
@@ -598,8 +593,7 @@ fun TvAddProviderScreen(
 
                             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
-                            // Down from the last field lands on Cancel, not on whichever
-                            // button happens to sit under the field's edit button.
+                            // Down from the last field lands on Cancel, not on the button under the field's edit button.
                             Row(
                                 modifier =
                                     Modifier
@@ -722,9 +716,8 @@ fun TvAddProviderScreen(
                                     viewModel = loginsViewModel,
                                     pane = settingsPane,
                                     onMainLoginChanged = { mainUsername ->
-                                        // Make main / Remove changed the main login: take it
-                                        // into the login fields and their loaded values, so
-                                        // Save connection doesn't write the old one back.
+                                        // Make main / Remove changed the main login: take it into the login fields and their loaded values,
+                                        // so Save connection does not write the old one back.
                                         if (loadedConnection?.getOrNull(2)?.let { it != mainUsername } == true) {
                                             coroutineScope.launch { reloadMainLogin() }
                                         }
@@ -855,7 +848,7 @@ fun TvAddProviderScreen(
             }
         }
 
-        // Discard unsaved connection edits (edit mode, Back)
+        // Discard unsaved connection edits (edit mode, Back).
         if (showDiscardDialog || discardThen != null) {
             CinemaAlertDialog(
                 onDismissRequest = {
@@ -1002,9 +995,8 @@ fun TvAddProviderScreen(
                 confirmText = stringResource(R.string.provider_clear_all_button),
                 onConfirm = {
                     coroutineScope.launch {
-                        // The live per-provider store, not a fresh XtreamRepository on provider 0:
-                        // going through AppContainer keeps the cached instance's in-memory
-                        // favorites view consistent with what was just removed from disk.
+                        // The live per-provider store through AppContainer, not a new XtreamRepository on provider 0, so
+                        // the cached instance's in-memory favourites match what was removed from disk.
                         AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
                     }
                     showClearFavoritesDialog = false
@@ -1034,8 +1026,8 @@ fun TvAddProviderScreen(
                 onSuccess = { nameVal, usernameVal, token, userId ->
                     showQuickConnectDialog = false
                     viewModel.quickConnectSave(
-                        // Editing: sign this source in for the household rather
-                        // than add a second one, as whoever Jellyfin says it is.
+                        // Editing: sign this source in for the household (as whoever Jellyfin says it is), not add a second
+                        // one.
                         id = if (isEditMode) editId else null,
                         name = name.ifBlank { nameVal },
                         url = url.trimEnd('/'),

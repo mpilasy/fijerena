@@ -14,8 +14,9 @@ import org.njarasoa.fijerena.core.ui.components.PinSession
 
 /**
  * Fixed data for the Settings focus tests, written to the real stores (preferences, the settings
- * database) before `setContent`: three profiles, two Xtream sources and a guide source. The sources' addresses
- * end in `.invalid`, and nothing here starts a sync, so no test reaches the network.
+ * database) before `setContent`: three profiles, two Xtream sources and a guide source. The
+ * sources' addresses end in `.invalid` and nothing here starts a sync, so no test reaches the
+ * network.
  */
 object SettingsFixture {
     const val ADMIN = "admin"
@@ -92,10 +93,10 @@ object SettingsFixture {
 
     /**
      * Forgets the singletons the screen reaches: Robolectric gives each test a new application and
-     * data folder but keeps the classes, so an instance left from the last test would read its files
-     * and preferences. A renamed field fails here, not as a stray focus miss. The databases are not
+     * data folder but keeps the classes, so an instance from the last test would read its files and
+     * preferences. A renamed field fails here, not as a stray focus miss. The databases are not
      * closed: a view model's read still running on a background thread then failed the test with
-     * "connection pool has been closed" (a CI flake); the next test's new folder is enough.
+     * "connection pool has been closed"; the next test's new folder is enough.
      */
     fun reset() {
         // Locks every profile again: an empty profile id keeps none unlocked.

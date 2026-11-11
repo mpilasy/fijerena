@@ -150,7 +150,6 @@ fun PlayerScreen(
         val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
         val controller by viewModel.controller.collectAsStateWithLifecycle()
 
-        // Capture delegated properties into local variables for stable smart casting
         val currentPs = playbackState
         val currentMeta = currentMetadata
 
@@ -160,9 +159,8 @@ fun PlayerScreen(
         // The frame on screen, for copying (the wait indicator's scene colour).
         val sceneFrame = rememberSceneFrame()
 
-        // Autoplay next episode — see UpNextState. The "Up next" card shows over the playing episode
-        // once little enough is left; its countdown is the playback time left, from the polled
-        // position, so it stops with the video.
+        // Autoplay next episode (see UpNextState). The "Up next" card shows over the playing episode near
+        // its end; its countdown is the playback time left, so it stops with the video.
         val autoplayNext = remember { AppSettings(context.applicationContext).autoplayNextEpisode }
         val lifecycle = LocalLifecycleOwner.current.lifecycle
         val upNextDismissed = upNextState.dismissedFor != null && upNextState.dismissedFor == currentStreamId
@@ -192,14 +190,10 @@ fun PlayerScreen(
             }
         }
 
-        // Proper BackHandler (not the onKeyEvent below) so this composes correctly whether
-        // PlayerScreen is reached via nav (Screen.Player) or embedded full-screen inside
-        // LiveTvSplitLayout's own BackHandler. A raw onKeyEvent consuming KEYCODE_BACK does not
-        // stop the OnBackPressedDispatcher chain, so an outer BackHandler still fires for the same
-        // press and can race a state read here into a double pop — same class of bug fixed earlier
-        // for the CategoryList/ContentTypeSelection transition. BackHandler's registration is
-        // properly stacked instead (innermost/most-recently-composed wins), so only one handler
-        // ever runs per press.
+        // A BackHandler, not the onKeyEvent below, so this works both from Screen.Player and inside
+        // LiveTvSplitLayout's own BackHandler. A raw onKeyEvent that consumes KEYCODE_BACK does not stop the
+        // OnBackPressedDispatcher chain, so an outer BackHandler also fires and can pop twice. BackHandlers
+        // stack (the most recently composed wins), so only one runs per press.
         BackHandler {
             when {
                 upNextVisible -> {
@@ -227,10 +221,8 @@ fun PlayerScreen(
                     state.showStreamInfo = false
                 }
 
-                // Whether "back" should stop playback is the caller's call, not this shared
-                // composable's — the standalone route's onBack stops (TvPlayerScreen.kt), while
-                // LiveTvSplitLayout's promoted view just wants to demote back to the dock without
-                // interrupting playback.
+                // The caller decides whether Back stops playback: the standalone route's onBack stops
+                // (TvPlayerScreen.kt), while LiveTvSplitLayout's full screen goes back to the dock and keeps playing.
                 else -> {
                     onBack()
                 }
@@ -247,9 +239,9 @@ fun PlayerScreen(
             tuningChannelName = tuningChannelName,
         )
 
-        // Ensure focus is requested when no overlays are visible — on the "Up next" card while it is up.
-        // Keyed on isModalOpen too: a track picker keeps focus while the OSD auto-hides behind it, so
-        // focus comes back to the player when it closes. Closing the channel panel lands here too.
+        // Focus the player when no overlay shows, or the "Up next" card while it is up. Keyed on
+        // isModalOpen too: a track picker keeps focus while the OSD hides behind it, so focus comes back
+        // when it closes. Closing the channel panel lands here too.
         LaunchedEffect(state.showControls, state.showChannelPanel, upNextVisible, state.isModalOpen) {
             if (!upNextVisible) upNextFocused = false
             val noOverlays = !state.showControls && !state.showChannelPanel
@@ -278,8 +270,8 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .panel(PanelFill.Media)
                     .then(
-                        // Only make the player box focusable when controls and menus are NOT visible.
-                        // This allows focus to pass to the active overlay (e.g. the channel panel).
+                        // The player box is focusable only while no controls or menus show, so focus can go to the active
+                        // overlay (the channel panel).
                         if (!state.showControls && !state.showChannelPanel) {
                             Modifier
                                 .focusRequester(state.focusRequester)
@@ -288,15 +280,10 @@ fun PlayerScreen(
                             Modifier
                         },
                     )
-                    // onPreviewKeyEvent (top-down, before any focused descendant) rather than
-                    // onKeyEvent (bubble-up, after) — mirrors the BackHandler/onPreviewKeyEvent
-                    // fix below for the same reason: a bubble-phase handler only gets an event
-                    // once the currently focused child has passed on it. The Center/Enter reveal
-                    // tap moves focus onto the play/pause button asynchronously (LaunchedEffect in
-                    // TvPlayerControlsOverlay); if that lands before this same press's KeyUp is
-                    // dispatched, the button's own click-on-KeyUp handling fired first and
-                    // suppressNextCenterKeyUp never got a chance to run, so one press both opened
-                    // the OSD and toggled play/pause. Preview phase always wins that race.
+                    // onPreviewKeyEvent (top-down, before the focused child), not onKeyEvent (after it). The
+                    // Center/Enter reveal moves focus to the play/pause button asynchronously; if that landed before
+                    // this press's KeyUp, the button clicked on KeyUp first and suppressNextCenterKeyUp did not run, so
+                    // one press opened the OSD and toggled play/pause.
                     .onPreviewKeyEvent { keyEvent ->
                         android.util.Log.i(
                             "PlayerScreen",
@@ -305,11 +292,10 @@ fun PlayerScreen(
                         // Any key while the OSD is up restarts its auto-hide (LT4).
                         if (state.showControls && keyEvent.type == KeyEventType.KeyDown) state.controlsKeyTick++
                         when {
-                            // Channel panel open: Back closes it (on KeyUp, so the release does not
-                            // land on the player). Taken here, top-down, because a focused row
-                            // swallows the first Back before BackHandler sees it (CONTRIBUTING.md → Back on
-                            // TV). Every other key goes on to the panel: the handler below leaves the
-                            // D-pad and OK alone while isModalOpen.
+                            // Channel panel open: Back closes it (on KeyUp, so the release does not land on the player). Taken
+                            // here, top-down, because a focused row swallows the first Back before BackHandler (CONTRIBUTING.md
+                            // → Back on TV). Other keys go on to the panel: the handler below ignores the D-pad and OK while
+                            // isModalOpen.
                             state.showChannelPanel && keyEvent.key == Key.Back -> {
                                 if (keyEvent.type == KeyEventType.KeyUp) state.showChannelPanel = false
                                 true
@@ -362,12 +348,10 @@ fun PlayerScreen(
                         }
                     },
         ) {
-            // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
-            // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
-            // recomposition here never steals frames from the video. See LiveTvSplitLayout's
-            // videoSurface comment for why the preview pane needs the opposite (TextureView).
-            // While the controls are up, the subtitles sit above their bottom panel (and a small gap)
-            // instead of on the title and timeline.
+            // SurfaceView (EmbeddedPlayerSurface's default): SurfaceFlinger composites full-screen video apart
+            // from the UI thread, so OSD recomposition never takes frames from it. See LiveTvSplitLayout for
+            // why the preview uses a TextureView. While the controls show, the subtitles sit above their
+            // bottom panel (with a small gap), not on the title and timeline.
             val osdShown = state.showControls || state.showStreamInfo
             EmbeddedPlayerSurface(
                 modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
@@ -378,7 +362,7 @@ fun PlayerScreen(
                 sceneFrame = sceneFrame,
             )
 
-            // Loading/Error overlays (always show, except Idle which is handled silently)
+            // Loading/Error overlays (Idle shows nothing).
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Center,
@@ -387,10 +371,8 @@ fun PlayerScreen(
                 val isRecycling by (service?.isRecyclingFlow ?: kotlinx.coroutines.flow.MutableStateFlow(false))
                     .collectAsStateWithLifecycle()
 
-                // Failsafe Truth: High-frequency poll of player status to clear stuck UI.
-                // `currentPosition` doesn't reset when buffering mid-stream, so comparing it against
-                // a threshold (e.g. > 0L) is always true the instant any playback has occurred —
-                // track actual progression against the previous sample instead.
+                // Poll the player often to clear a stuck buffering UI. `currentPosition` does not reset when
+                // buffering mid-stream, so compare progress with the previous sample, not with a threshold.
                 var isActuallyMoving by remember { mutableStateOf(false) }
                 LaunchedEffect(currentPs, isRecycling) {
                     if (currentPs is PlaybackState.Buffering && !isRecycling) {
@@ -411,13 +393,11 @@ fun PlayerScreen(
                     }
                 }
 
-                // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError
-                // only emits Ended for !metadata.isLive) — leave the player instead of waiting on a
-                // manual Back press, unless the profile plays the next episode automatically, there
-                // is one and its card wasn't cancelled: then it plays at once (once the screen is in
-                // the foreground). EndedContent below still renders for the brief window before this
-                // fires. While a next episode is starting, the player still reads Ended (and this
-                // screen re-mounts) — nothing to do until it plays.
+                // Natural end of a film/episode (never live TV: Ended is only emitted for !metadata.isLive): leave
+                // the player instead of waiting for Back, unless the profile plays the next episode automatically,
+                // there is one and its card was not cancelled: then it plays at once (once the screen is in the
+                // foreground). EndedContent shows until this fires. While a next episode starts, the player still
+                // reads Ended (and this screen mounts again): nothing to do until it plays.
                 LaunchedEffect(currentPs, currentStreamId) {
                     val startingFrom = upNextState.startingFrom
                     if (startingFrom != null) {
@@ -476,8 +456,8 @@ fun PlayerScreen(
             // P4: the connection can't keep up with the stream.
             rememberSlowConnectionText()?.let { TvSlowConnectionBanner(text = it) }
 
-            // Stats overlay (double-click to show)
-            // Visible whenever showStats is true, regardless of playbackState (survives channel switches)
+            // Stats overlay (double click), shown while showStats is true, in any playbackState (it survives
+            // channel switches).
             AnimatedVisibility(
                 visible = state.showStats,
                 enter = fadeIn(),
@@ -487,7 +467,6 @@ fun PlayerScreen(
                     playbackState = currentPs,
                     metadata = currentMeta,
                     onHide = {
-                        // Just close stats, leave controls as they are
                         state.showStats = false
                     },
                 )
@@ -521,13 +500,13 @@ fun PlayerScreen(
                 )
             }
 
-            // Autonomous top-of-hour clock
+            // Top-of-hour clock.
             AnimatedVisibility(
                 visible = state.showTopOfHourClock && !state.showControls && !state.showStreamInfo && !state.showStats,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                // Self-ticking: only this composable recomposes each second
+                // Ticks itself: only this composable recomposes each second.
                 var tick by remember { mutableLongStateOf(0L) }
                 LaunchedEffect(Unit) {
                     while (true) {
@@ -552,11 +531,9 @@ fun PlayerScreen(
                 }
             }
 
-            // Controls overlay. Declared before the channel panel below
-            // so that on the rare overlap (a channel-zap's showStreamInfo hasn't auto-hidden yet when
-            // the panel opens) it renders underneath it, never on top — opening the panel is never
-            // itself a reason to show this. hideTopBars still exists for that overlap case, so the
-            // compact top bars don't double up with the panel's tab row.
+            // Controls overlay, declared before the channel panel so that it draws under it on the rare overlap
+            // (a zap's showStreamInfo still up when the panel opens). hideTopBars keeps the compact top bars
+            // from doubling the panel's tab row then.
             AnimatedVisibility(
                 visible = state.showControls || state.showStreamInfo,
                 enter = fadeIn(),
@@ -638,13 +615,10 @@ fun PlayerScreen(
                                     .align(Alignment.CenterEnd)
                                     .fillMaxWidth(CHANNEL_PANEL_WIDTH_FRACTION)
                                     .fillMaxHeight()
-                                    // Keep focus inside while open: this is an overlay in the
-                                    // player's own tree, so a D-pad press past the tab row or the
-                                    // last row would otherwise move on to whatever lies behind
-                                    // (CONTRIBUTING.md → In-tree overlays trap focus). Only while open: it
-                                    // animates out focused, and a cancelled exit would also block the
-                                    // player taking focus back on close. focusProperties directly
-                                    // before focusGroup, so the exit belongs to the group.
+                                    // Keep focus inside while open: this overlay is in the player's own tree, so a D-pad press past
+                                    // its edge would move to what lies behind (CONTRIBUTING.md → In-tree overlays trap focus). Only
+                                    // while open: it animates out focused, and a cancelled exit would stop the player taking focus back.
+                                    // focusProperties directly before focusGroup, so the exit belongs to the group.
                                     .focusProperties { onExit = { if (state.showChannelPanel) cancelFocusChange() } }
                                     .focusGroup(),
                             backgroundAlpha = CHANNEL_PANEL_BACKGROUND_ALPHA,

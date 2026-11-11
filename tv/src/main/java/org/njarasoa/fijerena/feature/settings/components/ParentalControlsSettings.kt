@@ -64,9 +64,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /*
- * Settings › Parental controls on TV (the parental controls plan, "The page"),
- * for the admin only: the group's rows (one per list, then Check a source), a list's pane and the
- * check view. The panes open in place of the group's rows, like the other Settings pickers.
+ * Settings › Parental controls on TV (the parental controls plan, "The page"), for the admin only:
+ * the group's rows (one per list, then Check a source), a list's pane and the check view. The panes
+ * open in place of the group's rows, like the other Settings pickers.
  */
 
 /** The list's title. */
@@ -95,8 +95,9 @@ internal val ParentalList.descriptionRes: Int
 
 /**
  * The Parental controls group's rows: the description, one row per list with its number of words,
- * Check a source, then Content filters of each profile ([onOpenProfiles]). [firstRowModifier] carries the pane's entry key; [focusRequesterFor] gives
- * the row that opened a pane its focus back (by [parentalListReturnKey] or [PARENTAL_CHECK_RETURN_KEY]).
+ * Check a source, then Content filters of each profile ([onOpenProfiles]). [firstRowModifier]
+ * carries the pane's entry key; [focusRequesterFor] gives the row that opened a pane its focus back
+ * (by [parentalListReturnKey] or [PARENTAL_CHECK_RETURN_KEY]).
  */
 @Composable
 internal fun ParentalControlsCard(
