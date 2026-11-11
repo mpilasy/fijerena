@@ -14,8 +14,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → Admin's list of sections, and About (`scripts/focus-walks/settings.txt`): the five
- * section rows, for an Admin; About for everyone, with Logs under Device Info. The About rows open
- * other screens, so nothing here presses OK.
+ * section rows, for an Admin; About for everyone: About Fijerena, Device Info, then Logs. The About
+ * rows open other screens, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAboutFocusTest : SettingsFocusTest() {
@@ -37,15 +37,12 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
             up("Sources & Guide"),
             back("Admin"),
             down("About"),
-            right("Fijerena v"),
+            right("About Fijerena / Version, source code, licences and credits"),
             down("Device Info / This app and device"),
             down(logs),
-            down("Terms of Use / Who is responsible for the sources you add"),
-            down("Open-Source Licences / The libraries and fonts the app is built with"),
-            // TMDB's attribution: one focusable row, last.
-            down("Film and Show Data / TMDB logo"),
-            down("Film and Show Data / TMDB logo"),
-            up("Open-Source Licences"),
+            // The end of About: Down stays put.
+            down(logs),
+            up("Device Info"),
             back("About"),
         )
     }
@@ -55,14 +52,10 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
         open(SettingsFixture.GUEST)
         walk.run(
             down("About"),
-            right("Fijerena v"),
+            right("About Fijerena"),
             down("Device Info"),
             down(logs),
-            down("Terms of Use"),
-            down("Open-Source Licences"),
-            // No Shrink Database for a profile that is not an Admin.
-            down("Film and Show Data / TMDB logo"),
-            down("Film and Show Data / TMDB logo"),
+            down(logs),
             left("About"),
         )
     }

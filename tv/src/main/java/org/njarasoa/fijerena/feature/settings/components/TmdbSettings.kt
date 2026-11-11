@@ -145,15 +145,16 @@ fun TmdbKeyPane(
 }
 
 /**
- * TMDB's required attribution (About): its logo and notice, as one focusable row so Up/Down
- * never skip it (focus contract rule 3); OK does nothing.
+ * TMDB's required attribution (About Fijerena's credits): its logo and notice, as one focusable
+ * row so Up/Down never skip it (focus contract rule 3); OK does nothing.
  */
 @Composable
-fun TmdbAttributionRow() {
+fun TmdbAttributionRow(modifier: Modifier = Modifier) {
     SettingsRow(
         title = stringResource(R.string.tmdb_attribution_title),
         description = null,
         onClick = {},
+        modifier = modifier,
         kind = SettingsRowKind.Action,
         supporting = {
             Column {

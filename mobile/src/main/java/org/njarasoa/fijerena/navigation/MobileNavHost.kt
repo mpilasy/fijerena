@@ -986,8 +986,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         onDiagnostics = {
                             navController.navigateOnce(Screen.Diagnostics)
                         },
-                        onLicenses = { navController.navigateOnce(Screen.Licenses) },
-                        onTerms = { navController.navigateOnce(Screen.Terms) },
+                        onAbout = { navController.navigateOnce(Screen.About) },
                         onDeviceInfo = {
                             navController.navigateOnce(Screen.DeviceInfo)
                         },
@@ -1069,6 +1068,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 composable<Screen.DeviceInfo> {
                     org.njarasoa.fijerena.feature.settings
                         .MobileDeviceInfoScreen(onBack = { navController.navigateUp() })
+                }
+                composable<Screen.About> {
+                    org.njarasoa.fijerena.feature.settings.MobileAboutScreen(
+                        onTerms = { navController.navigateOnce(Screen.Terms) },
+                        onLicenses = { navController.navigateOnce(Screen.Licenses) },
+                        onBack = { navController.navigateUp() },
+                    )
                 }
                 composable<Screen.Licenses> {
                     org.njarasoa.fijerena.feature.settings.MobileLicensesScreen(

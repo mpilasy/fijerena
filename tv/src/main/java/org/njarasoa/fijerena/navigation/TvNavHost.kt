@@ -705,6 +705,13 @@ fun TvNavHost(
                                 .DeviceInfoScreen()
                         }
 
+                        composable<Screen.About> {
+                            org.njarasoa.fijerena.feature.settings.AboutScreen(
+                                onTerms = { navController.navigateOnce(Screen.Terms) },
+                                onLicenses = { navController.navigateOnce(Screen.Licenses) },
+                            )
+                        }
+
                         composable<Screen.Licenses> {
                             org.njarasoa.fijerena.feature.settings.LicensesScreen(
                                 onOpen = { id -> navController.navigateOnce(Screen.LicenseDetail(id)) },
@@ -1291,11 +1298,8 @@ fun TvNavHost(
                                 onDeviceInfo = {
                                     navController.navigateOnce(Screen.DeviceInfo)
                                 },
-                                onLicenses = {
-                                    navController.navigateOnce(Screen.Licenses)
-                                },
-                                onTerms = {
-                                    navController.navigateOnce(Screen.Terms)
+                                onAbout = {
+                                    navController.navigateOnce(Screen.About)
                                 },
                                 onProfileSwitched = {
                                     // As after the profile picker: every screen below may hold the previous

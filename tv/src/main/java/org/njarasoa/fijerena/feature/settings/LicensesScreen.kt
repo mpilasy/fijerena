@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -156,7 +157,10 @@ internal fun LicenseList(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal),
+        // The vertical margin inside the list: as the list's own padding it clipped the focused
+        // last row's border.
+        contentPadding = PaddingValues(vertical = Spacing.tvSafeMarginVertical),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         content = content,
     )

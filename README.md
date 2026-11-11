@@ -87,7 +87,7 @@ with Export / Import or live sync. The details are in [PRIVACY.md](PRIVACY.md).
 
 Fijerena provides no content and comes with no sources. You alone are responsible for the sources
 you add and for making sure that your use of them is legal where you are. The full terms are in
-[TERMS.md](TERMS.md) and in the app, Settings → About → Terms of use.
+[TERMS.md](TERMS.md) and in the app, Settings → About → About Fijerena → Terms of Use.
 
 ---
 

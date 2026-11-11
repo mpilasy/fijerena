@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,7 +34,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -64,7 +62,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
-import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -79,7 +76,6 @@ import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsRows
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
-import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -103,8 +99,7 @@ fun MobileSettingsScreen(
     onManageProviders: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onDeviceInfo: () -> Unit = {},
-    onLicenses: () -> Unit = {},
-    onTerms: () -> Unit = {},
+    onAbout: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onGuideSources: () -> Unit = {},
     /** Admin → Profiles: a profile's page with its Admin rows too. */
@@ -403,36 +398,11 @@ fun MobileSettingsScreen(
                 // === About ===
                 item {
                     SettingsGroupHeader(stringResource(R.string.settings_about_section_title))
-                    // Tapping the version 7 times turns Admin on while no profile is Admin (AdminTaps).
-                    val onVersionClick = rememberAdminTapHandler(uiState.adminExists, viewModel::enableAdmin)
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                // look-ok: the About text: seven taps turn Admin on, not a list row
-                                .clickable(onClick = onVersionClick)
-                                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    ) {
-                        CinemaText(stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME))
-                        CinemaText(
-                            stringResource(R.string.app_disclaimer_no_content),
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                        // GPL-3.0 "Appropriate Legal Notices": copyright, licence, no warranty, source.
-                        CinemaText(stringResource(R.string.app_copyright), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                        CinemaText(stringResource(R.string.app_license_notice), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                        CinemaText(
-                            stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                        CinemaText(
-                            stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
-                            role = TextRole.BodySmall,
-                            tone = TextTone.Secondary,
-                        )
-                    }
+                    SettingsListRow(
+                        title = stringResource(R.string.about_title),
+                        summary = stringResource(R.string.about_desc),
+                        onClick = onAbout,
+                    )
                     SettingsListRow(
                         title = stringResource(R.string.device_info_open),
                         summary = stringResource(R.string.device_info_desc),
@@ -444,17 +414,6 @@ fun MobileSettingsScreen(
                         summary = stringResource(R.string.settings_diagnostics_desc),
                         onClick = onDiagnostics,
                     )
-                    SettingsListRow(
-                        title = stringResource(R.string.terms_title),
-                        summary = stringResource(R.string.terms_desc),
-                        onClick = onTerms,
-                    )
-                    SettingsListRow(
-                        title = stringResource(R.string.licenses_title),
-                        summary = stringResource(R.string.licenses_desc),
-                        onClick = onLicenses,
-                    )
-                    TmdbAttribution()
                 }
             } else if (adminSection == null) {
                 // Admin: the list of its sections, in TV's order. Each row opens the page of its

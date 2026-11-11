@@ -189,6 +189,7 @@ Settings                                 Your Profile, Admin (an admin only), Ab
 ├─→ ProfileEdit(profileId, admin = true) Admin → Profiles → a profile's row (mobile): its page with the Admin rows too; a route to another profile for anyone but an admin shows the profile in use's own page (`Screen.ProfileEdit.shownProfileId`); TV: a page in Admin's pane
 ├─→ ParentalControls ─→ ParentalListEdit(listKey) | ParentalCheck(providerId)   Admin → Parental Controls (mobile: a row of Admin's list; TV: a section in Settings' pane)
 ├─→ SyncSettings                         Admin → Sync & Backup → Live sync
+├─→ About ─→ Terms | Licenses ─→ LicenseDetail(entryId)   About → About Fijerena (a link's QR code is a dialog, no route)
 ├─→ DeviceInfo                           About
 ├─→ Diagnostics                          About → Logs
 └─→ ContentTypeSelection                 Switch to this profile (back stack cleared)

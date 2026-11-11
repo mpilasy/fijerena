@@ -2,7 +2,7 @@
 
 Last changed on 21 October 2026.
 
-The app shows these terms in Settings → About → Terms of use, in English, French and Malagasy
+The app shows these terms in Settings → About → About Fijerena → Terms of Use, in English, French and Malagasy
 (`core/ui/src/main/res/values*/strings.xml`, `terms_*`). Change both together.
 
 ## What Fijerena is

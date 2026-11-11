@@ -65,7 +65,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
-import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
@@ -105,8 +104,7 @@ fun SettingsScreen(
     onGuideSources: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onDeviceInfo: () -> Unit = {},
-    onLicenses: () -> Unit = {},
-    onTerms: () -> Unit = {},
+    onAbout: () -> Unit = {},
     onProfileSwitched: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -246,7 +244,6 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
-    val onVersionClick = rememberAdminTapHandler(uiState.adminExists, viewModel::enableAdmin)
 
     // Two panes (plan Part I, B): a rail of the groups on the left, the selected group's
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
@@ -940,6 +937,10 @@ fun SettingsScreen(
                                             SettingsGroup.ABOUT -> {
                                                 item {
                                                     AboutSettingsCard(
+                                                        onAbout = {
+                                                            returnFocus.leaveFrom(RETURN_ABOUT, listState)
+                                                            onAbout()
+                                                        },
                                                         onDeviceInfo = {
                                                             returnFocus.leaveFrom(RETURN_DEVICE_INFO, listState)
                                                             onDeviceInfo()
@@ -948,23 +949,12 @@ fun SettingsScreen(
                                                             returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
                                                             onDiagnostics()
                                                         },
-                                                        onLicenses = {
-                                                            returnFocus.leaveFrom(RETURN_LICENSES, listState)
-                                                            onLicenses()
-                                                        },
-                                                        onTerms = {
-                                                            returnFocus.leaveFrom(RETURN_TERMS, listState)
-                                                            onTerms()
-                                                        },
-                                                        onVersionClick = onVersionClick,
                                                         rowModifier = entryModifier,
+                                                        aboutFocusRequester = returnFocus.requesterFor(RETURN_ABOUT),
                                                         deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
                                                         diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
-                                                        licensesFocusRequester = returnFocus.requesterFor(RETURN_LICENSES),
-                                                        termsFocusRequester = returnFocus.requesterFor(RETURN_TERMS),
                                                     )
                                                 }
-                                                item { TmdbAttributionRow() }
                                             }
                                         }
                                     }
@@ -1028,8 +1018,7 @@ private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
 private const val RETURN_DEVICE_INFO = "deviceInfo"
-private const val RETURN_LICENSES = "licenses"
-private const val RETURN_TERMS = "terms"
+private const val RETURN_ABOUT = "about"
 private const val RETURN_GUIDE_SOURCES = "guideSources"
 
 private fun profileReturnKey(profileId: String) = "profile:$profileId"

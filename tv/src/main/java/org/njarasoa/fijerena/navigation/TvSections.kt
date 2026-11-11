@@ -122,6 +122,7 @@ internal fun NavDestination.isSettingsTree(): Boolean =
         hasRoute<Screen.ProviderSelection>() ||
         hasRoute<Screen.EpgManagement>() ||
         hasRoute<Screen.DeviceInfo>() ||
+        hasRoute<Screen.About>() ||
         hasRoute<Screen.Licenses>() ||
         hasRoute<Screen.Terms>() ||
         hasRoute<Screen.LicenseDetail>() ||

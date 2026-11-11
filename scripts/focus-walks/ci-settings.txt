@@ -18,6 +18,8 @@
 # Admin sections (2026-11-03): Admin lists its five sections; OK opens a section in place of the
 # list, Back closes it on its row; Shrink Database ends Sources & Guide. Edited by hand from the
 # focus tests, not yet run.
+# About page (2026-11-11): About is About Fijerena, Device Info and Logs; the version, Terms,
+# Licences and the credits moved to the About Fijerena page, walked here. Edited by hand.
 @start Admin
 # The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
@@ -57,12 +59,24 @@ DOWN	Admin
 DOWN	About
 # Down at the end of the rail stays put.
 DOWN	About
-# About: the About card, Device Info, Logs, Terms of Use, Open-Source Licences.
-RIGHT	Fijerena v
-DOWN	Device Info
-DOWN	Logs
+# About: About Fijerena, Device Info, Logs. OK on About Fijerena opens its page: the version row,
+# the licence notice, the four links, Terms of Use, Open-Source Licences and the two credits; Back
+# returns to its row.
+RIGHT	About Fijerena
+CENTER	Fijerena v
+DOWN	© 2026
+DOWN	Source Code
+DOWN	Latest Release
+DOWN	Privacy Policy
+DOWN	Report a Problem
 DOWN	Terms of Use
 DOWN	Open-Source Licences
+DOWN	Film and Show Data
+DOWN	Sports Data
+DOWN	Sports Data
+BACK	About Fijerena
+DOWN	Device Info
+DOWN	Logs
 LEFT	About
 UP	Admin
 # Admin: the list of its sections, Profiles, Parental Controls, This Device, Sources & Guide and

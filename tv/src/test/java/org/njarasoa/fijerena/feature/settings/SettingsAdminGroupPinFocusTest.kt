@@ -64,7 +64,7 @@ class SettingsAdminGroupPinFocusTest : SettingsFocusTest() {
             center("Admin"),
             // About is everyone's: no PIN.
             down("About"),
-            right("Fijerena v"),
+            right("About Fijerena"),
         )
     }
 

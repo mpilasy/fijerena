@@ -33,6 +33,7 @@ class AdminOnlyGateTest {
                 composable<Screen.AddProvider> {}
                 composable<Screen.Settings> {}
                 composable<Screen.DeviceInfo> {}
+                composable<Screen.About> {}
                 composable<Screen.Licenses> {}
                 composable<Screen.Terms> {}
                 composable<Screen.Diagnostics> {}
@@ -76,6 +77,7 @@ class AdminOnlyGateTest {
         assertTrue(settingsArea(Screen.Settings))
         assertTrue(settingsArea(Screen.ProfileEdit("kid")))
         assertTrue(settingsArea(Screen.DeviceInfo))
+        assertTrue(settingsArea(Screen.About))
         assertTrue(settingsArea(Screen.Licenses))
         assertTrue(settingsArea(Screen.Terms))
         assertTrue(settingsArea(Screen.Diagnostics))

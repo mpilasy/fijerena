@@ -298,11 +298,18 @@ sealed interface Screen {
     @Serializable
     data object DeviceInfo : Screen
 
-    /** Settings → About → Open-source licences: every library and font the app ships. */
+    /**
+     * Settings → About → About Fijerena (everyone with Settings): version, the no-content notice,
+     * copyright and licence, the project's links with their QR codes, Terms, Licences and credits.
+     */
+    @Serializable
+    data object About : Screen
+
+    /** Settings → About → About Fijerena → Open-source licences: every library and font the app ships. */
     @Serializable
     data object Licenses : Screen
 
-    /** Settings → About → Terms of use: the user alone is responsible for the sources they add. */
+    /** Settings → About → About Fijerena → Terms of use: the user alone is responsible for the sources they add. */
     @Serializable
     data object Terms : Screen
 

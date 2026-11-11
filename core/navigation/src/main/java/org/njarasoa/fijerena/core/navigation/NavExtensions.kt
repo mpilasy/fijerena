@@ -84,6 +84,7 @@ fun NavBackStackEntry?.isSettingsArea(): Boolean =
         it.hasRoute<Screen.Settings>() ||
             it.hasRoute<Screen.ProfileEdit>() ||
             it.hasRoute<Screen.DeviceInfo>() ||
+            it.hasRoute<Screen.About>() ||
             it.hasRoute<Screen.Licenses>() ||
             it.hasRoute<Screen.Terms>() ||
             it.hasRoute<Screen.Diagnostics>()

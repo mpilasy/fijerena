@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **About page:** Settings → About → About Fijerena is a new page on TV and phone. It has the version, the line that Fijerena provides and hosts no content, the copyright and licence notice, Terms of Use, the open-source licences and the TMDB and sports data credits. New links open the source code, the latest release (where the TV and phone apps are), the privacy policy and the bug reports. Each link shows a QR code to scan with a phone; on the phone, Open in Browser opens it too. Settings → About keeps Device Info and Logs. On TV, the focused last row of Terms of Use and the licences no longer has its border cut at the bottom of the screen.
 - **New CI check (developers):** `scripts/check-init-order.py` fails the build when a class declares a property with a value below an `init` block. That `init` can start work that reads the property before it is set, and the crash then depends on timing (the Sources screen's view model failed a test on CI that passed on a local run). The property groups in the sync settings, guide management and app container classes now come before their `init` blocks.
 
 ## Version: 0.9.20261110234723

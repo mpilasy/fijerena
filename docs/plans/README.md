@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-11-11 | [About page](./20261111_about-page-plan.md) | Settings → About → About Fijerena on TV and phone: version, the no-content notice, copyright and licence, links to the source code, the latest release, the privacy policy and bug reports (each with a QR code), Terms, licences and data credits | Done 2026-11-11, walked on both emulators |
 | 2026-11-09 | [Send to TV](./20261109_send-to-tv-plan.md) | On the phone, send a film, episode or channel to a TV of the sync group that has the app open; the TV asks with a banner (Play / Dismiss) and plays it from its own source at the phone's position | Released in v0.9.20261109201957 |
 | 2026-11-09 | [New episode alerts](./20261109_new-episode-alerts-plan.md) | A followed show with a new episode on its source gets a New badge, its new episodes a New mark, and Home a New Episodes row, TV and phone; found after each catalogue sync, a few requests per sync | Released in v0.9.20261109201957 |
 | 2026-11-09 | [Night Audio](./20261109_night-audio-plan.md) | One switch in the player's Audio dialog makes quiet speech louder and loud sounds quieter (a compressor and a limiter on the decoded sound), TV and phone, every kind of playback | Released in v0.9.20261109201957 |
