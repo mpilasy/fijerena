@@ -39,7 +39,7 @@ class XtreamApiServiceTest {
                 password = "pass",
             )
 
-        // Extension with special chars (unlikely but good to cover)
+        // An extension with special characters.
         val url = service.buildSeriesStreamUrl(789, "mp4/bad")
         assertEquals("http://example.com/series/user/pass/789.mp4%2Fbad", url)
     }

@@ -24,9 +24,9 @@ interface MediaProvider {
     suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail>
 
     /**
-     * The series as last stored locally, with no network call, or null when nothing usable is
-     * cached. Lets a caller draw the screen while [getSeriesDetail] goes to the provider —
-     * that call still runs, because only it can notice episodes added since.
+     * The series as last stored locally, with no network call; null when nothing usable is cached.
+     * A caller draws the screen with it while [getSeriesDetail] still runs, as only that call sees
+     * new episodes.
      */
     suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? = null
 
@@ -52,16 +52,15 @@ interface MediaProvider {
     suspend fun getMovieDetail(movieId: String): Result<MovieDetail>
 
     /**
-     * Drops whatever this provider has cached for [itemId]'s detail, so the next read goes back to
-     * the server. Refresh actions call it — without it a "refresh" re-serves the cached copy and
-     * looks like it did nothing. No-op for providers that don't cache.
+     * Drops this provider's cached detail of [itemId], so the next read goes to the server. Refresh
+     * actions call it, else a refresh serves the cache again. No-op for providers that do not
+     * cache.
      */
     suspend fun invalidateCachedDetail(itemId: String) {}
 
     /**
-     * Fetches the whole catalogue again, bypassing any local copy — for providers that load it in
-     * one piece (a remote M3U playlist), where Refresh would otherwise re-serve the copy. No-op
-     * for providers whose lists are fetched per call.
+     * Fetches the whole catalogue again, past any local copy, for providers that load it in one
+     * piece (a remote M3U playlist). No-op for providers that fetch lists per call.
      */
     suspend fun refreshCatalog(): Result<Unit> = Result.success(Unit)
 
@@ -111,14 +110,11 @@ interface MediaProvider {
     ): Result<List<MediaItem>>? = null
 
     /**
-     * Titles related to [itemId] that this provider actually carries, for the two rows on a detail
-     * screen.
+     * Titles related to [itemId] that this provider carries, for the two rows on a detail screen.
      *
-     * The related titles come from TMDB, which answers in TMDB titles rather than in the user's
-     * catalogue, so an implementation has to match them back against what it holds and drop
-     * whatever it cannot play — a row of titles the provider does not carry is a row of dead ends.
-     * Either list is empty for every reason its row should simply not appear: no TMDB id, no API
-     * key, a failed call, or too few surviving matches to be worth a row.
+     * TMDB answers in TMDB titles, so an implementation matches them back against its catalogue and
+     * drops what it cannot play. Either list is empty when its row must not show: no TMDB id, no
+     * API key, a failed call, or too few matches for a row.
      */
     suspend fun getRelatedTitles(
         itemId: String,
@@ -127,10 +123,9 @@ interface MediaProvider {
     ): RelatedTitles = RelatedTitles()
 
     /**
-     * TMDB's own title for [tmdbId], for showing next to a provider's stream name — Xtream stream
-     * names are often raw release-file names rather than clean titles. Null for every reason it
-     * should simply not show: no TMDB id, no API key, a failed call, or a provider (like Jellyfin)
-     * whose own name is already clean.
+     * TMDB's own title for [tmdbId], shown next to a provider's stream name (Xtream names are often
+     * raw release-file names). Null when there is no TMDB id, no API key, a failed call, or a
+     * provider (like Jellyfin) whose own name is clean.
      */
     suspend fun getTmdbTitle(
         tmdbId: String?,
@@ -138,9 +133,8 @@ interface MediaProvider {
     ): String? = null
 
     /**
-     * TMDB's transparent-PNG wordmark art for [tmdbId], for the player OSD's title treatment.
-     * Null for every reason it should simply not show: no TMDB id, no API key, a failed call, or
-     * TMDB has no logo art for this title.
+     * TMDB's transparent-PNG wordmark for [tmdbId], for the player OSD's title. Null when there is
+     * no TMDB id, no API key, a failed call, or no logo on TMDB.
      */
     suspend fun getTmdbLogoUrl(
         tmdbId: String?,
@@ -148,10 +142,9 @@ interface MediaProvider {
     ): String? = null
 
     /**
-     * TMDB's full-bleed backdrop art for [tmdbId], for the TV detail hero background. Null for
-     * every reason it should simply not show: no TMDB id, no API key, a failed call, or TMDB has
-     * no backdrop for this title — callers fall back to whatever backdrop the catalogue itself
-     * carries, then to no image at all.
+     * TMDB's full-bleed backdrop for [tmdbId], for the TV detail hero. Null when there is no TMDB
+     * id, no API key, a failed call, or no backdrop on TMDB; callers then use the catalogue's
+     * backdrop, then no image.
      */
     suspend fun getTmdbBackdropUrl(
         tmdbId: String?,
@@ -168,11 +161,10 @@ interface MediaProvider {
     ): String? = null
 
     /**
-     * Other entries in this provider's local catalogue carrying the same TMDB id as [itemId] —
-     * different rips/languages of the same movie or show, for the "other instances" picker next
-     * to the stream name. Empty for every reason it should simply not show: no TMDB id, or
-     * nothing else in the catalogue happens to carry that id yet. A blank [itemId] leaves none out
-     * (the copies on another source than the item's).
+     * Other entries in this provider's catalogue with the same TMDB id as [itemId] (other rips or
+     * languages), for the "other instances" picker next to the stream name. Empty with no TMDB id
+     * or no other match. A blank [itemId] leaves none out (the copies on a source other than the
+     * item's).
      */
     suspend fun getAlternateStreams(
         itemId: String,
@@ -205,7 +197,7 @@ interface MediaProvider {
         isPaused: Boolean = false,
     ) {}
 
-    // Server-side user data methods (only Jellyfin overrides these)
+    // Server-side user data (only Jellyfin overrides these).
     suspend fun setFavorite(
         itemId: String,
         isFavorite: Boolean,
@@ -224,9 +216,9 @@ interface MediaProvider {
     suspend fun getPlaybackPositions(itemIds: List<String>): Result<Map<String, PlaybackStatus>>? = null
 
     /**
-     * Episode count per series id, cheap and local — used as the denominator for a series row's
-     * watch progress. Null when the provider can't answer without per-series network calls, in
-     * which case series rows simply show no progress.
+     * Episode count per series id, cheap and local: the denominator of a series row's watch
+     * progress. Null when the provider cannot answer without per-series network calls; series rows
+     * then show no progress.
      */
     suspend fun getEpisodeCountsBySeries(): Map<String, Int>? = null
 
@@ -239,9 +231,9 @@ interface MediaProvider {
     ) {}
 
     /**
-     * Drops whatever in-memory (not disk/DB) caches this provider holds, in response to the
-     * system signalling memory pressure ([android.content.ComponentCallbacks2.onTrimMemory]).
-     * No-op for providers that don't cache in memory.
+     * Drops this provider's in-memory (not disk or DB) caches under memory pressure
+     * ([android.content.ComponentCallbacks2.onTrimMemory]). No-op for providers without memory
+     * caches.
      */
     fun trimMemory() {}
 }

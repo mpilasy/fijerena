@@ -99,7 +99,7 @@ fun FirstVideoPlayerTheme(
     val palette = remember(themeId) { paletteById(themeId) }
     val style = remember(styleId) { styleById(styleId) }
 
-    // Set the global holders so non-composable code (re-export vals) can read them
+    // Global holders, so non-composable code (re-export vals) can read them.
     SideEffect {
         CinemaThemeHolder.current = palette
         UiStyleHolder.current = style

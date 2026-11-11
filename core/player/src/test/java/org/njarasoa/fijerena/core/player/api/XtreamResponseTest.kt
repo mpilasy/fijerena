@@ -8,8 +8,8 @@ import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 
 /**
- * The ways this provider says "nothing", each of which used to be recognised — or missed — at
- * whichever call site tripped over it first. Same Json configuration as XtreamApiService.
+ * The ways this provider says "nothing", classified in one place. Same Json configuration as
+ * XtreamApiService.
  */
 class XtreamResponseTest {
     private val json =
@@ -33,17 +33,16 @@ class XtreamResponseTest {
 
     @Test
     fun objectWithNothingInItIsAlsoUnavailable() {
-        // A proxy answering before it has the data: well-formed, no info, no episodes. Taken at
-        // face value this renders as a real show with nothing in it.
+        // A proxy that answers before it has the data: well-formed, no info, no episodes. Taken as
+        // is, it shows as a real show with nothing in it.
         assertEquals(XtreamResponse.Unavailable(4080, "get_series_info"), series(XtreamPayloads.EMPTY_OBJECT))
         assertEquals(XtreamResponse.Unavailable(4080, "get_series_info"), series(XtreamPayloads.SERIES_NO_EPISODES))
     }
 
     @Test
     fun infoWithoutEpisodesStillReadsAsAShow() {
-        // Unchanged from before this classification existed: a response carrying an info object
-        // but no episodes is Ok, and the screen shows a show with nothing under it. Whether that
-        // should count as nothing usable is a separate call, not one to make inside a refactor.
+        // An info object but no episodes is Ok, and the screen shows a show with nothing under it.
+        // Whether that counts as nothing usable is a separate decision.
         val response = series(XtreamPayloads.SERIES_INFO_ONLY)
 
         assertTrue(response is XtreamResponse.Ok)
@@ -65,8 +64,8 @@ class XtreamResponseTest {
 
     @Test
     fun seriesInfoWithoutANameKeepsItsEpisodes() {
-        // The name was the model's one required field, so a provider omitting it — or sending it
-        // as "title" — used to throw the whole episode list away.
+        // The name was the model's one required field, so a provider that leaves it out (or sends
+        // it as "title") lost the whole episode list.
         val response = series(XtreamPayloads.SERIES_INFO_WITHOUT_NAME)
 
         assertTrue("expected Ok, got $response", response is XtreamResponse.Ok)
@@ -81,8 +80,8 @@ class XtreamResponseTest {
 
     @Test
     fun oneUnreadableEpisodeCostsOnlyItself() {
-        // It used to cost the whole show: the map decode aborted on the first episode it could
-        // not read, and the series came back with no episodes at all.
+        // The map decode stopped at the first episode it could not read, and the series came back
+        // with no episodes.
         val response = series(XtreamPayloads.SERIES_ONE_EPISODE_MALFORMED)
 
         assertTrue("expected the readable episode to survive, got $response", response is XtreamResponse.Ok)
@@ -93,8 +92,8 @@ class XtreamResponseTest {
 
     @Test
     fun unreadableResponseIsMalformedNotUnavailable() {
-        // Distinguishing these matters: unavailable is worth retrying and re-resolving by name,
-        // a body we cannot parse is worth reporting as-is.
+        // Unavailable is worth a retry and a lookup by name; a body we cannot parse is worth
+        // reporting as is.
         val response = series(XtreamPayloads.NOT_JSON)
 
         assertTrue("expected Malformed, got $response", response is XtreamResponse.Malformed)

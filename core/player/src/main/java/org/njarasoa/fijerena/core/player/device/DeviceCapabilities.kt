@@ -101,9 +101,9 @@ object DeviceDetector {
     }
 
     private fun isAndroidTv(): Boolean {
-        // Check ro.build.characteristics for "tv" — reliable on all Android TV devices.
-        // Class.forName("TvInputManager") is NOT reliable: that class exists on all
-        // Android devices since API 21, causing phones to be misdetected as TV.
+        // ro.build.characteristics "tv" is reliable on all Android TV devices.
+        // Class.forName("TvInputManager") is NOT: the class exists on all devices since API 21, so
+        // phones read as TV.
         return try {
             @Suppress("PrivateApi")
             val clazz = Class.forName("android.os.SystemProperties")

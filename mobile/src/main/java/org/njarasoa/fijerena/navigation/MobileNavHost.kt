@@ -149,9 +149,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     LaunchedEffect(showClock) { clock.off = !showClock }
     val coroutineScope = rememberCoroutineScope()
 
-    // The bottom bar's tabs (the phone Home tab plan): Home, then the profile's
-    // merged sections (its Xtream sources', multi-source plan Phase 6), read at startup, on each visit
-    // to a tab's root and after every switch; its other sources are Browse entries.
+    // The bottom bar's tabs (the phone Home tab plan): Home, then the profile's merged sections
+    // (multi-source plan, Phase 6). Read at startup, on each visit to a tab's root and after every
+    // switch; the other sources are Browse entries.
     var profileSections by remember { mutableStateOf<ProfileSections?>(null) }
     // A source's first catalogue sync is running: an empty list says the library is still loading,
     // not that the category is empty.
@@ -166,10 +166,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val sportsChild = remember(sportsProfileId) { appSettings.isChildProfile(sportsProfileId) }
     // The graph's start destination, decided once at startup.
     var openingTab by remember { mutableStateOf(MobileTab.HOME) }
-    // Each Live TV dock as its screen reports it, by back-stack entry — the tab's root and any
-    // CategoryList pushed deeper (a channel opened from Search or a guide): stopped before the bar
-    // leaves the tab (the engine is Activity-scoped), and the bar hides while one takes the screen.
-    // Keyed by entry so the screen leaving can't clear the report of the one arriving.
+    // Each Live TV dock as its screen reports it, by back-stack entry (the tab's root and any
+    // CategoryList pushed deeper). Stopped before the bar leaves the tab (the engine is
+    // Activity-scoped), and the bar hides while one covers the screen. Keyed by entry, so the
+    // leaving screen cannot clear the report of the arriving one.
     val liveDocks = remember { mutableStateMapOf<String, Pair<(() -> Unit)?, Boolean>>() }
 
     fun stopLiveDocks() = liveDocks.values.forEach { (stop, _) -> stop?.invoke() }
@@ -190,10 +190,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         navController.clearBackStack<Screen.Settings>()
     }
 
-    // Each tab keeps its place: leaving one saves its back stack, coming back restores it. Tapping
-    // the tab you're on pops back to its root. The bar only shows on a tab's root, so the tab
-    // being left is the current destination's. Only one tab's stack is ever on the back stack; Back
-    // on a tab's root goes to Home, and on Home stays (never leaves the app; see below).
+    // Each tab keeps its place: leaving saves its back stack, coming back restores it. Tapping the
+    // current tab pops back to its root. The bar shows only on a tab's root, so the tab being left
+    // is the current destination's. Only one tab's stack is on the back stack at a time. Back on a
+    // tab's root goes to Home, and on Home does nothing.
     fun selectTab(tab: MobileTab) {
         val current = navController.currentTab()
         if (tab == current) {
@@ -209,12 +209,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
-    // A Search result opens in its own section's tab: a film picked from a search started on Live TV
-    // opens in Movies, with Movies highlighted. The search comes along — pushed again in that tab
-    // with the same query and the result's section chip — so Back returns to the results, then to
-    // the tab's start. The tab left is cut back to its root, so its saved place doesn't keep the
-    // search. Same section, or a section the bar doesn't show (a single-section source): opened
-    // where it is, as before. A Guide tab result ([guide]) brings the search back on its Guide tab.
+    // A Search result opens in its own section's tab (a film found from Live TV opens in Movies).
+    // The search is pushed again in that tab with the same query and the result's section chip, so
+    // Back returns to the results, then to the tab's start. The tab left is cut back to its root.
+    // Same section, or a section the bar does not show: opened where it is. A Guide tab result
+    // ([guide]) brings the search back on its Guide tab.
     fun openInSectionTab(
         contentType: String,
         screen: Screen,
@@ -275,8 +274,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     var sourcesProfileId by remember { mutableStateOf(appSettings.activeProfileId) }
     LaunchedEffect(sourcesProfileId) { sportsProfileId = sourcesProfileId }
 
-    // Back-Stack Rule 4's switches (profile, live sync, Settings' first source): every screen may
-    // hold the previous one's repository, so start over on the new profile's last tab, or the first
+    // Back-Stack Rule 4's switches (profile, live sync, Settings' first source): every screen can
+    // hold the previous repository, so start over on the new profile's last tab, or the first one
     // its sources have.
     suspend fun startOver() {
         val sections = ProfileSections.load(context)
@@ -358,7 +357,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
 
-    // Async initialization: migrate legacy creds, determine start destination
+    // Async startup: migrate legacy credentials, find the start destination.
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
     // No source at all and an Admin in use: Add Source over Settings at start (E1).
     var addSourceAtStart by remember { mutableStateOf(false) }
@@ -366,7 +365,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     suspend fun initializeStartup() {
         val providerRepo = ProviderRepository(context.applicationContext)
         if (providerRepo.getProviderCount() == 0) {
-            // Run one-time migration from AccountManager to Room
+            // One-time migration from AccountManager to Room.
             val legacyCreds = accountManager.exportForMigration()
             if (legacyCreds != null) {
                 val (url, username, password) = legacyCreds
@@ -383,7 +382,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             openingTab = startTab(appSettings.lastTab, sections.merged)
         } else {
             // A new install's first profile becomes Admin in the background startup work, maybe
-            // after this point: the start needs it now (the call does nothing when there is one).
+            // after this point. The start needs it now (the call does nothing when one exists).
             ProfileRepository(context.applicationContext).ensureAnAdmin()
             addSourceAtStart = startsOnAddSource(hasSource = false, admin = appSettings.isAdmin)
         }
@@ -393,9 +392,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     LaunchedEffect(Unit) {
         // A providers.db from a newer build can't be opened: same skip, its own screen.
         if (SafeMode.isActive || ProvidersDbGuard.isBlocked) {
-            // Crash-loop safe mode: none of initializeStartup()'s provider lookups, migration or
-            // orphan sweep — any of them may be what kept crashing. The safe-mode screen is the
-            // start destination; hasProvider only needs to stop being null.
+            // Crash-loop safe mode: skip initializeStartup()'s provider lookups, migration and
+            // orphan sweep, as any of them can be the crash. The safe-mode screen is the start
+            // destination; hasProvider only needs to stop being null.
             hasProvider = false
         } else {
             initializeStartup()
@@ -430,12 +429,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             openingTab.route
         }
 
-    // No session restore here: each Xtream source of the profile restores its own when it is first
-    // used (AppContainer), as there is no source in use.
+    // No session restore here: each Xtream source of the profile restores its own on first use
+    // (AppContainer).
 
-    // The bar shows on every screen inside a tab — its root and what's pushed on it (details,
-    // episodes, Search, guides…) — so the current tab always leads back to its start and each tab
-    // keeps its place; not on the player, Settings and its screens, or with a single section.
+    // The bar shows on every screen inside a tab (its root and what is pushed on it), so the
+    // current tab always leads back to its start. Not on the player, Settings and its screens, or
+    // with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentTab = currentEntry?.let { navController.currentTab() }
     val tabs =
@@ -444,13 +443,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             showsSportsTab(sportsOn, sportsChild, follows?.isEmpty == false, inSportsTab = currentTab == MobileTab.SPORTS),
         )
 
-    // The app opens next time on the tab used last. A tab the profile's sources don't have (one
-    // turned off meanwhile) gives way to one they have; with none, the tab roots show the sources
-    // panel instead.
+    // The app opens next time on the last tab used. A tab the profile's sources no longer have
+    // gives way to one they have; with none, the tab roots show the sources panel.
     LaunchedEffect(currentTab, profileSections) {
         val types = profileSections?.merged?.takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
-        // Settings is a tab but not a section: never the tab the app opens on.
-        // Sports neither: it is no source's section, and opens only while something is followed.
+        // Settings is a tab but not a section, so never the opening tab. Sports neither: it is no
+        // source's section and shows only while something is followed.
         val tab = currentTab?.takeIf { it != MobileTab.SETTINGS && it != MobileTab.SPORTS } ?: return@LaunchedEffect
         if (tab == MobileTab.HOME || tab.contentType in types) {
             appSettings.lastTab = tab.contentType
@@ -628,10 +626,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // The one snackbar over every screen; an Undo acts on its own screen, so it goes with it.
     val snackbar = rememberCinemaSnackbar()
     LaunchedEffect(entry?.id) { snackbar.dismissUndo() }
-    // Back never leaves the app (household UX plan, 2026-10-19): on a tab's start it goes to Home,
-    // on Home it does nothing — a child pressing Back stays in. On Settings' start it goes to the
-    // tab Settings was opened from. Composed before the NavHost, so the NavHost's own Back (popping
-    // a screen) and a screen's (Live TV's dock) come first.
+    // Back never leaves the app (household UX plan): on a tab's start it goes to Home, on Home it
+    // does nothing, so a child pressing Back stays in. On Settings' start it goes to the tab
+    // Settings was opened from. Composed before the NavHost, so the NavHost's own Back and a
+    // screen's (Live TV's dock) come first.
     BackHandler(enabled = currentTab != null && navController.previousBackStackEntry == null) {
         val from = settingsOpenedFrom.takeIf { currentTab == MobileTab.SETTINGS }
         if (from != null) {
@@ -653,12 +651,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 navController = navController,
                 startDestination = startDestination,
                 modifier = Modifier.consumeWindowInsets(PaddingValues(bottom = dockInset)),
-                // Screen.Player defines its own vertical slide (below) — these NavHost-wide defaults
-                // apply to the *other* screen in a Player transition too (the one that didn't define
-                // its own transitions), so without the Player check here that screen independently
-                // slid sideways while Player slid vertically: two perpendicular animations running at
-                // once. Fading instead of sliding the non-Player side lets Player's own vertical
-                // motion read as the transition, rather than fighting a lateral one.
+                // Screen.Player has its own vertical slide, and these defaults apply to the other
+                // screen of a Player transition. Without the Player check that screen slid sideways
+                // while Player slid vertically. Fading the other side lets Player's vertical motion
+                // read as the transition.
                 enterTransition = {
                     if (isPlayerTransition(initialState, targetState)) {
                         fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
@@ -718,8 +714,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                             )
                         },
                         onNavigateToPlayer = { matched ->
-                            // Land on the docked mini-player, not full-screen — same parity as every
-                            // other Live TV entry point.
+                            // Land on the docked mini-player, not full screen, as every other Live
+                            // TV entry does.
                             navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
@@ -846,8 +842,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 }
 
-                // Player Screen — vertical slide, not the lateral push used by list/detail screens:
-                // opening full-screen video reads as rising up, not stepping sideways into a list.
+                // Player screen: a vertical slide, not the lateral push of list and detail screens,
+                // so full-screen video reads as rising up.
                 composable<Screen.Player>(
                     enterTransition = {
                         slideIntoContainer(
@@ -1556,9 +1552,8 @@ private fun browseTargetRoute(
     contentType: String,
 ): Screen =
     when (target) {
-        // Continue Watching: the card stands for the show. Its page opens at the top, Play on the
-        // episode to resume (one tap), the season of that episode picked; the list does not
-        // scroll to it (user, 2026-10-31).
+        // Continue Watching: the card stands for the show. Its page opens at the top, with Play on
+        // the episode to resume and that episode's season picked; the list does not scroll to it.
         is BrowseTarget.Series -> {
             Screen.EpisodeSelection(
                 seriesId = target.seriesId.raw,
@@ -1569,8 +1564,7 @@ private fun browseTargetRoute(
             )
         }
 
-        // The card stands for one episode — play it, whether or not it can
-        // name the show it belongs to.
+        // The card stands for one episode: play it, whether or not it can name its show.
         is BrowseTarget.Episode -> {
             Screen.Player(
                 streamId = target.episodeId.raw,
@@ -1594,11 +1588,9 @@ private fun browseTargetRoute(
             )
         }
 
-        // Live TV: unreachable in practice for a genuine stream tap —
-        // MobileCategoryListScreen docks it locally instead of calling this
-        // callback (mirrors TV's LiveTvChannelList.onStreamPromote
-        // interception). Kept for the "not resolvable from the current list"
-        // case, same as TV.
+        // Live TV: a stream tap does not reach this in practice, as MobileCategoryListScreen docks
+        // it (as TV's LiveTvChannelList.onStreamPromote does). Kept for a channel the current list
+        // cannot resolve, as on TV.
         is BrowseTarget.Channel -> {
             Screen.Player(target.streamId, itemName, categoryId, contentType, providerId = source)
         }

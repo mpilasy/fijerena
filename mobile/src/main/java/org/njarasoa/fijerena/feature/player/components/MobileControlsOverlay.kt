@@ -145,10 +145,9 @@ fun MobileControlsOverlay(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
-    // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
-    // again for the rest of the session — leaving these counts permanently 0 and hiding the
-    // audio/subtitle/quality buttons even once tracks actually loaded.
+    // Keyed on tracksVersion, not only metadata: metadata is set at playStream(), usually before
+    // ExoPlayer resolves tracks, and on Live TV it may never change again, so the counts would stay
+    // 0 and hide the audio, subtitle and quality buttons.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val nightAudioOn = rememberNightAudioOn()
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
@@ -157,15 +156,14 @@ fun MobileControlsOverlay(
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
-    // Info popover (title + synopsis) — off by default. Other mobile players (and this app's own
-    // TMDB-backed detail pages) don't keep a synopsis on screen during playback; it's opt-in via
-    // an info icon instead, which is also what removes any risk of it colliding with the
-    // transport controls floating over the video.
+    // The info popover (title and synopsis) is off by default: mobile players do not keep a
+    // synopsis on screen during playback, and an info icon keeps it clear of the transport
+    // controls.
     var showInfo by remember { mutableStateOf(false) }
 
     LaunchedEffect(playbackState, metadata.streamUrl) {
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
-            // Keep checking every second as tracks might take time to load
+            // Check every second: tracks can take time to load.
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
                     val tracks = p.currentTracks
@@ -204,21 +202,19 @@ fun MobileControlsOverlay(
                     indication = null,
                 ) { },
     ) {
-        // Top bar, transport controls, and bottom bar stack in one Column spanning the full
-        // height, with the transport-controls region taking the leftover space via weight(1f) —
-        // its bounds can never eat into the top bar's or bottom bar's, regardless of how tall the
-        // bottom bar (e.g. Live TV's EPG block) gets. No synopsis competes for this space (see
-        // showInfo above), so nothing here has to share it with anything else either.
-        // The logo at the top left. While it shows, a film's or a series' title row stays empty:
-        // the logo names it, as before a3bc7b35.
+        // The top bar, transport controls and bottom bar stack in one full-height Column; the
+        // transport region takes the leftover space via weight(1f), so it never eats into either
+        // bar, however tall the bottom bar gets (for example Live TV's EPG block). The logo at the
+        // top left: while it shows, a film's or a series' title row stays empty, as the logo names
+        // it.
         val logoUrl = metadata.logoUrl
         var logoFailed by remember(logoUrl) { mutableStateOf(false) }
         val logoShown = logoUrl != null && !logoFailed
         Column(modifier = Modifier.fillMaxSize()) {
             // Top bar: the title's logo art (a film or a series) or the channel's logo (Live TV),
-            // the resolution/codec line, and the clock. The title sits in the bottom panel, above
-            // the seek bar. Padded clear of a display cutout; the system bars are
-            // hidden while the player is up (see MobilePlayerContent).
+            // the resolution / codec line, and the clock. The title sits in the bottom panel, above
+            // the seek bar. Padded clear of a display cutout; the system bars hide while the player
+            // shows (see MobilePlayerContent).
             Row(
                 modifier =
                     Modifier
@@ -285,14 +281,13 @@ fun MobileControlsOverlay(
                         }
                     }
                 }
-                // Clock — self-ticking so only this leaf recomposes each second
+                // Clock: it ticks itself, so only this leaf recomposes each second.
                 MobileClockText(tone = TextTone.OnMedia)
             }
 
-            // Rewind | Play/Pause | FastForward, floating plainly over the video — the pattern
-            // every mobile player uses: bare icons, no background pill, centred in whatever space
-            // is left between the top bar and the bottom bar. Nothing else shares this space, so
-            // it can never be pushed or clipped by anything growing elsewhere.
+            // Rewind | Play/Pause | FastForward, bare icons over the video as in every mobile
+            // player, centred in the space between the top and bottom bars. Nothing else shares
+            // this space, so nothing can push or clip it.
             val rowDrop by animateDpAsState(if (waiting) WaitStyle.controlsDrop else Dp.Hairline, label = "row drop")
             Box(
                 modifier =
@@ -347,10 +342,9 @@ fun MobileControlsOverlay(
                 }
             }
 
-            // Bottom bar: the title (with "Ends at" on VOD), then the scrubber + time row (live:
-            // Now and Next), then a compact icon row — a slim strip along the bottom, not a tall
-            // stack that could eat a quarter of the screen on its own. Its height goes to the
-            // player, which lifts the subtitles above it.
+            // Bottom bar: the title (with "Ends at" on VOD), the scrubber and time row (live: Now
+            // and Next), then a compact icon row: a slim strip, not a tall stack. Its height goes
+            // to the player, which lifts the subtitles above it.
             GlassPanel(
                 modifier =
                     Modifier
@@ -430,9 +424,9 @@ fun MobileControlsOverlay(
                                     tone = TextTone.Primary,
                                 )
                             } else if (!logoShown) {
-                                // Some providers' episode titles already embed the show name and
-                                // number ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
-                                // episode's own name is shown, none when the title is just the show
+                                // Some providers' episode titles embed the show name and number
+                                // ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
+                                // episode's own name shows, none when the title is only the show
                                 // and the number.
                                 val episodeLine =
                                     metadata.showTitle?.let {
@@ -489,8 +483,8 @@ fun MobileControlsOverlay(
                                 onValueChange = { newValue ->
                                     isSeeking = true
                                     seekPosition = newValue
-                                    // One tick per second crossed while dragging, not per pixel —
-                                    // Slider fires onValueChange continuously during a drag.
+                                    // One tick per second crossed while dragging, not per pixel:
+                                    // Slider fires onValueChange all through a drag.
                                     val newSecond = (newValue * duration).toLong() / 1000
                                     if (newSecond != lastHapticSecond) {
                                         lastHapticSecond = newSecond
@@ -511,8 +505,8 @@ fun MobileControlsOverlay(
                             )
                         }
                     } else if (isLive && currentEpgProgram != null) {
-                        // Live: Now with its times and the programme's progress, then Next — one
-                        // line each, so this can't grow past what a compact bottom bar can afford.
+                        // Live: Now with its times and the programme's progress, then Next, one
+                        // line each, so the bottom bar stays compact.
                         Column(modifier = Modifier.padding(top = Spacing.xxs, bottom = Spacing.xs)) {
                             val epgContext = LocalContext.current
                             val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
@@ -524,7 +518,8 @@ fun MobileControlsOverlay(
                                 role = TextRole.BodySmall,
                                 tone = TextTone.Primary,
                             )
-                            // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                            // Programme progress, keyed on livePosition, so there is no untracked
+                            // System.currentTimeMillis() read.
                             val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
                             val epgProgress =
                                 if (currentEpgProgram.duration > 0) {
@@ -677,7 +672,8 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
+                        // Next episode button: TV show episodes only, from 80% in, when a next
+                        // episode exists.
                         val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
                         val isOver80Percent = progressRatio >= 0.80f
                         if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
@@ -697,9 +693,9 @@ fun MobileControlsOverlay(
             }
         }
 
-        // Info popover: title + synopsis, on demand. A full-screen scrim behind the card closes
-        // it on tap — this is the LAST child of the outer Box, so it sits above everything else
-        // and intercepts that tap before it reaches the play/pause-toggle handler underneath.
+        // Info popover: title and synopsis, on demand. A full-screen scrim behind the card closes
+        // it on tap. It is the LAST child of the outer Box, so it is on top and takes that tap
+        // before the play / pause toggle underneath.
         if (showInfo) {
             Box(
                 modifier =

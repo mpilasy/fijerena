@@ -59,10 +59,10 @@ fun trailerUrl(raw: String?): String? {
 }
 
 /**
- * `providerData` is a `Map`, which the Compose compiler cannot prove immutable, so without this
- * annotation the whole class infers unstable and every list row in the app loses its skip. Every
- * construction site builds the map with `mapOf`/`buildMap` and every read site only indexes into
- * it — nothing mutates it after construction, so the promise holds. Keep it that way.
+ * `providerData` is a `Map`, which the Compose compiler cannot prove immutable; without this
+ * annotation the class is unstable and every list row loses its skip. Every construction site
+ * builds the map with `mapOf` / `buildMap` and nothing mutates it later, so the promise holds. Keep
+ * it that way.
  */
 @Immutable
 data class MediaItem(
@@ -75,16 +75,17 @@ data class MediaItem(
     val metadata: MediaMetadata = MediaMetadata(),
     val providerData: Map<String, String> = emptyMap(),
     /**
-     * What selecting this row opens, when the row knows something its id alone doesn't say — a
-     * history row that stands for a whole show, a row that stands for a category. Null on a plain
-     * catalogue row, whose content type already answers it; read it through
-     * [browseTarget][org.njarasoa.fijerena.core.player.domain.browseTarget] rather than directly.
+     * What selecting this row opens, when the row knows more than its id says (a history row that
+     * stands for a whole show, a row that stands for a category). Null on a plain catalogue row,
+     * whose content type answers it. Read it through
+     * [browseTarget][org.njarasoa.fijerena.core.player.domain.browseTarget].
      */
     val target: BrowseTarget? = null,
     /**
-     * The source this row belongs to, so a card can open its route on it; 0 = the list's own
-     * source (see [sourceOr]). Set on the rows a `MediaRepository` builds itself (Recent,
-     * favourites); catalogue rows leave it 0 until a list puts them on their source. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
+     * The source this row belongs to, so a card can open its route on it; 0 = the list's own source
+     * (see [sourceOr]). Set on the rows a `MediaRepository` builds itself (Recent, favourites);
+     * catalogue rows keep 0 until a list puts them on their source. See
+     * docs/plans/20261012_multi-source-search-history-plan.md, Phase 1.
      */
     val providerId: Long = 0L,
     /**

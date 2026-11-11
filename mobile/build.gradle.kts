@@ -155,11 +155,10 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
-    // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform) transitively, which
-    // ships its own copy of androidx.compose.foundation.layout classes (e.g. FlowRow) under an
-    // older Compose version than this app's real androidx BOM. The duplicate class wins at dex
-    // time in some builds, causing NoSuchMethodError at runtime — exclude it, this app is
-    // Android-only and already gets the real foundation-layout from the androidx BOM directly.
+    // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform), which ships its own
+    // androidx.compose.foundation.layout classes (for example FlowRow) from an older Compose than
+    // this app's BOM. The duplicate can win at dex time and cause NoSuchMethodError at runtime.
+    // Exclude it: this app is Android-only and gets foundation-layout from the BOM.
     implementation(libs.coil.compose) {
         exclude(group = "org.jetbrains.compose.foundation")
         exclude(group = "org.jetbrains.compose.animation")

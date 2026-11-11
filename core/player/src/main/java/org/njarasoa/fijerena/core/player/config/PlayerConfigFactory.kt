@@ -35,8 +35,8 @@ object PlayerConfigFactory {
                         }
                     setMaxVideoBitrate(maxBitrate)
 
-                    // Prioritize hardware-accelerated codecs based on device capabilities
-                    // Media3 will select the first available codec from the preferredMimeTypes list
+                    // Hardware codecs first, from the device capabilities: Media3 takes the first
+                    // available codec of preferredMimeTypes.
                     if (capabilities.preferredCodecs.isNotEmpty()) {
                         setPreferredVideoMimeTypes(*capabilities.preferredCodecs.toTypedArray())
                     }

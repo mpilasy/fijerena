@@ -19,26 +19,23 @@ import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * Default hairline border and elevation so a bare [CinemaCard] reads as a raised card against the
- * screen behind it instead of a flat single-tone block — every list row (stream, category,
- * episode, search result) goes through this component, so the fix lands once here rather than
- * per screen.
+ * Default hairline border and elevation, so a bare [CinemaCard] reads as a raised card, not a flat
+ * block. Every list row (stream, category, episode, search result) uses this component.
  */
 @Composable
 private fun defaultCardElevation(): CardElevation = CardDefaults.cardElevation(defaultElevation = MobileDimensions.cardRowElevation)
 
 /**
- * The same hairline used as [CinemaCard]'s own default border — exposed for the handful of
- * callers that need to swap in a different border conditionally (e.g. an accent border while
- * "now playing") and fall back to the hairline the rest of the time.
+ * [CinemaCard]'s default hairline, for callers that swap in another border conditionally (for
+ * example an accent border while "now playing").
  */
 @Composable
 fun cinemaCardHairlineBorder(): BorderStroke =
     BorderStroke(MobileDimensions.dividerThin, CinemaTheme.colors.surfaceHigh.copy(alpha = CinemaAlpha.cardHairline))
 
 /**
- * Themed replacement for [Card] — M3's default card shape ignores the app's
- * [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens. Thin passthrough otherwise.
+ * Themed replacement for [Card]: M3's default card shape ignores the
+ * [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens. A thin passthrough otherwise.
  */
 @Composable
 fun CinemaCard(

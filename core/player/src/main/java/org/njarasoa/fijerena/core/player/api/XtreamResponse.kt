@@ -5,17 +5,15 @@ import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 
 /**
- * What a provider's answer to a single-item lookup — `get_series_info`, `get_vod_info` — actually
- * turned out to be.
+ * What a provider's answer to a single-item lookup (`get_series_info`, `get_vod_info`) turned out
+ * to be.
  *
- * These servers, proxies especially, have several ways of saying "nothing" that all deserialize
- * happily: a bare `[]` where an object belongs, a well-formed object with no payload in it, a
- * field missing that the model called required. Each one used to be recognised (or missed) at
- * whichever call site tripped over it first, so the same non-answer read as an empty show on one
- * screen and an error on another. Classifying once, here, is what keeps those readings the same.
+ * These servers, proxies most of all, have several ways to say "nothing" that all deserialise: a
+ * bare `[]` where an object belongs, an object with no payload, a missing required field.
+ * Classifying once here keeps one reading of a non-answer on every screen.
  *
- * Callers get four cases and no raw text, so "the provider gave us nothing usable" is a thing they
- * match on rather than a shape they re-sniff.
+ * Callers get four cases and no raw text, so "nothing usable" is a case to match, not a shape to
+ * sniff again.
  */
 sealed interface XtreamResponse<out T> {
     /** A response with something in it. */
@@ -24,9 +22,9 @@ sealed interface XtreamResponse<out T> {
     ) : XtreamResponse<T>
 
     /**
-     * The provider has no such id, or nothing to say about it: `[]`, or an object whose every
-     * field came back empty. Usually a catalogue id that changed since the local sync, sometimes
-     * a proxy answering before it has the data.
+     * The provider has no such id, or nothing to say about it: `[]`, or an object with every field
+     * empty. Usually a catalogue id that changed since the local sync, sometimes a proxy that
+     * answers before it has the data.
      */
     data class Unavailable(
         val itemId: Int,
@@ -56,11 +54,10 @@ fun XtreamResponse<*>.asThrowable(): Throwable =
     }
 
 /**
- * Reads one item response, treating both "not an object" and "an object with nothing in it" as
- * [XtreamResponse.Unavailable] — the caller cannot tell those apart from the outside, and neither
- * can a viewer looking at the screen.
+ * Reads one item response. Both "not an object" and "an object with nothing in it" are
+ * [XtreamResponse.Unavailable]: neither a caller nor a viewer can tell them apart.
  *
- * [carriesNothing] is what "nothing in it" means for this particular payload.
+ * [carriesNothing] is what "nothing in it" means for this payload.
  */
 inline fun <reified T> Json.parseItemResponse(
     raw: String,

@@ -90,12 +90,12 @@ private data class GuideSelection(
 
 /**
  * The phone's TV Guide (UX overhaul plan Part III, GD3): "TV Guide · <category>" with the GD1
- * status line beneath it, date tabs (Today / Tomorrow / weekdays) and a "Now" chip, then the
- * [MobileGuideGrid] time grid. Tapping a programme opens its details sheet ("Watch channel" docks the
- * channel; "Watch from start" replays it from the channel's archive when it holds it, catch-up, and
- * past days get date tabs back to the longest archive); tapping a channel tunes it. Search opens "Search the guide" (the EPG Browser) on this
- * guide's channels — the grid has no search of its own (G-9, GD5). [focusChannelId] scrolls the
- * grid to that channel's row on first open.
+ * status line under it, date tabs (Today / Tomorrow / weekdays) and a "Now" chip, then the
+ * [MobileGuideGrid] time grid. A tap on a programme opens its details sheet ("Watch channel" docks
+ * the channel; "Watch from start" replays it from the channel's archive when it holds it, catch-up,
+ * and past days get date tabs back to the longest archive); a tap on a channel tunes it. Search
+ * opens "Search the guide" (the EPG Browser) on this guide's channels; the grid has no search of
+ * its own (G-9, GD5). [focusChannelId] scrolls the grid to that channel's row on first open.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

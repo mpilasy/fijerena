@@ -10,7 +10,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
  * and Feel's density ([CinemaSpacing]); code outside composition uses [CinemaSpacing.Base].
  */
 object Spacing {
-    // Base spacing (8dp grid) — delegated to shared core
+    // Base spacing (8dp grid), from the shared core.
     val none: Dp
         @Composable @ReadOnlyComposable
         get() = CinemaSpacing.none
@@ -47,11 +47,11 @@ object Spacing {
         @Composable @ReadOnlyComposable
         get() = CinemaSpacing.xxl
 
-    // Mobile-specific safe margins (standard Material padding)
+    // Mobile safe margins (standard Material padding).
     val mobileSafeMarginHorizontal: Dp = MobileDimensions.safeMarginHorizontal
     val mobileSafeMarginVertical: Dp = MobileDimensions.safeMarginVertical
 
-    // Component-specific spacing
+    // Component spacing.
     val cardPadding: Dp
         @Composable @ReadOnlyComposable
         get() = md

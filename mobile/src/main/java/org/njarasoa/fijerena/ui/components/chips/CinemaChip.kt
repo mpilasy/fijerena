@@ -17,8 +17,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
- * Themed replacement for [FilterChip] — M3's default chip shape ignores the app's
- * [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens. Thin passthrough otherwise.
+ * Themed replacement for [FilterChip]: M3's default chip shape ignores the
+ * [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens. A thin passthrough otherwise.
  */
 @Composable
 fun CinemaFilterChip(

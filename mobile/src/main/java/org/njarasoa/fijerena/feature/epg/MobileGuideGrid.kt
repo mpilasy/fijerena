@@ -100,15 +100,15 @@ enum class NowScroll { JUMP, ANIMATE }
 /**
  * The phone's TV Guide grid (UX overhaul plan Part III, GD3): a fixed channel column and a time
  * canvas placed by [GuideLayout] (1 h = 160 dp). The ruler and every row are windows onto the same
- * canvas, scrolled by the one [scrollState] — each row is a `Layout` of cells at `xFor(start)` with
- * their true width, never a `LazyRow` per row — so a horizontal drag anywhere moves them all and a
+ * canvas, scrolled by the one [scrollState]: each row is a `Layout` of cells at `xFor(start)` with
+ * their true width, never a `LazyRow` per row, so a horizontal drag moves them all and a
  * programme's left edge always sits under its tick (G-M1, G-M2). Rows compose only the cells in
- * `composeRange` (the viewport ± one viewport). A vertical line marks now, past cells are dimmed, the
- * on-air cell has an accent bar and accent title, and a channel without listings is its channel cell
- * beside an empty, dimmed track.
+ * `composeRange` (the viewport ± one viewport). A vertical line marks now, past cells are dimmed,
+ * the on-air cell has an accent bar and accent title, and a channel without listings has an empty,
+ * dimmed track.
  *
- * [nowScroll], while not null, asks the grid to put now about a third in from the left edge once the
- * canvas is measured and the day shown is today; [onNowScrolled] clears it.
+ * [nowScroll], while not null, asks the grid to put now about a third in from the left edge once
+ * the canvas is measured and the day shown is today; [onNowScrolled] clears it.
  */
 @Composable
 fun MobileGuideGrid(
@@ -489,10 +489,10 @@ private fun ProgramCell(
             )
         }
         if (cell.labelFits) {
-            // The label follows the left edge while the programme's start is scrolled off screen:
-            // a long programme on air since before the visible window (opened at "now") showed a
-            // blank bar, its title off to the left (phone UI audit, TV guide on panel-a). Read in
-            // graphicsLayer, so scrolling moves it at draw time without recomposing the row.
+            // The label follows the left edge while the programme's start is scrolled off screen,
+            // so a long programme on air since before the visible window does not show a blank bar
+            // (phone UI audit, TV guide on panel-a). Read in graphicsLayer, so scrolling moves it
+            // at draw time without recomposing the row.
             Column(
                 modifier =
                     Modifier

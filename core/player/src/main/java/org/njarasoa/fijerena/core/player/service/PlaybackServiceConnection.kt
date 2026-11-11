@@ -18,12 +18,11 @@ class PlaybackServiceConnection(
     @Volatile private var controller: MediaController? = null
 
     /**
-     * Each collection owns its own controller future. They used to share [controllerFuture]: when
-     * PlaybackViewModel restarted a collection after a service restart, the old collection's
-     * cleanup ran after the new one had started and released the *new* future through the shared
-     * field, leaving the ViewModel holding a released controller (no audio or subtitle tracks, no
-     * chapters). Cleanup now releases only its own future, and clears the shared fields only if
-     * they still point at it. See the rock solid stability resilience plan → F-06.
+     * Each collection owns its own controller future. With a shared [controllerFuture], an old
+     * collection's cleanup after a service restart released the new future, and the ViewModel held
+     * a released controller (no audio or subtitle tracks, no chapters). Cleanup releases only its
+     * own future, and clears the shared fields only if they still point at it. See the rock solid
+     * stability resilience plan, F-06.
      */
     fun connect(): Flow<MediaController?> =
         callbackFlow {

@@ -144,12 +144,11 @@ private data class HomeRows(
 }
 
 /**
- * The phone's Home tab: TV Home's rows for the profile's merged sources, phone-sized — Continue
- * watching, Channels, the Wanted list, each section's TMDB chart rows, then the favourites — each
- * hidden when empty, read again on every return. The chart rows load on their own so they never
- * hold Home up. [supportedTypes]: the profile's merged
- * sections; a row of a section they don't have stays empty. A card opens through its callback:
- * [onChannel] with the list it zaps through (Recent or Favourites).
+ * The phone's Home tab: TV Home's rows for the profile's merged sources, phone-sized: Continue
+ * watching, Channels, the Wanted list, each section's TMDB chart rows, then the favourites. Each
+ * row hides when empty and is read again on every return. The chart rows load on their own, so they
+ * never hold Home up. [supportedTypes]: the profile's merged sections; a row of a section they do
+ * not have stays empty. [onChannel] gets the list it zaps through (Recent or Favourites).
  */
 @Composable
 fun MobileHomeScreen(
@@ -171,8 +170,8 @@ fun MobileHomeScreen(
     // The Wanted list (wanted titles plan, Phase 5): its own row, last; empty on a child's profile.
     val wantedTitles = remember { WantedTitles.getInstance(context.applicationContext) }
     val wantedState by wantedTitles.state.collectAsStateWithLifecycle()
-    // Home is for what can be played: only the titles a source has (user, 2026-10-22); the
-    // others wait in the sections' Wishlist lists.
+    // Home is for what can be played: only the titles a source has; the others wait in the
+    // sections' Wishlist lists.
     val wantedCards = remember(wantedState) { wantedState.cards().filter { it.isAvailable } }
     // What the banner announces: available titles no banner has told about yet, marked told (on
     // every device) once the banner was on screen: on a tap, or when Home is left after showing it.
@@ -266,9 +265,9 @@ fun MobileHomeScreen(
         val settings = AppSettings(context.applicationContext)
         rows = loadRows(lists, supportedTypes, child = settings.isChildProfile(settings.activeProfileId))
     }
-    // The TMDB chart rows (the TMDB charts plan, Phase 4): read apart from the
-    // other rows, as they may ask TMDB, and again when the Admin switch or the Trending rows' switch
-    // (follow-up F3: the titles no source has) changes. A child gets the kids' charts.
+    // The TMDB chart rows (the TMDB charts plan, Phase 4): read apart from the other rows, as they
+    // can ask TMDB, and again when the Admin switch or the Trending rows' switch (follow-up F3:
+    // titles no source has) changes. A child gets the kids' charts.
     val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
         .collectAsStateWithLifecycle(initialValue = false)
     val chartsShowMissing by remember {
@@ -901,13 +900,13 @@ private fun HomeRowsColumn(
                 },
             ) { onContinueWatching(item) }
         }
-        // Recent channels second, alone like Continue Watching (user, 2026-10-30).
+        // Recent channels second, alone like Continue Watching.
         HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
-        // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on its
-        // section's tint, its favourites first.
+        // A group per section (Channels, TV Shows, Movies), each on its section's tint, its
+        // favourites first.
         if (rows.favoriteChannels.isNotEmpty() || upcoming.isNotEmpty()) {
             HomeSection(ThumbnailContentType.LIVE_TV) {
-                // Upcoming games before the favourite channels (user, 2026-11-01).
+                // Upcoming games before the favourite channels.
                 HomeRow(stringResource(R.string.home_upcoming_games), upcoming, { it.game.key }) { game ->
                     MobileUpcomingGameCard(game, onClick = { onUpcoming(game) })
                 }

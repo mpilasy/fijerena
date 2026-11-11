@@ -75,7 +75,7 @@ fun MobileProviderSelectionScreen(
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
 
-    // Refresh provider list when screen is shown (e.g., after adding a provider)
+    // Refresh the provider list when the screen shows (for example after adding a provider).
     LaunchedEffect(Unit) {
         viewModel.loadProviders()
     }

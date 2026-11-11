@@ -296,7 +296,7 @@ fun ColumnScope.ProviderFormSection(
         }
 
         ProviderType.LOCAL -> {
-            // Only the name field is needed; folder/file picker will be added later
+            // Only the name field.
         }
 
         ProviderType.REMOTE_M3U -> {

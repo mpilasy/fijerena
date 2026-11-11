@@ -14,10 +14,10 @@ import kotlin.concurrent.thread
 
 /**
  * R-14: a panel that trickles bytes never trips OkHttp's per-read timeout, so a metadata call held
- * its screen on a spinner forever. Metadata calls now have an overall deadline; the catalogue
- * downloads keep only the per-read timeouts. Run against a local server that sends its body one
- * byte every [BYTE_GAP_MS], longer in all than the deadline. See
- * the next level rock solid resilience plan → R-14.
+ * its screen on a spinner. Metadata calls have an overall deadline; the catalogue downloads keep
+ * only the per-read timeouts. Run against a local server that sends its body one byte every
+ * [BYTE_GAP_MS], longer in all than the deadline. See the next level rock solid resilience plan,
+ * R-14.
  */
 class XtreamApiServiceDeadlineTest {
     private val server = ServerSocket(0)

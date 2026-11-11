@@ -528,10 +528,9 @@ private fun EpgSourceCard(
                             stringResource(R.string.epg_source_none)
                         }
 
-                    // When the last run confirmed no change, the stored download/ingest
-                    // durations are from whenever it last actually ran — showing them here would
-                    // read as work that didn't happen this time, so a single status pair
-                    // replaces them instead.
+                    // When the last run confirmed no change, the stored download and ingest
+                    // durations are from an older run and would read as work done now, so one
+                    // status pair replaces them.
                     val stats =
                         listOf(
                             stringResource(R.string.epg_source_stat_label) to lastIngested,

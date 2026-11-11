@@ -22,7 +22,7 @@ subprojects {
         }
     }
 
-    // Prohibit all uninstall tasks across all modules to prevent accidental loss of app data/state
+    // No uninstall task in any module, so app data and state are never lost by accident.
     tasks.matching { it.name.contains("uninstall", ignoreCase = true) }.configureEach {
         doFirst {
             throw GradleException(
@@ -32,9 +32,9 @@ subprojects {
         }
     }
 
-    // Prohibit AGP connected test tasks (connectedAndroidTest, connectedDebugAndroidTest, connectedCheck, etc.)
-    // because AGP's test runner automatically uninstalls both the test APK and target application APK
-    // upon test completion across all connected devices (real or virtual).
+    // No AGP connected test tasks (connectedAndroidTest, connectedDebugAndroidTest, connectedCheck
+    // and others): AGP's test runner uninstalls the test APK and the app APK from every connected
+    // device when the tests end.
     tasks.matching { it.name.startsWith("connected") }.configureEach {
         val allowConnectedTest = project.hasProperty("allowConnectedTest")
         doFirst {

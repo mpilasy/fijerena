@@ -28,14 +28,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Must run before super.onCreate() — this is what paints the marble over the cold-start
-        // window instead of leaving it bare black until Compose's first frame.
+        // Must run before super.onCreate(): it paints the marble over the cold-start window, not
+        // bare black until Compose's first frame.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Hold the splash until Compose has actually drawn, then hand off to AppLoadingScreen,
-        // which carries the same marble on the same black while the nav host finishes init.
+        // Hold the splash until Compose has drawn, then hand off to AppLoadingScreen, which shows
+        // the same marble on the same black while the nav host starts.
         var contentReady = false
         splash.setKeepOnScreenCondition { !contentReady }
         splash.setOnExitAnimationListener { provider ->
@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                 .start()
         }
 
-        // Ensure PiP auto-enter is disabled by default
+        // PiP auto-enter is off by default.
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             setPictureInPictureParams(
                 android.app.PictureInPictureParams
@@ -72,8 +72,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val (themeId, uiStyleId, posterBackdrop) = look.collectAsState(initial = initialLook).value
-            // First composition is close enough to first draw here: the nav host renders
-            // AppLoadingScreen immediately, so the splash never lifts onto an empty window.
+            // The first composition is close enough to the first draw: the nav host shows
+            // AppLoadingScreen at once, so the splash never lifts onto an empty window.
             LaunchedEffect(Unit) { contentReady = true }
 
             FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
@@ -114,11 +114,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Fallback for Android < 12 if auto-enter is not supported or failed
+        // Fallback below Android 12, without auto-enter.
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
             val playbackViewModel = ViewModelProvider(this)[PlaybackViewModel::class.java]
             val state = playbackViewModel.playbackState.value
-            // Live only — same rule as the S+ auto-enter params set by the player screens.
+            // Live only: the same rule as the S+ auto-enter params of the player screens.
             if (playbackViewModel.currentMetadata.value.isLive &&
                 (
                     state is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing ||

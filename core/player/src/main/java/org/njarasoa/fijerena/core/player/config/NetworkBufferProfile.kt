@@ -7,8 +7,8 @@ enum class NetworkType {
 }
 
 /**
- * Design-token constants for network-aware buffer profiles, retry policies, and HTTP timeouts.
- * All magic numbers live here — logic files reference these only.
+ * Constants for network-aware buffer profiles, retry policies and HTTP timeouts. Logic files use
+ * only these, no magic numbers.
  */
 object NetworkBufferProfile {
     // ── WiFi Live TV (optimized for fast start + proactive recycle bridge) ─────
@@ -23,15 +23,15 @@ object NetworkBufferProfile {
     const val WIFI_VOD_MAX_BUFFER_MS = 60_000
     const val WIFI_VOD_PLAYBACK_MS = 2_500
 
-    // After a stall, 3 s held before playing on (was 10 s, never measured: double ExoPlayer's 5 s,
-    // stricter than mobile data, and as much as a 4K remux's byte cap can hold). The 2 s that
-    // repeat-stalled in 2026-09 came with the health monitor recycling VOD mid-buffer, since fixed.
+    // After a stall, hold 3 s before playing on: about ExoPlayer's 5 s default, and no more than a
+    // 4K remux's byte cap can hold. Repeated stalls seen with 2 s were from the health monitor
+    // recycling VOD mid-buffer (fixed).
     const val WIFI_VOD_REBUFFER_MS = 3_000
 
-    // No back buffer for VOD: ExoPlayer counts retained back buffer against the target byte cap,
-    // so on a high-bitrate 4K remux (~100 Mbps) 10 s of it (~125 MB) filled the whole cap and
-    // starved the forward buffer below 500 ms — a near-stall every 15-25 s on a Shield. A seek
-    // back re-downloads instead, about a second.
+    // No back buffer for VOD: ExoPlayer counts the back buffer against the byte cap, so on a ~100
+    // Mbps 4K remux 10 s of it (~125 MB) filled the cap and starved the forward buffer below 500 ms
+    // (a near-stall every 15-25 s on a Shield). A seek back downloads again instead, in about a
+    // second.
     const val WIFI_VOD_BACK_BUFFER_MS = 0
 
     // ── Cellular Live TV ────────────────────────────────────────────
@@ -45,14 +45,14 @@ object NetworkBufferProfile {
     const val CELLULAR_VOD_MIN_BUFFER_MS = 40_000
     const val CELLULAR_VOD_MAX_BUFFER_MS = 100_000
 
-    // Starts like Wi-Fi VOD and ExoPlayer's defaults: the 8 s / 10 s this began with was never
-    // measured, and made every start and seek on mobile data wait for 8 s of video.
+    // Starts as Wi-Fi VOD and ExoPlayer's defaults do: a longer threshold made every start and seek
+    // on mobile data wait for 8 s of video.
     const val CELLULAR_VOD_PLAYBACK_MS = 2_500
     const val CELLULAR_VOD_REBUFFER_MS = 5_000
     const val CELLULAR_VOD_BACK_BUFFER_MS = 0 // see WIFI_VOD_BACK_BUFFER_MS
 
     // ── Retry policy ────────────────────────────────────────────────
-    // Increase retries to handle initial connection failures without showing user errors
+    // More retries, so first-connection failures do not show an error.
     const val WIFI_MIN_RETRY_COUNT = 5
     const val CELLULAR_MIN_RETRY_COUNT = 8
     const val RETRY_BASE_DELAY_MS = 500L
@@ -65,14 +65,13 @@ object NetworkBufferProfile {
     const val CELLULAR_READ_TIMEOUT_MS = 30_000
 
     // ── Target buffer byte caps ────────────────────────────────────
-    // DefaultLoadControl's automatic byte-size default (a few MB, independent of the stream's
-    // actual bitrate) combined with prioritizeTimeOverSizeThresholds(true) let a high-bitrate
-    // 4K VOD stream keep buffering well past it while chasing the time-based target, risking
-    // hundreds of MB of native allocation on 1-2GB Android TV devices. An explicit cap bounds
-    // worst-case memory regardless of stream bitrate.
+    // DefaultLoadControl's automatic byte default (a few MB, whatever the bitrate) with
+    // prioritizeTimeOverSizeThresholds(true) let a high-bitrate 4K VOD stream buffer far past it
+    // while chasing the time target: hundreds of MB of native allocation on 1-2 GB Android TV
+    // devices. An explicit cap bounds the worst case.
     //
     // The floor: 64 MB holds 30 s+ of a 1080p stream but only ~5 s of a ~100 Mbps 4K remux, so on
-    // devices with the room the cap scales with the app's heap — see [vodTargetBufferBytes].
+    // devices with the room the cap scales with the app's heap (see [vodTargetBufferBytes]).
     const val VOD_TARGET_BUFFER_BYTES = 64 * 1024 * 1024
     const val VOD_TARGET_BUFFER_BYTES_MAX = 160 * 1024 * 1024
 
@@ -90,14 +89,12 @@ object NetworkBufferProfile {
             .coerceIn(VOD_TARGET_BUFFER_BYTES.toLong(), VOD_TARGET_BUFFER_BYTES_MAX.toLong())
             .toInt()
 
-    // 16MB left high-bitrate 4K live (25-40Mbps) hitting this cap in ~3-5s, well short of the
-    // 15-50s time-based targets above — see AdaptiveLoadControl.buildDelegate()'s
-    // prioritizeTimeOverSize, which now favors time for LIVE_TV. This cap still bounds worst-case
-    // native memory; just doubled for headroom on 4K/60fps streams.
+    // 16 MB let high-bitrate 4K live (25-40 Mbps) hit the cap in ~3-5 s, far short of the 15-50 s
+    // time targets above (see AdaptiveLoadControl.buildDelegate()'s prioritizeTimeOverSize, time
+    // first for LIVE_TV). This cap still bounds native memory, with headroom for 4K/60 fps.
     const val LIVE_TARGET_BUFFER_BYTES = 32 * 1024 * 1024
 
-    // ── Cellular buffer multiplier functions ─────────────────────────
-    // Apply multiplier to cellular buffers (WiFi always uses 1.0x)
+    // ── Cellular buffer multiplier functions (WiFi always uses 1.0x) ──
 
     fun getCellularLiveMinBuffer(multiplier: Float): Int = (CELLULAR_LIVE_MIN_BUFFER_MS * multiplier).toInt()
 

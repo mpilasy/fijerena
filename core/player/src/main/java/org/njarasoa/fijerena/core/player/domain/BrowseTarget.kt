@@ -3,15 +3,14 @@ package org.njarasoa.fijerena.core.player.domain
 import androidx.compose.runtime.Immutable
 
 /**
- * What a browse row points at — the thing selecting it should open.
+ * What a browse row points at: the thing selecting it opens.
  *
- * Rows used to say this through `providerData`, a `Map<String, String>` the nav hosts read keys
- * out of: `resumeSeries`, `episodeId`, `isCategoryRef`. A missing key never failed, it just
- * selected a different screen, which is how an episode id once reached the series screen and had
- * its episodes asked for. Stated as a type, the same mistake is a compile error, and a new kind of
- * row breaks the build at every `when` that has to learn about it.
+ * As a type, not `providerData` keys (`resumeSeries`, `episodeId`, `isCategoryRef`): a missing key
+ * never failed, it opened another screen (an episode id once reached the series screen). Now that
+ * mistake is a compile error, and a new kind of row breaks the build at every `when` that must
+ * handle it.
  *
- * Ids are [SeriesId]/[EpisodeId] where a swap between the two was possible; the rest stay raw.
+ * Ids are [SeriesId] / [EpisodeId] where the two could be swapped; the rest stay raw.
  */
 @Immutable
 sealed interface BrowseTarget {
@@ -53,9 +52,9 @@ sealed interface BrowseTarget {
 }
 
 /**
- * What selecting this row opens. Rows built from watch history or from a virtual category carry
- * [MediaItem.target] themselves; a plain catalogue row does not, and is whatever its content type
- * says it is — the one place that assumption is written down.
+ * What selecting this row opens. Rows built from watch history or a virtual category carry
+ * [MediaItem.target]; a plain catalogue row does not, and is what its content type says (this is
+ * the one place that assumption is written).
  */
 fun MediaItem.browseTarget(contentType: String): BrowseTarget = target ?: browseTargetFor(contentType, id)
 

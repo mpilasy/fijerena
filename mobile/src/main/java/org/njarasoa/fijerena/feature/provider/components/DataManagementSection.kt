@@ -75,7 +75,7 @@ fun ColumnScope.DataManagementSection(
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                 cacheStats?.let { stats ->
-                    // Sync Data Button (Xtream only)
+                    // Sync Data button (Xtream only).
                     if (selectedType == ProviderType.XTREAM) {
                         CinemaButton(
                             onClick = { viewModel.syncProvider(editId) },
@@ -111,10 +111,10 @@ fun ColumnScope.DataManagementSection(
                                 tone = TextTone.Secondary,
                             )
 
-                            // Only shown next to a clean sync: on error the columns hold the last
-                            // *successful* sync's delta (ProviderDao.updateSyncStats COALESCEs
-                            // rather than zeroing on failure), so showing it next to an error
-                            // would misleadingly read as "this failed run found 5 changes".
+                            // Only next to a clean sync: after an error the columns hold the last
+                            // successful sync's delta (ProviderDao.updateSyncStats COALESCEs, it
+                            // does not zero on failure), which would read as "this failed run found
+                            // 5 changes".
                             if (currentProvider?.lastSyncError == null) {
                                 val inserted = currentProvider?.lastSyncInserted ?: 0
                                 val updated = currentProvider?.lastSyncUpdated ?: 0

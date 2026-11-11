@@ -83,9 +83,9 @@ enum class MobileTab(
 }
 
 /**
- * The tab whose stack is on the back stack: its root is the one tab entry there (one tab's stack at
- * a time). Asked per tab with `getBackStackEntry`, which throws when the route isn't on the stack —
- * `currentBackStack` would say it in one read, but it is restricted API.
+ * The tab whose stack is on the back stack (one tab's stack at a time). Asked per tab with
+ * `getBackStackEntry`, which throws when the route is not on the stack: `currentBackStack` would
+ * answer in one read, but it is restricted API.
  */
 fun NavController.currentTab(): MobileTab? =
     MobileTab.entries.firstOrNull { tab ->

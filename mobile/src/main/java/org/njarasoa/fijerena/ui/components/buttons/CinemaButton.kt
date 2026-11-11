@@ -73,7 +73,7 @@ fun CinemaOutlinedButton(
     content: @Composable RowScope.() -> Unit,
 ) = CinemaDialogActionButton(onClick = onClick, modifier = modifier, enabled = enabled, kind = ButtonKind.Other, content = content)
 
-/** As [CinemaOutlinedButton]: a text-only button no longer looks different. */
+/** The same as [CinemaOutlinedButton]: a text-only button has no look of its own. */
 @Composable
 fun CinemaTextButton(
     onClick: () -> Unit,
@@ -82,9 +82,7 @@ fun CinemaTextButton(
     content: @Composable RowScope.() -> Unit,
 ) = CinemaDialogActionButton(onClick = onClick, modifier = modifier, enabled = enabled, kind = ButtonKind.Other, content = content)
 
-/**
- * Circular button with icon, uses primary color scheme, identical to TV's aesthetic.
- */
+/** A circular icon button in the primary colours, as on TV. */
 @Composable
 fun CinemaIconButton(
     onClick: () -> Unit,
@@ -133,11 +131,10 @@ fun RowScope.PlayButtonLabel(text: String) {
 }
 
 /**
- * Secondary detail-screen action: a filled icon button — the Plex/Netflix "Favorite / Restart /
- * Trailer" row under a detail screen's primary Play button. As every action icon on the phone, its
- * [label] is the content description and shows in a tooltip on a long press, never under the icon
- * (the labels under the icons were cut: "Add to favou…"). Only actions the app actually supports
- * belong in that row (no dead Cast/Shuffle buttons).
+ * Secondary detail-screen action: a filled icon button in the row under a detail screen's Play. As
+ * every action icon on the phone, its [label] is the content description and shows in a tooltip on
+ * a long press, never under the icon (labels under icons were cut: "Add to favou…"). Only actions
+ * the app supports belong in that row.
  */
 @Composable
 fun DetailIconAction(

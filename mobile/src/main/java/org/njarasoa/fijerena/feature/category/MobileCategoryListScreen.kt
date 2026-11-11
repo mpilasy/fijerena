@@ -258,8 +258,8 @@ fun MobileCategoryListScreen(
         categoryId: String,
         contentType: String,
         target: BrowseTarget,
-        // The row's source (a merged Recent / Favourites row, or another source's category); 0
-        // for the list's own.
+        // The row's source (a merged Recent / Favourites row, or another source's category); 0 for
+        // the list's own.
         providerId: Long,
     ) -> Unit,
     /** The TV Guide of a category, on its own source ([providerId]). */
@@ -354,29 +354,24 @@ fun MobileCategoryListScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
-        // The first RESUMED is this screen's own initial composition, which just ran the load
-        // that populates uiState/favoriteIds/watchProgress/watchedIds from scratch — re-running
-        // the same per-item refresh here duplicates that work (confirmed via logcat, TV side: two
-        // full refreshPerItemData passes back to back on every entry). Only a *later* RESUMED means
-        // an actual return from elsewhere, which is what this refresh exists for.
+        // The first RESUMED is this screen's initial composition, which just ran the full load.
+        // Only a later RESUMED is a return from elsewhere, which is what this refresh is for.
         var isFirstResume = true
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (!isFirstResume) {
                 viewModel.refreshLastPlayedItem()
-                // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
-                // an episode list, search) has no way back to this instance's cache otherwise.
+                // A watched or favourite mark made on another screen (details, episodes, search)
+                // cannot reach this instance's cache otherwise.
                 viewModel.refreshWatchStateOnResume()
             }
             isFirstResume = false
         }
     }
 
-    // Tap-driven equivalent of TV's preview pane (tv/.../LiveTvSplitLayout.kt): a
-    // small always-playing mini-player docked above the channel list, promotable to full screen
-    // in place (same engine, same ViewModel pair — never a second connection). Unlike TV, mobile
-    // commits immediately on tap (no "light" preview step — a tap is already a
-    // deliberate choice to watch) and does not auto-seed from the app-wide last-played channel on
-    // a bare entry (no passive "focus" state to preview from on touch).
+    // The phone form of TV's preview pane (LiveTvSplitLayout.kt): a mini-player docked above the
+    // channel list, promoted to full screen in place on the same engine and ViewModel pair (never a
+    // second connection). Unlike TV, a tap commits at once (no "light" preview step), and a bare
+    // entry does not seed from the app-wide last-played channel.
     val isLiveTv = contentType == ContentType.LIVE_TV
     var dockTarget by remember { mutableStateOf<MediaItem?>(null) }
     // The category the docked channel was picked from (UX-D8): a dock tab of its own. Null for a
@@ -394,42 +389,33 @@ fun MobileCategoryListScreen(
     }
     // The category list's scroll, kept here so its dock tab opens where the list was (UX-D8).
     val browseListState = rememberLazyListState()
-    // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
-    // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
-    // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
-    // default-scoped viewModel() here resolved to a *different* instance tied to this
-    // destination's back-stack entry, so MainActivity was always checking a viewmodel that
-    // never actually played anything — PiP could never trigger.
+    // Activity-scoped, not nav-scoped: MainActivity resolves PlaybackViewModel via
+    // ViewModelProvider(this) to decide on auto-enter PiP. A nav-scoped instance is a different
+    // one, which never triggers PiP.
     val dockPlayback: PlaybackViewModel? =
         if (isLiveTv && dockTarget != null && activity != null) viewModel(viewModelStoreOwner = activity) else null
     var fullScreen by remember { mutableStateOf(false) }
     var hasSeededDock by remember { mutableStateOf(false) }
-    // Orientation-driven, not a width threshold — a screenWidthDp cutoff happens to catch most
-    // phones once rotated (landscape width is usually well over 600dp) but doesn't express intent
-    // and misbehaves on small phones/foldables. LocalConfiguration is read live, so this flips as
-    // the device rotates.
+    // Orientation, not a width threshold: a screenWidthDp cutoff misbehaves on small phones and
+    // foldables. LocalConfiguration is read live, so this follows rotation.
     val isLandscape =
         LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
 
     BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
-    // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
-    // straight past the bare category screen and out of Live TV — mirrors TV's silent bare
-    // CategoryList push in TvNavHost.kt that guarantees the same stopover.
+    // The dock seeds itself on entry, so without this Back would skip the bare category screen and
+    // leave Live TV. Mirrors TV's silent bare CategoryList push in TvNavHost.kt.
     BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) {
-        // Stop first, same as the dock's close button: clearing dockTarget alone unmounts the
-        // dock (and its lifecycle observer with it) but left the stream playing, with nothing
-        // left to ever stop it — even after leaving the app. dockPlayback, never a fresh
-        // ViewModelProvider lookup: that would create a PlaybackViewModel (and start the
-        // playback service) just to stop it.
+        // Stop first, as the dock's close button does: clearing dockTarget alone unmounts the dock
+        // and its lifecycle observer but leaves the stream playing. Use dockPlayback, never a fresh
+        // ViewModelProvider lookup, which would create a PlaybackViewModel (and start the service)
+        // just to stop it.
         dockPlayback?.stop()
         dockTarget = null
     }
-    // The toolbar's Back, Search and TV Guide leave this screen without going through the
-    // BackHandler above. The dock's engine is Activity-scoped, so leaving it playing kept the
-    // stream's audio going behind the next screen — and, its ON_STOP observer gone with this
-    // screen, even after the app was backgrounded. Stop it on the way out, not on dispose: the
-    // player screen shares the same engine and may already be starting its own stream by then.
-    // See the rock solid stability resilience plan → F-17.
+    // The toolbar's Back, Search and TV Guide skip the BackHandler above. The dock's engine is
+    // Activity-scoped, so the stream kept playing behind the next screen, and after backgrounding
+    // too. Stop it on the way out, not on dispose: the player screen shares the engine and can
+    // already be starting its own stream. See the rock solid stability resilience plan, F-17.
     val stopDockThen: (() -> Unit) -> Unit = { leave ->
         if (isLiveTv && dockTarget != null) {
             dockPlayback?.stop()
@@ -437,11 +423,9 @@ fun MobileCategoryListScreen(
         leave()
     }
 
-    // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
-    // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
-    // fall back to the last channel watched — the newest of the profile's sources' own, on its
-    // source (multi-source plan, Phase 5) — so a bare "Live TV" tap from the main menu still lands
-    // on something.
+    // Seed the dock so entry never lands on a bare list, as TV's LiveTvSplitLayout does: an
+    // explicit initialStreamId (search or EPG deep link) wins, else the last channel watched on any
+    // of the profile's sources (multi-source plan, Phase 5).
     if (isLiveTv && !hasSeededDock) {
         val seedState = uiState
         LaunchedEffect(seedState) {
@@ -462,9 +446,8 @@ fun MobileCategoryListScreen(
 
     val target = dockTarget
 
-    // Auto-enter PiP (Android 12+) is off until set here: MainActivity.onUserLeaveHint()'s
-    // manual fallback only runs below SDK 31, so leaving the app (Home, app-switch) while the
-    // mini-player plays enters PiP only through these params.
+    // Auto-enter PiP (Android 12+) is off until set here. MainActivity.onUserLeaveHint()'s manual
+    // fallback only runs below SDK 31.
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
         val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
         LaunchedEffect(dockPlaybackState) {
@@ -476,10 +459,9 @@ fun MobileCategoryListScreen(
                     .build(),
             )
         }
-        // The params are the Activity's, not this screen's: leaving Live TV (Back, a tab, Search
-        // the guide) stops the dock after this screen has gone, so the effect above never sees
-        // it stop and auto-enter stayed on — the next Home press put Search the guide or a list
-        // into PiP with nothing playing. Off when the screen leaves, as MobilePlayerScreen does.
+        // The params are the Activity's, not this screen's. Leaving Live TV stops the dock after
+        // this screen has gone, so the effect above never sees the stop and auto-enter stays on.
+        // Turn it off when the screen leaves, as MobilePlayerScreen does.
         DisposableEffect(Unit) {
             onDispose {
                 if (dockPlayback?.isInPictureInPictureMode?.value == true) return@onDispose
@@ -494,20 +476,17 @@ fun MobileCategoryListScreen(
     }
 
     // While a preview is docked, the list below is the category the channel was picked from
-    // (UX-D8), or else the shared Recent list, with the playing channel included and highlighted.
-    // Recent and Favourites are independent of the CategoryViewModel's own
-    // selectedCategoryId/streams so normal category/tab browsing is untouched when nothing's
-    // docked, and mirror TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
-    // Shows (target is always null there). The tabs above the list (see DockListTabs) switch
+    // (UX-D8), or else Recent, with the playing channel included and highlighted. Recent and
+    // Favourites are independent of the CategoryViewModel's selection, so normal browsing is
+    // untouched when nothing is docked. Not used for Movies / TV Shows. DockListTabs switches
     // between them.
     var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
-    // Bumped by pull-to-refresh on the docked panel — the viewer asking for current truth, and so
-    // the one place the frozen order below is allowed to re-sort.
+    // Bumped by pull-to-refresh on the docked panel: the only place where the frozen order below
+    // can re-sort.
     var recentOrderResetTick by remember { mutableStateOf(0) }
     val publishedRecentStreams by viewModel.recentItems.collectAsStateWithLifecycle()
-    // Held in display order: a channel previewed past the watch delay is recorded while this
-    // panel is on screen, and promoting it to the top live would shift the rows under the
-    // viewer's thumb.
+    // Held in display order: a channel previewed past the watch delay is recorded while this panel
+    // shows, and moving it to the top would shift the rows under the viewer's thumb.
     val recentStreams =
         rememberStableRecentOrder(publishedRecentStreams.orEmpty(), resetKey = recentOrderResetTick)
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -569,9 +548,9 @@ fun MobileCategoryListScreen(
 
     if (target != null && dockLoader != null) {
         LaunchedEffect(target.sourceKey, dockRetry) {
-            // Skip re-resolving if the engine already plays this channel (e.g. back from full
-            // screen on the channel it zapped to) — same call-site guard TV's
-            // LiveTvSplitLayout.onStreamPromote uses instead of a VM/service-level dedup guard.
+            // Do not resolve again if the engine already plays this channel (for example back from
+            // full screen on the channel it zapped to). TV's LiveTvSplitLayout.onStreamPromote uses
+            // the same guard.
             val enginePlaysIt =
                 dockSuccess != null &&
                     dockPlayback != null &&
@@ -631,14 +610,13 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // Actually start playback for the resolved stream — without this the shared engine never
-    // gets a media source while docked (MobilePlayerContent's own playStream() call only runs
-    // once promoted to full screen), so the dock's EmbeddedPlayerSurface just shows black.
+    // Start playback for the resolved stream. MobilePlayerContent only calls playStream() once
+    // promoted to full screen, so without this the dock's surface stays black.
     if (dockPlayback != null) {
         LaunchedEffect(dockSuccess?.streamId) {
             val s = dockSuccess
-            // Mirrors TV's LiveTvSplitLayout guard: skip if the engine is already playing this
-            // exact URL, so a redundant re-resolve of the same channel can't restart the stream.
+            // As in TV's LiveTvSplitLayout: skip if the engine already plays this exact URL, so a
+            // repeated resolve cannot restart the stream.
             val alreadyPlayingThis =
                 s != null &&
                     dockPlayback.currentMetadata.value.streamUrl == s.streamUrl &&
@@ -680,10 +658,8 @@ fun MobileCategoryListScreen(
         }
 
         // Dead-stream watchdog (UX-D2): a pick with no picture after DOCK_START_TIMEOUT_MS is not
-        // available — rather than let a bad channel buffer in the background indefinitely. It
-        // counts from the pick (a loader that never answers too), only while the app is in sight
-        // (a stop in the background is not the channel's fault), and never in full screen, whose
-        // player has its own error.
+        // available. It counts from the pick (a loader that never answers too), only while the app
+        // is in sight, and never in full screen, whose player has its own error.
         val appStarted =
             lifecycleOwner.lifecycle
                 .currentStateAsState()
@@ -697,9 +673,8 @@ fun MobileCategoryListScreen(
                 while (true) {
                     val reachedPlaying =
                         withTimeoutOrNull(DOCK_START_TIMEOUT_MS) {
-                            // This channel's picture, not the one before: the loader resolved it and
-                            // the engine plays its URL. The flows directly, not snapshotFlow{}: they
-                            // are plain StateFlows, not Compose snapshot state.
+                            // This channel's picture, not the one before: the loader resolved it
+                            // and the engine plays its URL. Plain StateFlows, so no snapshotFlow{}.
                             combine(
                                 dockLoader.state,
                                 dockPlayback.playbackState,
@@ -720,9 +695,8 @@ fun MobileCategoryListScreen(
             }
         }
 
-        // Stop when the app isn't visible (backgrounded, PiP dismissed); restart on return — a
-        // docked preview has no business burning battery/data while the app isn't visible.
-        // ON_STOP, not ON_PAUSE, so going into PiP keeps it playing — see onAppStopped's kdoc.
+        // Stop when the app is not visible (backgrounded, PiP dismissed) and restart on return.
+        // ON_STOP, not ON_PAUSE, so PiP keeps playing (see onAppStopped's KDoc).
         DisposableEffect(lifecycleOwner) {
             val observer =
                 LifecycleEventObserver { _, event ->
@@ -745,13 +719,10 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // Rotation follows the phone's physical orientation automatically only while the preview is
-    // docked — the rest of the app is portrait-locked (AndroidManifest.xml). Placed before the
-    // fullScreen early-return below so it stays mounted across promote/demote, not just while the
-    // small dock is on screen. SENSOR (not USER) so it rotates on physical movement even if the
-    // OS auto-rotate toggle is off — same reasoning as the full-screen player's
-    // SENSOR_LANDSCAPE override in MobilePlayerScreen.kt, just not landscape-only here since the
-    // dock has a real portrait layout too.
+    // The phone follows its physical orientation only while the preview is docked; the rest of the
+    // app is portrait-locked (AndroidManifest.xml). Placed before the fullScreen return so it stays
+    // mounted across promote and demote. SENSOR, not USER, so it rotates even with the OS
+    // auto-rotate off (as the full-screen player's SENSOR_LANDSCAPE in MobilePlayerScreen.kt).
     if (isLiveTv && target != null) {
         val activity = context as? Activity
         RequestOrientation(activity, ActivityInfo.SCREEN_ORIENTATION_SENSOR)
@@ -770,11 +741,9 @@ fun MobileCategoryListScreen(
     if (dockCoversScreen) HideMobileClock()
 
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
-        // Refresh the favorites list on demote (fullScreen leaving composition) so it reflects
-        // what was just (un)favorited — promoting/demoting never leaves this screen, so nothing
-        // else would re-fetch it. The Recent list needs no equivalent: the player's own delayed
-        // history write republishes the shared list this screen collects. Mirrors TV's
-        // LiveTvSplitLayout for the same reason.
+        // Refresh Favourites on demote so it shows what was just (un)favourited: promote and demote
+        // never leave this screen. Recent needs no refresh: the player's delayed history write
+        // republishes the shared list. Mirrors TV's LiveTvSplitLayout.
         DisposableEffect(Unit) {
             onDispose {
                 viewModel.viewModelScope.launch {
@@ -813,10 +782,8 @@ fun MobileCategoryListScreen(
         return
     }
 
-    // PiP entered from the dock: the window is just the video. Without this the whole dock
-    // screen (preview card, Recent list) got squeezed into the PiP window. The promoted
-    // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
-    // chrome in PiP.
+    // PiP from the dock: the window shows only the video, not the whole dock screen. The
+    // full-screen branch above needs nothing: MobilePlayerContent hides its own chrome in PiP.
     if (isInPip) {
         Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Media)) {
             EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
@@ -846,9 +813,8 @@ fun MobileCategoryListScreen(
         Scaffold(
             containerColor = CinemaTheme.colors.clear,
             topBar = {
-                // Hidden in the landscape split — the title/EPG/search row eats vertical space the
-                // video pane needs, and none of its actions (EPG, search, category nav) apply while
-                // docked anyway (category chips are hidden here too, see below).
+                // Hidden in the landscape split: the video needs the height, and none of these
+                // actions apply while docked.
                 if (!(isLiveTv && target != null && isLandscape)) {
                     val sectionActions: @Composable RowScope.() -> Unit = {
                         if (contentType == ContentType.LIVE_TV) {
@@ -912,10 +878,9 @@ fun MobileCategoryListScreen(
             ) {
                 AnimatedContent(
                     targetState = uiState,
-                    // Keyed on the sealed subtype, not the state instance — Success carries fresh
-                    // data (stream lists, docked preview target) on nearly every emission, and a
-                    // plain targetState comparison would refire the crossfade on every one of those
-                    // instead of only on Loading/Success/Error swaps.
+                    // Keyed on the sealed subtype, not the instance: Success emits fresh data
+                    // nearly every time, and comparing instances would run the crossfade on each
+                    // emission.
                     contentKey = { it::class },
                     transitionSpec = {
                         fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
@@ -983,9 +948,8 @@ fun MobileCategoryListScreen(
                                     }
                                 }
 
-                                // Horizontal category chips — hidden while a preview is docked so the
-                                // video sits right below the top bar instead of being pushed down by
-                                // navigation chrome the user isn't using in that moment.
+                                // Category chips hide while a preview is docked, so the video sits
+                                // right below the top bar.
                                 if (!(isLiveTv && target != null)) {
                                     // The Live TV tab's root has no section top bar, so its TV Guide
                                     // sits at the end of the chips; a pushed list keeps it in its bar.
@@ -1033,10 +997,10 @@ fun MobileCategoryListScreen(
                                     CinemaDivider()
                                 }
 
-                                // Streams list with pull-to-refresh — while a preview is docked, Recent,
-                                // Favourites or the category the channel was docked from (see listSource
-                                // above). INCLUDE keeps the docked channel in Recent even before its
-                                // delayed history write lands.
+                                // Streams list with pull-to-refresh. While docked it shows Recent,
+                                // Favourites or the dock's category (see listSource). INCLUDE keeps
+                                // the docked channel in Recent before its delayed history write
+                                // lands.
                                 val hasDockCategory = dockCategory != null && dockCategory == state.selectedCategoryKey
                                 val dockList = dockListSource(listSource, hasDockCategory)
                                 // The category list as browsed: undocked, or its dock tab.
@@ -1099,10 +1063,10 @@ fun MobileCategoryListScreen(
                                                     rowSource = toggled.providerId,
                                                 )
                                                 if (target == null) {
-                                                    // Only reload when Favorites is what's on screen (so an
-                                                    // unfavorited row drops out) — refreshStreams selects the
-                                                    // category it loads, so calling it from any other category
-                                                    // yanked the view over to Favorites.
+                                                    // Reload only when Favourites shows, so an
+                                                    // unfavourited row drops out. refreshStreams
+                                                    // selects the category it loads, so a call from
+                                                    // another category jumped to Favourites.
                                                     if (state.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
                                                         viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
                                                     }
@@ -1168,17 +1132,20 @@ fun MobileCategoryListScreen(
                                                                 openWanted(wantedCard.route)
                                                             }
 
-                                                            // A row from "Recent Categories"/"Favorite Categories" browses, it
-                                                            // doesn't play, on its source; one of a source this list doesn't
-                                                            // hold opens there.
+                                                            // A row of Recent / Favourite
+                                                            // Categories browses, not plays, on its
+                                                            // source; one of a source this list
+                                                            // does not hold opens there.
                                                             selected is BrowseTarget.CategoryRef &&
                                                                 !viewModel.isOtherSource(item.providerId) -> {
                                                                 viewModel.loadStreams(selected.categoryId, item.providerId)
                                                             }
 
                                                             isLiveTv && selected !is BrowseTarget.CategoryRef -> {
-                                                                // Dock locally instead of navigating away — mirrors
-                                                                // TV's LiveTvChannelList.onStreamPromote interception.
+                                                                // Dock here instead of navigating,
+                                                                // as TV's
+                                                                // LiveTvChannelList.onStreamPromote
+                                                                // does.
                                                                 if (target == null) {
                                                                     // Docked from a category: it becomes the dock's
                                                                     // selected tab (UX-D8).
@@ -1291,9 +1258,8 @@ fun MobileCategoryListScreen(
                                     }
 
                                 if (isLiveTv && target != null && isLandscape) {
-                                    // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
-                                    // layout as closely as possible: video+EPG pane left (0.66), channel
-                                    // list right (0.34).
+                                    // Landscape split, as TV's LiveTvSplitLayout: video and EPG
+                                    // pane left (0.66), channel list right (0.34).
                                     Row(
                                         modifier = Modifier.fillMaxSize(),
                                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -1305,18 +1271,13 @@ fun MobileCategoryListScreen(
                                                     .fillMaxHeight()
                                                     .padding(horizontal = CinemaSpacing.md),
                                         ) {
-                                            // True 16:9 without Modifier.aspectRatio(16f / 9f): the latter
-                                            // mis-positions its content in this specific spot (a Row placed
-                                            // after other siblings in the parent Column, each weighted+
-                                            // fillMaxHeight child measured with a reduced-but-bounded height
-                                            // constraint) — reproduced with a bare colored Box, confirmed
-                                            // it's not related to EmbeddedPlayerSurface. TV's
-                                            // LiveTvSplitLayout doesn't hit this because its Row has no
-                                            // preceding siblings to reduce the incoming constraint.
-                                            // BoxWithConstraints sidesteps it: it reads the actual measured
-                                            // width and derives a plain .height() from it, the same
-                                            // primitive, computed instead of hardcoded — coerced against maxHeight
-                                            // too, so it never overflows the column on unusually short screens.
+                                            // True 16:9 without Modifier.aspectRatio(): here (a Row
+                                            // after weighted siblings in a Column, with a reduced
+                                            // but bounded height) aspectRatio mis-positions its
+                                            // content. TV's layout has no preceding siblings, so it
+                                            // does not hit this. BoxWithConstraints reads the
+                                            // measured width and sets a plain height, capped at
+                                            // maxHeight so it never overflows short screens.
                                             BoxWithConstraints(
                                                 modifier =
                                                     Modifier
@@ -1328,22 +1289,19 @@ fun MobileCategoryListScreen(
                                             ) {
                                                 val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
                                                 Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
-                                                    // TextureView (not the default SurfaceView): this box
-                                                    // sits next to the scrolling/recomposing channel list,
-                                                    // and SurfaceView there stalls the main thread and
-                                                    // ANRs. Full-screen playback (MobilePlayerContent) uses
-                                                    // its own default surface instead of sharing this one —
-                                                    // promoting/demoting does a real detach/reattach (one
-                                                    // frame's glitch) rather than relocating this node, but
-                                                    // it stops every OSD/flyout interaction in full-screen
-                                                    // from janking the video for the rest of the session.
-                                                    // Mirrors TV's LiveTvSplitLayout.
+                                                    // TextureView, not SurfaceView: next to the
+                                                    // scrolling channel list a SurfaceView stalls
+                                                    // the main thread and ANRs. Full screen uses
+                                                    // its own default surface, so promote and
+                                                    // demote detach and reattach (one frame's
+                                                    // glitch), but full-screen overlays never jank
+                                                    // the video. Mirrors TV's LiveTvSplitLayout.
                                                     EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
 
-                                                    // The preview surface has no controls/error UI of its
-                                                    // own, so a stalled or watchdog-killed stream would
-                                                    // otherwise look identical to a live frozen frame —
-                                                    // mirrors TV's LiveTvSplitLayout.
+                                                    // The preview surface has no error UI of its
+                                                    // own, so a stalled stream would look like a
+                                                    // frozen live frame. Mirrors TV's
+                                                    // LiveTvSplitLayout.
                                                     if (dockUnavailable) {
                                                         DockUnavailable(
                                                             name = target.name,
@@ -1405,10 +1363,8 @@ fun MobileCategoryListScreen(
                                         }
                                     }
                                 } else {
-                                    // Portrait: same video+EPG / list split as landscape, just stacked
-                                    // top/bottom instead of side-by-side (a plain Column weight split —
-                                    // no Row-after-siblings + aspectRatio() involved, so none of the
-                                    // mis-positioning above applies here).
+                                    // Portrait: the same split, stacked. A plain Column weight
+                                    // split, so the aspectRatio problem above does not apply.
                                     Column(modifier = Modifier.fillMaxSize()) {
                                         if (isLiveTv && target != null) {
                                             Box(
@@ -1416,12 +1372,9 @@ fun MobileCategoryListScreen(
                                                     Modifier
                                                         .fillMaxWidth()
                                                         .weight(0.5f)
-                                                        // Unlike TV, the dock here already did a full
-                                                        // loadStream() (see the top-of-function comment on
-                                                        // why mobile commits immediately on tap) — real
-                                                        // category/last-watched data and watch-history
-                                                        // recording already happened at dock time, so
-                                                        // promoting needs no extra reload.
+                                                        // The dock already did a full loadStream()
+                                                        // on tap, so promoting needs no extra
+                                                        // reload.
                                                         // look-ok: a tap target on the video dock or a swipe action, not a list row
                                                         .clickable(onClick = { promoteDock() }),
                                             ) {
@@ -1520,10 +1473,9 @@ private fun DockWait(
 }
 
 /**
- * The dock's channel lists: Recent and Favourites, and first the category the channel was docked
- * from (UX-D8), named [categoryName]. Tabs (phone UI audit #12): a sideways swipe used to switch
- * the list, and fought the rows' own swipe actions. A sideways swipe on a row is its row actions
- * now; the tabs are the way to switch.
+ * The dock's channel lists: first the category the channel was docked from (UX-D8), named
+ * [categoryName], then Recent and Favourites. Tabs, not a sideways swipe, which fought the rows'
+ * swipe actions (phone UI audit #12).
  */
 @Composable
 private fun DockListTabs(
@@ -1613,8 +1565,7 @@ private fun SwipeActionButton(
         CinemaIcon(
             imageVector = icon,
             contentDescription = contentDescription,
-            // Contrasts against the filled circle behind it — `fill` here would put a same-hue icon
-            // on a same-hue background, all but invisible.
+            // Primary, not `fill`: a same-hue icon on the filled circle would be invisible.
             tone = TextTone.Primary,
             modifier = Modifier.size(MobileDimensions.iconDefault),
         )
@@ -1652,10 +1603,8 @@ private fun CategoryChipRow(
             selectedLabelColor = CinemaTheme.colors.onAccent,
         )
 
-    // Entrance animation plays once per item: LazyRow recycles item composition off the ends
-    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
-    // Keyed to categories so it resets (bounded) on category-list change instead of growing
-    // unbounded for the composable's whole lifetime.
+    // The entrance animation plays once per item: LazyRow recycles items off the ends, so without
+    // this guard it replays on every scroll. Keyed to categories so the set stays bounded.
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
     var showingAll by remember { mutableStateOf(false) }
     if (showingAll) {
@@ -1681,9 +1630,9 @@ private fun CategoryChipRow(
     }
 
     Column {
-        // The modes of browsing (Recent, Favorites, Favorite / Recent Categories) as icon tabs, so
-        // they read apart from the category chips below (phone UI audit #1). No tab is marked
-        // while a real category is picked.
+        // The browse modes (Recent, Favourites, Favourite / Recent Categories) are icon tabs, so
+        // they read apart from the category chips (phone UI audit #1). No tab is marked while a
+        // real category is picked.
         if (virtualCategories.isNotEmpty()) {
             val selectedModeIndex = virtualCategories.indexOfFirst { it.key == selectedCategoryKey }
             CinemaIconTabRow(
@@ -1741,8 +1690,8 @@ private fun CategoryChipRow(
                         },
                         colors = chipColors,
                         modifier =
-                            // remember-scoped: bare add() returns false on the first recomposition
-                            // of an already-visible chip, dropping staggeredEntrance mid-animation.
+                            // remember-scoped: a bare add() returns false on the first
+                            // recomposition of a visible chip and drops the animation mid-way.
                             if (remember(category.key) { enteredCategoryIds.add(category.key) }) {
                                 Modifier.staggeredEntrance(index)
                             } else {
@@ -1846,8 +1795,8 @@ private fun AllCategoriesDialog(
 }
 
 /**
- * A virtual category's name in the app's current language. The ViewModel names them when the list
- * loads and keeps them, so after a language change in Settings they stayed in the old one.
+ * A virtual category's name in the current app language. The ViewModel's names stay in the language
+ * of the load.
  */
 @Composable
 private fun virtualCategoryName(category: MediaCategory): String =
@@ -1881,12 +1830,12 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
     }
 
 /**
- * A category chip. A long-press opens its action menu ([ItemActionsDialog]) to add the category to Favorite Categories
- * or take it off (phone UI audit P3) — it replaced a ☆ on every chip.
+ * A category chip. A long-press opens its action menu ([ItemActionsDialog]) to add it to or take it
+ * off Favourite Categories (phone UI audit P3).
  *
- * FilterChip has no long-click of its own, so the hold is timed from its press interactions: a
- * press held past the long-press timeout opens the menu, and the click its release then sends is
- * dropped. A sideways drag cancels the press (the row scrolls), as it would any long-press.
+ * FilterChip has no long-click, so the hold is timed from its press interactions: a press held past
+ * the long-press timeout opens the menu, and the click from its release is dropped. A sideways drag
+ * cancels the press (the row scrolls).
  */
 @Composable
 private fun CategoryChip(
@@ -1917,8 +1866,7 @@ private fun CategoryChip(
         }
     }
     val favoriteLabel = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add)
-    // A width limit: the name's weight in the label needs one, or the name gets no room at all in
-    // the row that scrolls (the chips showed only their source badge).
+    // A width limit: the name's weight needs one, or in the scrolling row the name gets no room.
     Box(modifier = modifier.widthIn(max = MobileDimensions.categoryChipMaxWidth)) {
         CinemaFilterChip(
             selected = selected,
@@ -2008,10 +1956,9 @@ private fun StreamsList(
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     // A favourite row's Tags action in its menu (favourite tags plan, FT2); null where it has none.
     editTagsFor: (MediaItem) -> (() -> Unit)? = { null },
-    // The swipe's "Mark watched / unwatched", absent when this is false (a source that keeps
-    // watched state on its server). A show row's is "Mark show watched / unwatched" for all its
-    // episodes (the season show watched plan Phase 3), worded from
-    // showWatchState when revealed.
+    // Shows the swipe's "Mark watched / unwatched" (absent for a source that keeps watched state on
+    // its server). A show row's mark covers all its episodes (the season show watched plan, Phase
+    // 3), worded from showWatchState.
     showWatchedMark: Boolean = false,
     // A row's own source answers for it (a merged list's row; 0: the list's).
     showWatchState: suspend (seriesId: String, providerId: Long) -> Boolean? = { _, _ -> null },
@@ -2027,15 +1974,12 @@ private fun StreamsList(
     val scope = rememberCoroutineScope()
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
 
-    // Built once per list composition rather than once per row. CardDefaults.cardColors is
-    // @Composable, so it can't be wrapped in remember — hoisting the call out of the item body
-    // is what stops a CardColors being allocated per visible row per recomposition.
+    // Built once per list, not per row. cardColors is @Composable, so it cannot go in remember;
+    // hoisting it stops a CardColors allocation per row per recomposition.
     val streamCardColors = CardDefaults.cardColors(containerColor = CinemaTheme.colors.surface)
 
-    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
-    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
-    // Keyed to items so it resets (bounded) on category switch instead of growing unbounded
-    // across every stream id seen this session.
+    // The entrance animation plays once per item: LazyColumn recycles items off the ends, so
+    // without this guard it replays on every scroll. Keyed to items so the set stays bounded.
     val enteredStreamIds = remember(items) { mutableSetOf<String>() }
 
     // A provider's separator rows ("####### ETHIOPIA VIP #######") are headings: never played,
@@ -2058,10 +2002,9 @@ private fun StreamsList(
         }
     }
 
-    // A list opens at its top, never scrolled to the section's last played item (it opened mid-list,
-    // Recent's newest rows out of sight); Back finds it where it was left (the saved list state).
-    // The list state keeps its first row by key, so a list that also has that row (Favourites
-    // after Recent, another tag) opened scrolled to it: a new list goes to its top once loaded.
+    // A list opens at its top, not at the section's last played item; Back finds it where it was
+    // left (the saved list state). The list state keeps its first row by key, so a list that also
+    // has that row would open scrolled to it: a new list goes to its top once loaded.
     val listIdentity = "$selectedCategoryKey|$selectedTag"
     var openedList by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(listIdentity, streamsLoading, items.isNullOrEmpty()) {
@@ -2565,9 +2508,8 @@ internal fun StreamCard(
                 val parsed = parseDisplayTitle(item.name).withoutCodeOf(categoryName)
                 item.listTitle?.let { ParsedTitle(it, badge = null, year = parsed.year) } ?: parsed
             }
-        // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
-        // between the dashes) — an empty row reads as broken, not a catalogue gap.
-        // The year goes to the line under it, with the length and rating.
+        // Providers sometimes send a blank name (for example "EN -  (US)"); an empty row reads as
+        // broken. The year goes to the line below, with the length and rating.
         val displayTitle = rowDisplayTitle(parsedTitle, item.name, categoryName) ?: stringResource(R.string.content_untitled)
         val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
         // Films and shows: year · length · rating, from what the row already carries (as on
@@ -2615,12 +2557,10 @@ internal fun StreamCard(
                 // The year first, so a long category can't push it off the line.
                 else -> listOfNotNull(metaLine.ifEmpty { null }, categoryText).joinToString(" · ").ifEmpty { null }
             }
-        // One accessibility node for the row's content, read as its parts were: with an
-        // accessibility service on (a screen reader, a password manager, an automation app),
-        // Compose walks and diffs every semantics node on scroll, and a node per text and badge
-        // made that the biggest cost of a frame on the TV
-        // (docs/plans/20260914_codebase-robustness-plan.md, Phase 4). The card keeps its click
-        // and long-click actions.
+        // One accessibility node for the row's content. With an accessibility service on, Compose
+        // diffs every semantics node on scroll, and a node per text and badge was the biggest cost
+        // of a frame on TV (docs/plans/20260914_codebase-robustness-plan.md, Phase 4). The card
+        // keeps its click and long-click actions.
         val isTmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
         val description =
             listOfNotNull(
@@ -2644,9 +2584,8 @@ internal fun StreamCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
-            // 16:9, with the resume bar on the thumbnail's bottom edge rather than along the whole
-            // card (phone UI audit P1, as on the TV). A category (Recent and Favourite Categories)
-            // has no artwork: no tile, as on the category chips.
+            // 16:9, with the resume bar on the thumbnail's bottom edge (phone UI audit P1). A
+            // category has no artwork, so no tile.
             val thumbnailShape = CinemaTheme.shapes.card
             if (item.target !is BrowseTarget.CategoryRef) {
                 Box(

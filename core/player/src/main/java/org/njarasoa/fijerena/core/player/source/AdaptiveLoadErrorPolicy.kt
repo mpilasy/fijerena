@@ -10,11 +10,9 @@ import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 /**
- * Network-aware [LoadErrorHandlingPolicy] that increases retry counts and applies
- * exponential backoff on cellular networks where transient errors from tower
- * handoffs are common.
- *
- * Reads [NetworkMonitor.currentNetworkType] at call time — no state to maintain.
+ * Network-aware [LoadErrorHandlingPolicy]: more retries and exponential backoff on cellular
+ * networks, where tower handoffs cause transient errors. Reads [NetworkMonitor.currentNetworkType]
+ * at call time, so it keeps no state.
  */
 @OptIn(UnstableApi::class)
 class AdaptiveLoadErrorPolicy(
@@ -27,7 +25,7 @@ class AdaptiveLoadErrorPolicy(
         }
 
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-        // The account is busy elsewhere: surface it at once — the service waits it out.
+        // The account is busy elsewhere: report it at once; the service waits it out.
         val httpStatus = (loadErrorInfo.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         if (AccountBusy.isAccountBusy(httpStatus)) return C.TIME_UNSET
 
@@ -36,7 +34,7 @@ class AdaptiveLoadErrorPolicy(
 
         if (errorCount > maxRetries) return C.TIME_UNSET
 
-        // Exponential backoff: baseDelay * 2^(errorCount-1), capped at maxDelay
+        // Exponential backoff: baseDelay * 2^(errorCount-1), capped at maxDelay.
         val delay =
             NetworkBufferProfile.RETRY_BASE_DELAY_MS *
                 (1L shl (errorCount - 1).coerceAtMost(30))
@@ -48,7 +46,7 @@ class AdaptiveLoadErrorPolicy(
         fallbackOptions: LoadErrorHandlingPolicy.FallbackOptions,
         loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo,
     ): LoadErrorHandlingPolicy.FallbackSelection? {
-        // Defer to Media3 defaults
+        // Media3 defaults.
         return null
     }
 }

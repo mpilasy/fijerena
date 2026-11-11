@@ -136,7 +136,7 @@ fun MobileCategoryFilterDialog(
                     )
                 }
 
-                // Add section first — the thing you open this dialog to do most often.
+                // The Add section first: it is what this dialog is opened for most often.
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     CinemaTextField(
                         value = addRulesText,
@@ -161,8 +161,7 @@ fun MobileCategoryFilterDialog(
                     pendingAddValues?.let { values ->
                         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                             CinemaText(stringResource(R.string.provider_filter_choose_match_type))
-                            // Manual 2-per-row wrap, not FlowRow — see MatchTypeChipRow note in
-                            // tv/ProviderDialogs.kt for why FlowRow is avoided here right now.
+                            // A manual 2-per-row wrap.
                             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                                 MatchType.entries.chunked(2).forEach { rowTypes ->
                                     Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {

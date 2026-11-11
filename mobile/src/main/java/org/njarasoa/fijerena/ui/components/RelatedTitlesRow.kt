@@ -19,9 +19,9 @@ import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * One row of related titles on a detail screen — those the provider actually carries. Detail
- * screens show two, [title] telling them apart. Draws nothing at all when [items] is empty — no
- * header, no empty state — since a row is a bonus and an empty one only takes up space.
+ * One row of related titles on a detail screen, only those the provider carries. Detail screens
+ * show two, told apart by [title]. Draws nothing when [items] is empty: an empty row only takes
+ * space.
  */
 @Composable
 fun RelatedTitlesRow(

@@ -109,10 +109,9 @@ class AdaptiveLoadControl(
         networkType: NetworkType,
         contentType: PlayerConfigFactory.ContentType,
     ): Delegate {
-        // WIFI and UNKNOWN both use the WiFi profile, matching NetworkMonitor's own default
-        // (currentNetworkType starts as WIFI; UNKNOWN only follows an explicit network loss,
-        // not a degraded-but-present connection) — written explicitly per branch rather than
-        // an `else` fallthrough so the mapping stays obvious to the next reader.
+        // WIFI and UNKNOWN both use the WiFi profile, as NetworkMonitor's own default
+        // (currentNetworkType starts as WIFI; UNKNOWN only follows an explicit network loss).
+        // Written per branch, not as an `else`, so the mapping stays clear.
         val durations =
             when (networkType) {
                 NetworkType.CELLULAR -> {
@@ -170,14 +169,12 @@ class AdaptiveLoadControl(
                 PlayerConfigFactory.ContentType.VOD -> vodTargetBufferBytes
             }
 
-        // VOD deliberately prioritizes the size cap over the time target (see
-        // NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES's kdoc) to bound native memory on a
-        // high-bitrate 4K VOD stream — keep that as-is. LIVE_TV needs the opposite: its time
-        // targets (15-50s depending on network) are what a smooth live handover actually depends
-        // on, but the same false setting let its much smaller byte cap cut buffering short well
-        // before those targets on high-bitrate streams (16MB fills in ~3-5s at 25-40Mbps 4K),
-        // repeatedly stalling and eventually exhausting recovery. Prioritizing time for LIVE_TV
-        // only, plus the larger cap below, fixes that without reopening the VOD memory risk.
+        // VOD puts the size cap before the time target (see
+        // NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES's KDoc) to bound native memory on
+        // high-bitrate 4K VOD. LIVE_TV needs the opposite: a smooth live handover depends on its
+        // time targets (15-50 s by network), but the small byte cap cut buffering short on
+        // high-bitrate streams (16 MB fills in ~3-5 s at 25-40 Mbps 4K), which stalled again and
+        // again until recovery ran out. Time first for LIVE_TV only, with the larger cap below.
         val prioritizeTimeOverSize = contentType == PlayerConfigFactory.ContentType.LIVE_TV
 
         val control =
@@ -199,8 +196,6 @@ class AdaptiveLoadControl(
         val rebufferMs: Int,
         val backBufferMs: Int,
     )
-
-    // ── LoadControl implementation ──
 
     // Media3 never calls the deprecated methods; they forward to the delegate in use.
     @Suppress("DEPRECATION")

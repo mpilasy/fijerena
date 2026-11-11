@@ -28,8 +28,8 @@ private val CinemaDisplayFontFamily =
     )
 
 /**
- * Optimized for mobile viewing distance (arms-length, ~16-20 inches)
- * Manrope for display/headline styles, Roboto (system default) for title/body/label.
+ * For a phone at arm's length. Manrope for display and headline styles, Roboto (system default) for
+ * title, body and label.
  */
 private val BaseTypography =
     Typography(

@@ -93,9 +93,9 @@ object ConnectionLog {
         }
     }
 
-    // Appended, not a read and rewrite of the whole file: during an outage many calls fail at
-    // once, and each one rewrote about 1 MB under this lock on the failing call's thread. The
-    // file is trimmed back to [MAX_ENTRIES] only once it holds twice that.
+    // Appended, not a read and rewrite of the whole file: in an outage many calls fail at once, and
+    // each rewrote about 1 MB under this lock. The file is trimmed back to [MAX_ENTRIES] only once
+    // it holds twice that.
     private fun append(
         target: File,
         entry: String,
@@ -111,7 +111,7 @@ object ConnectionLog {
 
     /**
      * Entries newest first, each as `"<epochMs> <what>\n<address>\n<error>"`, then
-     * [TRACE_SEPARATOR] and the stack trace (none in entries recorded before 2026-10-21).
+     * [TRACE_SEPARATOR] and the stack trace (older entries have none).
      */
     fun read(): List<String> {
         val target = file ?: return emptyList()

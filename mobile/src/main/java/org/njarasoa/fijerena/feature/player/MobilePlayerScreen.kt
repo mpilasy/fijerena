@@ -126,13 +126,11 @@ private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
 private const val SUBTITLE_GAP_FRACTION = 0.02f
 
 /**
- * Nav-route wrapper: owns ViewModel creation (fresh [StreamLoaderViewModel] per back-stack entry,
- * Activity-scoped [PlaybackViewModel] shared with MainActivity for PiP) and delegates to
- * [MobilePlayerContent]. Used by every nav destination that jumps straight to full-screen
- * playback (Movies, TV Shows/episodes, and any Live TV entry not going through the docked
- * mini-player). The Live TV docked screen (`MobileCategoryListScreen`) calls
- * [MobilePlayerContent] directly with its own dock-owned ViewModel pair instead, so promoting to
- * full-screen never creates a second engine connection.
+ * Nav-route wrapper: creates the ViewModels (a fresh [StreamLoaderViewModel] per back-stack entry,
+ * the Activity-scoped [PlaybackViewModel] that MainActivity shares for PiP) and delegates to
+ * [MobilePlayerContent]. Used by every destination that goes straight to full-screen playback. The
+ * Live TV dock (`MobileCategoryListScreen`) calls [MobilePlayerContent] with its own ViewModel
+ * pair, so promoting never opens a second engine connection.
  */
 @Composable
 fun MobilePlayerScreen(
@@ -181,19 +179,16 @@ fun MobilePlayerScreen(
 ) {
     val activity = LocalActivity.current
 
-    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
+    // Activity-scoped, so MainActivity shares it for PiP.
     val activityScopedViewModel: PlaybackViewModel =
         viewModel(
             viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner,
         )
 
-    // This is the standalone full-screen route (Movies, TV Shows, or Live TV reached without
-    // the docked mini-player) — unlike the dock's promoted view, actually leaving this screen
-    // means the watch session is over, so finalize + stop here. Mirrors TV's
-    // TvPlayerScreen.kt, which owns this same responsibility instead of PlayerScreen.kt.
-    // Set when catch-up has saved, stopped the player and left (Back, Watch live): the screen it
-    // goes to (often the channel's dock) starts on that same player at once, so from then on this
-    // one must not stop it.
+    // The standalone full-screen route: unlike the dock's promoted view, leaving it ends the watch
+    // session, so finalise and stop on dispose (as TV's TvPlayerScreen.kt does). Set when catch-up
+    // has saved, stopped the player and left (Back, Watch live): the next screen (often the
+    // channel's dock) starts on the same player at once, so this one must not stop it.
     var handedOff by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         onDispose {
@@ -215,9 +210,9 @@ fun MobilePlayerScreen(
     val scope = rememberCoroutineScope()
     val sendToTv = LocalSendToTv.current
 
-    // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
-    // for (panel-a), so reaching its end asks again and carries on from there, until the window has
-    // been asked for in full. See the catchup plan → Phase 2.
+    // Catch-up of a programme still on air: the panel's answer stops at the moment of the request
+    // (panel-a), so at its end ask again and carry on, until the full window is asked for. See the
+    // catchup plan, Phase 2.
     var catchupAskedAtSec by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
     val continueCatchup: (() -> Boolean)? =
         catchup?.let { window ->
@@ -232,9 +227,9 @@ fun MobilePlayerScreen(
             }
         }
 
-    // Leaving catch-up (Back, Watch live): the session saved and the player stopped, then [then].
-    // Stopped now, not through the view model's coroutine, which could land after the dock has
-    // started its stream on the same player (seen on the TV emulator, 2026-10-10).
+    // Leaving catch-up (Back, Watch live): save the session and stop the player, then [then]. Stop
+    // now, not through the view model's coroutine, which can land after the dock has started its
+    // stream on the same player.
     val leaveCatchup: (then: () -> Unit) -> Unit = { then ->
         scope.launch {
             finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
@@ -244,9 +239,9 @@ fun MobilePlayerScreen(
         }
     }
 
-    // System Back on catch-up hands the player on too: left to the nav host, the screen would leave
-    // as a film does and its dispose stop the dock that starts on the same player (seen on the
-    // phone emulator, 2026-10-10). Declared before the content, so its own Back handlers win.
+    // System Back on catch-up hands the player on too: left to the nav host, this screen's dispose
+    // would stop the dock that starts on the same player. Declared before the content, so its own
+    // Back handlers win.
     BackHandler(enabled = catchup != null && !handedOff) { leaveCatchup(onBack) }
 
     MobilePlayerContent(
@@ -298,11 +293,10 @@ fun MobilePlayerScreen(
             if (catchup != null) {
                 leaveCatchup(onBack)
             } else {
-                // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
-                // straight back to the episode-selection screen — its own watch-history read can
-                // otherwise win the race against an unawaited write and land on the wrong resume
-                // season. See finalizeSessionAndAwait's kdoc and
-                // the episode selection fragility plan.
+                // Awaited: this Back path goes straight to episode selection, whose watch-history
+                // read can otherwise win the race against the write and pick the wrong resume
+                // season. See finalizeSessionAndAwait's KDoc and the episode selection fragility
+                // plan.
                 scope.launch {
                     finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
                     activityScopedViewModel.stop()
@@ -314,10 +308,10 @@ fun MobilePlayerScreen(
 }
 
 /**
- * The actual full-screen player UI (touch controls, gestures, overlays, PiP wiring). Takes its
- * [PlaybackViewModel]/[StreamLoaderViewModel] as params rather than owning creation, so callers
- * can share a single engine connection across a preview/dock and full-screen — mirrors TV's
- * `PlayerScreen`/`TvPlayerScreen` split (`tv/.../ui/player/PlayerScreen.kt`).
+ * The full-screen player UI (touch controls, gestures, overlays, PiP). Takes its
+ * [PlaybackViewModel] / [StreamLoaderViewModel] as parameters, so callers can share one engine
+ * connection between the dock and full screen, as TV's `PlayerScreen` / `TvPlayerScreen` split
+ * does.
  */
 @Composable
 fun MobilePlayerContent(
@@ -352,7 +346,7 @@ fun MobilePlayerContent(
         // The frame on screen, for copying (the wait indicator's scene colour).
         val sceneFrame = rememberSceneFrame()
 
-        // Observe app focus/lifecycle to pause on background and stop after timeout
+        // Pause on background, and stop after a timeout.
         DisposableEffect(lifecycleOwner) {
             val observer =
                 LifecycleEventObserver { _, event ->
@@ -375,15 +369,13 @@ fun MobilePlayerContent(
             }
         }
 
-        // Force landscape while in the full-screen player, even though the rest of the app is
-        // portrait-locked and even if system auto-rotate is off. SENSOR_LANDSCAPE (not plain
-        // LANDSCAPE) still follows the sensor between landscape-left/landscape-right, it just never
-        // flips to portrait.
+        // Force landscape in the full-screen player, even with auto-rotate off. SENSOR_LANDSCAPE
+        // still follows the sensor between the two landscape sides; it never goes portrait.
         RequestOrientation(activity, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
 
-        // Immersive while in the full-screen player: the status and navigation bars are hidden, even
-        // while the controls show — a swipe from an edge brings them back for a moment. Leaving the
-        // player (or shrinking back to the Live TV dock) shows them again.
+        // Immersive in the full-screen player: the system bars hide, also while the controls show;
+        // an edge swipe brings them back for a moment. Leaving (or shrinking back to the dock)
+        // shows them again.
         DisposableEffect(activity) {
             val controller = activity?.window?.let { WindowCompat.getInsetsController(it, it.decorView) }
             controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -395,16 +387,11 @@ fun MobilePlayerContent(
 
         val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
 
-        // Remember the last successful stream so a channel change can keep the player UI mounted
-        // (and the old video frame visible) through the Loading window instead of unmounting to a
-        // full-screen spinner and flashing black — mirrors TV's TvPlayerScreen. Every effect below
-        // that actually drives playback (position save, playStream trigger) still keys off the live
-        // streamState/currentStreamId, not this — only the final `when` that picks what to draw uses
-        // the frozen fallback, via displayState below.
-        // Cleared on Error, not just set on Success: without this, a channel switch that fails
-        // leaves the *previous* channel's frozen frame in place, and the next successful switch's
-        // own Loading window falls back to that now-stale frame instead of the spinner below —
-        // confusing after the viewer already saw an Error screen in between.
+        // The last successful stream, so a channel change keeps the player UI and the old frame
+        // through Loading instead of a black full-screen spinner (as TV's TvPlayerScreen). Effects
+        // that drive playback still key off the live streamState; only the final `when` uses
+        // displayState. Cleared on Error: else the next switch's Loading would fall back to the
+        // stale frame from before the error.
         var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
         when (streamState) {
             is StreamLoaderViewModel.StreamState.Success -> {
@@ -425,14 +412,12 @@ fun MobilePlayerContent(
             }
 
         var showChannelToast by remember { mutableStateOf(false) }
-        // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
-        // restarts its delay even when a second channel switch lands while the toast from the first
-        // one is still showing (showChannelToast itself stays true across both, so keying on it
-        // alone wouldn't restart the coroutine).
+        // Bumped on each showChannelToast trigger, so the auto-hide effect restarts its delay when
+        // a second switch lands while the first toast shows (showChannelToast stays true across
+        // both).
         var channelToastTick by remember { mutableStateOf(0) }
-        // Tracks whether the stream-start effect below has run at least once, so its very first run
-        // (mounting on / promoting to full screen) can stay silent while every later run — a genuine
-        // channel switch — shows the toast, independent of whether playback itself needed restarting.
+        // Whether the stream-start effect has run once: its first run (mount, or promote to full
+        // screen) stays silent; each later run is a real channel switch and shows the toast.
         var hasHandledFirstStream by remember { mutableStateOf(false) }
         var showCategoryOverlay by remember { mutableStateOf(false) }
         var showLastWatchedOverlay by remember { mutableStateOf(false) }
@@ -449,11 +434,10 @@ fun MobilePlayerContent(
             showLastWatchedOverlay = false
         }
 
-        // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
-        // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction
-        // (10s, 20s, 30s...) rather than showing one pill per tap; seekRippleTick, same pattern as
-        // channelToastTick above, restarts the auto-hide delay on every tap in the burst. While the
-        // pill shows, one tap on a side seeks again (see the tap gestures below).
+        // Double-tap seek pill (2a): side -1 (rewind, left 40%), +1 (forward, right 40%), 0 hidden.
+        // A burst of taps in one direction adds up (10 s, 20 s, 30 s...) in one pill;
+        // seekRippleTick restarts the auto-hide delay on each tap. While the pill shows, one tap on
+        // a side seeks again.
         var seekRippleSide by remember { mutableStateOf(0) }
         var seekRippleSeconds by remember { mutableStateOf(0) }
         var seekRippleTargetMs by remember { mutableLongStateOf(0L) }
@@ -468,9 +452,9 @@ fun MobilePlayerContent(
             StreamingPlaybackService.awaitInstanceOrNull()?.newStreamStarting?.collect { newStreamStarting = it }
         }
 
-        // The flyout offers channels to switch to, so the one already playing is filtered out below —
-        // unlike the docked preview panel, which keeps it as the highlighted row. Held in display
-        // order so watching past the delay doesn't re-sort the list the viewer may have open.
+        // The flyout offers channels to switch to, so the playing one is filtered out below (the
+        // dock's panel keeps it, highlighted). Held in display order, so watching past the delay
+        // does not re-sort an open list.
         val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
         val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
 
@@ -479,8 +463,8 @@ fun MobilePlayerContent(
         val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
         val seekTarget by viewModel.seekTarget.collectAsStateWithLifecycle()
 
-        // Enable/disable PiP auto-enter — only for live video that's actually playing. Anything else
-        // (VOD, paused, idle) just leaves the app normally on Home/app-switch.
+        // PiP auto-enter only for live video that plays. Anything else leaves the app normally on
+        // Home or app switch.
         LaunchedEffect(playbackState::class, currentMetadata.isLive) {
             val ps = playbackState
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -494,11 +478,11 @@ fun MobilePlayerContent(
             }
         }
 
-        // Live position polling for smooth VOD timer updates
+        // Polled position, for smooth VOD timer updates.
         var livePosition by remember { mutableLongStateOf(0L) }
         var liveDuration by remember { mutableLongStateOf(0L) }
 
-        // Capture delegated properties into local variables for stable smart casting
+        // Local copies of the delegated properties, for smart casts.
         val currentPs = playbackState
         val currentMeta = currentMetadata
 
@@ -525,11 +509,11 @@ fun MobilePlayerContent(
         // player gets there.
         val shownPosition = seekTarget ?: livePosition
 
-        // Autoplay next episode. The "Up next" card shows over the playing episode once little enough
-        // is left (see showUpNext); its countdown is the playback time left, from the polled position,
-        // so it stops with the video. Per playing stream: the one whose card was cancelled or used
-        // (stays hidden for that episode), and the one a next episode is starting from until the new
-        // one plays — the player keeps reading the old episode, or Ended, until then.
+        // Autoplay next episode. The "Up next" card shows over the playing episode near its end
+        // (see showUpNext); its countdown is the playback time left, so it stops with the video.
+        // Per playing stream: the one whose card was cancelled or used (hidden for that episode),
+        // and the one the next episode starts from, until the new one plays (the player reads the
+        // old episode, or Ended, until then).
         val shownSuccess = displayState as? StreamLoaderViewModel.StreamState.Success
         val autoplayNext = remember { appSettings.autoplayNextEpisode }
         var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
@@ -567,11 +551,10 @@ fun MobilePlayerContent(
             }
         }
 
-        // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
-        // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
-        // frame with no controls (see the `else` branch below that deliberately renders nothing
-        // for Ended), unless the profile plays the next episode automatically, there is one and its
-        // card wasn't cancelled: then it plays at once (once the app is at least STARTED — PiP is).
+        // Natural end of a film or episode (never live: Ended is only emitted for VOD). Leave the
+        // player rather than sit on a frozen frame with no controls (Ended draws nothing below),
+        // unless the profile plays the next episode automatically, there is one and its card was
+        // not cancelled: then it plays at once (once the app is at least STARTED, which PiP is).
         LaunchedEffect(currentPs) {
             if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
                 val next =
@@ -609,7 +592,7 @@ fun MobilePlayerContent(
         var showSubtitleSelector by remember { mutableStateOf(false) }
         var showQualitySelector by remember { mutableStateOf(false) }
 
-        // Track when video first starts playing so we stop showing the center spinner
+        // When video first plays, the centre spinner goes.
         LaunchedEffect(currentPs) {
             if (currentPs is PlaybackState.Playing) {
                 hasStartedPlaying = true
@@ -623,10 +606,10 @@ fun MobilePlayerContent(
             }
         }
 
-        // Save playback position and track choices. Collected from the service's process-wide flow,
-        // not a listener set on one instance: on the first playback after a cold start this screen
-        // composes before the service exists. Composition-scoped, not lifecycle-gated, so PiP keeps
-        // saving. See the next level rock solid resilience plan → R-04.
+        // Save the playback position and track choices. Collected from the service's process-wide
+        // flow, not a listener on one instance: after a cold start this screen composes before the
+        // service exists. Composition-scoped, not lifecycle-gated, so PiP keeps saving. See the
+        // next level rock solid resilience plan, R-04.
         LaunchedEffect(loaderViewModel) {
             StreamingPlaybackService.positionSaves.collect { save ->
                 loaderViewModel.recordHistory(
@@ -663,19 +646,16 @@ fun MobilePlayerContent(
         LaunchedEffect(currentStreamId) {
             val state = streamState
             if (state is StreamLoaderViewModel.StreamState.Success) {
-                // Promoting an already-playing docked preview to full screen re-mounts this
-                // composable (and thus re-runs this effect) even though nothing actually changed —
-                // skip re-issuing playStream() so promoting doesn't restart the stream from scratch.
+                // Promoting a playing docked preview re-runs this effect with nothing changed: do
+                // not call playStream() again, or the stream restarts.
                 val alreadyPlayingThis =
                     viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
                         viewModel.playbackState.value !is PlaybackState.Idle &&
                         viewModel.playbackState.value !is PlaybackState.Error
 
-                // Toast visibility is intentionally independent of alreadyPlayingThis: when this
-                // screen is the promoted full-screen view of a Live TV dock (MobileCategoryListScreen),
-                // the dock's own effect already calls playStream() for the new channel before this one
-                // runs, so alreadyPlayingThis is true on every ordinary channel switch, not just on
-                // promote. Only the very first run of this effect (mount / promote) should stay silent.
+                // The toast does not depend on alreadyPlayingThis: on the dock's promoted view the
+                // dock already calls playStream() for the new channel, so alreadyPlayingThis is
+                // true on every switch. Only the first run (mount or promote) stays silent.
                 if (hasHandledFirstStream) {
                     showChannelToast = true
                     channelToastTick++
@@ -701,9 +681,9 @@ fun MobilePlayerContent(
                     viewModel.playStream(metadata, state.resumePosition)
 
                     if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                        // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
-                        // in snapshotFlow{} never registers an observable read, so it emits once and
-                        // never again, leaving this stuck waiting forever instead of restoring tracks.
+                        // playbackState is a plain StateFlow, not Compose snapshot state: in
+                        // snapshotFlow{} it emits once and never again, so this would wait for
+                        // ever.
                         val readyState =
                             viewModel.playbackState
                                 .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
@@ -725,10 +705,9 @@ fun MobilePlayerContent(
             }
         }
 
-        // The series name / episode label / TMDB logo / synopsis above resolve asynchronously (a
-        // series-detail and a TMDB lookup) well after the effect above already started playback with
-        // whatever was known at that instant — almost always still null. Patch them into the OSD's
-        // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
+        // The series name, episode label, TMDB logo and synopsis resolve after the effect above
+        // started playback, almost always with them still null. Patch them into the OSD metadata as
+        // they land, without touching playback (see PlaybackViewModel.updateMetadata).
         val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
         LaunchedEffect(
             enrichedState?.seriesName,
@@ -768,11 +747,9 @@ fun MobilePlayerContent(
 
             is StreamLoaderViewModel.StreamState.Success -> {
                 val isLiveContent = state.isLive
-                // Buffering is included alongside Playing/Paused (unlike the equivalent TV gate, which
-                // never excluded it in the first place) — without it, the tap gesture still flipped
-                // showControls, but the overlay itself stayed invisible for as long as a stream was
-                // buffering, silently swallowing every reveal tap. Idle/Error/Ended stay excluded:
-                // nothing here to control yet.
+                // Buffering counts too: without it a tap flipped showControls but the overlay
+                // stayed invisible while buffering. Idle / Error / Ended stay out: nothing to
+                // control yet.
                 val controlsVisible =
                     !isInPipMode && showControls && !showStats &&
                         (
@@ -800,9 +777,10 @@ fun MobilePlayerContent(
                                 if (isInPipMode) {
                                     Modifier
                                 } else {
-                                    // While the seek pill shows, a single tap on a side seeks again at once
-                                    // (YouTube style): no double-tap wait, and it doesn't toggle the controls.
-                                    // The key change restarts the detector when the pill comes and goes.
+                                    // While the seek pill shows, one tap on a side seeks again at
+                                    // once (YouTube style), without the double-tap wait and without
+                                    // toggling the controls. The key change restarts the detector
+                                    // when the pill comes and goes.
                                     Modifier.pointerInput(showStats, isLiveContent, seekRippleSide != 0) {
                                         if (seekRippleSide != 0) {
                                             detectTapGestures(
@@ -820,13 +798,11 @@ fun MobilePlayerContent(
                                                 onTap = {
                                                     if (!showStats) showControls = !showControls
                                                 },
-                                                // Double-tap 10s relative seek (2a), not pause/resume — that
-                                                // would duplicate the single-tap + center button path and break
-                                                // the double-tap-to-seek convention every other mobile video
-                                                // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
-                                                // the width rewinds, right 40% seeks forward, the center 20% is left alone —
-                                                // single tap already toggles the controls overlay, so a
-                                                // second meaning on center double-tap would be redundant.
+                                                // Double-tap is a 10 s relative seek (2a), as in
+                                                // every mobile video player, not pause / resume (a
+                                                // single tap and the centre button do that). The
+                                                // left 40% rewinds, the right 40% seeks forward,
+                                                // the centre 20% does nothing.
                                                 onDoubleTap = { offset ->
                                                     val side = seekTapSide(offset.x, size.width.toFloat())
                                                     if (side != 0 && !showStats && !isLiveContent) seekBy(side)
@@ -872,10 +848,8 @@ fun MobilePlayerContent(
                                                 hasFiredHorizontalThisGesture = false
                                             },
                                             onDrag = { change, dragAmount ->
-                                                // Without guarding the other two overlays the same way
-                                                // showStats already was, a vertical scroll inside the open
-                                                // category/last-watched drawer was consumed here instead —
-                                                // channel-skipping while the user tried to scroll the list.
+                                                // With either drawer open, a vertical scroll in it
+                                                // must scroll the list, not skip channels.
                                                 if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
                                                 if (startedInEdge) return@detectDragGestures
                                                 change.consume()
@@ -917,13 +891,11 @@ fun MobilePlayerContent(
                                 },
                             ),
                 ) {
-                    // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
-                    // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
-                    // recomposition here never steals frames from the video. See
-                    // MobileCategoryListScreen's videoSurface comment for why the dock needs the
-                    // opposite (TextureView).
-                    // While the controls are up, the subtitles sit above their bottom panel (and a
-                    // small gap) instead of on the title and seek bar.
+                    // SurfaceView (EmbeddedPlayerSurface's default): SurfaceFlinger composites
+                    // full-screen video apart from the UI thread, so overlay recomposition never
+                    // takes frames from the video. The dock needs the opposite (TextureView, see
+                    // MobileCategoryListScreen). While the controls show, the subtitles sit above
+                    // their bottom panel.
                     EmbeddedPlayerSurface(
                         modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
                         subtitleBottomInsetPx =
@@ -937,12 +909,11 @@ fun MobilePlayerContent(
                         sceneFrame = sceneFrame,
                     )
 
-                    // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
-                    // session and stopping playback is NOT done here — this composable is shared
-                    // between the standalone full-screen route (which does own that) and the Live
-                    // TV dock's promoted view (where "leaving" just means shrinking back to the
-                    // dock, and the stream must keep playing). See MobilePlayerScreen's own
-                    // DisposableEffect for the standalone case.
+                    // Reset PiP auto-enter when leaving the full-screen player. Finalise and stop
+                    // are NOT done here: this composable is shared by the standalone route (which
+                    // does that) and the dock's promoted view (where leaving means shrinking back
+                    // to the dock, and the stream plays on). See MobilePlayerScreen's own
+                    // DisposableEffect.
                     DisposableEffect(Unit) {
                         onDispose {
                             if (viewModel.isInPictureInPictureMode.value) return@onDispose
@@ -1031,8 +1002,8 @@ fun MobilePlayerContent(
                             },
                             onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(300_000L) }) else null,
                             onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-60_000L) }) else null,
-                            // Finalizing the session and stopping playback is the caller's call —
-                            // see the DisposableEffect note above. Forward as-is.
+                            // Finalise and stop are the caller's (see the DisposableEffect note
+                            // above).
                             onBack = onBack,
                             onStats = { showStats = true },
                             onAudioTrack = { showAudioTrackSelector = true },
@@ -1050,10 +1021,10 @@ fun MobilePlayerContent(
                             onStartOver = onStartOver,
                             nextEpisode = state.nextEpisode,
                             onPlayNextEpisode = { nextEp ->
-                                // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
-                                // in its own coroutine, which races an unawaited finalizeSession()'s
-                                // position-save read of that same state — see finalizeSessionAndAwait's
-                                // kdoc / the episode selection fragility plan.
+                                // Awaited: playNextEpisode() sets the loader's state to Loading in
+                                // its own coroutine, which races an unawaited finalizeSession()'s
+                                // read of that state. See finalizeSessionAndAwait's KDoc and the
+                                // episode selection fragility plan.
                                 scope.launch {
                                     finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
                                     loaderViewModel.playNextEpisode(nextEp)
@@ -1087,7 +1058,7 @@ fun MobilePlayerContent(
                     }
                 }
 
-                // Category streams panel — slides in from the left
+                // Category streams panel, slides in from the left.
                 AnimatedVisibility(
                     visible = !isInPipMode && showCategoryOverlay,
                     enter = slideInHorizontally { -it },
@@ -1105,7 +1076,7 @@ fun MobilePlayerContent(
                         currentStreamId = state.streamId,
                         catchupDays = categoryCatchupDays,
                         onSelect = { item ->
-                            // Finalize current session properly before starting new one
+                            // Finalise the current session before the new one starts.
                             finalizeSession(viewModel.playbackState.value, loaderViewModel)
 
                             showCategoryOverlay = false
@@ -1115,7 +1086,7 @@ fun MobilePlayerContent(
                     )
                 }
 
-                // Last watched panel — slides in from the right
+                // Last watched panel, slides in from the right.
                 AnimatedVisibility(
                     visible = !isInPipMode && showLastWatchedOverlay,
                     enter = slideInHorizontally { it },
@@ -1134,7 +1105,7 @@ fun MobilePlayerContent(
                         panelAlignment = Alignment.CenterEnd,
                         catchupDays = recentCatchupDays,
                         onSelect = { item ->
-                            // Finalize current session properly before starting new one
+                            // Finalise the current session before the new one starts.
                             finalizeSession(viewModel.playbackState.value, loaderViewModel)
 
                             showLastWatchedOverlay = false
@@ -1144,9 +1115,9 @@ fun MobilePlayerContent(
                     )
                 }
 
-                // Channel/program info toast — not shown while the category or last-watched panel is
-                // open; MobileChannelListSheet already highlights the current channel, so the toast
-                // would just be redundant on top of it (mirrors TV's PlayerScreen).
+                // Channel / programme info toast. Not while a channel panel is open:
+                // MobileChannelListSheet already highlights the current channel (as TV's
+                // PlayerScreen).
                 Box(modifier = Modifier.fillMaxSize()) {
                     AnimatedVisibility(
                         visible = !isInPipMode && showChannelToast,
@@ -1160,11 +1131,9 @@ fun MobilePlayerContent(
                         )
                     }
 
-                    // Small spinner over the frozen last frame while a new stream is being resolved
-                    // (loaderViewModel.state is still Loading) — the Buffering overlay below only
-                    // covers ExoPlayer's own buffering once playStream() has already been called, so
-                    // without this the resolve gap between a channel switch and that call would show
-                    // nothing at all.
+                    // A small spinner over the frozen frame while a new stream resolves (loader
+                    // still Loading). The Buffering overlay only covers ExoPlayer's buffering after
+                    // playStream(), so the gap before it would show nothing.
                     AnimatedVisibility(
                         visible = !isInPipMode && streamState is StreamLoaderViewModel.StreamState.Loading,
                         enter = fadeIn(),
@@ -1174,9 +1143,9 @@ fun MobilePlayerContent(
                         CinemaSpinner()
                     }
 
-                    // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading
-                    // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst. Under
-                    // the burst's seconds, larger, the time it goes to.
+                    // Double-tap seek pill (2a), on the tapped side; it fades out
+                    // CinemaAnimation.seekRippleDismissMs after the last tap of a burst. Under the
+                    // burst's seconds, larger, is the time it goes to.
                     AnimatedVisibility(
                         visible = !isInPipMode && seekRippleSide != 0,
                         enter = fadeIn(),
@@ -1215,7 +1184,7 @@ fun MobilePlayerContent(
                     }
                 }
 
-                // Selector dialogs (outside the clickable Box)
+                // Selector dialogs, outside the clickable Box.
                 if (showAudioTrackSelector) {
                     AudioTrackSelectorDialog(
                         viewModel = viewModel,

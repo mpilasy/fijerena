@@ -19,9 +19,9 @@ sealed class PlaybackState {
     ) : PlaybackState()
 
     /**
-     * Playback reached the natural end of the stream. Carries the duration so the session can be
-     * finalized as *completed* — the player is torn down moments later, so reading position off it
-     * at exit time yields 0 and the item silently loses both its resume point and its watched mark.
+     * Playback reached the natural end of the stream. Carries the duration so the session is
+     * finalised as completed: the player is torn down moments later, so its position at exit is 0
+     * and the item would lose its resume point and its watched mark.
      */
     data class Ended(
         val duration: Long = 0L,
@@ -43,14 +43,13 @@ data class PlayerMetadata(
     val streamUrl: String = "",
     val isLive: Boolean = false,
     val headers: Map<String, String> = emptyMap(),
-    // Series name for episode playback — when set, the OSD renders it as the big title and
-    // demotes [title] (the episode name) to a subtitle line prefixed with [episodeLabel].
-    // Null for movies and Live TV, which keep [title] as the sole OSD title.
+    // Series name for episode playback: when set, the OSD shows it as the big title and [title]
+    // (the episode name) as a subtitle line after [episodeLabel]. Null for films and Live TV.
     val showTitle: String? = null,
-    // "S{season}:E{episode}", e.g. "S3:E1" — only meaningful alongside [showTitle].
+    // "S{season}:E{episode}", for example "S3:E1"; only used with [showTitle].
     val episodeLabel: String? = null,
-    // TMDB's transparent-PNG wordmark art for this title, if any — the OSD renders this image
-    // in place of [showTitle]/[title] as text when present.
+    // TMDB's transparent-PNG wordmark for this title, if any: the OSD shows it in place of
+    // [showTitle] / [title] as text.
     val logoUrl: String? = null,
     // Live TV: the EPG programme on air, once the guide lookup resolves and as it rolls over.
     // Null for VOD and for channels without guide data. Only live sync's "now playing" reads it.

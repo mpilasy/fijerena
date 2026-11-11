@@ -5,8 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * A list entry with `"name": null` (panel-c's film list, 2026-10-09) used to fail the whole list.
- * Same Json settings as XtreamApiService.
+ * A list entry with `"name": null` (panel-c's film list) must not fail the whole list. Same Json
+ * settings as XtreamApiService.
  */
 class XtreamListNamesTest {
     private val json =

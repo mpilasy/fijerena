@@ -14,10 +14,9 @@ import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 /**
- * Reuses an internal [DefaultMediaSourceFactory] to avoid memory churn and binder exhaustion
- * during rapid channel switching. The HTTP data source is backed by OkHttp (via
- * [NetworkModule.streamingClientFor]) so streaming shares the same connection pool and
- * DNS-retry resilience as the rest of the app's networking.
+ * Reuses one [DefaultMediaSourceFactory] against memory churn and binder exhaustion during fast
+ * channel switching. The HTTP data source uses OkHttp (via [NetworkModule.streamingClientFor]), so
+ * streaming shares the app's connection pool and DNS retry.
  */
 @OptIn(UnstableApi::class)
 class StreamingMediaSourceFactory(
@@ -57,10 +56,10 @@ class StreamingMediaSourceFactory(
                 .setDefaultRequestProperties(allHeaders)
                 .setTransferListener(transferListener)
 
-        // OkHttpDataSource only understands http(s):// — set directly as the root factory, it
-        // threw "Expected HTTP scheme" for every file:// (LOCAL provider) or content:// URI.
-        // DefaultDataSource.Factory dispatches by scheme, routing http(s) to httpDataSourceFactory
-        // and file/content/asset to Media3's own local-file data sources.
+        // OkHttpDataSource only reads http(s)://; as the root factory it threw "Expected HTTP
+        // scheme" for every file:// (LOCAL provider) or content:// URI. DefaultDataSource.Factory
+        // dispatches by scheme: http(s) to httpDataSourceFactory, file / content / asset to
+        // Media3's local data sources.
         mediaSourceFactory.setDataSourceFactory(DefaultDataSource.Factory(context, httpDataSourceFactory))
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)

@@ -326,10 +326,10 @@ fun MobileSettingsScreen(
         )
     }
 
-    // The Admin section open as its own page, in place of Settings' list (null: the list); Back
-    // returns to the list. Its row on Settings opens it after the PIN of the profile in use, once per
-    // session (PinSession), for all five sections; the rows inside ask nothing more. Saveable, so a
-    // language change (Activity recreate) and the round trip through a screen it opens come back to it.
+    // The Admin section open as its own page in place of Settings' list (null: the list); Back
+    // returns to the list. Its row opens it after the PIN of the profile in use, once per session
+    // (PinSession); the rows inside ask nothing more. Saveable, so a language change (Activity
+    // recreate) and a round trip through a screen it opens come back to it.
     var adminSection by rememberSaveable { mutableStateOf<AdminGroup?>(null) }
     // Admin turned off, or the session locked again (a long time in the background): back to
     // the list, so the Admin rows are not open without the PIN.
@@ -692,9 +692,8 @@ private fun AdminGroup.summary(profiles: List<ProfileUi>): String =
 
 /**
  * Profiles' rows: on the Admin page ([admin]) every profile, else none (Settings shows the viewer's
- * own rows in place). Add Profile
- * for any grown-up, with no PIN (the profile rules plan, PR-D2), an Admin's in Admin; only an Admin
- * edits another profile, so only an Admin's new profile opens its page ([onAdded]).
+ * own rows in place). Add Profile for any grown-up, with no PIN (the profile rules plan, PR-D2).
+ * Only an Admin edits another profile, so only an Admin's new profile opens its page ([onAdded]).
  */
 @Composable
 private fun ProfilesRows(

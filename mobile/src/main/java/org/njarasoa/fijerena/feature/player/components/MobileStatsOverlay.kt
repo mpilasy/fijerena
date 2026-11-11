@@ -146,8 +146,8 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
-    // Process-side health. ExoPlayer's counters cannot see the app starving itself, which is
-    // exactly what a GC storm or a heavy background job looks like from the couch.
+    // Process-side health. ExoPlayer's counters cannot see the app starving itself (a GC storm, a
+    // heavy background job).
     var heap by remember { mutableStateOf(AppPerformanceMonitor.heapSnapshot()) }
     var uiFramesSkipped by remember { mutableLongStateOf(0L) }
     val jankMonitor = remember { AppPerformanceMonitor.JankMonitor() }
@@ -157,8 +157,7 @@ fun MobileStatsOverlay(
     }
 
     LaunchedEffect(Unit) {
-        // Persisted across ticks so an unchanged Tracks instance (no track/quality switch)
-        // skips the O(N) group/track scan entirely instead of repeating it every tick.
+        // Kept across ticks, so an unchanged Tracks instance skips the O(N) group / track scan.
         var lastTracks: androidx.media3.common.Tracks? = null
         var selectedVideoFormat: androidx.media3.common.Format? = null
         var currentVideoBitrate = 0
@@ -264,9 +263,9 @@ fun MobileStatsOverlay(
                     }
                 }
 
-                // Frame rate depends on the live measured-fps signal too (common fallback for
-                // streams whose container doesn't report a static rate), so it's recomputed
-                // every tick rather than gated behind the tracks-changed check above.
+                // The frame rate also depends on the measured-fps signal (the fallback for
+                // containers without a static rate), so it is computed every tick, not only when
+                // tracks change.
                 val fmt = selectedVideoFormat
                 val mFps = serviceMeasuredFps
                 val newFrameRate =
@@ -279,7 +278,8 @@ fun MobileStatsOverlay(
                     }
                 if (newFrameRate != videoFrameRate) videoFrameRate = newFrameRate
 
-                // If bitrate is still unknown for video but we have a bandwidth estimate, use a portion of it as a guess for VOD/IPTV
+                // Video bitrate still unknown but a bandwidth estimate exists: use part of it as a
+                // guess (VOD / IPTV).
                 val bw = serviceBandwidth
                 if (currentVideoBitrate <= 0 && bw > 0) {
                     val estimatedBitrate = (bw * 0.9).toInt()
@@ -320,10 +320,9 @@ fun MobileStatsOverlay(
         }
     }
 
-    // position above is live-polled by the LaunchedEffect ticker, not read off playbackState:
-    // PlaybackState.Playing.position is only a snapshot taken when that object was last
-    // (re)created — on a real ExoPlayer state transition — so during smooth, uninterrupted
-    // playback it never changes and this stat looked frozen despite playback actually advancing.
+    // The position above is polled live, not read off playbackState: PlaybackState.Playing.position
+    // is a snapshot from the last ExoPlayer state transition, so in smooth playback it never
+    // changes.
     val duration =
         when (playbackState) {
             is PlaybackState.Playing -> playbackState.duration
@@ -343,7 +342,7 @@ fun MobileStatsOverlay(
         modifier =
             Modifier
                 .fillMaxSize(),
-        // Not focusable, no background scrim - allows gestures to pass to the stream underneath
+        // Not focusable, no background scrim: gestures pass to the stream underneath.
     ) {
         GlassPanel(
             modifier =
@@ -451,8 +450,8 @@ fun MobileStatsOverlay(
                     )
                 }
 
-                // Short-window rate: the cumulative one above averages a bad burst away against
-                // however long the stream has already been clean.
+                // Short-window rate: the cumulative one above averages a bad burst away against a
+                // long clean run.
                 val recentDropRate = serviceRecentDropRate
                 val recentDropColor =
                     when {

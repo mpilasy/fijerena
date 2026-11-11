@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.njarasoa.fijerena.core.player.config.NetworkType
 
 /**
- * Singleton that observes network connectivity changes via ConnectivityManager.
+ * Observes network connectivity changes via ConnectivityManager.
  *
  * Provides:
- * - [networkType] StateFlow for coroutine-based collection
+ * - [networkType] StateFlow for coroutine collection
  * - [currentNetworkType] @Volatile field for hot-path synchronous reads (LoadControl, error policy)
  *
- * Safe to call [init] multiple times (idempotent). Call [release] when done.
+ * [init] is idempotent. Call [release] when done.
  */
 object NetworkMonitor {
     private const val TAG = "NetworkMonitor"
@@ -26,7 +26,7 @@ object NetworkMonitor {
     private val _networkType = MutableStateFlow(NetworkType.WIFI)
     val networkType: StateFlow<NetworkType> = _networkType.asStateFlow()
 
-    /** Hot-path read for LoadControl and error policy — no suspension needed. */
+    /** Hot-path read for LoadControl and the error policy, without suspension. */
     @Volatile
     var currentNetworkType: NetworkType = NetworkType.WIFI
         private set
@@ -35,9 +35,7 @@ object NetworkMonitor {
     private var callback: ConnectivityManager.NetworkCallback? = null
     private var initialized = false
 
-    /**
-     * Register a NetworkCallback. Idempotent — calling again after init is a no-op.
-     */
+    /** Registers a NetworkCallback. Idempotent: a second call is a no-op. */
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -69,7 +67,7 @@ object NetworkMonitor {
                 }
 
                 override fun onLost(network: Network) {
-                    // Network lost — fall back to UNKNOWN (will use WIFI-like defaults)
+                    // Network lost: fall back to UNKNOWN (WIFI-like defaults).
                     Log.i(TAG, "Network lost, falling back to UNKNOWN")
                     updateType(NetworkType.UNKNOWN)
                 }
@@ -78,15 +76,13 @@ object NetworkMonitor {
         cm.registerNetworkCallback(request, networkCallback)
     }
 
-    /**
-     * Unregister the callback. Safe to call even if not initialized.
-     */
+    /** Unregisters the callback. Safe even if not initialised. */
     fun release() {
         callback?.let { cb ->
             try {
                 connectivityManager?.unregisterNetworkCallback(cb)
             } catch (_: IllegalArgumentException) {
-                // Already unregistered
+                // Already unregistered.
             }
         }
         callback = null
@@ -97,7 +93,7 @@ object NetworkMonitor {
     private fun resolveNetworkType(caps: NetworkCapabilities?): NetworkType {
         if (caps == null) return NetworkType.UNKNOWN
         return when {
-            // Ethernet and WiFi both map to WIFI profile (stable, high bandwidth)
+            // Ethernet and WiFi both use the WIFI profile (stable, high bandwidth).
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkType.WIFI
 
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI

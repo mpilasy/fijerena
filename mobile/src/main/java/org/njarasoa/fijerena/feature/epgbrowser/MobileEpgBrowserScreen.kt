@@ -274,8 +274,8 @@ internal fun MobileGuideSearchPane(
             }
         }
 
-    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
-    // until a later change gives it a home.
+    // Unmatched airings (no channel in the profile's sources) stay hidden; there is no toggle for
+    // them.
     val matchedOnly = true
 
     val nowEpoch = rememberNowEpochSeconds()

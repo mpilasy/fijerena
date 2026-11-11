@@ -32,7 +32,7 @@ class StreamCallTracker(
     fun cancelAll() {
         // Not toList(): it reads the size, then the first element, and the collector can clear a
         // weak entry in between, so a set of one threw NoSuchElementException on the main thread
-        // (a Chromecast crash, 2026-10-30). hasNext() holds the next call strongly until next().
+        // (seen on a Chromecast). hasNext() holds the next call strongly until next().
         val open =
             synchronized(calls) {
                 buildList {

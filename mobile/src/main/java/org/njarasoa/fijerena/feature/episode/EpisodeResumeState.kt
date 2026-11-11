@@ -11,15 +11,13 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
- * Which episode/season this episode-selection screen is anchored on, and whether that's because
- * the user picked it (Play/Resume button, an episode's own Play, a season tab or swipe) or
- * because the anchor auto-select effect guessed it from watch history.
+ * The episode and season this episode-selection screen is anchored on, and whether the user picked
+ * it (Play / Resume, an episode's own Play, a season tab or swipe) or the anchor effect guessed it
+ * from watch history.
  *
- * One object with named transitions instead of ad hoc assignments, so the "don't clobber a manual
- * pick" rule lives in exactly one place and no independently-declared field can drift out of sync
- * with the rest — see the episode selection fragility plan. Mirrors TV's identical
- * EpisodeResumeState.kt (this app's screens are separate per platform, not shared, same as the
- * rest of feature/episode/).
+ * One object with named transitions, so the "do not overwrite a manual pick" rule lives in one
+ * place and no field can drift out of sync (see the episode selection fragility plan). TV has its
+ * own EpisodeResumeState.kt: the screens are separate per platform.
  */
 @Stable
 class EpisodeResumeState(
@@ -35,10 +33,9 @@ class EpisodeResumeState(
         private set
 
     /**
-     * The user explicitly chose to play this episode — the hero Play/Resume button, or an
-     * episode's own Play in its detail panel. Always moves the resume anchor; also claims the
-     * season as a manual pick when known, so the auto-select effect never second-guesses a season
-     * the user just navigated to and pressed Play in.
+     * The user chose to play this episode (the hero Play / Resume, or an episode's own Play in its
+     * detail panel). Always moves the resume anchor; also claims the season as a manual pick when
+     * known, so the auto-select effect never overrides a season the user just pressed Play in.
      */
     fun setResumeEpisode(
         episodeId: String,
@@ -52,8 +49,8 @@ class EpisodeResumeState(
     }
 
     /**
-     * The user explicitly switched to this season — a tab tap, or a horizontal swipe. No-op when
-     * it's already selected. Returns whether it actually changed.
+     * The user switched to this season (a tab tap or a horizontal swipe). No-op when it is already
+     * selected. Returns whether it changed.
      */
     fun selectSeason(season: Int): Boolean {
         val changed = season != selectedSeason
@@ -65,9 +62,9 @@ class EpisodeResumeState(
     }
 
     /**
-     * Background recompute from watch history (the anchor `LaunchedEffect`, re-run on every entry
-     * into this screen, including a return from the player). Never overrides a manual season pick;
-     * the episode id itself is always safe to update since nothing else auto-derives it.
+     * Background recompute from watch history (the anchor `LaunchedEffect`, run again on every
+     * entry, a return from the player too). Never overrides a manual season pick; the episode id is
+     * always safe to update, as nothing else derives it.
      */
     fun applyAnchor(
         episodeId: String?,
@@ -83,10 +80,10 @@ fun rememberEpisodeResumeState(
     seriesId: String,
     initialEpisodeId: String?,
     initialSeason: Int?,
-    // Defaults to "a season is known", but the caller may need to distinguish a real resume
-    // season from a plain fallback (e.g. "first season" when there's no resume episode at all) —
-    // only the former should seed hasManuallySelectedSeason, or the anchor effect's "jump to the
-    // next unwatched season" auto-select can never run for a series with no watch history yet.
+    // Defaults to "a season is known", but the caller must tell a real resume season from a
+    // fallback (for example the first season with no resume episode). Only a real one may set
+    // hasManuallySelectedSeason, or the "jump to the next unwatched season" auto-select never runs
+    // for a series with no watch history.
     initialManualSeason: Boolean = initialSeason != null,
 ): EpisodeResumeState {
     val saver =

@@ -36,11 +36,13 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
- * Xtream IPTV API service for fetching categories and streams.
- * Uses OkHttp engine for better stability on Android TV hardware.
+ * Xtream IPTV API service for categories and streams, on the OkHttp engine (more stable on Android
+ * TV hardware).
  *
- * @param baseUrl The Xtream API base URL (e.g., "http://example.com:8080")
- * @param streamOutputFormat The output format for live stream URLs: "m3u8" (HLS) or "ts" (MPEG-TS)
+ * @param baseUrl The Xtream API base URL (for example "http://example.com:8080")
+ *
+ * @param streamOutputFormat The output format of live stream URLs: "m3u8" (HLS) or "ts" (MPEG-TS)
+ *
  * @param metadataTimeoutMs Overall deadline of a metadata call; the catalogue downloads have none
  */
 class XtreamApiService(
@@ -58,57 +60,48 @@ class XtreamApiService(
             coerceInputValues = true
         }
 
-    // Held directly so close() can shut them down explicitly — Ktor's HttpClient.close() on the
-    // OkHttp engine doesn't do this itself. Not a true leak (OkHttp's default dispatcher reclaims
-    // idle threads after 60s and this pool evicts idle connections after 5 min on its own), but a
-    // provider switch/reconnect leaves both lingering longer than necessary until then.
+    // Held so close() can shut them down: Ktor's HttpClient.close() on the OkHttp engine does not.
+    // Not a true leak (both free idle resources on their own), but a provider switch keeps them
+    // longer than needed.
     private val okhttpDispatcher = okhttp3.Dispatcher()
     private val okhttpConnectionPool = ConnectionPool(5, 5, TimeUnit.MINUTES)
 
     private val client: HttpClient =
         HttpClient(OkHttp) {
-            // Without this, a non-2xx response (401/403/429/502...) — often an HTML error page,
-            // not JSON — goes straight into decodeFromString/decodeFromStream/decodeToSequence
-            // below, surfacing as a confusing SerializationException ("Unexpected token '<'")
-            // instead of a catchable, status-carrying exception (ClientRequestException /
-            // ServerResponseException). Same as JellyfinApiService. Both are still ordinary
-            // Exceptions, so generic `catch (e: Exception)` call sites keep working, and
-            // friendlyErrorMessage()'s 401/403 string-matching can match them.
+            // Without this, a non-2xx response (often an HTML error page) goes into the JSON
+            // decoders and shows as a confusing SerializationException ("Unexpected token '<'")
+            // instead of a status-carrying ClientRequestException / ServerResponseException. Same
+            // as JellyfinApiService. Both are ordinary Exceptions, so `catch (e: Exception)` sites
+            // keep working and friendlyErrorMessage()'s 401/403 matching finds them.
             expectSuccess = true
             install(ContentNegotiation) {
                 json(json)
             }
             // An overall deadline per call, on top of OkHttp's per-read timeouts: a panel that
             // trickles a byte every few seconds never trips a read timeout and held Login, a
-            // category load or a detail screen on a spinner indefinitely. The catalogue downloads
-            // opt out ([noDeadline]): a big list on a slow panel legitimately takes minutes. See
-            // the next level rock solid resilience plan → R-14.
+            // category load or a detail screen on a spinner. The catalogue downloads opt out
+            // ([noDeadline]): a big list on a slow panel can take minutes. See the next level rock
+            // solid resilience plan, R-14.
             install(HttpTimeout) {
                 requestTimeoutMillis = metadataTimeoutMs
             }
             recordFailedCalls()
 
-            // No ContentEncoding plugin here deliberately: advertising gzip/deflate via Ktor's
-            // Accept-Encoding causes some Cloudflare-fronted panels to respond with zstd instead
-            // (a codec this plugin doesn't decode), leaving the body empty downstream. The
-            // underlying OkHttp engine already transparently handles gzip on its own as long as
-            // we don't set Accept-Encoding ourselves.
+            // No ContentEncoding plugin on purpose: Ktor's Accept-Encoding makes some
+            // Cloudflare-fronted panels answer with zstd, which it does not decode, so the body
+            // arrives empty. OkHttp handles gzip itself while we do not set Accept-Encoding.
             defaultRequest {
                 url(normalizeBaseUrl(baseUrl))
             }
 
             engine {
                 // ktor-client-okhttp 3.5.2's createOkHttpClient() only builds a fresh Dispatcher()
-                // when `preconfigured == null`:
-                //   val builder = (config.preconfigured ?: okHttpClientPrototype).newBuilder()
-                //   if (config.preconfigured == null) { builder.dispatcher(Dispatcher()) }
-                // With `preconfigured` set, the client would inherit NetworkModule.okHttpClient's
-                // Dispatcher, and close() on any XtreamApiService would shut down the app-wide
-                // shared executor, breaking Xtream, Jellyfin, TMDB, EPG downloads, and ExoPlayer
-                // streaming permanently (the "executor rejected" reports of 2026-09-21). So set our
-                // own Dispatcher explicitly here, same as the ConnectionPool below, so this client
-                // owns both regardless of what a given Ktor version does by default.
-                // `preconfigured` is kept only for DNS/timeout/redirect inheritance.
+                // when `preconfigured == null`. With `preconfigured` set, the client inherits
+                // NetworkModule.okHttpClient's Dispatcher, and close() on any XtreamApiService
+                // shuts down the app-wide executor (Xtream, Jellyfin, TMDB, EPG downloads and
+                // ExoPlayer all fail with "executor rejected"). So set our own Dispatcher here, as
+                // the ConnectionPool below, whatever a Ktor version does by default.
+                // `preconfigured` is kept only for DNS, timeout and redirect settings.
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
                     followRedirects(true)
@@ -125,8 +118,8 @@ class XtreamApiService(
                 parameter("username", username)
                 parameter("password", password)
             }
-        // .body() (Ktor ContentNegotiation) fails to resolve a serializer for bare (non-List)
-        // response types in this build — see getSeriesInfo/getVodInfo for the same workaround.
+        // .body() (Ktor ContentNegotiation) cannot resolve a serializer for bare (non-List)
+        // response types in this build; getSeriesInfo / getVodInfo use the same workaround.
         return json.decodeFromString(response.bodyAsText())
     }
 
@@ -160,10 +153,7 @@ class XtreamApiService(
             .filterNotNull()
             .filter { it.categoryId.isNotBlank() }
 
-    /**
-     * Fetches all live streams for a specific category.
-     * Uses streaming response to handle potentially massive lists (50,000+ items).
-     */
+    /** All live streams of a category, read as a stream: lists can have 50,000+ items. */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getStreams(categoryId: String? = null): List<XtreamStream> =
         client
@@ -179,9 +169,7 @@ class XtreamApiService(
                 }
             }
 
-    /**
-     * Streaming fetch for live streams. Items are passed to [onItem] as they are parsed.
-     */
+    /** Live streams read as a stream: items go to [onItem] as they are parsed. */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getStreamsStreaming(
         categoryId: String? = null,
@@ -203,10 +191,7 @@ class XtreamApiService(
             }
     }
 
-    /**
-     * Fetches all VOD streams (movies) for a specific category.
-     * Uses streaming response to handle potentially massive lists.
-     */
+    /** All VOD streams (films) of a category, read as a stream. */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getVodStreams(categoryId: String? = null): List<XtreamStream> =
         client
@@ -243,10 +228,7 @@ class XtreamApiService(
             }
     }
 
-    /**
-     * Fetches all series (TV shows) for a specific category.
-     * Uses streaming response to handle potentially massive lists.
-     */
+    /** All series (TV shows) of a category, read as a stream. */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getSeries(categoryId: String? = null): List<XtreamSeries> =
         client
@@ -284,9 +266,9 @@ class XtreamApiService(
     }
 
     /**
-     * Fetches detailed information about a specific series including seasons and episodes.
+     * A series' details with its seasons and episodes.
      *
-     * @return the seasons and episodes, or which way the provider had nothing to give
+     * @return the seasons and episodes, or the way the provider had nothing to give
      */
     suspend fun getSeriesInfo(seriesId: Int): XtreamResponse<SeriesInfo> =
         fetchItem(seriesId, "get_series_info", SeriesInfo::carriesNothing) {
@@ -294,9 +276,9 @@ class XtreamApiService(
         }
 
     /**
-     * Fetches detailed information about a specific VOD movie.
+     * A VOD film's details.
      *
-     * @return the movie details, or which way the provider had nothing to give
+     * @return the film's details, or the way the provider had nothing to give
      */
     suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> =
         fetchItem(vodId, "get_vod_info", VodInfo::carriesNothing) {
@@ -304,9 +286,9 @@ class XtreamApiService(
         }
 
     /**
-     * Runs one single-item lookup and classifies whatever comes back, including the ways it can
-     * fail: a call that never completes is [XtreamResponse.Failed] rather than a thrown exception,
-     * so a caller handles every outcome in one `when` instead of a `when` plus a `try`.
+     * Runs one single-item lookup and classifies what comes back, failures too: a call that never
+     * completes is [XtreamResponse.Failed], not an exception, so a caller handles every outcome in
+     * one `when`.
      */
     private suspend inline fun <reified T> fetchItem(
         itemId: Int,
@@ -333,12 +315,12 @@ class XtreamApiService(
     }
 
     /**
-     * Builds a playable stream URL for a given stream ID.
+     * A playable live stream URL.
      *
      * Format: http://url:port/live/username/password/streamId.[format]
      *
-     * The output format is determined by [streamOutputFormat] (e.g., "m3u8" for HLS
-     * or "ts" for MPEG-TS, as specified by the Xtream server's `output` parameter).
+     * [streamOutputFormat] sets the format ("m3u8" for HLS or "ts" for MPEG-TS, from the Xtream
+     * server's `output` parameter).
      */
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
@@ -346,7 +328,7 @@ class XtreamApiService(
     }
 
     /**
-     * Builds a playable VOD (movie) stream URL for a given stream ID.
+     * A playable VOD (film) stream URL.
      *
      * Format: http://url:port/movie/username/password/streamId.ext
      */
@@ -359,7 +341,7 @@ class XtreamApiService(
     }
 
     /**
-     * Builds a playable Series (TV show) stream URL for a given stream ID.
+     * A playable series stream URL.
      *
      * Format: http://url:port/series/username/password/streamId.ext
      */
@@ -372,7 +354,7 @@ class XtreamApiService(
     }
 
     /**
-     * Builds a playable episode stream URL for a specific episode.
+     * A playable episode stream URL.
      *
      * Format: http://url:port/series/username/password/episodeId.ext
      */
@@ -391,8 +373,8 @@ class XtreamApiService(
      * Always HLS, whatever the live output. panel-a builds the archive playlist before answering
      * (~6 s per hour of window: 2 s for 15 min, 25 s for 4 h), but then seeks are segment requests.
      * `.ts` answers in a second, yet has no index: every seek is a binary search of range requests
-     * (~20 s on panel-a), and a window still on air has no end to measure, so it never seeks at all.
-     * Measured 2026-10-10, the catchup plan → "Facts measured".
+     * (~20 s on panel-a), and a window still on air has no end to measure, so it never seeks at
+     * all. Measured in the catchup plan, "Facts measured".
      *
      * Format: http://url:port/timeshift/username/password/durationMin/start/streamId.m3u8
      */
@@ -410,10 +392,7 @@ class XtreamApiService(
     /** A catalogue download: only OkHttp's per-read timeouts apply, not the overall deadline. */
     private fun HttpRequestBuilder.noDeadline() = timeout { requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS }
 
-    /**
-     * Fetches EPG data for a specific stream.
-     * Endpoint: player_api.php?action=get_simple_data_table&stream_id=X
-     */
+    /** EPG data of one stream. Endpoint: player_api.php?action=get_simple_data_table&stream_id=X */
     suspend fun getEpgForStream(streamId: Int): EpgResponse {
         val response =
             client.get("player_api.php") {
@@ -426,8 +405,8 @@ class XtreamApiService(
     }
 
     /**
-     * Fallback: Short EPG (next X programs) for a specific stream.
-     * Endpoint: player_api.php?action=get_short_epg&stream_id=X&limit=Y
+     * Fallback: the short EPG (next X programmes) of one stream. Endpoint:
+     * player_api.php?action=get_short_epg&stream_id=X&limit=Y
      */
     suspend fun getShortEpg(
         streamId: Int,
@@ -444,10 +423,7 @@ class XtreamApiService(
         return json.decodeFromString<XtreamEpgAnswer>(response.bodyAsText()).toEpgResponse()
     }
 
-    /**
-     * Normalizes the base URL to ensure consistent formatting.
-     * Removes trailing slashes and ensures http:// prefix.
-     */
+    /** Normalises the base URL: no trailing slash, and an http:// prefix. */
     private fun normalizeBaseUrl(url: String): String {
         var normalized = url.trim()
 
@@ -464,7 +440,7 @@ class XtreamApiService(
 
     fun close() {
         client.close()
-        // client.close() alone doesn't touch these — see okhttpDispatcher's kdoc.
+        // client.close() alone does not shut these down (see okhttpDispatcher).
         okhttpDispatcher.executorService.shutdown()
         okhttpConnectionPool.evictAll()
     }

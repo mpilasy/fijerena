@@ -82,10 +82,9 @@ import java.io.IOException
 import java.util.UUID
 
 /**
- * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a
- * caller was waiting on it. Deliberately not a [kotlinx.coroutines.CancellationException]: it
- * represents a real playback failure a caller should react to (e.g. show an error), not a
- * structured-concurrency cancellation that should silently propagate and skip error handling.
+ * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a caller
+ * waited. Not a [kotlinx.coroutines.CancellationException] on purpose: it is a real playback
+ * failure that the caller must handle (for example, show an error).
  */
 class ServiceDestroyedException(
     message: String,
@@ -93,13 +92,14 @@ class ServiceDestroyedException(
 
 @androidx.media3.common.util.UnstableApi
 class StreamingPlaybackService : MediaSessionService() {
-    // internal, not private (with mediaSourceFactory, mainHandler, performSeamlessRecycle and
+    // internal, not private (also mediaSourceFactory, mainHandler, performSeamlessRecycle and
     // handleStreamEndedOrError): StreamingPlaybackServiceRecoveryTest drives the retry/recycle
-    // state machine directly, with a fake player.
+    // state machine directly with a fake player.
     internal var mediaSession: MediaSession? = null
 
-    // internal for tests. Held while something plays; released by pause, stop, teardown — and when
-    // playback ends by itself (Ended, a final error), or it kept the CPU awake with nothing playing.
+    // internal for tests. Held while something plays. Released by pause, stop, teardown, and when
+    // playback ends by itself (Ended, a final error), so the CPU does not stay awake with nothing
+    // playing.
     internal var wakeLock: PowerManager.WakeLock? = null
     private var playerListener: PlayerListener? = null
     private var analyticsListener: PerformanceAnalyticsListener? = null
@@ -116,16 +116,14 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     internal var mediaSourceFactory: StreamingMediaSourceFactory? = null
 
-    // Guards releasePlayerAndSession() against running twice on the same instance —
-    // stopAndRelease() calls it directly, then onDestroy() (fired later by stopSelf(), or by the
-    // system independently) calls it again. See releasePlayerAndSession()'s kdoc for why a second
-    // run is more than just redundant cleanup.
+    // Guards releasePlayerAndSession() against a second run on the same instance: stopAndRelease()
+    // calls it, then onDestroy() calls it again. See releasePlayerAndSession()'s KDoc for why a
+    // second run is harmful.
     private var isReleased = false
 
-    // Set by pause() (the app's own pause button, and TV's onFocusLost) and cleared as soon as
-    // playback is requested again — lets the live-pause guard in onCreate() tell those apart from
-    // pauses arriving via the media session (PiP window, notification, Bluetooth), headphone
-    // unplug, or audio-focus loss.
+    // Set by pause() (the app's own pause button, and TV's onFocusLost) and cleared when playback
+    // is requested again. The live-pause guard in onCreate() uses it to tell these apart from media
+    // session pauses (PiP window, notification, Bluetooth), headphone unplug and audio-focus loss.
     private var pausedInApp = false
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
@@ -152,8 +150,8 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
 
-    // P4 (the playback capability errors plan): the slow-connection banner,
-    // and the 60 s limit on buffering with no data arriving.
+    // P4 (the playback capability errors plan): the slow-connection banner, and the 60 s limit on
+    // buffering with no data.
     private val _slowConnection = MutableStateFlow<SlowConnection?>(null)
     val slowConnection: StateFlow<SlowConnection?> = _slowConnection.asStateFlow()
     private val slowConnectionDetector = SlowConnectionDetector()
@@ -180,9 +178,8 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredDroppedFps = MutableStateFlow(0f)
     val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
 
-    // Percentage of frames dropped over the last ~10s. The cumulative rate averages a bad burst
-    // away against however long the stream has been clean — half an hour of perfect playback
-    // makes a 15-second stall look like a rounding error.
+    // Percentage of frames dropped over the last ~10 s. The cumulative rate averages a bad burst
+    // away against a long clean run.
     private val _recentDropRate = MutableStateFlow(0f)
     val recentDropRate: StateFlow<Float> = _recentDropRate.asStateFlow()
 
@@ -197,10 +194,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private var autoRetryAttempted = false
     private var lastErrorMessage: String? = null
 
-    // Position to resume at on a VOD retry/reconnect — captured the moment a fault is first
-    // observed, since the player's position is still valid then even though playback state is
-    // about to flip to Error/Idle. Live retries reconnect to the live edge instead, so they
-    // never read this.
+    // The position to resume at on a VOD retry or reconnect, captured when a fault is first seen,
+    // while the player's position is still valid. Live retries reconnect to the live edge and never
+    // read this.
     private var pendingResumePositionMs: Long = 0L
     internal var mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
@@ -210,8 +206,8 @@ class StreamingPlaybackService : MediaSessionService() {
     private var freedWhilePaused: PlaybackState.Paused? = null
 
     // A retry that came due while paused: reopening the stream then would play it (and take an
-    // Xtream connection) against the pause. The next Play runs it
-    // (the Xtream stream release plan, Phase 2).
+    // Xtream connection) against the pause. The next Play runs it (the Xtream stream release plan,
+    // Phase 2).
     private var heldRetry: Runnable? = null
     private val accountBusyWait = AccountBusyWait()
 
@@ -225,10 +221,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private var lastHealthCheckPosition: Long = -1L
 
     // True from a new stream's start until its first frame is drawn. The full-screen surface keeps
-    // the last frame through a same-stream wait or reconnect (reprepare(), a recycle, a stream freed
-    // while paused), but must not keep the previous channel or title frozen under a new one: while
-    // this is true it shows black. Only a drawn frame clears it; an error before that keeps it, as
-    // the surface still holds the previous stream's last frame.
+    // the last frame through a same-stream wait or reconnect, but must not keep the previous
+    // channel's frame under a new one: while this is true it shows black. Only a drawn frame clears
+    // it.
     private val _newStreamStarting = MutableStateFlow(true)
     val newStreamStarting: StateFlow<Boolean> = _newStreamStarting.asStateFlow()
 
@@ -241,20 +236,18 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var recycleStartTimeMs: Long = 0L
 
-    // A seek (esp. VOD scrubbing into an unbuffered region) briefly looks identical to real
-    // degradation (low buffered margin) to the health monitor. This grace window suppresses
-    // health-metric feeding right after a seek so scrubbing never triggers a spurious recycle.
-    // Live streams don't seek, so this is a no-op for them.
+    // A seek (mostly VOD scrubbing into an unbuffered region) looks like real degradation to the
+    // health monitor. This grace window stops health-metric feeding right after a seek, so
+    // scrubbing never causes a false recycle. Live streams do not seek.
     private var lastSeekTimeMs: Long = 0L
 
     private fun isWithinSeekGrace(): Boolean = (SystemClock.elapsedRealtime() - lastSeekTimeMs) < SEEK_HEALTH_GRACE_MS
 
     fun isRecycling(): Boolean = _isRecycling.value
 
-    // While a recycle is in flight, non-Playing states are suppressed to keep it seamless.
-    // On a healthy connection that gap is a few seconds; on a degraded one it can run much
-    // longer, so the suppression only holds for this long before a real Buffering state is
-    // allowed through instead of leaving the screen black with no indicator.
+    // During a recycle, non-Playing states are suppressed to keep it seamless. On a degraded
+    // connection the gap can be long, so the suppression only holds this long before a real
+    // Buffering state goes through.
     private fun isWithinSeamlessGrace(): Boolean =
         isRecycling() && (SystemClock.elapsedRealtime() - recycleStartTimeMs) < SEAMLESS_RECYCLE_GRACE_MS
 
@@ -273,25 +266,24 @@ class StreamingPlaybackService : MediaSessionService() {
                 val currentPos = player.currentPosition
                 Log.i(TAG, "Executing silent stream recycle at position: $currentPos (isLive=${metadata.isLive})")
 
-                // 1. Evict network connection pool to bypass ISP/CDN shaping.
-                // Closing pooled connections can block on socket I/O, so this must not run on
-                // the main thread (recycleHandler is posted via mainHandler.post).
+                // 1. Evict the connection pool to bypass ISP/CDN shaping. Closing pooled
+                // connections can block on socket I/O, so not on the main thread.
                 serviceScope?.launch(Dispatchers.IO) {
                     org.njarasoa.fijerena.core.player.network.NetworkModule
                         .evictConnectionPool()
                 }
 
-                // 2. Restart stream seamlessly without clearing the screen
+                // 2. Restart the stream without clearing the screen.
                 performSeamlessRecycle(metadata, currentPos)
 
-                // 3. Reset monitor for the fresh connection
+                // 3. Reset the monitor for the new connection.
                 healthMonitor?.reset()
             }
         }
 
-    // Named so stop() can remove it: posted just before a stop, it ran after and left the closed
-    // stream in Error, which the auto-retry below then reopened when the network came back
-    // (the Xtream stream release plan, Phase 1).
+    // Named so stop() can remove it: posted just before a stop, it ran after it and left the closed
+    // stream in Error, which the auto-retry then reopened (the Xtream stream release plan, Phase
+    // 1).
     internal val recoveryExhaustedHandler =
         Runnable {
             val isLive = _currentMetadata.value.isLive
@@ -326,11 +318,11 @@ class StreamingPlaybackService : MediaSessionService() {
                     return
                 }
 
-        // A hard retry scheduled for the same underlying error must not be allowed to fire
-        // later with a screen-clearing setMediaSource() call on top of this seamless swap.
+        // A hard retry scheduled for the same error must not fire later with a screen-clearing
+        // setMediaSource() on top of this seamless swap.
         cancelPendingRetry()
 
-        // Temporarily increase buffer requirement for recycling to ensure a 100% smooth handover
+        // A larger buffer requirement during the recycle, for a smooth handover.
         setRecycling(true)
 
         val mediaSource =
@@ -343,9 +335,9 @@ class StreamingPlaybackService : MediaSessionService() {
                 metadata = metadata,
             ) ?: run {
                 Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
-                // setRecycling(true) above already fired — without resetting it here, isRecycling()
-                // stays true until some later Playing state, and the recycle-grace suppression keeps
-                // hiding every non-Playing state meanwhile.
+                // setRecycling(true) above already fired. Without a reset here, isRecycling() stays
+                // true until a later Playing state and the recycle grace hides every non-Playing
+                // state meanwhile.
                 setRecycling(false)
                 return
             }
@@ -357,8 +349,7 @@ class StreamingPlaybackService : MediaSessionService() {
             NetworkModule.streamCalls.cancelAll()
         }
 
-        // setMediaSource(source, resetPosition=false) keeps the current frame on screen
-        // while the new source prepares in the background.
+        // resetPosition=false keeps the current frame on screen while the new source prepares.
         player.setMediaSource(mediaSource, false)
         player.prepare()
         player.playWhenReady = playWhenReady
@@ -416,19 +407,13 @@ class StreamingPlaybackService : MediaSessionService() {
     /** Creates the player and session and publishes this instance. [onCreate], or a start after [stopAndRelease]. */
     internal fun setUpPlayer() {
         initializePlayer()
-        // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
-        // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()
-        // call fired from a LaunchedEffect right as the player screen mounts) can't resolve to a
-        // service whose mediaSession/adaptiveLoadControl is still null. Those callers silently
-        // no-op on null (`?: return`, `?.`) with no log, so the previous early-publish made
-        // failures invisible — playStream()'s case produced a black screen stuck in Idle
-        // forever, with no diagnostic trail.
+        // Publish the instance only after initializePlayer(), so getInstance() / awaitInstance()
+        // callers (PlaybackViewModel.playStream(), TvPlayerScreen's setContentType()) never get a
+        // service whose mediaSession or adaptiveLoadControl is still null. Those callers no-op on
+        // null without a log, so an early publish gave a black screen stuck in Idle with no trail.
         publishInstance()
-        // Not acquired here: the service can be created well before any stream is requested
-        // (e.g. StreamingPlaybackService.awaitInstance() callers racing service startup), and a
-        // PARTIAL_WAKE_LOCK held during that idle stretch outlasts nothing useful. PlayerListener
-        // already acquires it itself the moment playback actually goes active — see
-        // onWakeLockRequired below, fired from onIsPlayingChanged/onPlayWhenReadyChanged.
+        // The wake lock is not acquired here: the service can start long before any stream.
+        // PlayerListener acquires it when playback goes active (onWakeLockRequired).
         observeNetworkChanges()
         serviceScope?.let(::publishNowPlaying)
     }
@@ -508,12 +493,9 @@ class StreamingPlaybackService : MediaSessionService() {
     internal fun wantsRetryOnReconnect(): Boolean =
         !autoRetryAttempted && _currentMetadata.value.streamUrl.isNotEmpty() && _playbackState.value is PlaybackState.Error
 
-    // Wall-clock-driven, unlike PlayerListener's save-on-state-change: a long stretch of
-    // smooth, uninterrupted playback fires none of onPlaybackStateChanged/onIsPlayingChanged/
-    // onPlayWhenReadyChanged, so without this loop nothing gets saved for as long as that
-    // stretch lasts — resume position can end up stale by however long since the last real
-    // event (pause/seek/rebuffer/track-change). This guarantees a save at least every
-    // POSITION_SAVE_INTERVAL_MS regardless of whether any such event ever fires.
+    // Driven by the clock, unlike PlayerListener's save on state change: smooth playback fires no
+    // events, so without this loop the resume position goes stale. This saves at least every
+    // POSITION_SAVE_INTERVAL_MS.
     private fun startPositionSaveLoop(scope: CoroutineScope) {
         scope.launch {
             while (isActive) {
@@ -553,9 +535,9 @@ class StreamingPlaybackService : MediaSessionService() {
                     val state = player.playbackState
                     if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
                         val position = player.currentPosition
-                        // Position not moving while ExoPlayer claims READY+playing isn't caught by
-                        // the buffered-margin check below: bufferedPosition stalls right alongside
-                        // currentPosition, so their difference still looks like a healthy buffer.
+                        // A position that does not move while ExoPlayer says READY and playing is
+                        // not caught by the buffered-margin check: bufferedPosition stalls with
+                        // currentPosition, so the margin still looks healthy.
                         val isStalled =
                             state == Player.STATE_READY &&
                                 player.isPlaying &&
@@ -581,8 +563,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         observeNightAudioSetting()
 
-        // Cellular buffers always use the profile's own sizes (1.0×): the multiplier setting is gone
-        // (UX overhaul A-W5), and a value saved by an older build must not keep applying unseen.
+        // Cellular buffers always use the profile's own sizes (1.0×). The multiplier setting is
+        // gone (UX overhaul A-W5); a value saved by an older build must not apply.
         val loadControl =
             AdaptiveLoadControl(
                 contentType = contentType,
@@ -619,10 +601,9 @@ class StreamingPlaybackService : MediaSessionService() {
                         .setUsage(C.USAGE_MEDIA)
                         .build(),
                     true,
-                    // Without this, unplugging headphones (or the Shield remote's headphone jack)
-                    // mid-playback left audio blasting out of the device speaker instead of
-                    // auto-pausing — ExoPlayer's built-in ACTION_AUDIO_BECOMING_NOISY handling, off
-                    // by default.
+                    // Pause when headphones are unplugged (also the Shield remote's headphone
+                    // jack), not play from the speaker. ExoPlayer's ACTION_AUDIO_BECOMING_NOISY
+                    // handling is off by default.
                 ).setHandleAudioBecomingNoisy(true)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
 
@@ -639,11 +620,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
                     if (newState is PlaybackState.Playing) {
                         retryCount = 0
-                        // Recycle backoff is cleared by StreamHealthMonitor itself once metrics
-                        // stay healthy for a full sustainedDegradationWindowMs — NOT here. A
-                        // single Playing state fires right after every recycle too, so resetting
-                        // eagerly on it wiped recycleAttempts before it could ever escalate to
-                        // the degraded/give-up tier (see StreamHealthMonitor.updateMetrics()).
+                        // StreamHealthMonitor clears the recycle backoff itself once metrics stay
+                        // healthy for sustainedDegradationWindowMs, NOT here. A Playing state
+                        // follows every recycle, so a reset here would wipe recycleAttempts before
+                        // it could escalate (see StreamHealthMonitor.updateMetrics()).
                         if (isRecycling) {
                             Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
                             setRecycling(false)
@@ -655,13 +635,11 @@ class StreamingPlaybackService : MediaSessionService() {
                         setRecycling(false)
                     }
 
-                    // Suppress any non-final state during a silent recycle to keep it seamless.
-                    // The player can pass through Buffering/Paused/Idle with not-yet-valid
-                    // (e.g. negative) position data while the new source's timeline resolves;
-                    // only a confirmed Playing or a terminal Error should reach the UI. This
-                    // only holds for SEAMLESS_RECYCLE_GRACE_MS — past that, let the real state
-                    // (almost always Buffering) through so a slow recovery shows a spinner
-                    // instead of leaving the screen black with no indicator at all.
+                    // Suppress any non-final state during a silent recycle. The player passes
+                    // through Buffering / Paused / Idle with position data that is not valid yet;
+                    // only Playing or a terminal Error may reach the UI. After
+                    // SEAMLESS_RECYCLE_GRACE_MS the real state goes through, so a slow recovery
+                    // shows a spinner, not a black screen.
                     if (isWithinSeamlessGrace() && newState !is PlaybackState.Playing && newState !is PlaybackState.Error) {
                         Log.d(TAG, "Suppressing $newState during silent recycle.")
                         return@PlayerListener
@@ -687,8 +665,8 @@ class StreamingPlaybackService : MediaSessionService() {
             )
         player.addListener(playerListener!!)
 
-        // Live TV has no use for a paused stream: resuming it plays stale buffered content that's
-        // behind the broadcast. Any pause the app didn't ask for itself stops it instead.
+        // Live TV has no use for a paused stream: resuming plays stale buffered content behind the
+        // broadcast. Any pause the app did not ask for stops it instead.
         player.addListener(
             object : Player.Listener {
                 override fun onPlayWhenReadyChanged(
@@ -775,18 +753,17 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             },
         )
-        // Debug builds log every track's codecs string, format support and chosen decoder
-        // (logcat tag "EventLogger") — how codec fallback, e.g. Dolby Vision → HEVC, is diagnosed.
+        // Debug builds log each track's codecs, format support and chosen decoder (logcat tag
+        // "EventLogger"), to diagnose codec fallback such as Dolby Vision → HEVC.
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             player.addAnalyticsListener(EventLogger())
         }
     }
 
     /**
-     * Patches the currently-playing metadata in place — e.g. once the series/episode/TMDB-logo
-     * lookup [playStream] kicked off resolves asynchronously, after the OSD is already showing
-     * it. A no-op when [streamUrl] no longer matches what's actually playing (a stale async
-     * result for content that's since been swapped out or stopped).
+     * Patches the playing metadata in place, for example when the series / episode / TMDB-logo
+     * lookup that [playStream] started resolves after the OSD shows. A no-op when [streamUrl] no
+     * longer matches what plays (a stale result).
      */
     fun updateMetadata(
         streamUrl: String,
@@ -873,10 +850,9 @@ class StreamingPlaybackService : MediaSessionService() {
         pendingResumePositionMs = 0L
         healthMonitor?.notifyStablePlayback()
         healthMonitor?.reset()
-        // A new stream has no position history yet — without this, the stall check in
-        // startHealthMonitorLoop() compares the new stream's first sampled position against
-        // whatever the PREVIOUS stream's position happened to be, and a coincidental match
-        // false-positives an immediate recycle.
+        // A new stream has no position history. Without this, the stall check in
+        // startHealthMonitorLoop() compares its first position with the previous stream's, and a
+        // match causes a false recycle.
         lastHealthCheckPosition = -1L
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
@@ -891,7 +867,7 @@ class StreamingPlaybackService : MediaSessionService() {
         playSessionId.value = UUID.randomUUID().toString()
         _currentMetadata.value = metadata
 
-        // Ensure we are in fast-startup mode and buffer profile matches stream type
+        // Fast-startup mode, and the buffer profile for the stream type.
         setRecycling(false)
         val expectedContentType =
             if (metadata.isLive) {
@@ -901,9 +877,9 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         adaptiveLoadControl?.updateContentType(expectedContentType)
 
-        // DIAGNOSTIC (temporary): split startup latency into
-        // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
-        // apart from a slow buffer gate. Remove once the 30s VOD startup is root-caused.
+        // DIAGNOSTIC (temporary): split startup latency into request-init -> first-byte ->
+        // STATE_READY to tell a slow provider or DNS from a slow buffer gate. Remove once the 30 s
+        // VOD startup is root-caused.
         val startupTiming = StartupTimingTransferListener(dataTransferListener, _streamStartTimeMs.value)
 
         val mediaSource =
@@ -921,11 +897,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
         // Black until this stream draws a frame: the old one's last frame must not show under it.
         _newStreamStarting.value = true
-        // Fully release the outgoing renderer/decoder session before starting the next one.
-        // setMediaSource() alone replaces the playlist but can reuse the existing renderer
-        // rather than releasing it, which on this emulator's decoder leaves the old codec
-        // session still delivering in-flight frames to its Surface after the new one starts —
-        // rendering two channels overlapping. An explicit stop() forces a clean teardown first.
+        // Fully release the old renderer and decoder before the next stream. setMediaSource() alone
+        // can reuse the renderer, and on the emulator's decoder the old codec session then sends
+        // frames to the Surface after the new one starts (two channels overlap). stop() forces a
+        // clean teardown.
         player.stop()
         // The outgoing stream's socket closes now, not at its read timeout (Xtream counts it).
         NetworkModule.streamCalls.cancelAll()
@@ -936,13 +911,6 @@ class StreamingPlaybackService : MediaSessionService() {
         player.playWhenReady = true
         player.prepare()
     }
-
-    // DIAGNOSTIC (temporary): delegates to the real bandwidth meter so measurement/ABR is
-    // unaffected, but logs the first onTransferInitializing (request sent) and first
-    // onTransferStart (response headers back, i.e. first byte) relative to startTimeMs.
-    // Guarded so only the very first segment/manifest transfer of a playStream() call is
-    // logged — later transfers (subsequent segments) would otherwise spam this every few
-    // seconds for the life of the stream.
 
     /** Passes transfers to [delegate] (the bandwidth meter) and calls [onData] whenever bytes arrive. */
     private class DataArrivalTransferListener(
@@ -960,6 +928,8 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
+    // DIAGNOSTIC (temporary): passes everything to the real bandwidth meter, and logs only the first
+    // request sent and the first byte of a playStream() call, relative to startTimeMs.
     private class StartupTimingTransferListener(
         private val delegate: androidx.media3.datasource.TransferListener?,
         private val startTimeMs: Long,
@@ -1043,12 +1013,10 @@ class StreamingPlaybackService : MediaSessionService() {
             return
         }
 
-        // No "seamless recycle in progress, skip" guard here: this only runs once the player has
-        // reported an error (or a live stream ended), so a recycle in flight is one that just
-        // failed. Skipping left isRecycling stuck true forever — nothing else clears it short of
-        // reaching Playing — so no retry ever ran again: a frozen frame, no spinner, no error.
-        // See the rock solid stability resilience plan → F-01.
-        // Hard retry should use fast-startup settings
+        // No "recycle in progress, skip" guard: this only runs after the player reported an error
+        // (or a live stream ended), so a recycle in flight is one that failed. A skip left
+        // isRecycling stuck true, so no retry ran again (frozen frame, no spinner, no error). See
+        // the rock solid stability resilience plan, F-01. A hard retry uses fast-startup settings.
         setRecycling(false)
 
         retryCount++
@@ -1057,11 +1025,10 @@ class StreamingPlaybackService : MediaSessionService() {
         val delayMs = baseDelay * retryCount
         Log.i(TAG, "Stream retry $retryCount/$maxRetries in ${delayMs}ms (isLive=${metadata.isLive})")
 
-        // updatePlaybackState() already pushed the player's raw STATE_IDLE through before
-        // onPlayerError ran, so without this the screen goes silently blank for the whole
-        // retry delay — indistinguishable from a dead app. Show buffering instead, or, when the
-        // provider's server is down, say so: the message stays up through the attempt, as the
-        // account-busy one does, and only playing replaces it.
+        // updatePlaybackState() already pushed the raw STATE_IDLE before onPlayerError ran, so the
+        // screen would be blank for the whole retry delay. Show Buffering instead, or, when the
+        // provider's server is down, say so: the message stays up through the attempt and only
+        // playing replaces it.
         _playbackState.value =
             if (serverDownStatus != null) {
                 PlaybackState.Error(getString(R.string.player_error_server_down_retrying_format, serverDownStatus))
@@ -1069,8 +1036,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 PlaybackState.Buffering
             }
 
-        // Captured now, not read from the field inside the closure — a later fault (before this
-        // delayed retry fires) could overwrite pendingResumePositionMs with a different value.
+        // Captured now, not read inside the closure: a later fault can overwrite
+        // pendingResumePositionMs before this retry fires.
         val resumePosition = pendingResumePositionMs
 
         val retryRunnable =
@@ -1270,8 +1237,8 @@ class StreamingPlaybackService : MediaSessionService() {
             return
         }
         if (errorMessage == null && !metadata.isLive) {
-            // Natural end of VOD content — not a fault, never retried. Grab the duration while
-            // the player still has it: finalizeSession runs after teardown, when it reads 0.
+            // Natural end of VOD content: not a fault, never retried. Read the duration now:
+            // finalizeSession runs after teardown, when it is 0.
             _playbackState.value = PlaybackState.Ended(getPlayer()?.duration?.coerceAtLeast(0L) ?: 0L)
             releaseWakeLock()
             return
@@ -1411,15 +1378,12 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     /**
-     * TV-only: stop playback and fully tear down the player (decoder, renderer buffers) via
-     * [releasePlayerAndSession] — called directly, not via [stopSelf], because
-     * [androidx.media3.session.MediaSessionService] does not reliably call [onDestroy] just
-     * because [stopSelf] was requested (verified on-device: service stayed resident with zero
-     * active binds). Unlike [stop], nothing survives this call. TV has no background-playback/PiP
-     * feature (see `c4c337bc`), so once the user leaves the player there's no reason to keep the
-     * native player resources resident — on a 512MB heap ceiling they were competing with
-     * subsequent category browsing for memory, causing GC/swap pressure and multi-second UI
-     * freezes. Mobile must keep using [stop] to preserve PiP/background-audio resume.
+     * TV only: stop playback and fully tear down the player via [releasePlayerAndSession]. Called
+     * directly, because [androidx.media3.session.MediaSessionService] does not reliably call
+     * [onDestroy] after [stopSelf] (seen on device with zero binds). Unlike [stop], nothing
+     * survives this call. TV has no background playback or PiP, and on a 512 MB heap the resident
+     * native player resources caused GC pressure and multi-second UI freezes during browsing.
+     * Mobile must use [stop] to keep PiP and background audio.
      */
     fun stopAndRelease() {
         releasePlayerAndSession()
@@ -1428,8 +1392,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun stop() {
         cancelPendingRetry()
-        // A pending autonomous recycle (StreamHealthMonitor) must not be allowed to silently
-        // resurrect playback right after a deliberate stop.
+        // A pending autonomous recycle (StreamHealthMonitor) must not restart playback right after
+        // a deliberate stop.
         mainHandler.removeCallbacks(recycleHandler)
         mainHandler.removeCallbacks(recoveryExhaustedHandler)
         // A stopped stream is nobody's: connectivity coming back must not reopen it. playStream() re-arms.
@@ -1588,10 +1552,9 @@ class StreamingPlaybackService : MediaSessionService() {
 
         trackSelector.parameters = parameters
 
-        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
-        // not the raw in-group trackIndex — since selectAudioTrack(consolidatedIndex) is what
-        // resumes it on restore, and that overload indexes into getAudioTracks()'s flattened
-        // list, not per-group.
+        // Save the choice now. Persist the consolidated (flattened, cross-group) index, not the
+        // in-group trackIndex: selectAudioTrack(consolidatedIndex) restores it, and that overload
+        // indexes into getAudioTracks()'s flattened list.
         val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
         savePosition(
             player.currentPosition,
@@ -1623,20 +1586,18 @@ class StreamingPlaybackService : MediaSessionService() {
         val parameters =
             trackSelector.parameters
                 .buildUpon()
-                // A prior disableSubtitles() (explicit "Off", or restoring a saved -1
-                // preference at episode start) leaves TRACK_TYPE_TEXT disabled on this
-                // trackSelector. That flag wins over any override, so picking a language
-                // here would otherwise silently do nothing until it's cleared too.
+                // A prior disableSubtitles() ("Off", or a saved -1 restored at episode start)
+                // leaves TRACK_TYPE_TEXT disabled, and that flag wins over any override. Clear it,
+                // or picking a language does nothing.
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
                 .setOverrideForType(trackSelectionOverride)
                 .build()
 
         trackSelector.parameters = parameters
 
-        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
-        // not the raw in-group trackIndex — since selectSubtitleTrack(consolidatedIndex) is
-        // what resumes it on restore, and that overload indexes into getSubtitleTracks()'s
-        // flattened list, not per-group.
+        // Save the choice now. Persist the consolidated index, not the in-group trackIndex:
+        // selectSubtitleTrack(consolidatedIndex) restores it from getSubtitleTracks()'s flattened
+        // list.
         val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
         savePosition(
             player.currentPosition,
@@ -1658,7 +1619,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         trackSelector.parameters = parameters
 
-        // Save choice immediately (-1 for disabled)
+        // Save the choice now (-1 for disabled).
         savePosition(player.currentPosition, player.duration, !player.isPlaying, subtitleIndex = -1)
     }
 
@@ -1733,31 +1694,24 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     /**
-     * The actual resource teardown — player, session, wake lock, scopes — factored out of
-     * [onDestroy] so [stopAndRelease] can run it directly. [stopSelf] alone does not reliably
-     * trigger [onDestroy] on a [androidx.media3.session.MediaSessionService]: the framework has
-     * its own session-lifecycle bookkeeping (independent of ordinary bindService connections —
-     * confirmed on-device with zero active binds yet the service still resident) that can keep
-     * treating the service as "needed" until the session itself is released, so waiting for
-     * onDestroy to do the release is a chicken-and-egg deadlock. Calling this directly frees the
-     * native decoder/renderer memory immediately and deterministically either way.
+     * The resource teardown (player, session, wake lock, scopes), out of [onDestroy] so
+     * [stopAndRelease] can run it directly. [stopSelf] alone does not reliably trigger [onDestroy]
+     * on a [androidx.media3.session.MediaSessionService]: its own session bookkeeping can keep the
+     * service "needed" until the session is released (seen on device with zero binds). Calling this
+     * directly frees the native decoder and renderer memory at once.
      *
-     * Safe to call twice (from here and then again if onDestroy does eventually fire): [isReleased]
-     * makes the second call a no-op outright, rather than relying on mediaSession already being
-     * null — that null check alone let a second call still reach the companion `instance`/
-     * `instanceReady` mutation below and, if a newer instance had since started and published
-     * itself, null out and fail *that* instance's deferred, permanently orphaning every future
-     * awaitInstance() caller even though playback was alive and well. The `instance === this`
-     * check there is the other half of that same fix, for the case where a *different* stale
-     * instance (not this one) races a teardown against a newer one.
+     * Safe to call twice: [isReleased] makes the second call a no-op. A mediaSession null check
+     * alone let a second call reach the companion `instance` / `instanceReady` update below and
+     * fail a newer instance's deferred, which orphaned every later awaitInstance() caller. The
+     * `instance === this` check there covers a different stale instance that races a newer one.
      */
     private fun releasePlayerAndSession() {
         if (isReleased) return
         isReleased = true
-        // Each stage runs in its own try: one that throws (the native player.release(), say) is
-        // recorded and the rest still run, so the wake lock, the scope and the singleton below are
-        // never left behind and a teardown never crashes the app on exit. See
-        // the next level rock solid resilience plan → R-12.
+        // Each stage runs in its own try: a stage that throws (the native player.release(), say) is
+        // recorded and the rest still run, so the wake lock, scope and singleton are never left
+        // behind and teardown never crashes the app. See the next level rock solid resilience plan,
+        // R-12.
         releaseStage("cancelRetries") {
             cancelPendingRetry()
             mainHandler.removeCallbacks(recycleHandler)
@@ -1777,9 +1731,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             }
         }
-        // mediaSession is assigned before playerListener/analyticsListener in initializePlayer(),
-        // so a re-entrant/concurrent releasePlayerAndSession() landing in that window sees a
-        // non-null mediaSession but a still-null listener — hence the ?.let on each.
+        // mediaSession is assigned before playerListener / analyticsListener in initializePlayer(),
+        // so a re-entrant release in that window sees a null listener: hence the ?.let on each.
         releaseStage("removeListeners") {
             session?.player?.let { player ->
                 playerListener?.let { player.removeListener(it) }
@@ -1799,13 +1752,10 @@ class StreamingPlaybackService : MediaSessionService() {
         releaseStage("cancelScope") { serviceScope?.cancel() }
         serviceScope = null
         adaptiveLoadControl = null
-        // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
-        // components (EPG sync, provider loading) depend on for live connectivity callbacks —
-        // tearing it down on every playback stop cut those off until the next playback started.
-        // The whole publication step is synchronized on instanceLock (see its kdoc) so a
-        // concurrent awaitInstance() can never snapshot a mid-teardown state: it sees either
-        // the pre-teardown instance/deferred or the fully-reset post-teardown ones, never both
-        // halves mixed.
+        // NetworkMonitor is not released here: it is a process-wide singleton that EPG sync and
+        // provider loading depend on. The publication step is synchronized on instanceLock, so a
+        // concurrent awaitInstance() sees either the old instance and deferred or the reset ones,
+        // never a mix.
         synchronized(instanceLock) {
             if (instance === this) {
                 serviceStartRequested.set(false)
@@ -1813,23 +1763,18 @@ class StreamingPlaybackService : MediaSessionService() {
                 // The collector feeding it died with serviceScope above, before it could see Idle.
                 _nowPlaying.value = null
                 _engineStream.value = EngineStream()
-                // Any caller already suspended in awaitInstance() holds a reference to *this*
-                // deferred, not the field below — reassigning the field alone leaves them awaiting
-                // an object nobody will ever complete again if the service doesn't restart.
-                // completeExceptionally is a no-op if something already completed it normally, so
-                // this is safe either way. ServiceDestroyedException, not CancellationException —
-                // see its kdoc: this needs to reach callers as a catchable failure, not vanish into
-                // structured-concurrency cancellation handling.
+                // A caller suspended in awaitInstance() holds this deferred, not the field below,
+                // so reassigning the field alone leaves it waiting for ever. completeExceptionally
+                // is a no-op on a completed deferred. ServiceDestroyedException, not
+                // CancellationException: see its KDoc.
                 instanceReady.completeExceptionally(ServiceDestroyedException("StreamingPlaybackService destroyed"))
-                // If Android recreates this service later in the same process (e.g. after
-                // reclaiming it during long standby), the next onCreate() needs a fresh,
-                // not-yet-completed deferred to publish into — instanceReady.complete() is a
-                // silent no-op once already completed, so without this reset awaitInstance()
-                // would hand out this now-destroyed instance forever.
+                // If Android recreates the service later in the same process (for example after
+                // long standby), the next onCreate() needs a fresh deferred: complete() is a no-op
+                // once completed, so awaitInstance() would return the destroyed instance for ever.
                 instanceReady = kotlinx.coroutines.CompletableDeferred()
             }
-            // else: a newer instance has already published itself — this stale teardown must not
-            // touch its instance/instanceReady (see this function's kdoc).
+            // else: a newer instance has published itself, and this stale teardown must not touch
+            // it (see this function's KDoc).
         }
     }
 
@@ -1862,8 +1807,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onFinalError: (message: String, exception: Exception?) -> Unit = { _, _ -> },
         private val onAccountBusy: (httpStatus: Int) -> Unit = {},
         private val isCatchup: () -> Boolean = { false },
-        // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
-        // after a new stream can log total prepare-to-ready latency.
+        // DIAGNOSTIC (temporary): the clock time of playStream()'s start, so the first STATE_READY
+        // can log prepare-to-ready latency.
         private val streamStartTimeMs: () -> Long = { 0L },
         private val onFirstFrame: () -> Unit = {},
         /** Every player error, before it is handled: for Diagnostics. */
@@ -1908,7 +1853,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 val duration = player.duration
                 val isPaused = !player.isPlaying
 
-                // Periodic save while playing or immediate save on state change (including pause)
+                // Save periodically while playing, and at once on a state change (pause included).
                 if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveIntervalMs || isPaused) {
                     onPositionSave?.invoke(currentPosition, duration, isPaused, null, null)
                     lastSavedPosition = currentPosition
@@ -2095,7 +2040,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         companion object {
-            // Pre-compiled regexes — avoid recompiling on every error event
+            // Compiled once, not on every error event.
             private val HTTP_STATUS_REGEX = Regex("Response code: (\\d{3})")
         }
 
@@ -2171,10 +2116,9 @@ class StreamingPlaybackService : MediaSessionService() {
         /** Per-second (rendered, dropped) samples, trimmed to the last [RECENT_WINDOW_SAMPLES]. */
         private val recentSamples = ArrayDeque<Pair<Long, Long>>()
 
-        // playStream() zeroes the published StateFlow counters on every channel switch, but this
-        // listener instance lives for the whole service lifetime — without resetting these too,
-        // the next real rebuffer republishes a stale, session-wide count in one jump instead of
-        // a small per-stream delta, which used to trip the exhaustion-toast threshold instantly.
+        // playStream() zeroes the published counters on every channel switch, but this listener
+        // lives for the whole service. Without a reset here, the next rebuffer publishes a stale
+        // session-wide count in one jump and trips the exhaustion-toast threshold.
         fun reset() {
             droppedFrames = 0L
             totalFrames = 0L
@@ -2284,8 +2228,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             }
 
-            // Feed health monitor on every state change for Live TV streams. Skipped for VOD
-            // and right after a seek.
+            // Feed the health monitor on every state change of a Live TV stream. Not for VOD, and
+            // not right after a seek.
             val service = instance
             val player = service?.getPlayer()
             val isLive = service?._currentMetadata?.value?.isLive == true
@@ -2348,15 +2292,10 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val AWAIT_INSTANCE_TIMEOUT_MS = 10_000L
         private const val POSITION_SAVE_BUFFER = 16
 
-        // Guards `instance`/`instanceReady` publication as one atomic unit. Every current call
-        // site happens to run on Main (Service lifecycle callbacks, viewModelScope's default
-        // Main.immediate), which alone would already serialize these reads/writes — but that's
-        // an implicit invariant nothing enforces, and violating it (e.g. a future caller awaiting
-        // the instance from a Dispatchers.IO coroutine) would open a real window: a reader could
-        // capture the old, about-to-fail `instanceReady` right as teardown swaps it out, failing
-        // with a stale ServiceDestroyedException instead of awaiting the fresh deferred a
-        // concurrent restart is about to complete. Synchronizing removes the dependency on that
-        // invariant instead of relying on it silently holding forever.
+        // Guards `instance` / `instanceReady` publication as one unit. Today every call site runs
+        // on Main, which already serialises them, but nothing enforces that. A caller on another
+        // dispatcher could capture the old `instanceReady` as teardown swaps it and fail with a
+        // stale ServiceDestroyedException.
         private val instanceLock = Any()
 
         @Volatile
@@ -2365,14 +2304,11 @@ class StreamingPlaybackService : MediaSessionService() {
         @Volatile
         private var instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
 
-        // Guards startService() against being called more than once for the same "generation"
-        // of the service. Owned here, not by callers: getInstance() == null is ambiguous
-        // between "never started", "starting" (Android's startService() -> onCreate() gap is
-        // real, tens to hundreds of ms), and "just died" — a caller resetting this flag on its
-        // own observation of getInstance() == null can't tell those apart, and a caller doing so
-        // during the starting gap re-arms the claim for a second, redundant startService() call
-        // racing the first. Only this class knows the true moment a start-claim should be
-        // released: exactly when releasePlayerAndSession() tears the instance down.
+        // Guards startService() against a second call for the same generation of the service. Owned
+        // here, not by callers: getInstance() == null can mean "never started", "starting" (the
+        // startService() -> onCreate() gap is tens to hundreds of ms) or "just died", and a caller
+        // cannot tell them apart. Only this class knows when to release the claim: when
+        // releasePlayerAndSession() tears the instance down.
         private val serviceStartRequested =
             java.util.concurrent.atomic
                 .AtomicBoolean(false)
@@ -2381,9 +2317,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
         /**
          * Loads the FFmpeg native library, which [initializePlayer] checks on the main thread from
-         * onCreate. Call it off the main thread at app start: loading it reads disk, and once loaded
-         * the check is a cached answer. See
-         * the next level rock solid resilience plan → R-28.
+         * onCreate. Call it off the main thread at app start: loading reads disk, and later checks
+         * are cached. See the next level rock solid resilience plan, R-28.
          */
         fun warmUp() {
             Log.i(TAG, "FFmpeg library warmed up: ${FfmpegLibrary.isAvailable()}")
@@ -2413,34 +2348,29 @@ class StreamingPlaybackService : MediaSessionService() {
             MutableSharedFlow<PositionSave>(extraBufferCapacity = POSITION_SAVE_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
         /**
-         * Positions and track choices the playing session wants saved — process-wide, so the
-         * player screen keeps receiving them after the service is destroyed and started again
-         * (TV Home → return, or the first playback after a cold start, when the screen composes
-         * before the service exists). The player screen collects it for as long as it's composed.
-         * See the next level rock solid resilience plan → R-04.
+         * Positions and track choices the playing session wants saved. Process-wide, so the player
+         * screen keeps receiving them after the service is destroyed and started again (TV Home and
+         * return, or the first playback after a cold start, when the screen composes before the
+         * service exists). See the next level rock solid resilience plan, R-04.
          */
         val positionSaves: SharedFlow<PositionSave> = _positionSaves.asSharedFlow()
 
         /** Atomically claims the right to call startService(). Returns false if already claimed. */
         fun tryClaimStart(): Boolean = serviceStartRequested.compareAndSet(false, true)
 
-        // Bounded so a caller can never suspend forever if the service fails to start
-        // (e.g. startService() silently refused, or Android never gets around to onCreate()).
-        // The deferred is snapshotted under instanceLock before awaiting outside it — a lock
-        // can't be held across a suspension point — so this always awaits either the deferred
-        // that's about to complete normally or the fresh one a concurrent restart just created,
-        // never a stale one caught mid-teardown-swap.
+        // Bounded, so a caller never suspends for ever if the service fails to start. The deferred
+        // is read under instanceLock and awaited outside it (a lock cannot be held across a
+        // suspension), so this never awaits a stale deferred caught in a teardown swap.
         suspend fun awaitInstance(): StreamingPlaybackService {
             val deferred = synchronized(instanceLock) { instanceReady }
             return kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { deferred.await() }
         }
 
         /**
-         * [awaitInstance], or null when the service never came up in time or was torn down while
-         * waiting — for callers with nothing to do in either case. Composition-scoped effects must
-         * use this: a [ServiceDestroyedException] escaping a `LaunchedEffect` crashes the app.
-         * Genuine cancellation still propagates. See
-         * the rock solid stability resilience plan → F-03.
+         * [awaitInstance], or null when the service did not come up in time or was torn down while
+         * waiting. Composition-scoped effects must use this: a [ServiceDestroyedException] that
+         * escapes a `LaunchedEffect` crashes the app. Real cancellation still propagates. See the
+         * rock solid stability resilience plan, F-03.
          */
         suspend fun awaitInstanceOrNull(): StreamingPlaybackService? =
             try {

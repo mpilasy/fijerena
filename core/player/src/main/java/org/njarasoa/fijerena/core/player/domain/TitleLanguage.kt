@@ -1,14 +1,12 @@
 package org.njarasoa.fijerena.core.player.domain
 
 /**
- * Provider metadata routinely bakes a language/region code into the title string itself —
- * `"EN - Breaking Bad"`, `"NP:Kantipur"`, `"DE| ZDF"`, `"Breaking Bad (US)"` — and more besides:
- * the picture format (`"Joker 4K (2019)"`, `"RTL HEVC"`, `"ᵁᴴᴰ"`), the audio or subtitles
- * (`"(FRENCH ENG-SUB)"`, `"(Ger Sub)"`, `"POLSKI"`), a timeshift (`"+6H"`) or an events-only
- * channel (`"[LIVE-EVENT]"`). Parsed once here and consumed by every surface that renders
- * [MediaItem.name] (mobile's `StreamCard`, TV's `StreamList`, both platforms' `RelatedTitlesRow`)
- * so the title shown to the user is clean and the code becomes its own small badge, the rest its
- * own [tags], instead of visual noise baked into the title.
+ * Provider metadata often puts a language or region code in the title (`"EN - Breaking Bad"`,
+ * `"NP:Kantipur"`, `"DE| ZDF"`, `"Breaking Bad (US)"`), and more: the picture format (`"Joker 4K
+ * (2019)"`, `"RTL HEVC"`, `"ᵁᴴᴰ"`), the audio or subtitles (`"(FRENCH ENG-SUB)"`, `"(Ger Sub)"`,
+ * `"POLSKI"`), a timeshift (`"+6H"`) or an events-only channel (`"[LIVE-EVENT]"`). Parsed once here
+ * for every surface that shows [MediaItem.name], so the title is clean, the code is its own badge
+ * and the rest are [tags].
  */
 data class ParsedTitle(
     val title: String,
@@ -50,10 +48,9 @@ data class ParsedTitle(
 
 private val SPACES = Regex("\\s{2,}")
 
-// Requires the code to be all-uppercase letters so ordinary title casing ("A-Team") never
-// matches — real prefixes/suffixes from provider feeds are consistently shouted like "EN", "FR".
-// A streaming service's code may end in a plus ("DSC+", Discovery+). D+/A+ (Disney+/Apple TV+)
-// are the exception to the uppercase rule: accepted in either case, badged uppercase.
+// The code must be all capitals, so ordinary title casing ("A-Team") never matches; provider codes
+// are written like "EN", "FR". A streaming service's code can end in a plus ("DSC+", Discovery+).
+// D+ / A+ (Disney+ / Apple TV+) are accepted in either case and badged in capitals.
 private const val CODE = "[A-Z]{2,4}\\+?|[DdAa]\\+"
 private val PREFIX_CODE = Regex("^($CODE)\\s*-\\s*")
 
@@ -295,12 +292,11 @@ private fun labels(formats: List<Format>): List<String> =
         .map { (_, same) -> same.maxBy { it.rank }.label }
 
 /**
- * Strips a leading `EN -`/`NP:`/`DE|`/`IN-PREM|`/`4K-NF -`/`4K:` style prefix or a trailing `(US)`
- * style suffix off [raw] and returns the cleaned title plus the code as a badge; picture formats at
- * the start or the end, and the audio, subtitle and timeshift words at the end, become
- * [ParsedTitle.tags]. When both a prefix and a suffix code are present, the prefix wins — it is the
- * more common shape and carries the language, the more useful of the two. Returns [raw] verbatim
- * (trimmed) with a null badge and no tags when nothing matches.
+ * Strips a leading `EN -` / `NP:` / `DE|` / `IN-PREM|` / `4K-NF -` / `4K:` style prefix or a
+ * trailing `(US)` style suffix off [raw], and returns the clean title with the code as a badge.
+ * Picture formats at the start or end, and the audio, subtitle and timeshift words at the end,
+ * become [ParsedTitle.tags]. With both a prefix and a suffix code, the prefix wins: it is more
+ * common and carries the language. With no match, returns [raw] trimmed, with no badge and no tags.
  */
 fun parseDisplayTitle(raw: String): ParsedTitle {
     var text = raw

@@ -258,12 +258,10 @@ fun MobileSearchScreen(
     val activeTab = activeSearchTab(selectedTab, tabs)
     val guideActive = activeTab == SearchTab.GUIDE
     val currentOtherTab by rememberUpdatedState(activeTab != SearchTab.CATALOGUE)
-    // Scope filter selection lives here, not inside SearchResults — performSearch() emits a
-    // transitional UiState.Loading on every debounced re-search (not just the first), which
-    // unmounts SearchResults entirely. A plain rememberSaveable inside it doesn't survive that
-    // disposal (same gotcha as tab content resetting without a SaveableStateHolder), so the
-    // filter would silently reset to "All" every time the user kept typing.
-    // A section's Search arrives with its own section selected; All is one tap away.
+    // The type filter lives here, not in SearchResults: performSearch() emits UiState.Loading on
+    // every debounced search, which unmounts SearchResults, and a rememberSaveable inside it would
+    // reset the filter to "All" as the user types. A section's Search arrives with its own section
+    // selected; All is one tap away.
     var selectedTypeFilter by SearchSession::typeFilter
     // The source chip chosen in a multi-source profile (null: every source).
     var selectedSource by SearchSession::source
@@ -341,12 +339,10 @@ fun MobileSearchScreen(
     }
     val longPressScope = rememberCoroutineScope()
 
-    // As-you-type search: debounced so every keystroke doesn't fire its own query. The manual
-    // triggers below (search icon tap, keyboard search action) still work unchanged — performSearch()
-    // already cancels any in-flight search job before starting a new one, so an explicit tap
-    // landing right after a debounced fire is a harmless redundant call, not a race.
-    // The catalogue only: the Guide tab doesn't run it unseen (D3).
-    // Coming back to a screen whose results are already for this term runs nothing again.
+    // Search as you type, debounced so each keystroke does not run its own query. performSearch()
+    // cancels any search in flight, so a manual search right after a debounced one is a harmless
+    // repeat, not a race. The catalogue only: the Guide tab does not run it unseen (D3). Back on a
+    // screen whose results are already for this term runs nothing again.
     LaunchedEffect(searchQuery) {
         if (activeTab != SearchTab.CATALOGUE) return@LaunchedEffect
         if ((viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query == searchQuery) return@LaunchedEffect
@@ -434,8 +430,8 @@ fun MobileSearchScreen(
                 return@Column
             }
 
-            // The results' sources (the search source filter plan): for a Nerd
-            // only, as the source badges — otherwise results don't name their source.
+            // The results' sources (the search source filter plan), for a Nerd only, as the source
+            // badges.
             val successState = uiState as? SearchViewModel.UiState.Success
             val showSources = LocalNerd.current
             val sources =
@@ -464,7 +460,7 @@ fun MobileSearchScreen(
                 ) { searchFacets(sourceResults, tmdbTitles, facetChoice, language) }
             val facetLabels = rememberSearchFacetLabels()
 
-            // Search bar — searches as you type; the keyboard's search action runs it at once.
+            // Searches as you type; the keyboard's search action runs it at once.
             val keyboardController = LocalSoftwareKeyboardController.current
             CinemaSearchField(
                 value = searchQuery,
@@ -631,7 +627,6 @@ fun MobileSearchScreen(
 }
 
 /** "Catalogue | People | Teams | Guide" ([tabs]), in the look of the category list's mode tabs (phone UI audit #1). */
-
 @Composable
 internal fun MobileSearchTabs(
     tabs: List<SearchTab>,
@@ -868,9 +863,8 @@ private fun SearchResults(
 ) {
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
-    // Built once for the whole result list rather than once per row. CardDefaults.cardColors is
-    // @Composable, so it can't be wrapped in remember — hoisting the call out of the item bodies
-    // is what stops a CardColors being allocated per visible result per recomposition.
+    // Built once for the result list, not per row. cardColors is @Composable, so it cannot go in
+    // remember; hoisting it stops a CardColors allocation per row per recomposition.
     val categoryCardColors =
         CardDefaults.cardColors(
             containerColor = CinemaTheme.colors.accentStrong.copy(alpha = CinemaAlpha.tint),
@@ -918,12 +912,11 @@ private fun SearchResults(
             }
         }
     } else {
-        // Filter chips and the results list must be vertical siblings — this whole branch is
-        // composed directly inside the caller's Box (SearchScreen.kt), which stacks children by
-        // paint order, not position. Without this Column, the LazyColumn below (declared after
-        // the Row) painted on top of it and ate every touch meant for the chips.
+        // The chips and the results list must be vertical siblings: this branch is composed in the
+        // caller's Box, which stacks children by paint order. Without this Column, the LazyColumn
+        // painted over the chips and took their touches.
         Column(modifier = Modifier.fillMaxSize()) {
-            // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
+            // Grouped once outside the LazyColumn, not filtered per type on each recomposition.
             val groupedByType =
                 remember(categoryResults, results) {
                     buildGroupedSearchResults(categoryResults, results)
@@ -940,11 +933,9 @@ private fun SearchResults(
                     }
                 }
 
-            // Scope filter chips — only meaningful for Global Search, where results already span
-            // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
-            // only ever has one type of result to begin with. Selection is hoisted to the caller (see
-            // MobileSearchScreen) so it survives the transitional Loading state performSearch() emits
-            // on every re-search, not just the first.
+            // Type filter chips only for Global Search, where results span several content types; a
+            // type-scoped search has one type. The selection is hoisted to the caller
+            // (MobileSearchScreen), so it survives the Loading state of each search.
             if (queryContentType == "ALL" && groupedByType.size + (if (notInSources.isEmpty()) 0 else 1) > 1) {
                 val totalCount = categoryResults.size + results.size + notInSources.size
                 Row(
@@ -1544,8 +1535,8 @@ internal fun MobileSearchFavoriteDialog(
     // A film's or an episode's "Mark watched / unwatched", worded from the target's isWatched.
     // Null hides it.
     onToggleWatched: (() -> Unit)? = null,
-    // A show's "Mark show watched / unwatched" (the season show watched plan
-    // Phase 3), worded from the target's isShowWatched. Null hides it.
+    // A show's "Mark show watched / unwatched" (the season show watched plan, Phase 3), worded from
+    // the target's isShowWatched. Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()

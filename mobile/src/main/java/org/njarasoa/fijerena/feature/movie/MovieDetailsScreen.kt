@@ -137,8 +137,8 @@ fun MobileMovieDetailsScreen(
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
     val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
 
-    // Retained across a refresh so pulling down leaves the details on screen under the spinner,
-    // instead of blanking to a full-screen loading state. Mirrors the episode screen.
+    // Kept across a refresh, so the details stay under the pull spinner instead of a full-screen
+    // loading state, as on the episode screen.
     var lastSuccess by remember { mutableStateOf<MovieDetailsViewModel.UiState.Success?>(null) }
     (uiState as? MovieDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
     val isRefreshing = uiState is MovieDetailsViewModel.UiState.Loading && lastSuccess != null
@@ -157,9 +157,8 @@ fun MobileMovieDetailsScreen(
                 title = if (solidBar) tmdbTitle ?: cleanTitle(lastSuccess?.movieDetail?.name?.ifEmpty { null } ?: movieName) else "",
                 onBack = onBack,
                 ground = if (solidBar) HeaderGround.Covered else HeaderGround.Artwork,
-                // Favourite and Watched are in the icon row under the Play button (see
-                // MovieDetailsContent), the Plex/Netflix "actions under the poster" layout, not a
-                // top-bar icon cluster.
+                // Favourite and Watched are in the icon row under Play (see MovieDetailsContent),
+                // not in the top bar.
             )
         },
     ) { paddingValues ->
@@ -299,14 +298,10 @@ private fun MovieDetailsContent(
     val extension = movieDetail.extension ?: "mp4"
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
-        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
-        // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
-        // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same
-        // ~167ms rebuild frame. Unlike the TV version, nothing moves visually here: the rows were
-        // already top-level siblings rather than nested inside a panel.
-        //
-        // Everything above the related rows stays in one item: it is a single flowing block that is
-        // largely on screen anyway, so splitting it would add churn without saving measurement.
+        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the
+        // off-screen related rows paid their full layout cost (on TV that was 200 ms of a 215 ms
+        // measure pass). Everything above the related rows stays in one item: it is one block,
+        // mostly on screen, so splitting it saves no measurement.
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding =
@@ -342,10 +337,10 @@ private fun MovieDetailsContent(
                         )
                     }
 
-                    // Single dot-separated facts line in TV's order ("1999 • 8.2/10 • R • 2h 16m"): content
-                    // rating and resolution are small outlined badges, everything else plain text.
-                    // The length is the provider's, else the one the player saw last time
-                    // (phone UI audit, P4) — many providers send none.
+                    // One dot-separated facts line in TV's order ("1999 • 8.2/10 • R • 2h 16m"):
+                    // content rating and resolution as small outlined badges, the rest plain text.
+                    // The length is the provider's, else the one the player saw last time (phone UI
+                    // audit, P4): many providers send none.
                     val length =
                         movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)
                             ?: (resumeDurationMs / 1000).takeIf { it > 0 }?.toString()
@@ -396,7 +391,7 @@ private fun MovieDetailsContent(
                         }
                     }
 
-                    // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
+                    // Secondary actions: only what the app supports (no Cast or Shuffle).
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     val playTrailer = rememberPlayTrailer()
                     // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1); none for a child.
@@ -469,11 +464,10 @@ private fun MovieDetailsContent(
                         ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
                     }
 
-                    // Segmented detail sections (the ui ux transitions flow uplift plan,
-                    // Phase 4 3c) — mirrors TV's own tabbed layout (the tv detail hero ui plan
-                    // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
-                    // cast/related-titles doesn't show an empty tab for it.
-                    // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
+                    // Segmented detail sections (the ui ux transitions flow uplift plan, Phase 4
+                    // 3c), as TV's tabs (the tv detail hero ui plan, Phase 4): built from what this
+                    // film has, so no empty tab. TMDB's credits when it has them (cast tab plan),
+                    // else the source's cast names (CT-D7).
                     val tmdbCredits = credits?.takeUnless { it.isEmpty }
                     val hasCast = tmdbCredits != null || !movieDetail.metadata.cast.isNullOrBlank()
                     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
@@ -491,9 +485,7 @@ private fun MovieDetailsContent(
                     val selectedTab = pickedTab?.takeIf { it in tabs } ?: tabs.first()
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                    // A single-tab strip (a title with no cast/related-titles, leaving
-                    // only Details) has nothing to switch between — skip the strip entirely rather than
-                    // render dead chrome for a tab the user can't leave.
+                    // One tab only (no cast or related titles) has nothing to switch: no strip.
                     if (tabs.size > 1) {
                         CinemaTabRow(
                             selectedIndex = tabs.indexOf(selectedTab),
@@ -731,9 +723,8 @@ private fun LoadingScreen() {
 }
 
 /**
- * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
- * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
- * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ * The "Stream name: X" row. Plain text when [alternates] is empty (most titles). A dropdown when
+ * another catalogue entry has the same TMDB id, to open that copy's detail screen.
  */
 @Composable
 private fun StreamNamePicker(

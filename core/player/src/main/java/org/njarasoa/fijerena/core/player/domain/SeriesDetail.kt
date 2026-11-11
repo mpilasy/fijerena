@@ -5,9 +5,11 @@ data class SeriesDetail(
     val name: String,
     val metadata: MediaMetadata = MediaMetadata(),
     val coverUrl: String? = null,
-    /** The provider's own backdrop art, if it has one (Xtream's `backdrop_path`, Jellyfin's
-     * `BackdropImageTags`) — the fallback the TV detail hero uses when TMDB has none. Null for
-     * providers with no such concept (SMB, Local, Remote M3U). */
+    /**
+     * The provider's own backdrop art, if any (Xtream's `backdrop_path`, Jellyfin's
+     * `BackdropImageTags`): the TV detail hero's fallback when TMDB has none. Null for providers
+     * without one (SMB, Local, Remote M3U).
+     */
     val backdropUrl: String? = null,
     val seasons: List<SeasonInfo> = emptyList(),
     val episodes: Map<String, List<EpisodeItem>> = emptyMap(),
@@ -33,13 +35,10 @@ data class EpisodeItem(
 )
 
 /**
- * Seasons to display, sorted and with empty ones (e.g. a "Season 0" specials
- * entry with no actual episodes) dropped. Some Xtream panels send a `seasons`
- * list that's missing an entry for a season the episode map still has
- * episodes under (seen in the wild: same episode data, one alternate stream's
- * `seasons` array just omits the last season) — those are backfilled from the
- * episode map too, so a season with real episodes is never dropped from the
- * accordion, only under-counted.
+ * Seasons to show, sorted, without empty ones (for example a "Season 0" with no episodes). Some
+ * Xtream panels send a `seasons` list without a season that the episode map still has episodes for;
+ * those seasons are added from the episode map, so a season with real episodes is never dropped,
+ * only under-counted.
  */
 fun SeriesDetail.sortedSeasons(seasonName: (Int) -> String): List<SeasonInfo> {
     val apiSeasons =
@@ -91,9 +90,8 @@ fun SeriesDetail.seasonNumberContaining(episodeId: String): Int? =
         ?.toIntOrNull()
 
 /**
- * First season (in [sortedSeasons] order) containing an episode for which
- * [isCompleted] returns false — used to auto-expand the season with the next
- * unwatched/in-progress episode.
+ * The first season (in [sortedSeasons] order) with an episode for which [isCompleted] is false: the
+ * season with the next unwatched or in-progress episode.
  */
 fun firstSeasonWithUnwatchedEpisode(
     sortedSeasons: List<SeasonInfo>,
@@ -128,15 +126,14 @@ fun SeriesDetail.episodeIdMatchingName(name: String): String? {
 private val SEASON_EPISODE = Regex("""\bS(\d{1,3})\s*E(\d{1,4})\b""", RegexOption.IGNORE_CASE)
 
 /**
- * Episode to land on when the series screen opens: the most recently played one, or the first
- * unwatched episode after it when that one was already finished (nobody comes back to a series
- * to rewatch what they just completed) — see [nextUnwatchedEpisodeId]. Nothing played but some
- * episodes marked watched: the first unwatched episode from the start. Null when nothing here has
- * been played or marked yet.
+ * The episode to land on when the series screen opens: the last one played, or the first unwatched
+ * one after it when that one was finished (see [nextUnwatchedEpisodeId]). Nothing played but some
+ * episodes marked watched: the first unwatched episode from the start. Null when nothing was played
+ * or marked.
  *
- * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
- * episodes (a manual mark is not a play); [isCompleted] reports whether an episode was watched
- * past the completion mark or marked watched.
+ * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series' episodes (a
+ * manual mark is not a play); [isCompleted] says whether an episode was watched past the completion
+ * mark or marked watched.
  */
 fun SeriesDetail.resumeAnchorEpisodeId(
     sortedSeasons: List<SeasonInfo>,
@@ -153,12 +150,12 @@ fun SeriesDetail.resumeAnchorEpisodeId(
 }
 
 /**
- * The episode to watch after finishing [finishedEpisodeId], from [orderedEpisodeIds] in show order
- * (the watched followups plan → Phase 1): the first one after it that isn't
- * completed; failing that, the first one from the start of the show that isn't; and when every
- * episode is completed, the first episode. [finishedEpisodeId] itself counts as completed; null
- * starts from the beginning. Null when [finishedEpisodeId] isn't in the list, or the list is empty.
- * Shared by the series screens and Home's "Continue watching" card so both offer the same episode.
+ * The episode to watch after [finishedEpisodeId], from [orderedEpisodeIds] in show order (the
+ * watched followups plan, Phase 1): the first one after it that is not completed, else the first
+ * such one from the start, and when all are completed, the first episode. [finishedEpisodeId]
+ * counts as completed; null starts from the beginning. Null when [finishedEpisodeId] is not in the
+ * list, or the list is empty. Shared by the series screens and Home's "Continue watching" card, so
+ * both offer the same episode.
  */
 fun nextUnwatchedEpisodeId(
     orderedEpisodeIds: List<String>,
@@ -178,8 +175,8 @@ fun nextUnwatchedEpisodeId(
 }
 
 /**
- * Returns formatted start and end years (e.g. "2008–2013", "2024–present", or "2021") for a series
- * based on the series release year and its episodes' air dates.
+ * The series' start and end years ("2008–2013", "2024–present" or "2021"), from its release year
+ * and its episodes' air dates.
  */
 fun SeriesDetail.seriesYearRange(presentLabel: String = "present"): String? {
     val startYear = metadata.year ?: metadata.releaseDate?.take(4)?.toIntOrNull()

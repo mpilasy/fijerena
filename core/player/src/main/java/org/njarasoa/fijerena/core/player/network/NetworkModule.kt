@@ -11,28 +11,25 @@ import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /**
- * Singleton providing a shared OkHttpClient to prevent memory leaks and thread exhaustion.
- * All HTTP clients (Ktor, OkHttp) should reuse this underlying engine or create shallow
- * copies using [OkHttpClient.newBuilder].
+ * One shared OkHttpClient, against memory leaks and thread exhaustion. All HTTP clients (Ktor,
+ * OkHttp) reuse this engine or make shallow copies with [OkHttpClient.newBuilder].
  */
 object NetworkModule {
     private var applicationContext: Context? = null
 
     /**
-     * Initialize the network module with an application context.
-     * This allows the DNS resolver to use Android-specific network APIs for better reliability.
+     * Gives the module the application context, so the DNS resolver can use Android network APIs.
      */
     fun init(context: Context) {
         this.applicationContext = context.applicationContext
     }
 
     /**
-     * The global OkHttpClient instance.
-     * Sharing this ensures that we reuse the same connection pool and thread pool (Dispatcher),
-     * which is critical for avoiding OutOfMemoryErrors on low-memory Android devices.
+     * The global OkHttpClient. One connection pool and one thread pool (Dispatcher) for the app,
+     * which avoids OutOfMemoryErrors on low-memory devices.
      */
     val okHttpClient: OkHttpClient by lazy {
-        // Restrict concurrency to prevent OOM but allow enough for concurrent tasks
+        // Limited concurrency against OOM, but enough for parallel tasks.
         val dispatcher =
             Dispatcher().apply {
                 maxRequests = 16
@@ -53,8 +50,8 @@ object NetworkModule {
     }
 
     /**
-     * Explicitly clear all connections in the pool.
-     * Used by the stream health system to bypass ISP/CDN shaping by forcing fresh sockets.
+     * Clears all connections in the pool. The stream health system uses it to bypass ISP/CDN
+     * shaping with fresh sockets.
      */
     fun evictConnectionPool() {
         okHttpClient.connectionPool.evictAll()
@@ -62,10 +59,8 @@ object NetworkModule {
 
     /**
      * Per-network-type OkHttp clients for streaming, derived from [okHttpClient] via
-     * [OkHttpClient.newBuilder] (shares connection pool, dispatcher, DNS, and redirect settings).
-     * Connect/read timeouts are baked in at construction since OkHttpDataSource has no per-call
-     * timeout setters (unlike DefaultHttpDataSource.Factory) — timeouts must be chosen at the
-     * client level, hence one client per network type rather than one mutable shared client.
+     * [OkHttpClient.newBuilder] (shared pool, dispatcher, DNS and redirects). OkHttpDataSource has
+     * no per-call timeout setters, so timeouts are set per client: one client per network type.
      */
     private val wifiStreamingClient: OkHttpClient by lazy {
         okHttpClient
@@ -101,10 +96,9 @@ object NetworkModule {
                 }
             }
 
-            // Single attempt only — this runs synchronously on whatever thread triggers the
-            // OkHttpClient's first use (can be the main thread), so blocking here with retry
-            // sleeps risks an ANR. Transient DNS failure is already handled by the outer
-            // AdaptiveLoadErrorPolicy, which retries the whole request with backoff.
+            // One attempt only: this runs on the thread of the OkHttpClient's first use (can be the
+            // main thread), so retry sleeps risk an ANR. AdaptiveLoadErrorPolicy already retries
+            // the whole request with backoff.
             return resolveOnce(hostname)
         }
 

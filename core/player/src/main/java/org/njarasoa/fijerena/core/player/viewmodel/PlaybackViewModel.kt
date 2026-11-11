@@ -53,12 +53,10 @@ class PlaybackViewModel(
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
-    // Bumped on every onTracksChanged — getAudioTracks()/getSubtitleTracks()/getVideoQualities()
-    // are plain synchronous reads of controller.currentTracks with nothing to observe on their
-    // own, so a caller that only recomposed on `controller` or `metadata` changing could freeze
-    // on an empty list forever if it read tracks before ExoPlayer resolved them (metadata is set
-    // once at playStream() time, well before tracks are typically ready). Callers that need to
-    // stay current key their remember{} on this instead.
+    // Bumped on every onTracksChanged. getAudioTracks() / getSubtitleTracks() / getVideoQualities()
+    // are plain reads of controller.currentTracks with nothing to observe, and metadata is set at
+    // playStream(), before tracks are ready. A caller that keys its remember{} only on `controller`
+    // or `metadata` can freeze on an empty list; key it on this.
     private val _tracksVersion = MutableStateFlow(0)
     val tracksVersion: StateFlow<Int> = _tracksVersion.asStateFlow()
 
@@ -73,26 +71,25 @@ class PlaybackViewModel(
     private var isInErrorState = false
     private var focusLostJob: Job? = null
 
-    // Set when onAppStopped() stopped a live stream, so onAppResumed() knows to restart it.
-    // Cleared by any explicit playStream()/stop() so a stale flag can't resurrect a stream the
-    // user already moved on from.
+    // Set when onAppStopped() stopped a live stream, so onAppResumed() restarts it. Cleared by any
+    // explicit playStream() / stop(), so a stale flag cannot restart a stream the user left.
     private var liveStoppedInBackground = false
 
     private val playerListener =
         object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                // Rely on service.playbackState Flow for state updates
+                // service.playbackState carries the state.
             }
 
             override fun onPlayWhenReadyChanged(
                 playWhenReady: Boolean,
                 reason: Int,
             ) {
-                // Rely on service.playbackState Flow for state updates
+                // service.playbackState carries the state.
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                // Rely on service.playbackState Flow for state updates
+                // service.playbackState carries the state.
             }
 
             override fun onTracksChanged(tracks: Tracks) {
@@ -101,9 +98,8 @@ class PlaybackViewModel(
 
             override fun onPlayerError(error: PlaybackException) {
                 isInErrorState = true
-                // Service handles the specific error message and propagates it via flow
-                // (observeServiceState collects service.playbackState).
-                // Only set a fallback here if the service isn't reachable.
+                // The service sets the error message and publishes it through
+                // service.playbackState. A fallback only when the service cannot be reached.
                 if (StreamingPlaybackService.getInstance() == null) {
                     _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred), error)
                 }
@@ -114,40 +110,33 @@ class PlaybackViewModel(
     private var connectStateJob: Job? = null
 
     init {
-        // connectToService() never returns (it collects a connection flow that stays open
-        // for the life of the controller), so it must run in its own coroutine. Otherwise it
-        // blocks observeServiceState() from ever starting, leaving playbackState stuck at Idle.
+        // connectToService() never returns (it collects a connection flow open for the controller's
+        // life), so it runs in its own coroutine. Else observeServiceState() never starts and
+        // playbackState stays Idle.
         startService()
         connectStateJob = viewModelScope.launch { connectToService() }
         observeStateJob = viewModelScope.launch { observeServiceState() }
     }
 
     /**
-     * Re-subscribes to the service if it died since this ViewModel was created. It's common
-     * for one PlaybackViewModel to outlive several playback sessions (e.g. TV's embedded
-     * preview panel), but observeServiceState() only ever awaits and collects from a single
-     * service instance — once that instance is torn down by stopAndRelease(), a *new* service
-     * starting later is never subscribed to, leaving playbackState/currentMetadata frozen even
-     * though playback is actually working again. Call before starting a fresh stream.
+     * Subscribes again if the service died since this ViewModel was created. One PlaybackViewModel
+     * often outlives several playback sessions (for example TV's preview panel), but
+     * observeServiceState() only collects from one service instance. After stopAndRelease(), a new
+     * service is never subscribed to and playbackState / currentMetadata freeze. Call before a
+     * fresh stream.
      */
     private fun ensureServiceRunning() {
         if (StreamingPlaybackService.getInstance() == null) {
-            // The start-claim (StreamingPlaybackService.tryClaimStart()) is owned and reset by
-            // the service itself, exactly when it actually tears down — not guessed here from
-            // getInstance() == null, which is also true during Android's normal, harmless
-            // startService() -> onCreate() gap (tens to hundreds of ms). A caller-side reset
-            // keyed on that observation can't tell "starting" from "just died" apart, and two
-            // ViewModels racing this path during the starting gap could each reset and reclaim,
-            // both issuing a redundant startService() call. startService() below just attempts
-            // the claim; if it's already held (by a start in flight or a live instance), it's a
-            // no-op.
+            // The service owns and resets the start claim
+            // (StreamingPlaybackService.tryClaimStart()) when it tears down. getInstance() == null
+            // is also true in the normal startService() -> onCreate() gap, so a reset here could
+            // make two ViewModels both call startService(). startService() below only tries the
+            // claim; when it is held, it is a no-op.
             startService()
             observeStateJob?.cancel()
             observeStateJob = viewModelScope.launch { observeServiceState() }
-            // connectToService() rebinds _controller to a fresh MediaController for the new
-            // service instance. Without this, callers reading _controller (getAudioTracks(),
-            // getChapters()) keep whatever controller — possibly none — was bound to the service
-            // that just died.
+            // connectToService() binds _controller to a fresh MediaController for the new service.
+            // Else getAudioTracks() and getChapters() keep the dead service's controller (or none).
             connectStateJob?.cancel()
             connectStateJob = viewModelScope.launch { connectToService() }
         }
@@ -155,21 +144,18 @@ class PlaybackViewModel(
 
     private suspend fun observeServiceState() =
         coroutineScope {
-            // launch on this coroutineScope, not viewModelScope: that makes both collectors
-            // structural children of observeStateJob, so ensureServiceRunning()'s
-            // observeStateJob?.cancel() actually tears them down. Launching on viewModelScope
-            // directly (as this used to) made them siblings of observeStateJob instead — the
-            // outer suspend function returned as soon as both launches fired, so the job was
-            // already completed by the time cancel() ran, and every service restart leaked two
-            // more collectors bound to the old service's now-dead flows.
+            // Launch on this coroutineScope, not viewModelScope: both collectors are then children
+            // of observeStateJob, so ensureServiceRunning()'s observeStateJob?.cancel() stops them.
+            // On viewModelScope they were siblings, the job was complete by the time cancel() ran,
+            // and every service restart leaked two collectors on the dead service's flows.
             val service =
                 try {
                     StreamingPlaybackService.awaitInstance()
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                    // Service never came up in time — nothing to observe.
+                    // The service did not come up in time: nothing to observe.
                     return@coroutineScope
                 } catch (e: ServiceDestroyedException) {
-                    // Service was torn down while we were waiting on it — nothing to observe.
+                    // The service was torn down while waiting: nothing to observe.
                     return@coroutineScope
                 }
 
@@ -191,9 +177,8 @@ class PlaybackViewModel(
         }
 
     private fun startService() {
-        // tryClaimStart() ensures only the first caller across all PlaybackViewModel instances
-        // (and across restarts — see its own doc) actually issues the (ANR-risky) startService()
-        // call.
+        // tryClaimStart() lets only the first caller across all PlaybackViewModel instances (and
+        // across restarts, see its doc) make the ANR-risky startService() call.
         if (StreamingPlaybackService.tryClaimStart()) {
             val intent = Intent(context, StreamingPlaybackService::class.java)
             context.startService(intent)
@@ -219,8 +204,7 @@ class PlaybackViewModel(
         _seekTarget.value = null
         onFocusRegained()
         ensureServiceRunning()
-        // DO NOT set _playbackState.value = Buffering here!
-        // Let the service handle the state transitions.
+        // Do NOT set _playbackState to Buffering here: the service handles the state transitions.
 
         viewModelScope.launch {
             try {
@@ -229,37 +213,34 @@ class PlaybackViewModel(
                 _currentMetadata.value = metadata
                 service.playStream(metadata, resumeFromPosition)
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // awaitInstance() gave up after AWAIT_INSTANCE_TIMEOUT_MS — the service never
-                // came up in time.
+                // awaitInstance() gave up after AWAIT_INSTANCE_TIMEOUT_MS: the service did not come
+                // up in time.
                 _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred))
             } catch (e: ServiceDestroyedException) {
-                // The service was torn down while we were waiting on it — a real failure to
-                // surface, not the coroutine's own cancellation (see the exception's kdoc).
+                // The service was torn down while waiting: a real failure to show, not this
+                // coroutine's cancellation (see the exception's KDoc).
                 _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred))
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // A genuine structured-concurrency cancellation (e.g. this ViewModel being
-                // cleared) — propagate it rather than swallowing it into an error state nobody
-                // will see.
+                // Real cancellation (for example this ViewModel being cleared): propagate it, do
+                // not turn it into an error state nobody sees.
                 throw e
             }
         }
     }
 
     /**
-     * Runs [action] against the running service once it's up, swallowing the failure if the
-     * service never came up or was torn down while we were waiting on it (see [ServiceDestroyedException]'s
-     * kdoc) — these are fire-and-forget control actions with nothing left to act on in that case,
-     * not a failure worth surfacing as a player error. A genuine structured-concurrency
-     * cancellation (e.g. this ViewModel being cleared) still propagates.
+     * Runs [action] against the service once it is up. Ignores a service that did not come up or
+     * was torn down while waiting (see [ServiceDestroyedException]): these are fire-and-forget
+     * control actions with nothing to act on then. Real cancellation still propagates.
      */
     private fun launchServiceAction(action: suspend (StreamingPlaybackService) -> Unit) {
         viewModelScope.launch {
             try {
                 action(StreamingPlaybackService.awaitInstance())
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                // no-op: service never came up in time
+                // no-op: the service did not come up in time
             } catch (e: ServiceDestroyedException) {
-                // no-op: service died mid-wait or mid-call
+                // no-op: the service died during the wait or the call
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -294,20 +275,19 @@ class PlaybackViewModel(
         launchServiceAction { it.stop() }
     }
 
-    /** TV-only wrapper for [StreamingPlaybackService.stopAndRelease] — see its kdoc. */
+    /** TV-only wrapper for [StreamingPlaybackService.stopAndRelease]; see its KDoc. */
     fun stopAndRelease() {
         isInErrorState = false
         onFocusRegained()
-        // getInstance(), not awaitInstance(): there's nothing to release if the service is
-        // already dead, and awaiting a service that will never start just pays the full
-        // 10-second AWAIT_INSTANCE_TIMEOUT_MS for no reason. Neither this nor stopAndRelease()
-        // itself suspends, so no coroutine is needed here at all.
+        // getInstance(), not awaitInstance(): a dead service has nothing to release, and awaiting
+        // one that never starts costs the full AWAIT_INSTANCE_TIMEOUT_MS. Nothing here suspends, so
+        // no coroutine.
         StreamingPlaybackService.getInstance()?.stopAndRelease()
     }
 
     /**
-     * Called when the app loses focus (e.g. backgrounded).
-     * Pauses playback and starts a 30s timer to stop playback completely.
+     * Called when the app loses focus (for example backgrounded). Pauses playback and starts a 30 s
+     * timer to stop it.
      */
     fun onFocusLost(isInPip: Boolean = false) {
         if (isInPip || _isInPictureInPictureMode.value) return
@@ -315,12 +295,10 @@ class PlaybackViewModel(
     }
 
     /**
-     * Mobile: the activity is no longer visible (ON_STOP). Unlike ON_PAUSE, this never fires
-     * while in PiP — ON_PAUSE arrives *before* isInPictureInPictureMode flips on a swipe-home
-     * PiP entry (paused the stream going into PiP), and nothing handled the ON_STOP that follows
-     * dismissing the PiP window (left the stream playing with no window at all). Live stops
-     * outright instead of pausing — a paused live stream is stale by the time it's resumed —
-     * and [onAppResumed] restarts it.
+     * Mobile: the activity is no longer visible (ON_STOP). Unlike ON_PAUSE, this never fires in
+     * PiP: ON_PAUSE arrives before isInPictureInPictureMode flips on a swipe-home PiP entry, and
+     * only ON_STOP follows a dismissed PiP window. Live stops instead of pausing (a paused live
+     * stream is stale on resume), and [onAppResumed] restarts it.
      */
     fun onAppStopped() {
         val currentState = _playbackState.value
@@ -338,8 +316,8 @@ class PlaybackViewModel(
     fun onAppResumed() {
         onFocusRegained()
         if (liveStoppedInBackground) {
-            // Unconditional (no Idle check): the stop launched by onAppStopped() is async, so a
-            // quick return can land before it takes effect — playStream() replaces it either way.
+            // No Idle check: onAppStopped()'s stop is async, so a quick return can land before it;
+            // playStream() replaces it either way.
             playStream(_currentMetadata.value)
         }
     }
@@ -360,10 +338,7 @@ class PlaybackViewModel(
         }
     }
 
-    /**
-     * Called when the app regains focus.
-     * Cancels the pending stop timer.
-     */
+    /** Called when the app regains focus. Cancels the pending stop timer. */
     fun onFocusRegained() {
         focusLostJob?.cancel()
         focusLostJob = null
@@ -380,18 +355,16 @@ class PlaybackViewModel(
      * null when nothing was sought.
      */
     fun seekRelative(offsetMs: Long): Long? {
-        // Playing, paused or buffering (most often after an earlier seek) — do nothing on
-        // Idle/Ended/Error.
+        // Playing, paused or buffering (most often after an earlier seek); nothing on Idle / Ended
+        // / Error.
         val isSeekableState =
             when (_playbackState.value) {
                 is PlaybackState.Playing, is PlaybackState.Paused, is PlaybackState.Buffering -> true
                 else -> false
             }
-        // Read the live player position/duration rather than the cached PlaybackState: that
-        // StateFlow only updates on discrete Player.Listener events (state/playWhenReady/
-        // isPlaying changes), so during steady playback it stays frozen at whatever it was
-        // when last set — often minutes stale. Seeking relative to it jumped to the wrong
-        // spot (the bug behind "fast forward/rewind fucked up").
+        // Read the live player position and duration, not the cached PlaybackState: that StateFlow
+        // only updates on discrete Player.Listener events, so in steady playback it can be minutes
+        // stale and a relative seek went to the wrong place.
         val player = if (isSeekableState) StreamingPlaybackService.getInstance()?.getPlayer() else null
         val duration = player?.duration?.coerceAtLeast(0L) ?: 0L
         val target =
@@ -511,10 +484,7 @@ class PlaybackViewModel(
         launchServiceAction { it.disableSubtitles() }
     }
 
-    /**
-     * Get available video quality levels from the player.
-     * Returns a list sorted by resolution (highest first).
-     */
+    /** The player's video quality levels, highest resolution first. */
     fun getVideoQualities(): List<VideoQualityInfo> {
         val qualities = mutableListOf<VideoQualityInfo>()
         val groups =
@@ -566,8 +536,8 @@ class PlaybackViewModel(
     }
 
     /**
-     * Get chapter markers from the current media item's metadata.
-     * Jellyfin stores chapters in mediaMetadata.extras as parallel arrays.
+     * Chapter markers from the current media item's metadata. Jellyfin stores them in
+     * mediaMetadata.extras as parallel arrays.
      */
     fun getChapters(): List<ChapterInfo> {
         val controller = _controller.value
@@ -610,12 +580,10 @@ class PlaybackViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        // viewModelScope is already cancelled by the time onCleared() runs, so cleanup
-        // must happen synchronously here rather than via viewModelScope.launch.
-        // Stops the shared player only while it still plays this ViewModel's stream: by the time a
-        // screen's ViewModel is cleared, the screen it left for may already play its own on it
-        // (catch-up's Watch live and Back hand the player to the live preview — the preview was
-        // stopped here, seen on the emulator 2026-10-10, the catchup plan).
+        // viewModelScope is already cancelled when onCleared() runs, so clean up synchronously
+        // here. Stop the shared player only while it plays this ViewModel's stream: the screen this
+        // one left for can already play its own on it (catch-up's Watch live and Back hand the
+        // player to the live preview; the catchup plan).
         val service = StreamingPlaybackService.getInstance()
         val own = ownStreamUrl
         val ownsPlayback = service == null || own == null || XtreamStreamUrl.sameStream(service.currentMetadata.value.streamUrl, own)
@@ -626,10 +594,9 @@ class PlaybackViewModel(
         }
         if (ownsPlayback) service?.stop()
         serviceConnection.disconnect()
-        // The start-claim itself is no longer this ViewModel's to clear — see
-        // StreamingPlaybackService.tryClaimStart()'s doc. .stop() above doesn't tear the service
-        // down (unlike stopAndRelease()), so the service may still be alive and its claim still
-        // legitimately held after this ViewModel is cleared.
+        // The start claim is not this ViewModel's to clear (see
+        // StreamingPlaybackService.tryClaimStart()). stop() above does not tear the service down,
+        // so its claim can still be held.
     }
 }
 

@@ -25,8 +25,8 @@ fun formatBitrate(bitrate: Int): String =
     if (bitrate > 0) {
         val kbps = bitrate / 1000
         if (kbps > 1000) {
-            // Locale.US, not getDefault(): a device-locale decimal comma here would read as
-            // inconsistent next to formatRating()'s always-dot output elsewhere on screen.
+            // Locale.US, not getDefault(): a decimal comma would look inconsistent next to
+            // formatRating()'s dot.
             String.format(Locale.US, "%.1f Mbps", kbps / 1000f)
         } else {
             "$kbps Kbps"
@@ -36,8 +36,8 @@ fun formatBitrate(bitrate: Int): String =
     }
 
 /**
- * Parses a duration string that can be either raw seconds ("7200") or h:mm:ss / m:ss
- * format ("1:23:45"). Returns total seconds, or null if unparseable.
+ * Parses raw seconds ("7200") or h:mm:ss / m:ss ("1:23:45"). Returns total seconds, or null if it
+ * cannot parse.
  */
 fun parseDurationToSeconds(duration: String): Long? {
     duration.toLongOrNull()?.let { return it }
@@ -63,9 +63,8 @@ fun parseDurationToSeconds(duration: String): Long? {
 }
 
 /**
- * Computes "Ends at" wall-clock time from a duration string and optional resume
- * position. Returns a formatted time string like "10:30 PM", or null if the
- * duration is missing/unparseable.
+ * The "Ends at" clock time from a duration string and an optional resume position, for example
+ * "10:30 PM". Null when the duration is missing or cannot parse.
  */
 fun computeEndsAt(
     context: Context,
@@ -83,8 +82,8 @@ fun computeEndsAt(
 }
 
 /**
- * Formats a duration string (raw seconds or h:mm:ss / m:ss) into human-readable
- * "2h 0m" form. Returns the input unchanged if unparseable.
+ * Formats a duration string (raw seconds or h:mm:ss / m:ss) as "2h 0m". Returns the input unchanged
+ * if it cannot parse.
  */
 fun formatDuration(duration: String): String {
     val seconds = parseDurationToSeconds(duration) ?: return duration
@@ -98,22 +97,22 @@ fun formatDuration(duration: String): String {
 }
 
 /**
- * Trims a star rating to one decimal place. Providers pass TMDB's vote average straight through,
- * which carries three decimals ("6.666") and reads as false precision on a 10-point scale.
+ * Trims a star rating to one decimal. Providers pass TMDB's vote average through with three
+ * decimals ("6.666"), which is false precision on a 10-point scale.
  *
- * Returns the input unchanged when it is not a bare number — some providers send the rating
- * combined with a certificate, e.g. "7.9 | PG-13", and that must not be mangled into a number.
+ * Returns the input unchanged when it is not a bare number: some providers send the rating with a
+ * certificate, for example "7.9 | PG-13".
  */
 fun formatRating(rating: String): String {
     val value = rating.trim().toDoubleOrNull() ?: return rating
-    // Locale.US, not the default: on a device set to a comma-decimal locale this rendered "6,4"
-    // for one row and "9.0" for another (same list, different providers), which reads as a bug.
+    // Locale.US, not the default: a comma-decimal locale gave "6,4" on one row and "9.0" on another
+    // in the same list.
     return String.format(Locale.US, "%.1f", value)
 }
 
 /**
  * True when [duration] parses to more than zero seconds. Providers sometimes send "0" for an
- * unknown/missing runtime — treat that as absent rather than render it as a bogus "0s".
+ * unknown runtime: treat it as absent, not "0s".
  */
 fun hasMeaningfulDuration(duration: String?): Boolean = duration != null && (parseDurationToSeconds(duration) ?: 0) > 0
 
@@ -132,9 +131,8 @@ fun resolutionLabel(
     }
 
 /**
- * Channel-count label, e.g. "5.1", "7.1", "Stereo". [custom] handles any channel
- * count without a well-known name; the named labels default to English but can be
- * overridden (e.g. with string resources) by callers that need localization.
+ * Channel-count label, for example "5.1", "7.1", "Stereo". [custom] handles a count with no common
+ * name; the named labels default to English, and callers can pass string resources.
  */
 fun channelLabel(
     channels: Int,
@@ -152,9 +150,7 @@ fun channelLabel(
         else -> custom(channels)
     }
 
-/**
- * Extracts a 4-digit release year from metadata or by parsing the title string.
- */
+/** A 4-digit release year from metadata, else from the title. */
 fun extractYear(
     metadataYear: Int?,
     releaseDate: String?,

@@ -3,9 +3,7 @@ package org.njarasoa.fijerena.ui.theme
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Component sizes optimized for handheld touch interaction.
- */
+/** Component sizes for handheld touch. */
 object MobileDimensions {
     val safeMarginHorizontal: Dp = 16.dp
     val safeMarginVertical: Dp = 16.dp
@@ -18,7 +16,7 @@ object MobileDimensions {
     val iconPlayContainer: Dp = 56.dp
     val iconPlayIcon: Dp = 36.dp
 
-    // Height of the TMDB logo art rendered in place of the OSD's big title text.
+    // Height of the TMDB logo art shown in place of the OSD's big title text.
     val osdLogoHeight: Dp = 40.dp
     val progressIndicatorSmall: Dp = 20.dp
     val progressIndicatorDefault: Dp = 24.dp
@@ -28,13 +26,16 @@ object MobileDimensions {
     val dividerThin: Dp = 0.5.dp
     val strokeWidth: Dp = 2.dp
 
-    /** Default elevation for [org.njarasoa.fijerena.ui.components.cards.CinemaCard] list rows —
-     * enough shadow that a row reads as a raised card against the screen behind it, not a flat
-     * table cell. */
+    /**
+     * Default elevation of [org.njarasoa.fijerena.ui.components.cards.CinemaCard] list rows: enough
+     * shadow that a row reads as a raised card, not a flat table cell.
+     */
     val cardRowElevation: Dp = 2.dp
 
-    /** VOD scrubber thumb — M3's default is a 4dp-wide bar, which reads as a thin needle rather
-     * than a draggable knob. Round (equal width/height) and sized for a thumb, not a tick mark. */
+    /**
+     * VOD scrubber thumb. M3's default 4dp-wide bar reads as a thin needle; this is round and sized
+     * for a thumb.
+     */
     val playerScrubberThumbSize: Dp = 20.dp
 
     /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */

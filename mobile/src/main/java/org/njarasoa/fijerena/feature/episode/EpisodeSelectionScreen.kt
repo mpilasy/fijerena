@@ -197,8 +197,8 @@ fun MobileEpisodeSelectionScreen(
     val sourceName = rememberSourceName(providerId)
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
-    // Retained across a background refresh so the list stays visible with just a pull-spinner
-    // (PullToRefreshBox below) instead of flashing to a full-screen loading state.
+    // Kept across a background refresh, so the list stays with a pull spinner instead of a
+    // full-screen loading state.
     var lastSuccess by remember { mutableStateOf<SeriesDetailsViewModel.UiState.Success?>(null) }
     if (uiState is SeriesDetailsViewModel.UiState.Success) {
         lastSuccess = uiState as SeriesDetailsViewModel.UiState.Success
@@ -210,9 +210,9 @@ fun MobileEpisodeSelectionScreen(
     // episode's page again (the navigation round trip drops every plain remember).
     var personReturnEpisodeId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Selected episode for detail panel — set by an explicit tap (including on the Continue
-    // Watching resume episode below), on the way back from a person page opened from the episode's
-    // page, and for an actor's episode (below).
+    // The episode of the detail panel: set by a tap (also on the Continue Watching resume episode),
+    // on the way back from a person page opened from the episode's page, and for an actor's
+    // episode.
     var selectedEpisode by remember {
         mutableStateOf(
             personReturnEpisodeId?.let { id ->
@@ -222,9 +222,9 @@ fun MobileEpisodeSelectionScreen(
     }
     // Used once: a later return (from the player) opens on the list again.
     LaunchedEffect(Unit) { personReturnEpisodeId = null }
-    // An actor's episode (the route names its season too): its page opens once the show is in,
-    // so the episode picked is the one on screen (user, 2026-10-31). Once only: Back shows the
-    // list on it, and a return from the player stays where the user was.
+    // An actor's episode (the route names its season too): its page opens once the show is in, so
+    // the episode picked is the one on screen. Once only: Back shows the list on it, and a return
+    // from the player stays where the user was.
     var actorEpisodeOpened by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(displaySeriesDetail) {
         if (actorEpisodeOpened || initialEpisodeId == null || initialSeason == null) return@LaunchedEffect
@@ -239,17 +239,13 @@ fun MobileEpisodeSelectionScreen(
         personReturnEpisodeId = null
     }
 
-    // Episode/season this screen is anchored on, and whether that season was the user's own
-    // pick — see EpisodeResumeState.kt. Hoisted above both EpisodeListContent and
-    // EpisodeDetailContent (both disposed by the other's toggle, and by navigating to the
-    // player) — a plain remember, or state scoped to just one of the two content composables,
-    // would drop it and land the user back on season 1 episode 1 at the top of the list.
-    // initialSeason is best-effort: seriesDetail is usually already cached and available by
-    // this first composition, but on a genuinely cold load it isn't yet, and this is a
-    // rememberSaveable initial value — evaluated once, never revisited once seriesDetail
-    // arrives. EpisodeListContent's own anchor effect (keyed on seriesDetail) corrects it
-    // shortly after in that rare case, same as it does for a series with no resume episode at
-    // all; the only cost is one frame showing season 1 first instead of the resume season.
+    // The episode and season this screen is anchored on, and whether the season was the user's own
+    // pick (see EpisodeResumeState.kt). Hoisted above EpisodeListContent and EpisodeDetailContent,
+    // which each dispose on the other's toggle and on navigation to the player; a plain remember
+    // there would land on season 1 episode 1. initialSeason is best effort: on a cold load
+    // seriesDetail is not there yet, and a rememberSaveable initial value is read once.
+    // EpisodeListContent's anchor effect (keyed on seriesDetail) corrects it, at the cost of one
+    // frame of season 1.
     val resumeState =
         rememberEpisodeResumeState(
             seriesId = seriesId,
@@ -261,11 +257,10 @@ fun MobileEpisodeSelectionScreen(
         closeEpisode()
     }
 
-    // The episode list opens on the backdrop under a clear top bar (TV visual refresh, Phase 5);
-    // the bar turns solid with the title once the backdrop has scrolled up under it, and stays
-    // solid on an episode's own page and while there is no list to show (loading, error). The
-    // list also reports it covered once it has scrolled past the backdrop, as when the page opens
-    // on an episode and the backdrop is never drawn.
+    // The episode list opens on the backdrop under a clear top bar (TV visual refresh, Phase 5).
+    // The bar turns solid with the title once the backdrop scrolls up under it, and stays solid on
+    // an episode's page and with no list (loading, error). The list also reports it covered once
+    // scrolled past the backdrop, as when the page opens on an episode.
     var heroCovered by remember { mutableStateOf(false) }
     val showsList = displaySeriesDetail != null && selectedEpisode == null
     val solidBar = heroCovered || !showsList
@@ -273,7 +268,7 @@ fun MobileEpisodeSelectionScreen(
     Scaffold(
         topBar = {
             MobileScreenHeader(
-                // TMDB's clean title once it resolves, the provider's raw stream name until then
+                // TMDB's clean title once it resolves, the provider's raw stream name until then.
                 title = if (solidBar) tmdbTitle ?: cleanTitle(lastSuccess?.streamName ?: seriesName) else "",
                 onBack = {
                     if (selectedEpisode != null) {
@@ -283,8 +278,8 @@ fun MobileEpisodeSelectionScreen(
                     }
                 },
                 ground = if (solidBar) HeaderGround.Covered else HeaderGround.Artwork,
-                // Favourite is in the icon row under the Play/Resume button (see EpisodeListContent),
-                // the Plex/Netflix "actions under the poster" layout, not a top-bar icon.
+                // Favourite is in the icon row under Play / Resume (see EpisodeListContent), not in
+                // the top bar.
             )
         },
     ) { paddingValues ->
@@ -450,7 +445,7 @@ private fun EpisodeListContent(
     // The episode the route opened the screen on (Continue Watching, an actor's episode).
     initialEpisodeId: String?,
     // Continue Watching: the page stays at its top, where Play resumes that episode; the list does
-    // not scroll to it (user, 2026-10-31). An actor's episode scrolls into view.
+    // not scroll to it. An actor's episode scrolls into view.
     openAtTop: Boolean,
     categoryName: String?,
     logoUrl: String?,
@@ -504,9 +499,9 @@ private fun EpisodeListContent(
     val heroCovered = heroItemCovered || scrolledPastHero
     LaunchedEffect(heroCovered) { onHeroCovered(heroCovered) }
 
-    // How far the season row moves down so that, pinned, it sits below the top bar and not under
-    // it: none while it is lower than the bar, then as much as keeps it at the bar's bottom edge,
-    // so it never jumps. Read at layout time, so scrolling does not recompose.
+    // How far the season row moves down so that, pinned, it sits below the top bar: none while it
+    // is lower than the bar, then as much as keeps it at the bar's bottom edge, so it never jumps.
+    // Read at layout time, so scrolling does not recompose.
     val seasonRowShift: () -> Int = {
         if (listState.firstVisibleItemIndex > 0) {
             topBarPx
@@ -520,12 +515,11 @@ private fun EpisodeListContent(
     }
 
     // The anchor a season or show mark just moved Play to (markEpisodesWatched below): the list
-    // doesn't scroll to it, staying where the user pressed the mark.
+    // does not scroll to it and stays where the user pressed the mark.
     var anchorMovedByMark by remember { mutableStateOf<String?>(null) }
 
-    // Scroll to the resume episode, but only when it's actually the reason this season is
-    // selected — a manual tab tap or swipe must never yank the list back to the resume spot (or
-    // anywhere else); it stays exactly where the user left it.
+    // Scroll to the resume episode only when it is the reason this season is selected: a manual tab
+    // tap or swipe must never move the list.
     LaunchedEffect(resumeState.resumeEpisodeId) {
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
         if (targetId == anchorMovedByMark) return@LaunchedEffect
@@ -550,9 +544,9 @@ private fun EpisodeListContent(
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
 
-    // The route's episode is the resume episode only once it has been played: an actor's episode
-    // opens the screen on it, but it is not where the viewer stopped, so it gets no "Continue
-    // watching" (the episode cast plan). Read again on each entry, a return from the player too.
+    // The route's episode is the resume episode only once played: an actor's episode opens the
+    // screen on it, but it is not where the viewer stopped, so no "Continue watching" (the episode
+    // cast plan). Read again on each entry, a return from the player too.
     var routeEpisodePlayed by remember { mutableStateOf(false) }
     LaunchedEffect(initialEpisodeId) {
         routeEpisodePlayed = initialEpisodeId != null && wasPlayed(mediaRepository, initialEpisodeId)
@@ -573,10 +567,10 @@ private fun EpisodeListContent(
         )
     if (wishlist?.askRemove == true) WishlistRemovePrompt(wishlistTitle, wishlist.answer)
 
-    // Re-reads progress/watched (including TMDB siblings) for every episode of this series.
-    // Called after a manual mark, not just on initial load — a single-episode optimistic patch
-    // would miss a sibling that the mark just made completed, and wouldn't restore a resume bar
-    // an unmark brings back. Returns this series' own rows, for markEpisodesWatched's re-anchor.
+    // Reads progress and watched state again (TMDB siblings included) for every episode of this
+    // series. Called after a manual mark too: a single-episode patch would miss a sibling the mark
+    // completed, and would not restore a resume bar after an unmark. Returns this series' own rows,
+    // for markEpisodesWatched's re-anchor.
     suspend fun refreshEpisodeWatchState(): Map<String, WatchedItem> {
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
@@ -608,9 +602,9 @@ private fun EpisodeListContent(
     }
 
     // Mark a whole season (long-press its chip) or the whole show (the action row) watched or
-    // unwatched (the season show watched plan). Hidden for a source that keeps
-    // watched state on its server (Jellyfin). The wording follows episodesWatchState: "unwatched"
-    // only when every episode in scope is already watched.
+    // unwatched (the season show watched plan). Hidden for a source that keeps watched state on its
+    // server (Jellyfin). The wording follows episodesWatchState: "unwatched" only when every
+    // episode in scope is watched.
     val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkWatched }
     var showAllWatched by remember(seriesDetail) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(seriesDetail, watchedEpisodeIds, canMarkManyWatched) {
@@ -626,8 +620,8 @@ private fun EpisodeListContent(
                 }
             val allWatched = refreshEpisodeWatchState()
             // Play and the "Continue watching" badge move on to the first unwatched episode at once
-            // (the watched followups plan → Phase 1); the selected season stays.
-            // A single-episode toggle doesn't come through here, so it leaves the anchor alone.
+            // (the watched followups plan, Phase 1); the selected season stays. A single-episode
+            // toggle does not come here, so it leaves the anchor alone.
             seriesDetail
                 .resumeAnchorEpisodeId(
                     sortedSeasons = sortedSeasons,
@@ -662,10 +656,10 @@ private fun EpisodeListContent(
                         icon = if (nowWatched) CinemaIcons.MarkUnwatched else CinemaIcons.MarkWatched,
                         label = stringResource(if (nowWatched) R.string.watched_unmark else R.string.watched_mark),
                         onClick = {
-                            // Manual watched/unwatched mark (Phase 6, the watch state durable storage
-                            // plan). Optimistic: flips this episode's own badge at once; the full
-                            // re-read after the write catches a TMDB sibling this mark completed too
-                            // (Phase 5) and restores the resume bar on an unmark.
+                            // Manual watched mark (the watch state durable storage plan, Phase 6).
+                            // Optimistic: this episode's badge flips at once; the full read after
+                            // the write catches a TMDB sibling the mark completed (Phase 5) and
+                            // restores the resume bar on an unmark.
                             watchedEpisodeIds =
                                 if (nowWatched) watchedEpisodeIds - episode.id else watchedEpisodeIds + episode.id
                             watchedToggleScope.launch {
@@ -739,9 +733,9 @@ private fun EpisodeListContent(
                 for ((id, watched) in allWatched) {
                     if (watched.isCompleted) add(id)
                 }
-                // TMDB dedup (Phase 5): completing one language/quality variant of an episode
-                // completes them all. Checks only — never adds a resume bar or moves the anchor
-                // below, same as the movies side of this.
+                // TMDB dedup (Phase 5): completing one language or quality variant of an episode
+                // completes them all. Checks only: never adds a resume bar or moves the anchor, as
+                // for films.
                 addAll(mediaRepository.getSiblingCompletedEpisodeIds(seriesDetail.id))
             }
 
@@ -760,8 +754,8 @@ private fun EpisodeListContent(
                 )?.also { resumeState.applyAnchor(episodeId = it, season = null) }
 
         if (!hasMultipleSeasons) {
-            // Only one season, so no "which season" guess needed — still must seed
-            // selectedSeason or the episode list below stays keyed off null forever.
+            // Only one season, so no guess, but selectedSeason must still be set or the list below
+            // stays keyed on null.
             sortedSeasons.firstOrNull()?.let { resumeState.applyAnchor(episodeId = null, season = it.seasonNumber) }
             return@LaunchedEffect
         }
@@ -790,11 +784,10 @@ private fun EpisodeListContent(
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
 
-    // Segmented detail sections (the ui ux transitions flow uplift plan, Phase
-    // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
-    // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
-    // Episodes is the always-present, always-first tab.
-    // TMDB's credits when it has them (cast tab plan), else the source's cast names (CT-D7).
+    // Segmented detail sections (the ui ux transitions flow uplift plan, Phase 4 3c), hoisted above
+    // the LazyColumn: the hero item's TabRow and the LazyColumn's stickyHeader / items both need
+    // it. Episodes is always the first tab. TMDB's credits when it has them (cast tab plan), else
+    // the source's cast names (CT-D7).
     val tmdbCredits = credits?.takeUnless { it.isEmpty }
     val hasCast = tmdbCredits != null || !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
@@ -825,12 +818,10 @@ private fun EpisodeListContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                // Horizontal swipe anywhere in the list switches season — the touch equivalent
-                // of tapping a season tab. Vertical scrolling is untouched: this only fires on
-                // a horizontal drag, same technique EpisodeDetailContent below uses for
-                // prev/next episode. Gated on the Episodes detail-tab too — without it, a swipe
-                // made while looking at Details/Cast/More Like This silently changed the season
-                // selection in the background, invisible until switching back to Episodes.
+                // A horizontal swipe anywhere in the list switches season, as a season tab tap
+                // does; vertical scrolling is untouched (EpisodeDetailContent uses the same for
+                // previous / next episode). Only on the Episodes tab: elsewhere it changed the
+                // season out of sight.
                 .pointerInput(hasMultipleSeasons, previousSeason, nextSeason, selectedTab) {
                     if (!hasMultipleSeasons || selectedTab != SeriesDetailTab.EPISODES) return@pointerInput
                     var dragAmount = 0f
@@ -874,9 +865,9 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // Single dot-separated facts line, wrapping on a narrow phone (see
-                // MobileMovieDetailsScreen for the same treatment): the content rating an
-                // outlined badge, everything else plain text, in TV's order.
+                // One dot-separated facts line that wraps on a narrow phone (as
+                // MobileMovieDetailsScreen): the content rating as an outlined badge, the rest as
+                // plain text, in TV's order.
                 val presentLabel = stringResource(R.string.series_present)
                 val yearRange = seriesDetail.seriesYearRange(presentLabel)
                 val countText =
@@ -898,9 +889,9 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-                // Two lines (phone UI audit, #3): what the button does with the episode's code
-                // (the play icon, then "Resume S02E10 · 19:04 left" or "Play S01E01"), then the episode's own title
-                // under it. No code when the provider numbers episodes 0.
+                // Two lines (phone UI audit, #3): what the button does with the episode's code (the
+                // play icon, then "Resume S02E10 · 19:04 left" or "Play S01E01"), then the
+                // episode's own title. No code when the provider numbers episodes 0.
                 val anchorOwnTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }
                 val anchorSeason = anchorEpisode?.seasonNumber ?: 1
                 val anchorHasCode = anchorEpisode != null && anchorEpisode.episodeNumber > 0
@@ -966,7 +957,7 @@ private fun EpisodeListContent(
                     }
                 }
 
-                // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
+                // Secondary actions: only what the app supports (no Cast or Shuffle).
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1031,8 +1022,8 @@ private fun EpisodeListContent(
                     ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
                 }
 
-                // Segmented detail sections — tab state is hoisted above the LazyColumn (see
-                // there); this item only reads it.
+                // Segmented detail sections: the tab state is hoisted above the LazyColumn; this
+                // item only reads it.
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
                 CinemaTabRow(
                     selectedIndex = tabs.indexOf(selectedTab),
@@ -1076,10 +1067,9 @@ private fun EpisodeListContent(
             }
         }
 
-        // Episodes tab only: season tabs pinned in place as the episode list scrolls under it
-        // (stickyHeader, not a plain item), so it reads as the control for what's below rather
-        // than scrolling away with it. A horizontal swipe anywhere in this list (see the
-        // pointerInput above) does the same thing as tapping a tab.
+        // Episodes tab only: the season tabs pin in place as the list scrolls under them
+        // (stickyHeader), so they read as the control for what is below. A horizontal swipe in the
+        // list (see pointerInput above) does the same as a tab tap.
         if (selectedTab == SeriesDetailTab.EPISODES) {
             if (hasMultipleSeasons) {
                 stickyHeader(key = SEASON_TABS_KEY, contentType = "header") {
@@ -1127,9 +1117,9 @@ private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
     }
 
 /**
- * Details tab: director, the stream-name picker (alternate cached instances of this
- * series), TMDB id, then the category button. Cast lives in its own tab (see
- * [CastChipsTabContent]); episodes live in the always-present Episodes tab.
+ * Details tab: director, the stream-name picker (other cached copies of this series), TMDB id, then
+ * the category button. Cast has its own tab ([CastChipsTabContent]); episodes are in the Episodes
+ * tab.
  */
 @Composable
 private fun SeriesDetailsTabContent(
@@ -1198,10 +1188,9 @@ private fun CastChipsTabContent(cast: String) {
 }
 
 /**
- * The value of the Details tab's "Stream name" row. Plain text when [alternates] is empty — most
- * titles have no other cached instance. Becomes a tappable dropdown once there is at least one
- * other local catalogue entry sharing the same TMDB id, letting the user switch to that instance's
- * detail screen.
+ * The value of the Details tab's "Stream name" row. Plain text when [alternates] is empty (most
+ * titles). A dropdown when another catalogue entry has the same TMDB id, to open that copy's detail
+ * screen.
  */
 @Composable
 private fun StreamNamePicker(
@@ -1285,10 +1274,9 @@ private fun EpisodeDetailContent(
     val episodeCredits = rememberEpisodeCredits(mediaRepository, seriesDetail.metadata.tmdbId, episode, showCredits)
     val scrollState = rememberScrollState()
 
-    // Back from a person page opened from this cast: the page is new and its cast comes late, so the
-    // restored scroll was cut to the short page first and it opened at its top (seen in the walk,
-    // 2026-10-30). The place left is kept here, and the page goes back to it once it is that long:
-    // again when TMDB's cards come.
+    // Back from a person page opened from this cast: the page is new and its cast comes late, so
+    // the restored scroll was cut to the short page and it opened at its top. The place left is
+    // kept here, and the page goes back to it once it is that long, again when TMDB's cards come.
     var personScroll by rememberSaveable(episode.id) { mutableStateOf<Int?>(null) }
     LaunchedEffect(personScroll != null, episodeCredits != null) {
         val target = personScroll ?: return@LaunchedEffect
@@ -1297,10 +1285,8 @@ private fun EpisodeDetailContent(
         scrollState.scrollTo(target)
     }
 
-    // Load resume position. Keyed on the episode so stepping to another one clears the previous
-    // episode's value immediately rather than showing its resume time until the lookup lands —
-    // and the lookup assigns unconditionally, so an episode with nothing to resume resets it
-    // instead of leaving the last one's position behind.
+    // The resume position. Keyed on the episode, so a step to another one clears the old value at
+    // once; the lookup always assigns, so an episode with nothing to resume resets it.
     var resumePositionMs by remember(episode.id) { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
@@ -1349,7 +1335,8 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Episode title — the provider's often only repeats the show and the number ("EN - Show - S01E22")
+        // Episode title: the provider's often only repeats the show and the number ("EN - Show -
+        // S01E22").
         CinemaText(
             text = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) },
             role = TextRole.Display,
@@ -1379,7 +1366,7 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Single dot-separated meta row — same treatment as the series header above.
+        // One dot-separated meta row, as in the series header above.
         val contentRating = episode.metadata.contentRating ?: seriesDetail.metadata.contentRating
         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
         val year =
@@ -1424,9 +1411,8 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Start over and the trailer as the film and show pages offer them: icon actions under
-        // Play, the label in a tooltip. The trailer is the show's, not this episode's — Xtream
-        // and Jellyfin only ever carry one per series.
+        // Start over and the trailer, as on the film and show pages: icon actions under Play, the
+        // label in a tooltip. The trailer is the show's: Xtream and Jellyfin carry one per series.
         val trailer = seriesDetail.metadata.trailerUrl
         if (hasResume || trailer != null) {
             val playTrailer = rememberPlayTrailer()
@@ -1503,7 +1489,7 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // TMDB id, for a Nerd only: the episode's own when it has one, else the show's
+        // TMDB id, for a Nerd only: the episode's own, else the show's.
         if (LocalNerd.current) {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             CinemaText(
@@ -1549,12 +1535,11 @@ private fun EpisodeDetailContent(
 }
 
 /**
- * One row of season tabs (the current one marked by an accent bar under it, as the page's tabs);
- * tapping one switches [selectedSeason]. Horizontally scrollable so a
- * long-running show's season count never wraps the row. The row runs to the screen's edges (out
- * through the list's side padding) with the pills inset by that padding, so the first pill lines
- * up with the content and the last ones slide off the edge — plainly a row that scrolls — rather
- * than being cut short of it; the selected season is scrolled into view (phone UI audit, #3).
+ * One row of season tabs (the current one marked by an accent bar, as the page's tabs); a tap
+ * switches [selectedSeason]. It scrolls sideways, so many seasons never wrap. The row runs to the
+ * screen's edges with the pills inset by the list's padding, so the first pill lines up with the
+ * content and the last ones slide off the edge; the selected season is scrolled into view (phone UI
+ * audit, #3).
  */
 @Composable
 private fun SeasonTabs(
@@ -1610,8 +1595,8 @@ private fun SeasonTabs(
                     val shift = pinShift().toFloat()
                     if (shift > 0f) drawRect(background, topLeft = Offset(0f, -shift), size = Size(size.width, shift))
                 }
-                // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
-                // underneath it and need to actually be hidden, not show through.
+                // Opaque: the row is pinned (stickyHeader), so episode cards scroll under it and
+                // must not show through.
                 .panel(PanelFill.Ground)
                 .padding(vertical = CinemaSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
@@ -1622,7 +1607,7 @@ private fun SeasonTabs(
             Box {
                 // A tab as the page's tabs and TV's season tabs: the label in the Heading role
                 // (TvInputDefaults.tabLabelRole), the current one in the text colour over an accent
-                // bar on its bottom edge. The accent fill with accent text was hard to read.
+                // bar. Accent text on an accent fill was hard to read.
                 CinemaText(
                     text = stringResource(R.string.series_season_name_format, season.seasonNumber),
                     role = TextRole.Heading,
@@ -1698,8 +1683,8 @@ private fun EpisodeCard(
                         tone = TextTone.Accent,
                     )
                 }
-                // Episode number, with the watched check beside it — the 40dp thumbnail is too
-                // short to carry the check as an overlay the way the TV card does.
+                // Episode number, with the watched check beside it: the 40dp thumbnail is too short
+                // for the check as an overlay (as the TV card has).
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
@@ -1723,7 +1708,7 @@ private fun EpisodeCard(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
 
-                // Episode title: nothing when the provider's only repeats the show and the number
+                // Episode title: nothing when the provider's only repeats the show and the number.
                 val ownTitle = remember(episode.title) { episodeOwnTitle(episode.title) }
                 if (ownTitle.isNotBlank()) {
                     CinemaText(
@@ -1757,9 +1742,8 @@ private fun EpisodeCard(
             }
         }
 
-        // Resume progress, card-width at the bottom edge — same placement as the stream card in
-        // MobileCategoryListScreen, so a half-watched episode and a half-watched film read the
-        // same. Poster-width was too short to be legible.
+        // Resume progress, card-width at the bottom edge, as the stream card in
+        // MobileCategoryListScreen. Poster width was too short to read.
         if (watchProgress > 0f) {
             CinemaProgressBar(
                 progress = { watchProgress.coerceIn(0f, 1f) },

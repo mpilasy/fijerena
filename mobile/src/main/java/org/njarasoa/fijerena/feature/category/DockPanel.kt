@@ -21,7 +21,10 @@ internal fun dockCategoryKey(
         selectedCategoryId != null && selectedCategoryId !in CategoryViewModel.VIRTUAL_CATEGORY_IDS
     }
 
-/** The dock's tabs: Recent, Favourites, then the category (user, 2026-10-30), only when the channel was docked from one. */
+/**
+ * The dock's tabs: Recent, Favourites, then the category, only when the channel was docked from
+ * one.
+ */
 internal fun dockTabs(hasCategory: Boolean): List<PreviewListSource> =
     if (hasCategory) {
         listOf(PreviewListSource.RECENT, PreviewListSource.FAVORITES, PreviewListSource.CATEGORY)

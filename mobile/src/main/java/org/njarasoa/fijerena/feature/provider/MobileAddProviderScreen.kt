@@ -127,9 +127,8 @@ fun MobileAddProviderScreen(
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val providers by viewModel.providers.collectAsStateWithLifecycle()
-    // A background data sync must never block saving or leaving this screen — it runs
-    // independently of the form (ProviderSyncManager's own scope), so it isn't disturbed by
-    // either.
+    // A background data sync never blocks saving or leaving: it runs in ProviderSyncManager's own
+    // scope, apart from the form.
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     var showQuickConnectDialog by remember { mutableStateOf(false) }
@@ -174,19 +173,19 @@ fun MobileAddProviderScreen(
         }
     }
 
-    // A sync started here outlives this screen, so pick it back up when we come back to it
+    // A sync started here outlives this screen, so pick it up again on return.
     LaunchedEffect(editId) {
         if (isEditMode) viewModel.observeRunningSync(editId)
     }
 
-    // Refresh UI data when sync completes
+    // Refresh the UI data when a sync completes.
     LaunchedEffect(syncState) {
         if (syncState is SyncState.Success || syncState is SyncState.Error) {
             cacheRefreshTrigger++
         }
     }
 
-    // Load existing provider data in edit mode directly from the repository
+    // Edit mode: load the provider's data from the repository.
     LaunchedEffect(editId) {
         if (isEditMode) {
             val provider = providerRepo.getProviderById(editId)
@@ -682,9 +681,9 @@ fun MobileAddProviderScreen(
                     danger =
                         DialogAction(stringResource(R.string.common_ok)) {
                             coroutineScope.launch {
-                                // The live per-provider store, not a fresh XtreamRepository on provider 0:
-                                // going through AppContainer keeps the cached instance's in-memory
-                                // favorites view consistent with what was just removed from disk.
+                                // The live per-provider store via AppContainer, not a fresh
+                                // XtreamRepository on provider 0, so the cached instance's
+                                // in-memory favourites match what was just removed from disk.
                                 AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
                             }
                             showClearFavoritesDialog = false

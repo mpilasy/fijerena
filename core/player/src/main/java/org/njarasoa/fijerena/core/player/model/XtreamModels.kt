@@ -33,13 +33,13 @@ data class XtreamCategory(
 data class XtreamStream(
     @SerialName("num")
     val num: Int = 0,
-    // Defaults so one entry with `"name": null` (a panel-c film, 2026-10-09) doesn't fail the
-    // whole list: coerceInputValues turns a null into the default. [withName] then names the entry
-    // from its title, or drops it.
+    // Defaults, so one entry with `"name": null` (a panel-c film) does not fail the whole list:
+    // coerceInputValues turns a null into the default. [withName] then names the entry from its
+    // title, or drops it.
     @SerialName("name")
     val name: String = "",
-    // Raw: until 2026-10-09 the key was ignored, so a server sending it as anything but text
-    // must not start failing the list now. [titleText] reads it.
+    // Raw, so a server that sends it as anything but text does not fail the list. [titleText] reads
+    // it.
     @SerialName("title")
     val title: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("stream_type")
@@ -84,18 +84,16 @@ data class XtreamStream(
     val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
-/**
- * Note: Series use series_id instead of stream_id
- */
+/** Series use series_id, not stream_id. */
 @Serializable
 data class XtreamSeries(
     @SerialName("num")
     val num: Int? = null,
-    // See XtreamStream: a null name no longer fails the list.
+    // See XtreamStream: a null name does not fail the list.
     @SerialName("name")
     val name: String = "",
-    // Raw: until 2026-10-09 the key was ignored, so a server sending it as anything but text
-    // must not start failing the list now. [titleText] reads it.
+    // Raw, so a server that sends it as anything but text does not fail the list. [titleText] reads
+    // it.
     @SerialName("title")
     val title: kotlinx.serialization.json.JsonElement? = null,
     // See XtreamStream.streamId.
@@ -127,7 +125,7 @@ data class XtreamSeries(
     val youtubeTrailer: String? = null,
     @SerialName("episode_run_time")
     val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
-    // See XtreamStream: a null category id (a series list, 2026-10-12) no longer fails the list.
+    // See XtreamStream: a null category id (seen in a series list) does not fail the list.
     @SerialName("category_id")
     val categoryId: String = "",
     @SerialName("tmdb")
@@ -203,9 +201,9 @@ data class SeriesInfo(
 
 @Serializable
 data class SeriesDetails(
-    // Nullable: some Xtream servers omit it from `info` entirely, or send it as `title`. It is
-    // only a display fallback (the series list already carries the name), so a missing one must
-    // not fail the whole episode list — which is what a required field did.
+    // Nullable: some Xtream servers leave it out of `info`, or send it as `title`. It is only a
+    // display fallback (the series list has the name), so a missing one must not fail the whole
+    // episode list.
     @JsonNames("name", "title")
     @SerialName("name")
     val name: String? = null,
@@ -383,11 +381,10 @@ data class AudioInfo(
  * Custom serializer for the episodes map: some servers answer `[]` where the object belongs, and
  * some send an episode the model cannot read.
  *
- * Episodes are decoded one at a time. Handing the whole map to the generated serializer meant one
- * episode missing a required field — `title`, `container_extension` — aborted the decode and cost
- * the show every other episode it had, leaving a series that read as empty for a reason nothing
- * reported. An episode we cannot read is dropped on its own; a missing `container_extension` in
- * particular is unplayable anyway, since the stream URL is built from it.
+ * Episodes are decoded one at a time: with the generated serializer on the whole map, one episode
+ * without a required field (`title`, `container_extension`) failed the decode and the show read as
+ * empty. An episode we cannot read is dropped alone; one without `container_extension` cannot play
+ * anyway, as the stream URL is built from it.
  */
 object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
     private val mapSerializer = MapSerializer(String.serializer(), ListSerializer(Episode.serializer()))
@@ -428,8 +425,8 @@ object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
 }
 
 /**
- * Custom serializer for VideoInfo that handles both object and array responses
- * Some APIs return empty arrays [] instead of null/object for missing video info
+ * VideoInfo from an object or an array: some APIs send an empty array [] in place of null or an
+ * object.
  */
 object VideoInfoSerializer : KSerializer<VideoInfo?> {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
@@ -464,8 +461,8 @@ object VideoInfoSerializer : KSerializer<VideoInfo?> {
 }
 
 /**
- * Custom serializer for AudioInfo that handles both object and array responses
- * Some APIs return empty arrays [] instead of null/object for missing audio info
+ * AudioInfo from an object or an array: some APIs send an empty array [] in place of null or an
+ * object.
  */
 object AudioInfoSerializer : KSerializer<AudioInfo?> {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
@@ -500,8 +497,8 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
 }
 
 /**
- * This entry with a name to show: its own, else its title; null when it has neither (nothing to
- * list it under) or has no id (nothing to play). A list entry with no name used to fail the whole list.
+ * This entry with a name to show: its own, else its title. Null when it has neither (nothing to
+ * list it under) or no id (nothing to play), so one bad entry does not fail the whole list.
  */
 fun XtreamStream.withName(): XtreamStream? {
     if (streamId == 0) return null

@@ -56,8 +56,8 @@ fun AudioTrackSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
-    // tracks would freeze on an empty list for its whole lifetime.
+    // Keyed on tracksVersion: a dialog opened before ExoPlayer resolved the tracks would freeze on
+    // an empty list.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val audioTracks = remember(tracksVersion) { viewModel.getAudioTracks() }
     val nightAudioOn = rememberNightAudioOn()
@@ -109,8 +109,8 @@ fun SubtitleSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
-    // tracks would freeze on an empty list for its whole lifetime.
+    // Keyed on tracksVersion: a dialog opened before ExoPlayer resolved the tracks would freeze on
+    // an empty list.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val subtitleTracks = remember(tracksVersion) { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
@@ -152,8 +152,8 @@ fun QualitySelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
-    // tracks would freeze on an empty list for its whole lifetime.
+    // Keyed on tracksVersion: a dialog opened before ExoPlayer resolved the tracks would freeze on
+    // an empty list.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val videoQualities = remember(tracksVersion) { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }

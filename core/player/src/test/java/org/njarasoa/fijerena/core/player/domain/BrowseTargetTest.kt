@@ -23,8 +23,8 @@ class BrowseTargetTest {
 
     @Test
     fun aRowThatKnowsBetterKeepsItsOwnTarget() {
-        // A history row for one episode of a TV show: the content type would say "series", and
-        // acting on that is exactly how an episode id once reached the series screen.
+        // A history row for one episode of a TV show: the content type says "series", and acting on
+        // that sent an episode id to the series screen.
         val episode = BrowseTarget.Episode(episodeId = EpisodeId("242136"), seriesId = null)
 
         assertEquals(episode, item(episode).browseTarget(ContentType.TV_SHOWS))
