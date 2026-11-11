@@ -162,7 +162,7 @@ Older builds also created `xtream://<providerId>` sources for an Xtream-API inge
 
 - `parseChannelForIndex(parser, sourceId)` -> `EpgChannelEntity`
 - `parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)` -> `EpgProgrammeEntity`
-- `parseTimestamp(str, timezoneOverrideHours)` — XMLTV timestamp parser
+- `parseTimestamp(str, timezoneOverrideHours)` — XMLTV timestamp parser. It reads 8 to 14 digits (XMLTV lets a feed leave out the seconds or more; missing digits count as 0) and a zone part with or without a space before it (`splitTimestamp`; the index reads the file's zone with the same split).
 - `parse(inputStream, channelFilter, timeWindowSeconds)` — whole-file parse into `XmltvData`; no caller in the app any more
 
 **Timezone override:** a non-zero offset replaces the timezone in XMLTV timestamps, to fix sources that encode local times but label them UTC. It is per source: `ingestDownloadedSource` passes `EpgSourceEntity.timezoneOffsetHours` down to `parseProgrammeForIndex`. The object's own `timezoneOverrideHours` default is never set (0).

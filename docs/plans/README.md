@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-11 | [Audit cleanups](./20261111_audit-cleanups-plan.md) | Five small fixes the 2026-11-11 code audit confirmed: a scope leak in AppContainer, v2 test rule in mobile tests, lifecycle-aware flow collection, hoisted search regexes, standard XMLTV timestamp parsing | Planned 2026-11-11, not started |
+| 2026-11-11 | [Audit cleanups](./20261111_audit-cleanups-plan.md) | Five small fixes the 2026-11-11 code audit confirmed: a scope leak in AppContainer, v2 test rule in mobile tests, lifecycle-aware flow collection, hoisted search regexes, standard XMLTV timestamp parsing | AC-5 done 2026-11-11; AC-1 to AC-4 not started |
 | 2026-11-11 | [Match frame rate](./20261111_match-frame-rate-plan.md) | The TV app plays full-screen video at a display mode that matches the content's frame rate (24 fps at 24 Hz, 50 Hz channels at 50 Hz), with a This Device switch | Planned 2026-11-11; open questions MF-Q1 to MF-Q6 |
 | 2026-11-11 | [Preferred track languages](./20261111_preferred-track-languages-plan.md) | Each profile sets a preferred audio and subtitle language, used when the title or series has no saved choice; TV and phone | Planned 2026-11-11; open questions PL-Q1 to PL-Q7 |
 | 2026-11-11 | [Provider data tests](./20261111_provider-data-tests-plan.md) | Tests that run the parsers on recorded and hand-written provider answers (Xtream, XMLTV, M3U, TMDB, Jellyfin, sync), with a privacy gate for the fixtures | Planned 2026-11-11; open questions PD-Q1 to PD-Q6 |

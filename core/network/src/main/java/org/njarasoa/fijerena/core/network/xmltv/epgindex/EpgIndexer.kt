@@ -342,9 +342,7 @@ class EpgIndexer private constructor(
                                 val zone =
                                     parser
                                         .getAttributeValue(null, "start")
-                                        ?.trim()
-                                        ?.substringAfter(' ', "")
-                                        ?.trim()
+                                        ?.let { XmltvParser.splitTimestamp(it)?.second }
                                 if (zone != null && !mixedZones) {
                                     if (fileZone == null) {
                                         fileZone = zone

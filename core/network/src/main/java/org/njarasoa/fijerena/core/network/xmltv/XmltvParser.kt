@@ -309,25 +309,25 @@ object XmltvParser {
 
     private val zoneRegex = Regex("""([+-])(\d{2}):?(\d{2})""")
 
+    /**
+     * An XMLTV time split into its digits, padded to 14, and its zone part ("" when it has none).
+     * XMLTV lets a feed leave out digits from the right ("202611111800" has no seconds), and some
+     * feeds put no space before the zone ("20261111180000+0300"). Null without a full date (fewer
+     * than 8 digits) or with more than 14 digits.
+     */
+    fun splitTimestamp(ts: String): Pair<String, String>? {
+        val trimmed = ts.trim()
+        val digits = trimmed.takeWhile { it.isDigit() }
+        return if (digits.length in 8..14) digits.padEnd(14, '0') to trimmed.substring(digits.length).trim() else null
+    }
+
     fun parseTimestamp(
         ts: String,
         timezoneOverrideHours: Int = this.timezoneOverrideHours,
     ): Long =
         try {
-            // XMLTV format: "20260206180000 +0000" or "20260206180000"
-            val trimmed = ts.trim()
-
-            // Split into datetime part and optional timezone
-            val spaceIndex = trimmed.indexOf(' ')
-            val datePart: String
-            val tzPart: String?
-            if (spaceIndex > 0) {
-                datePart = trimmed.substring(0, spaceIndex)
-                tzPart = trimmed.substring(spaceIndex + 1).trim()
-            } else {
-                datePart = trimmed
-                tzPart = null
-            }
+            val (datePart, zone) = requireNotNull(splitTimestamp(ts)) { "Not an XMLTV time" }
+            val tzPart = zone.ifEmpty { null }
 
             val format = dateFormatThreadLocal.get()!!
 

@@ -190,6 +190,16 @@ class EpgOffsetShiftTest {
         }
 
     @Test
+    fun `an import records the offset of times with no space before the zone`() =
+        runBlocking {
+            val date = day.format(DateTimeFormatter.BASIC_ISO_DATE)
+            val xml =
+                """<?xml version="1.0" encoding="UTF-8"?><tv><channel id="ARS.uk"><display-name>Arsenal TV</display-name></channel>""" +
+                    """<programme start="${date}1600+0200" stop="${date}1700+0200" channel="ARS.uk"><title>A</title></programme></tv>"""
+            assertEquals(120, settings.epgSourceDao().getSourceById(imported(xml))!!.fileUtcOffsetMinutes)
+        }
+
+    @Test
     fun `zone parts read as minutes`() {
         assertEquals(480, XmltvParser.zoneMinutes("+0800"))
         assertEquals(-330, XmltvParser.zoneMinutes("-05:30"))

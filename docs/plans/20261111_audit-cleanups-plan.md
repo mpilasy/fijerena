@@ -1,6 +1,6 @@
 # Audit cleanups
 
-**Status:** Planned 2026-11-11, not started. One commit; no open questions.
+**Status:** Planned 2026-11-11. AC-5 done 2026-11-11; AC-1 to AC-4 not started. No open questions.
 
 ## Goal
 
@@ -32,7 +32,7 @@ The audit listed 15 findings. Five are real and listed under Work. The others we
 | AC-2 | Move the 13 mobile tests on the old `createComposeRule` to `androidx.compose.ui.test.junit4.v2.createComposeRule`. CONTRIBUTING → Tech Stack: with the old rule, focus retries do not run. | `mobile/src/test/` |
 | AC-3 | Use `collectAsStateWithLifecycle()` in place of `collectAsState()`, so collection stops while the activity is stopped. | `SourceBadges.kt` (2 sites), both `MainActivity.kt`, `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `WatchQuestion.kt` |
 | AC-4 | Make the two regexes in `formatFtsQuery` top-level `private val`s. It runs on each search query. | `core/network/.../xtream/manager/XtreamContentManager.kt` |
-| AC-5 | Parse 12-digit XMLTV timestamps (`YYYYMMDDhhmm`, seconds optional per XMLTV DTD) and timestamps without a space before `+HHMM`/`-HHMM`. Feeds without seconds currently fail `SimpleDateFormat` and drop all programmes; feeds without a space drop the timezone and shift air times. | `core/network/.../xmltv/XmltvParser.kt`, `parseTimestamp` |
+| AC-5 | Parse 12-digit XMLTV timestamps (`YYYYMMDDhhmm`, seconds optional per XMLTV DTD) and timestamps without a space before `+HHMM`/`-HHMM`. Feeds without seconds currently fail `SimpleDateFormat` and drop all programmes; feeds without a space drop the timezone and shift air times. | `core/network/.../xmltv/XmltvParser.kt`, `parseTimestamp` (**Done 2026-11-11:** `splitTimestamp`, also used by `EpgIndexer` for the file's zone; checked on the TV emulator with a guide in both formats) |
 
 ## Checks
 

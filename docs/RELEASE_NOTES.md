@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Guides with short times:** a guide that writes its times without seconds ("202611111800", which XMLTV allows) showed no programmes at all, and a guide with no space before the time zone ("20261111180000+0300") showed every programme hours early or late. Both now read correctly.
+
 ## Version: 0.9.20261111200651
 
 - **Up next waits for you:** the Up next card near the end of an episode still offers the next one, with Watch now chosen, but the next episode no longer starts by itself when nobody answers: the player closes, back to the episode list. The card also appears at most 4 minutes before the end, so it no longer covers the last minutes of a long episode. TV and phone.
