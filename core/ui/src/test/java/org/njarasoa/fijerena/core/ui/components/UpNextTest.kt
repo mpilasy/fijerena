@@ -12,7 +12,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 class UpNextTest {
     private val next = EpisodeItem(id = "ep-2", episodeNumber = 2, title = "The Return", seasonNumber = 1)
 
-    private val longEpisode = 47 * 60_000L // lead 12% = 5 min 38.4 s
+    private val longEpisode = 47 * 60_000L // 12% = 5 min 38.4 s, capped at 4 min
+    private val midEpisode = 22 * 60_000L // lead 12% = 2 min 38.4 s
     private val shortEpisode = 5 * 60_000L // lead 90 s
 
     private fun shows(
@@ -25,18 +26,25 @@ class UpNextTest {
     ) = showUpNext(autoplay, xtream, nextEpisode, positionMs, durationMs, dismissed)
 
     @Test
-    fun `lead is 12 percent for a long episode, 90 s for a short one, none for an unknown length`() {
-        assertEquals(338_400L, upNextLeadMs(longEpisode))
+    fun `lead is 12 percent, at least 90 s and at most 4 min, none for an unknown length`() {
+        assertEquals(240_000L, upNextLeadMs(longEpisode))
+        assertEquals(158_400L, upNextLeadMs(midEpisode))
         assertEquals(90_000L, upNextLeadMs(shortEpisode))
         assertEquals(0L, upNextLeadMs(0L))
         assertEquals(0L, upNextLeadMs(-1L))
     }
 
     @Test
-    fun `long episode - shows in the last 12 percent, not before`() {
-        assertFalse(shows(longEpisode - 338_401L))
-        assertTrue(shows(longEpisode - 338_400L))
+    fun `long episode - shows in the last 4 min, not before`() {
+        assertFalse(shows(longEpisode - 240_001L))
+        assertTrue(shows(longEpisode - 240_000L))
         assertTrue(shows(longEpisode - 5_000L))
+    }
+
+    @Test
+    fun `mid-length episode - shows in the last 12 percent, not before`() {
+        assertFalse(shows(midEpisode - 158_401L, midEpisode))
+        assertTrue(shows(midEpisode - 158_400L, midEpisode))
     }
 
     @Test
@@ -61,15 +69,6 @@ class UpNextTest {
         assertFalse(shows(longEpisode - 5_000L, autoplay = false))
         assertFalse(shows(longEpisode - 5_000L, nextEpisode = null))
         assertFalse(shows(longEpisode - 5_000L, xtream = false))
-    }
-
-    @Test
-    fun `end of episode - plays the next one only with the setting on, an Xtream provider and no cancel`() {
-        assertEquals(next, upNextOnEnd(autoplayEnabled = true, providerSupportsAutoplay = true, nextEpisode = next, dismissed = false))
-        assertNull(upNextOnEnd(autoplayEnabled = false, providerSupportsAutoplay = true, nextEpisode = next, dismissed = false))
-        assertNull(upNextOnEnd(autoplayEnabled = true, providerSupportsAutoplay = false, nextEpisode = next, dismissed = false))
-        assertNull(upNextOnEnd(autoplayEnabled = true, providerSupportsAutoplay = true, nextEpisode = null, dismissed = false))
-        assertNull(upNextOnEnd(autoplayEnabled = true, providerSupportsAutoplay = true, nextEpisode = next, dismissed = true))
     }
 
     @Test

@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Up next waits for you:** the Up next card near the end of an episode still offers the next one, with Watch now chosen, but the next episode no longer starts by itself when nobody answers: the player closes, back to the episode list. The card also appears at most 4 minutes before the end, so it no longer covers the last minutes of a long episode. TV and phone.
+
 ## Version: 0.9.20261111185612
 
 - **Guide search counts in your language:** the Nerd line over Search the Guide's results ("12 programmes (30 airings)") was always in English. It is now in English, French or Malagasy, as the app is.

@@ -44,7 +44,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -63,13 +62,11 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
-import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -159,10 +156,9 @@ fun PlayerScreen(
         // The frame on screen, for copying (the wait indicator's scene colour).
         val sceneFrame = rememberSceneFrame()
 
-        // Autoplay next episode (see UpNextState). The "Up next" card shows over the playing episode near
-        // its end; its countdown is the playback time left, so it stops with the video.
+        // The "Up next" card (see UpNextState) shows over the playing episode near its end; its countdown
+        // is the playback time left, so it stops with the video. Only Watch now plays the next episode.
         val autoplayNext = remember { AppSettings(context.applicationContext).autoplayNextEpisode }
-        val lifecycle = LocalLifecycleOwner.current.lifecycle
         val upNextDismissed = upNextState.dismissedFor != null && upNextState.dismissedFor == currentStreamId
         val upNext =
             nextEpisode?.takeIf {
@@ -394,24 +390,15 @@ fun PlayerScreen(
                 }
 
                 // Natural end of a film/episode (never live TV: Ended is only emitted for !metadata.isLive): leave
-                // the player instead of waiting for Back, unless the profile plays the next episode automatically,
-                // there is one and its card was not cancelled: then it plays at once (once the screen is in the
-                // foreground). EndedContent shows until this fires. While a next episode starts, the player still
-                // reads Ended (and this screen mounts again): nothing to do until it plays.
+                // the player instead of waiting for Back. The next episode plays only from the "Up next" card's
+                // Watch now, never on its own. EndedContent shows until this fires. While a next episode starts,
+                // the player still reads Ended (and this screen mounts again): nothing to do until it plays.
                 LaunchedEffect(currentPs, currentStreamId) {
                     val startingFrom = upNextState.startingFrom
                     if (startingFrom != null) {
                         if (currentPs !is PlaybackState.Ended && currentStreamId != startingFrom) upNextState.startingFrom = null
                     } else if (currentPs is PlaybackState.Ended && continueOnEnd?.invoke() != true) {
-                        val next =
-                            upNextOnEnd(autoplayNext, autoplayNextSupported, nextEpisode, upNextDismissed)
-                                ?.takeIf { onPlayNextEpisode != null }
-                        if (next != null) {
-                            lifecycle.awaitStarted()
-                            playUpNext(next)
-                        } else {
-                            onBack()
-                        }
+                        onBack()
                     }
                 }
 

@@ -80,14 +80,12 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
-import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.components.waitKindOf
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
@@ -509,8 +507,9 @@ fun MobilePlayerContent(
         // player gets there.
         val shownPosition = seekTarget ?: livePosition
 
-        // Autoplay next episode. The "Up next" card shows over the playing episode near its end
-        // (see showUpNext); its countdown is the playback time left, so it stops with the video.
+        // The "Up next" card shows over the playing episode near its end (see showUpNext); its
+        // countdown is the playback time left, so it stops with the video. Only Watch now plays the
+        // next episode.
         // Per playing stream: the one whose card was cancelled or used (hidden for that episode),
         // and the one the next episode starts from, until the new one plays (the player reads the
         // old episode, or Ended, until then).
@@ -519,7 +518,7 @@ fun MobilePlayerContent(
         var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
         var upNextStartingFrom by remember { mutableStateOf<String?>(null) }
         val upNextDismissed = upNextDismissedFor != null && upNextDismissedFor == shownSuccess?.streamId
-        // Hidden in picture-in-picture (nothing there to tap); the episode still rolls on at its end.
+        // Hidden in picture-in-picture (nothing there to tap).
         val upNext =
             shownSuccess?.nextEpisode?.takeIf {
                 !isInPipMode &&
@@ -552,24 +551,11 @@ fun MobilePlayerContent(
         }
 
         // Natural end of a film or episode (never live: Ended is only emitted for VOD). Leave the
-        // player rather than sit on a frozen frame with no controls (Ended draws nothing below),
-        // unless the profile plays the next episode automatically, there is one and its card was
-        // not cancelled: then it plays at once (once the app is at least STARTED, which PiP is).
+        // player rather than sit on a frozen frame with no controls (Ended draws nothing below). The
+        // next episode plays only from the "Up next" card's Watch now, never on its own.
         LaunchedEffect(currentPs) {
             if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
-                val next =
-                    upNextOnEnd(
-                        autoplayNext,
-                        shownSuccess?.supportsAutoplayNext == true,
-                        shownSuccess?.nextEpisode,
-                        upNextDismissed,
-                    )
-                if (next != null) {
-                    lifecycleOwner.lifecycle.awaitStarted()
-                    playUpNext(next)
-                } else {
-                    onBack()
-                }
+                onBack()
             }
         }
 
