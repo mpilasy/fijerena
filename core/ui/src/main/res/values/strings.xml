@@ -662,6 +662,15 @@
         <item quantity="one">%1$d more airing</item>
         <item quantity="other">%1$d more airings</item>
     </plurals>
+    <plurals name="epg_browser_stats_programmes">
+        <item quantity="one">%1$d programme</item>
+        <item quantity="other">%1$d programmes</item>
+    </plurals>
+    <plurals name="epg_browser_stats_airings">
+        <item quantity="one">%1$d airing</item>
+        <item quantity="other">%1$d airings</item>
+    </plurals>
+    <string name="epg_browser_stats_truncated">(cut short)</string>
     <string name="epg_browser_on_air_badge">ON AIR</string>
     <string name="epg_browser_soon_badge">SOON</string>
     <string name="epg_browser_recent_searches">Recent Searches</string>

@@ -754,10 +754,17 @@ class EpgBrowserViewModel(
     }
 }
 
-/** "N programs (M airings) — 1.2s [source]" summary line for the results header. */
+/**
+ * "12 programmes (30 airings) — 1.2s [FTS phrase]": the results header's line for a Nerd, in the
+ * app language. The search path tags stay in English: they name the code paths.
+ */
+@androidx.compose.runtime.Composable
 fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
     val timeStr = String.format(Locale.US, "%.1f", searchTimeMs / 1000.0)
-    val truncatedSuffix = if (truncated) " (truncated)" else ""
+    val truncatedLabel =
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_stats_truncated)
+    val truncatedSuffix = if (truncated) " $truncatedLabel" else ""
     val sourceSuffix =
         when {
             !searchedFromIndex -> {
@@ -773,7 +780,13 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
                 }
             }
         }
-    return "$totalPrograms programs ($totalAirings airings) — ${timeStr}s$truncatedSuffix$sourceSuffix"
+    val programmes =
+        androidx.compose.ui.res
+            .pluralStringResource(R.plurals.epg_browser_stats_programmes, totalPrograms, totalPrograms)
+    val airings =
+        androidx.compose.ui.res
+            .pluralStringResource(R.plurals.epg_browser_stats_airings, totalAirings, totalAirings)
+    return "$programmes ($airings) — ${timeStr}s$truncatedSuffix$sourceSuffix"
 }
 
 /** Why [EpgBrowserViewModel.UiState.IndexBusy.query] hasn't run yet. */

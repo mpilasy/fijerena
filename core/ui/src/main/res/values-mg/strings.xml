@@ -593,6 +593,15 @@
         <item quantity="one">%1$d fandaharana hafa</item>
         <item quantity="other">%1$d fandaharana hafa</item>
     </plurals>
+    <plurals name="epg_browser_stats_programmes">
+        <item quantity="one">%1$d fandaharana</item>
+        <item quantity="other">%1$d fandaharana</item>
+    </plurals>
+    <plurals name="epg_browser_stats_airings">
+        <item quantity="one">%1$d fandefasana</item>
+        <item quantity="other">%1$d fandefasana</item>
+    </plurals>
+    <string name="epg_browser_stats_truncated">(notapahina)</string>
     <string name="epg_browser_on_air_badge">MIRONGATRA</string>
     <string name="epg_browser_soon_badge">MANATONA</string>
     <string name="epg_browser_recent_searches">Fikarohana farany</string>
