@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261111185612
 
 - **Guide search counts in your language:** the Nerd line over Search the Guide's results ("12 programmes (30 airings)") was always in English. It is now in English, French or Malagasy, as the app is.
 - **Clearer PIN reminder:** the Set a PIN for Settings reminder no longer says that a child can switch to any profile, since a PIN does not change that. It now says only that without an admin PIN anyone can change sources, content filters and profiles. English, French and Malagasy.
