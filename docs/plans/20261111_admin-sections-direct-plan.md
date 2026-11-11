@@ -1,6 +1,6 @@
 # Admin Sections Without the Admin List
 
-**Status:** In progress since 2026-11-11: Phases 1 (TV) and 2 (phone) done; Phase 3 (emulator check) next.
+**Status:** Done 2026-11-11 (84d9e5bb2 TV, fa6813e9f phone), walked on both emulators.
 
 ## Goal
 
@@ -74,4 +74,4 @@ One commit per phase; each phase builds and passes its tests, and updates its do
 |---|---|---|
 | 1 | TV rail and pane | Done 2026-11-11 |
 | 2 | Phone Settings list | Done 2026-11-11 |
-| 3 | Emulator check | Not started |
+| 3 | Emulator check | Done 2026-11-11: Admin with its PIN (locked panes, PIN pad, Cancel, all five sections after one PIN, Back and Left, the Parental Controls → Profiles link) on both emulators; a grown-up on the phone (no Admin rows). A child not walked: its Settings did not change, and the unit tests cover it. |
