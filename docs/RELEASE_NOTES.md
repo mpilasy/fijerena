@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Jellyfin hears every stop:** when the app could not save your place at the end of playback, it also did not tell the Jellyfin server that playback stopped, so the server kept the old position and showed the title as still playing. Now the server is always told. TV and phone.
+
 ## Version: 0.9.20261111170052
 
 - **Admin sections straight from Settings:** an admin's Settings now lists the five Admin sections (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup) directly, so a section opens in one step. On TV they are rows of the Settings rail under an Admin heading; on the phone they are rows under the Admin header. Admin's list of sections and the Open Admin row are gone. The first section you open asks for the admin PIN, once per session; on TV a section shows only "PIN needed" until then.

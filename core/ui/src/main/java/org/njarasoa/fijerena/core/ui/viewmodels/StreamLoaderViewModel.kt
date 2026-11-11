@@ -883,43 +883,53 @@ class StreamLoaderViewModel(
         val currentState = _state.value as? StreamState.Success
         val repo = mediaRepository
         if (currentState != null && repo != null) {
+            // The source hears of the stop even when the local write fails: a Jellyfin server keeps
+            // its own resume point and "now playing" state. The failure still reaches the caller.
+            var writeFailure: Exception? = null
             if (contentType != ContentType.LIVE_TV) {
-                val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+                try {
+                    val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
 
-                if (progressPercent >= 2.0f) {
-                    repo.saveLastPlayedItem(
-                        categoryId = currentCategoryId,
-                        itemId = currentState.streamId,
-                        itemName = currentState.streamName,
-                        contentType = contentType,
+                    if (progressPercent >= 2.0f) {
+                        repo.saveLastPlayedItem(
+                            categoryId = currentCategoryId,
+                            itemId = currentState.streamId,
+                            itemName = currentState.streamName,
+                            contentType = contentType,
+                            episodeId = episode,
+                            episodeExtension = currentEpisodeExtension,
+                            seriesId = series,
+                            seriesName = seriesName,
+                        )
+                    }
+
+                    // Metadata goes with every position write, not only the ones past the threshold
+                    // above: this call creates the row for a session too short to reach it, and a row
+                    // without it is an episode that cannot say which show it belongs to.
+                    repo.savePlaybackPosition(
+                        currentState.streamId,
+                        currentState.streamName,
+                        currentCategoryId,
+                        contentType,
+                        position,
+                        duration,
+                        audioTrackIndex = audioTrackIndex,
+                        subtitleTrackIndex = subtitleTrackIndex,
                         episodeId = episode,
                         episodeExtension = currentEpisodeExtension,
                         seriesId = series,
                         seriesName = seriesName,
                     )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    writeFailure = e
                 }
-
-                // Metadata goes with every position write, not only the ones past the threshold
-                // above: this call creates the row for a session too short to reach it, and a row
-                // without it is an episode that cannot say which show it belongs to.
-                repo.savePlaybackPosition(
-                    currentState.streamId,
-                    currentState.streamName,
-                    currentCategoryId,
-                    contentType,
-                    position,
-                    duration,
-                    audioTrackIndex = audioTrackIndex,
-                    subtitleTrackIndex = subtitleTrackIndex,
-                    episodeId = episode,
-                    episodeExtension = currentEpisodeExtension,
-                    seriesId = series,
-                    seriesName = seriesName,
-                )
             }
 
             // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
             repo.onPlaybackStopped(currentState.streamId, position, duration)
+            writeFailure?.let { throw it }
 
             // Flush to disk immediately to ensure history is committed
             repo.flushWatchHistory()
