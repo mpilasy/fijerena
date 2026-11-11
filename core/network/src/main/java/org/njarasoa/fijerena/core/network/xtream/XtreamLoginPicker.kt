@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap
  * main login costs nothing: no panel request, the URL as built. With extra logins, every login's
  * `player_api.php` is asked in parallel (3 s each) and the first free one is taken, preferring the
  * one this device is playing on now (a channel change replaces its own stream) and then the one it
- * used last. Nothing free or nothing answers: the main login, as before. Process-wide state, like
- * the player's. See the shared logins plan.
+ * used last. Nothing free or nothing answers: the main login. Process-wide state, like the
+ * player's. See the shared logins plan.
  */
 object XtreamLoginPicker : AlternateLogin {
     private const val CHECK_TIMEOUT_MS = 3_000L

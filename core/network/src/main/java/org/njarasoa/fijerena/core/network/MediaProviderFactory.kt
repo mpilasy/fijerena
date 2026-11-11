@@ -26,24 +26,22 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Resolves the correct [MediaProvider] implementation based on the provider entity type.
- *
- * Caches provider instances by ID to ensure the same authenticated provider is reused
- * across all screens, preventing session conflicts (especially for Jellyfin).
+ * Picks the [MediaProvider] implementation for a provider entity's type, and caches instances by
+ * id, so every screen reuses one authenticated provider (no session conflicts, Jellyfin above all).
  */
 object MediaProviderFactory {
     private val json = Json { ignoreUnknownKeys = true }
 
-    // Prevents multiple auth sessions that can invalidate each other
-    // ConcurrentHashMap: create() is called from background workers, IO dispatchers, and
-    // composables, while trimMemory()/clearCache() mutate/iterate it from other threads.
+    // One instance per provider, so no two auth sessions cancel each other. ConcurrentHashMap:
+    // create() runs from workers, IO dispatchers and composables while trimMemory()/clearCache()
+    // change it from other threads.
     private val providerCache = ConcurrentHashMap<Long, MediaProvider>()
 
     // Disconnects of evicted providers run here, off the caller's thread.
     private val disconnectScope = AppScopes.create("MediaProviderFactory.disconnect", kotlinx.coroutines.Dispatchers.IO)
 
     /**
-     * Reuses cached instances to avoid creating duplicate auth sessions.
+     * Reuses the cached instance, so no second auth session starts.
      *
      * @param password The decrypted password from ProviderRepository
      */
@@ -52,11 +50,8 @@ object MediaProviderFactory {
         context: Context,
         password: String,
     ): MediaProvider =
-        // computeIfAbsent is atomic per key on ConcurrentHashMap: only one caller's block ever
-        // runs for a given provider id, even under concurrent access. A check-then-act (get,
-        // build, putIfAbsent) would let two racing callers each build a full provider — including
-        // a real authenticated session — before only one got cached and the other silently
-        // discarded.
+        // computeIfAbsent runs one caller's block per id. With get, build and putIfAbsent, two
+        // callers could each build a provider with a real session, and one would be discarded.
         providerCache.computeIfAbsent(entity.id) {
             when (entity.type) {
                 "XTREAM" -> createXtream(entity, context, password)
@@ -69,17 +64,14 @@ object MediaProviderFactory {
         }
 
     /**
-     * Whether a provider carries live TV channels, and can therefore have an XMLTV EPG
-     * attached to it. EPG is a live-TV concept: Jellyfin and SMB serve on-demand media only,
-     * and a local folder only has channels when an M3U playlist is configured.
+     * Whether a provider carries live TV channels, so an XMLTV guide can attach to it: Jellyfin and
+     * SMB serve on-demand media only, and a local folder has channels only with an M3U playlist.
      *
-     * Derived from type + config alone - no credentials, no network, no provider instance - so
-     * it is safe to call for every row of a provider list. Mirrors the `supportedContentTypes`
-     * declared by each provider's `capabilities`; keep it in sync with [create] above.
+     * From type and config alone (no credentials, network or instance), so safe for every row of a
+     * list. Keep it in line with each provider's `supportedContentTypes` and with [create].
      *
-     * Note this is deliberately NOT `capabilities.supportsEpg`, which means *native* EPG
-     * (Xtream's get_short_epg). A REMOTE_M3U provider has no native EPG but is exactly the
-     * case that needs an external XMLTV source.
+     * Not `capabilities.supportsEpg`, which means a *native* EPG (Xtream's get_short_epg): a
+     * REMOTE_M3U provider has none but needs an external XMLTV source.
      */
     fun hasLiveTv(entity: ProviderEntity): Boolean =
         when (entity.type) {
@@ -107,8 +99,8 @@ object MediaProviderFactory {
     /**
      * Told the id of each provider whose settings or login changed in the app ([providerChanged]).
      * `AppContainer` sets it to drop its cached `MediaRepository` along with the provider, which
-     * would otherwise keep the old, disconnected instance and reconnect it with the old login. See
-     * the next level rock solid resilience plan → R-06 step 2.
+     * would otherwise keep the old, disconnected instance and reconnect it with the old login. See the
+     * next level rock solid resilience plan → R-06 step 2.
      */
     @Volatile
     var providerChangedListener: ((Long) -> Unit)? = null

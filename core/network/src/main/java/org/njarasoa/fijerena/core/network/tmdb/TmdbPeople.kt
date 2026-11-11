@@ -17,9 +17,9 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
 
 /**
- * The people read from TMDB, kept 7 days for the device (the cast tab plan,
- * Design 5): an actor page opened again asks TMDB nothing. Kept in memory and in one file per
- * person under [dir]. A person read in another TMDB language ([language]) is read again.
+ * The people read from TMDB, kept 7 days for the device (the cast tab plan, Design 5): an actor
+ * page opened again asks TMDB nothing. Kept in memory and in one file per person under [dir]. A
+ * person read in another TMDB language ([language]) is read again.
  *
  * The credits of the person opened on an actor page ([credit], `credit/{credit_id}`) are kept with
  * the person, for as long as the person (the episode cast plan).
@@ -261,8 +261,8 @@ fun personCredits(
 
 /**
  * A credit that is not a role in a story: a talk, news or reality show, or the person as
- * themselves ("Self", "Himself", "Herself"). Found in the walk (2026-10-30): an actor's TV
- * Shows row was full of the talk shows they visited.
+ * themselves ("Self", "Himself", "Herself"). Without this, an actor's TV Shows row was full of the
+ * talk shows they visited.
  */
 internal fun isAppearance(credit: TmdbPersonCredit): Boolean =
     credit.genreIds.any { it in APPEARANCE_GENRES } ||

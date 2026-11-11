@@ -14,8 +14,8 @@ import javax.crypto.KeyAgreement
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * What pairing QR codes carry, and the one-time key agreement of a handoff. See
- * the live sync plan → Security (pairing).
+ * What pairing QR codes carry, and the one-time key agreement of a handoff. See the live sync plan
+ * → Security (pairing).
  *
  * - [Invite]: shown by a device of an account; the device that scans it joins with the pairing code
  *   and the account key in it. The key is on screen: shown only on demand, never saved as an image.

@@ -42,10 +42,9 @@ class XmltvEpgService(
             }
     }
 
-    // The parsed listings used to live in SharedPreferences as one JSON blob of every channel
-    // asked for since the last index build: it grew with each channel change, was rewritten whole
-    // each time, and apply() made the main thread wait for it in onPause/onStop. Memory only now;
-    // the old file is deleted once, off the main thread.
+    // Parsed listings were once a SharedPreferences blob that grew with each channel change and
+    // made the main thread wait in onPause/onStop. Memory only now; the old file is deleted once,
+    // off the main thread.
     private val legacyPrefsDeleted = AtomicBoolean(false)
 
     private class CachedListings(
@@ -57,16 +56,13 @@ class XmltvEpgService(
     // Guarded by itself: several IO threads read and write it at once.
     private val parsedEpgCache = parsedCaches.computeIfAbsent(providerId) { newParsedCache() }
 
-    // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
+    // Cached channel match maps: no full DB scan and 5 map builds on each getNowPlayingForItems call.
     @Volatile private var cachedChannelMaps: ChannelMatchMaps? = null
 
-    // A miss is cached too, briefly: whenever the maps come out empty — no enabled source for this
-    // provider, or no indexed channel belonging to one — every call would redo the query, and
-    // getNowPlayingForItems runs on every channel-list render and channel switch. Bounded rather
-    // than permanent: the index can finish
-    // building after a miss, and the clearCache() that would reset it is called on a different
-    // XmltvEpgService instance than the one MediaRepository holds, so a permanent negative would
-    // strand EPG until process death.
+    // A miss is cached too, briefly: with empty maps every call would redo the query, and
+    // getNowPlayingForItems runs on each channel-list render and channel switch. Not permanent:
+    // the index can finish after a miss, and clearCache() runs on another XmltvEpgService instance
+    // than MediaRepository's.
     private var missCachedUntilMs = 0L
 
     private data class ChannelMatchMaps(
@@ -74,8 +70,7 @@ class XmltvEpgService(
         val byIdLower: Map<String, String>,
         val byName: Map<String, String>,
         val byNormalized: Map<String, String>,
-        // Performance Optimization: Use parallel arrays instead of List<Pair<String, String>>
-        // to avoid object boxing, allocation overhead, and iterator instantiation during hot loops.
+        // Parallel arrays, not List<Pair<String, String>>: no boxing or iterator allocation in hot loops.
         val normalizedNames: Array<String>,
         val normalizedIds: Array<String>,
         // Programme lookups keyed on xmltv id alone would also match another provider's source
@@ -173,10 +168,7 @@ class XmltvEpgService(
         return matchedIds
     }
 
-    /**
-     * Get EPG data for channels from the SQLite index.
-     * Returns empty map if no index is available.
-     */
+    /** EPG data for channels from the SQLite index; empty when there is no index. */
     suspend fun getEpgForChannels(channels: List<MediaItem>): Map<String, EpgResponse> =
         withContext(Dispatchers.IO) {
             val indexState =
@@ -328,10 +320,7 @@ class XmltvEpgService(
             matchItems(items, maps)
         }
 
-    /**
-     * Lightweight now-playing query: returns only the currently airing programme per item.
-     * Uses the same 6-level channel matching but queries only current programmes.
-     */
+    /** Light now-playing query: only the programme on air per item, with the same 6-level channel matching. */
     suspend fun getNowPlayingForItems(items: List<MediaItem>): Map<String, EpgProgram> =
         withContext(Dispatchers.IO) {
             val indexer = EpgIndexer.getInstance(context)
@@ -484,7 +473,6 @@ class XmltvEpgService(
         // 6. Contains match (min 4 chars to avoid false positives, pre-filter by length)
         if (normalizedItemName.length >= 4) {
             val itemLen = normalizedItemName.length
-            // Performance Optimization: Use parallel arrays and index-based iteration
             for (i in normalizedNames.indices) {
                 val norm = normalizedNames[i]
                 val normLen = norm.length

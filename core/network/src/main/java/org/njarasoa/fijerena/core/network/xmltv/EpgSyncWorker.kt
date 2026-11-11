@@ -27,11 +27,10 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
  * A guide source that several sources read is in the run one time. It runs at the shortest
  * interval among every provider's guide sources (`EpgFileManager.scheduleAutoRefresh`).
  *
- * Runs as a foreground service via setForeground() to bypass Android Doze mode,
- * which blocks DNS on Ethernet-connected Shield TVs during overnight maintenance windows.
- * WorkManager holds a wake lock for the full duration of doWork(), so DNS and network
- * remain available even on Shield/TV in Doze. processAllSources is called directly
- * (not via RefreshQueue) to keep work inside this wake-lock-backed coroutine.
+ * Runs as a foreground service (setForeground()) to get past Doze, which blocks DNS on
+ * Ethernet-connected Shield TVs in overnight maintenance windows. WorkManager holds a wake lock for
+ * all of doWork(), so processAllSources is called directly, not through RefreshQueue, to stay
+ * inside it.
  */
 class EpgSyncWorker(
     context: Context,
@@ -121,9 +120,8 @@ class EpgSyncWorker(
                 }
             }
         } catch (e: CancellationException) {
-            // WorkManager stopped this run (constraints lost, timeout, replaced) — not a sync
-            // failure. Let it propagate so WorkManager sees a genuine cancellation rather than a
-            // logged failure headed for retry/failure classification.
+            // WorkManager stopped this run (constraints lost, timeout, replaced): not a sync
+            // failure. Rethrown, so WorkManager sees a cancellation.
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)

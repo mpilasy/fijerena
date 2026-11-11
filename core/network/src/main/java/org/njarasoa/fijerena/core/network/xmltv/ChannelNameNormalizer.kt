@@ -1,9 +1,8 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 /**
- * Shared channel name normalization utility.
- * Strips language prefixes, quality suffixes, country codes, unicode superscripts,
- * and non-alphanumeric characters to produce a comparable key.
+ * Channel name normalisation: strips language prefixes, quality suffixes, country codes, Unicode
+ * superscripts and characters that are not letters or digits, for a comparable key.
  */
 object ChannelNameNormalizer {
     private val LANGUAGE_PREFIX_REGEX = Regex("^[A-Za-z]{2,3}:\\s*")

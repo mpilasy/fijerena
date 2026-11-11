@@ -11,8 +11,8 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 /**
- * Debug-only receiver that enqueues an immediate EpgSyncWorker OneTimeWorkRequest.
- * Used to validate foreground-service Doze bypass without waiting for the periodic schedule.
+ * Debug only: enqueues an EpgSyncWorker run now, to test the foreground-service Doze bypass without
+ * waiting for the periodic schedule.
  *
  * Trigger: adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena
  *
@@ -26,9 +26,8 @@ class EpgSyncDebugReceiver : BroadcastReceiver() {
     ) {
         if (intent.action != ACTION) return
         Log.i(TAG, "Debug trigger received — enqueuing force OneTimeWorkRequest for EpgSyncWorker")
-        // Explicit backoff: WorkManager's default (~30s initial, doubling) is fine for a transient
-        // blip, hostile to a source that's actively rate-limiting/blocking (retrying every 30s
-        // only keeps it blocked).
+        // Explicit backoff: WorkManager's default (~30 s, doubling) suits a blip, but a retry every
+        // 30 s keeps a source that rate-limits blocking us.
         val request =
             OneTimeWorkRequestBuilder<EpgSyncWorker>()
                 .setInputData(androidx.work.workDataOf("force" to true))

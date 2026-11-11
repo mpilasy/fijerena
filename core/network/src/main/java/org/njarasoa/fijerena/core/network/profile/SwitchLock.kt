@@ -20,9 +20,9 @@ sealed interface SwitchLock {
 
     companion object {
         /**
-         * Whether the lock applies. Off since 2026-10-24: the user put it on hold, as asking a PIN
-         * to leave a child profile needs more thought. While off, no switch asks a PIN and the
-         * texts about the lock don't show; the code stays for when it comes back.
+         * Whether the lock applies. Off on purpose: a PIN to leave a child profile needs more
+         * thought. While off, no switch asks a PIN and the texts about the lock don't show; the code
+         * stays for when it comes back.
          */
         const val ON = false
 

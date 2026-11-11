@@ -10,8 +10,7 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["channel_id", "source_id", "start_epoch"], name = "idx_programme_staging_dedup", unique = true),
         // Backs EpgIndexDao's per-source staging queries (clearStagingProgrammesForSources,
-        // transferProgrammesFromStaging) — source_id isn't the leading column of the dedup index
-        // above, so those "WHERE source_id IN (...)" queries had no usable index.
+        // transferProgrammesFromStaging): source_id does not lead the dedup index above.
         Index(value = ["source_id"], name = "idx_programme_staging_source"),
     ],
 )

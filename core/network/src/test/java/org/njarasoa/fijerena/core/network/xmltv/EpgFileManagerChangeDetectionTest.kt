@@ -16,10 +16,10 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
 /**
- * G-11 (the ux overhaul plan → III.H): a source must never read "ingested",
- * validators included, while the live guide holds none of its rows. Two halves: on the staging
- * path the stats are written only after the swap commits, and an empty index never lets a 304 or
- * a hash match skip the download.
+ * G-11 (the ux overhaul plan → III.H): a source must never read "ingested", validators included,
+ * while the live guide holds none of its rows. Two halves: on the staging path the stats are
+ * written only after the swap commits, and an empty index never lets a 304 or a hash match skip the
+ * download.
  */
 class EpgFileManagerChangeDetectionTest {
     private val source =

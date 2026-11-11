@@ -22,9 +22,8 @@ data class CatalogueHit(
  * Finds a film or show in the stored catalogues of some Xtream sources, as the profile in use sees
  * them: excluded categories are left out, Parental controls exceptions are kept. By TMDB id first;
  * when no source has the id, by title and year ([TitleMatcher]), among the rows without a TMDB id
- * only, so a row with another id (a remake with the same name) never matches. Sources
- * are searched in the order given. Blocking: call it on `Dispatchers.IO`. See
- * the wanted titles plan → Matching.
+ * only, so a row with another id (a remake with the same name) never matches. Sources are searched
+ * in the order given. Blocking: call it on `Dispatchers.IO`. See the wanted titles plan → Matching.
  */
 class CatalogueLookup(
     db: XtreamDatabase,

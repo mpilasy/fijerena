@@ -6,17 +6,11 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 /**
- * The watch-history row shapes that exist on real devices, so a test has to pick one rather than
- * invent a convenient row.
+ * The watch-history row shapes that exist on real devices, so a test picks one and does not invent
+ * a convenient row. A helper that always set `episodeId` once hid a bug (an episode id sent to the
+ * series screen) behind a green suite: [anonymousEpisode] is the shape that breaks.
  *
- * The bug that started this — an episode id sent to the series screen — shipped with a green
- * suite, including a test named for the exact case, because the local helper set `episodeId`
- * unconditionally. The shape that breaks was not merely untested; it could not be constructed.
- * Naming the shapes here is what keeps that from repeating: [anonymousEpisode] is a row nothing
- * else in the codebase would have produced by accident.
- *
- * Counts and percentages below are from the phone on 2026-08-19 (12 TV_SHOWS rows, providers
- * 2/8/9), from the id type-safety plan (removed; in git history).
+ * Counts and percentages below are from a test phone (12 TV_SHOWS rows, providers 2/8/9).
  */
 object WatchHistoryFixtures {
     /**
@@ -48,8 +42,8 @@ object WatchHistoryFixtures {
      * The other six rows, every one of them under 1.33 % watched: `savePlaybackPosition` created
      * the row while the write that carried the metadata sat behind a 2 % gate.
      *
-     * Fixed at the write side in `041b1944`, but rows in this shape are on devices now, and the
-     * Recent list has to keep opening them at the player rather than at a series screen.
+     * The write side is fixed, but rows in this shape stay on devices, and Recent must still open
+     * them at the player, not at a series screen.
      */
     fun anonymousEpisode(
         id: String,
@@ -114,7 +108,7 @@ object WatchHistoryFixtures {
      * than the model — a schema change, a serializer swap.
      */
     object Stored {
-        /** Provider 9, the row this investigation started from. Full metadata. */
+        /** Provider 9, full metadata. */
         const val LAW_AND_ORDER =
             """{"itemId":"242136","itemName":"EN - Law & Order - S06E18","categoryId":"156",""" +
                 """"contentType":"TV_SHOWS","timestamp":1787181459349,"playbackPosition":37365,""" +

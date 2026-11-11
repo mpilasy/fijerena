@@ -1,21 +1,13 @@
 package org.njarasoa.fijerena.core.network.queue
 
 interface RefreshTask : Comparable<RefreshTask> {
-    /**
-     * Unique identifier for the task, used to deduplicate tasks.
-     * e.g. "epg_refresh", "xtream_streams_123"
-     */
+    /** Unique id of the task, for deduplication ("epg_refresh", "xtream_streams_123"). */
     val id: String
 
-    /**
-     * Priority of the task. Higher value means higher priority.
-     * Use constants from RefreshPriority.
-     */
+    /** Priority of the task, higher first: a RefreshPriority constant. */
     val priority: Int
 
-    /**
-     * Execute the task. This will be called on a background thread.
-     */
+    /** Runs the task, on a background thread. */
     suspend fun execute()
 
     override fun compareTo(other: RefreshTask): Int {

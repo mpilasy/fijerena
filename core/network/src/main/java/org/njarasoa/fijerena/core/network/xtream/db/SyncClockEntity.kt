@@ -11,8 +11,8 @@ import androidx.room.PrimaryKey
  * `SettingsSyncTriggers`); records in different databases never share a key, so they needn't agree.
  *
  * [applying] is 1 while changes received from another device are written, which stops the
- * triggers from queueing them to be sent straight back. See
- * the live sync plan → Conflicts, Applying remote records.
+ * triggers from queueing them to be sent straight back. See the live sync plan → Conflicts,
+ * Applying remote records.
  */
 @Entity(tableName = "sync_clock")
 data class SyncClockEntity(

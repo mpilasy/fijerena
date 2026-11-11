@@ -4,9 +4,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.player.domain.TitleFacts
 
-/** `/movie/{id}/images` and `/tv/{id}/images`. `logos` is the transparent-PNG wordmark art for
- * the OSD title treatment and the TV detail hero headline; `backdrops` is the hero's full-bleed
- * background — the Xtream catalogue's own backdrop (when it has one) is preferred over neither. */
+/**
+ * `/movie/{id}/images` and `/tv/{id}/images`. `logos` is the transparent-PNG wordmark art for the
+ * OSD title and the TV detail hero headline; `backdrops` is the hero's full-bleed background, with
+ * the Xtream catalogue's own cover as the fallback.
+ */
 @Serializable
 data class TmdbImagesResponse(
     @SerialName("logos")

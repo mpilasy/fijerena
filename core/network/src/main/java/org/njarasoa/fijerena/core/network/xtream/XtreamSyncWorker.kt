@@ -16,10 +16,9 @@ import org.njarasoa.fijerena.core.network.trySetForeground
 /**
  * WorkManager worker for periodic Xtream catalog sync (all device types).
  *
- * Runs as a foreground service via setForeground() to bypass Android Doze mode, which blocks
- * DNS on Ethernet-connected Shield TVs during overnight maintenance windows — same failure
- * class fixed for EpgSyncWorker. WorkManager holds a wake lock for the full duration of
- * doWork(), so DNS and network remain available even on Shield/TV in Doze.
+ * Runs as a foreground service (setForeground()) to get past Doze, which blocks DNS on
+ * Ethernet-connected Shield TVs in overnight maintenance windows, as for EpgSyncWorker. WorkManager
+ * holds a wake lock for all of doWork(), so DNS and the network stay available.
  */
 class XtreamSyncWorker(
     context: Context,

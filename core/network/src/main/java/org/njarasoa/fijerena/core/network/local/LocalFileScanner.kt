@@ -327,7 +327,7 @@ object LocalFileScanner {
             streamUri = file.uri.toString(),
         )
 
-    // Zero-allocation file extension matching to avoid substring and lowercase allocations during file scanning.
+    // Extension match with no allocation (no substring, no lowercase) during the scan.
     private fun isVideoFile(name: String?): Boolean {
         if (name == null) return false
         val dotIndex = name.lastIndexOf('.')

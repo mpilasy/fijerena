@@ -14,7 +14,7 @@ import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
 
-/** the rock solid stability resilience plan → F-27. */
+/** See the rock solid stability resilience plan → F-27. */
 class SuspendRunCatchingTest {
     @Test
     fun `success is wrapped`() =

@@ -17,9 +17,7 @@ class XtreamMetricsManager(
 
     fun getFetchTime(key: String): Long? = fetchTimes[key]
 
-    /**
-     * Get fetch time for a specific key in human-readable format
-     */
+    /** A key's fetch time as text; null for a profile that is not a Nerd. */
     fun getFetchTimeFormatted(key: String): String? {
         if (!appSettings.isNerdMode) return null
         val timeMs = fetchTimes[key] ?: return null

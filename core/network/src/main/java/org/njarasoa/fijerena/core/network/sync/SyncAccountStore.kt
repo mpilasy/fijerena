@@ -25,10 +25,9 @@ class SyncAccountStore(
 
     /**
      * The Keystore master key can be lost (OEM Keystore resets, data restored without its key):
-     * the file then can't be decrypted and `create` throws. Read on every app start (SyncManager),
-     * so an unhandled throw would crash the app on every launch. The link is unrecoverable either way — reset it,
-     * so this device shows as unlinked and can pair again. See
-     * the rock solid stability resilience plan → F-21.
+     * the file then can't be decrypted and `create` throws. Read at every app start (SyncManager),
+     * so a throw would crash every launch. The link is lost either way: reset it, so this device
+     * shows as unlinked and can pair again. See the rock solid stability resilience plan → F-21.
      */
     private fun open(context: Context): SharedPreferences? {
         val prefs =

@@ -14,10 +14,9 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 /**
  * A synced setting this version can't use is dropped, not stored: a malformed refresh time would
- * crash EPG management on every linked device. See
- * the next level rock solid resilience plan → R-09. The guide
- * auto-refresh keys an older version still sends are retired (each guide source has its own
- * interval, the sources guide profiles plan → P5b) and ignored.
+ * crash EPG management on every linked device (the next level rock solid resilience plan → R-09).
+ * The guide auto-refresh keys an older version still sends are retired (each guide source has its
+ * own interval, the sources guide profiles plan → P5b) and ignored.
  */
 class AppSettingsRemoteSettingTest {
     private lateinit var settings: AppSettings

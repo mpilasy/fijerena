@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * A team or a league that a profile follows. Kept per profile and not per provider: it belongs to
- * no source. The Sports section, the Home row and the reminders fetch games only for these. See
- * the sports teams plan → Followed teams and leagues.
+ * no source. The Sports section, the Home row and the reminders fetch games only for these. See the
+ * sports teams plan → Followed teams and leagues.
  *
  * [kind] is `FollowKind.id` (`TEAM` or `LEAGUE`), [source] is `SportsSource.id` (`espn`, `nhl`, `mlb`)
  * and [itemId] the team or league id at that source. [league] is the source's league key of a team

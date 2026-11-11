@@ -3,8 +3,7 @@ package org.njarasoa.fijerena.core.network.sync
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 
 /**
- * The `kind` of a synced record — see the live sync plan → Record model.
- * Kinds are added as their write paths are queued for sync.
+ * The `kind` of a synced record. See the live sync plan → Record model.
  */
 object SyncKind {
     const val WATCH = "watch"
@@ -39,9 +38,9 @@ object SyncKind {
     const val NOW_PLAYING = "now_playing"
 
     /**
-     * A command to one device — today only "stop what you are playing"; keyed by the *target's*
-     * server device id. Volatile — see [VOLATILE], [RemoteCommands] and
-     * the live sync now playing plan → Remote Stop.
+     * A command to one device (only "stop what you are playing"); keyed by the *target's* server
+     * device id. Volatile: see [VOLATILE], [RemoteCommands] and the live sync now playing plan →
+     * Remote Stop.
      */
     const val REMOTE_COMMAND = "remote_command"
 
@@ -74,8 +73,8 @@ object SyncKind {
 
     /**
      * A film or show on a profile's Wanted list; keyed by its TMDB id, with the content type.
-     * Not tied to a provider: its version and tombstone rows use [WANTED_PROVIDER_ID]. See
-     * the wanted titles plan.
+     * Not tied to a provider: its version and tombstone rows use [WANTED_PROVIDER_ID]. See the
+     * wanted titles plan.
      */
     const val WANTED = "wanted"
 

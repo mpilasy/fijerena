@@ -10,9 +10,8 @@ import androidx.room.Index
     indices = [
         Index(value = ["providerId"]),
         Index(value = ["categoryId", "providerId"]),
-        // Backs XtreamSeriesDao.getByTmdbId() and the sibling-series lookups in
-        // XtreamEpisodeDao (getSiblingCompletedEpisodeIds/getSiblingCompletedCountsBySeries/
-        // clearGroupCompletion) — none of the existing indices cover tmdbId at all.
+        // Backs XtreamSeriesDao.getByTmdbId() and the sibling-series lookups in XtreamEpisodeDao
+        // (getSiblingCompletedEpisodeIds/getSiblingCompletedCountsBySeries/clearGroupCompletion).
         Index(value = ["providerId", "tmdbId"]),
         // Finds the allowed series of a provider for the Parental controls recompute (v25).
         Index(value = ["providerId", "allowed"]),
@@ -39,19 +38,17 @@ data class XtreamSeriesEntity(
     val contentHash: Int = 0,
     // Unused since schema v24: series follow their category's flag (see XtreamSeriesDao).
     val excluded: Boolean = false,
-    // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
+    // TMDB and detail cache fields, filled by a detail-screen fetch.
     val contentRating: String? = null,
     val tmdbId: String? = null,
     val detailFetchedAt: Long? = null,
     val posterPath: String? = null,
     // TitleFacts as JSON (v28): country, original title, networks… from TMDB or the source.
     val facts: String? = null,
-    // Set every time `get_series_info` successfully persists this series' episode list — the
-    // freshness check that lets a detail-screen open skip the network round trip and rebuild
-    // straight from `xtream_episodes` (see XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS). A
-    // separate stamp from detailFetchedAt above: that one guards the TMDB content-rating/plot
-    // enrichment cache (7 days), a different freshness question from "did the episode list itself
-    // change". A catalogue sync clears it when the series' catalogue entry changes (see withDetailCache).
+    // Set each time `get_series_info` stores this series' episode list: a detail-screen open while
+    // it is fresh (XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS) rebuilds from `xtream_episodes`
+    // with no network call. Apart from detailFetchedAt, which guards the TMDB enrichment (7 days).
+    // A catalogue sync clears it when the series' catalogue entry changes (see withDetailCache).
     val episodesFetchedAt: Long? = null,
     // A Parental controls exception lets a child see this series in a hidden category (v25). Set
     // by XtreamCategoryExclusionSync for the profile in use; a sync that rewrites the row resets it.

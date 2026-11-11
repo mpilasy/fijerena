@@ -19,9 +19,9 @@ android {
     defaultConfig {
         minSdk = 30
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // No TMDB key is built in: the user enters their own in Settings (D4,
-        // the public release plan). Debug builds only seed it from
-        // the gitignored local.properties (TMDB_API_KEY), so a developer's devices need no typing.
+        // No TMDB key is built in: the user enters their own in Settings (D4, the public release
+        // plan). Debug builds only seed it from the gitignored local.properties (TMDB_API_KEY), so a
+        // developer's devices need no typing.
     }
     buildTypes {
         debug {
@@ -49,9 +49,8 @@ android {
     }
     testOptions {
         unitTests {
-            // MediaRepository starts a HandlerThread; without this the android.jar stubs throw
-            // "Method getLooper in android.os.HandlerThread not mocked" and every test in
-            // MediaRepositoryTest fails before reaching its assertions.
+            // The android.jar stubs return defaults instead of throwing "Method … not mocked", so
+            // plain JVM tests that touch Android classes reach their assertions.
             isReturnDefaultValues = true
             // Robolectric tests (SettingsDatabaseMigration15To16Test) read the schemas below as assets.
             isIncludeAndroidResources = true

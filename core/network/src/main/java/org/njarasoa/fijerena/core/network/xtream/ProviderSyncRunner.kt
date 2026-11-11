@@ -28,10 +28,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.CatalogSearchIndex
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
- * Single per-provider Xtream sync shared by [ProviderSyncManager] (manual + periodic
- * foreground refresh) and [XtreamSyncWorker] (WorkManager). Adds transient-vs-permanent
- * classification and in-run retry with exponential backoff, mirroring
- * EpgFileManager.downloadSource().
+ * The one per-provider Xtream sync, shared by [ProviderSyncManager] (manual and periodic
+ * foreground refresh) and [XtreamSyncWorker] (WorkManager). Classifies a failure as transient or
+ * permanent and retries in-run with exponential backoff, as EpgFileManager.downloadSource() does.
  */
 object ProviderSyncRunner {
     private const val TAG = "ProviderSyncRunner"
@@ -64,8 +63,8 @@ object ProviderSyncRunner {
 
     /**
      * How many catalogue syncs have succeeded in this process: goes up after each one. The Wanted
-     * list and the gone favourites are checked again on each change
-     * (the wanted titles plan → Matching).
+     * list and the gone favourites are checked again on each change (the wanted titles plan →
+     * Matching).
      */
     val catalogueUpdates: StateFlow<Long> = successes.asStateFlow()
 
@@ -90,7 +89,7 @@ object ProviderSyncRunner {
     }
 
     /**
-     * Sync one provider, retrying transient network failures in-run before giving up.
+     * Syncs one provider, with in-run retries of transient network failures.
      * The returned errors are codes ([StoredError]): persist their encoded form via
      * `updateSyncStats`, and show their message in the app language in use.
      */
@@ -159,9 +158,7 @@ object ProviderSyncRunner {
 
                 return Outcome.Success(delta)
             } catch (e: CancellationException) {
-                // Worker stopped or timed out — not a sync failure. Recording it as one would
-                // flag the provider as permanently broken in providers.db for what's really just
-                // a pause.
+                // Worker stopped or timed out: not a sync failure, so nothing is recorded.
                 throw e
             } catch (e: Exception) {
                 val transient = isTransient(e)

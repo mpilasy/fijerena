@@ -41,15 +41,11 @@ import org.njarasoa.fijerena.core.player.model.*
 internal fun List<String?>.backdropText(): String? = filterNot { it.isNullOrBlank() }.joinToString(",").ifEmpty { null }
 
 /**
- * Data-hygiene guard, demoted from Phase 5 dedup (the watch state durable storage plan) to a
- * standalone one after an on-device check showed episode-`tmdbId`-based dedup couldn't work at all
- * — the real duplication lives across separate `xtream_series` rows (see
- * [org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao.getSiblingCompletedEpisodeIds]),
- * so dedup no longer reads this column. Kept anyway: panels frequently copy the *series* `tmdb_id`
- * into every episode's info block, and a `tmdbId` that repeats across more than one episode of the
- * same series is a series-level value, not episode identity, regardless of whether anything
- * currently consumes the column. [episodes] is expected to already be scoped to one series (as
- * [XtreamContentManager.getSeriesInfo]'s call site is), so no `seriesId` grouping is needed.
+ * Data-hygiene guard: panels often copy the *series* `tmdb_id` into every episode's info block, and
+ * a `tmdbId` that repeats across episodes of one series is a series value, not an episode identity.
+ * Dedup does not read this column: it works across `xtream_series` rows (see
+ * [org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao.getSiblingCompletedEpisodeIds]).
+ * [episodes] must be one series' episodes, as at [XtreamContentManager.getSeriesInfo]'s call site.
  */
 internal fun guardSeriesLevelEpisodeTmdbIds(episodes: List<XtreamEpisodeEntity>): List<XtreamEpisodeEntity> {
     val tmdbIdCounts = episodes.mapNotNull { it.tmdbId }.groupingBy { it }.eachCount()
@@ -75,22 +71,18 @@ class XtreamContentManager(
     private val episodeDao = database.episodeDao()
     private val newEpisodeDao = database.newEpisodeDao()
 
-    // See MediaRepository's identical writeScope/commitAsync for the full rationale: commit()
-    // on a background thread never leaves an entry in QueuedWork, unlike apply(). These freshness
-    // timestamps are written on the same cold-entry path (category/stream load) as several
-    // Media3-triggered startForegroundService() dispatches, so keeping this backlog at zero here
-    // matters as much as in MediaRepository.
+    // As MediaRepository's writeScope/commitAsync: commit() on a background thread leaves nothing
+    // in QueuedWork, unlike apply(). These stamps are written on the same cold-entry path as
+    // Media3's startForegroundService() dispatches.
     private val writeScope = AppScopes.create("XtreamContentManager.write", Dispatchers.IO.limitedParallelism(1))
 
     private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
         writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
     }
 
-    // Accumulates the row-level delta each sync task already computes for its own diff, so
-    // syncAll() can report one combined total instead of throwing the counts away. Diagnostic
-    // only — a sync triggered outside syncAll() (e.g. a lazy-load cache-miss refresh) adds into
-    // the same counter, so a reading taken while such a sync overlaps a syncAll() run can include
-    // a few rows that aren't actually syncAll()'s. Acceptable for "did anything change" reporting.
+    // The row-level delta of each sync task, so syncAll() can report one total. Diagnostic only:
+    // a sync outside syncAll() (a cache-miss refresh) adds to the same counter, so an overlapping
+    // reading can include a few rows that are not syncAll()'s.
     private val pendingDelta =
         java.util.concurrent.atomic
             .AtomicReference(SyncDelta())
@@ -113,28 +105,27 @@ class XtreamContentManager(
         // scheduled runs still tops the catalogue up rather than sitting on day-old data.
         private const val CACHE_EXPIRATION_MS = 4 * 3600 * 1000L
 
-        // Episode synopses are written once and essentially never revised, so they get a much
-        // longer life than the catalogue itself — long enough to make refetching rare, short
-        // enough that a correction upstream still lands eventually.
+        // Episode synopses rarely change: a long life makes refetches rare, and a correction
+        // upstream still lands in the end.
         private const val OVERVIEW_CACHE_TTL_MS = 30L * 24 * 3600 * 1000
 
-        // SQLite caps bound variables per statement (historically 999 on Android); chunk large
-        // DELETE ... IN (...) batches well under that so deletes don't fail outright on
-        // providers with very large catalogs.
+        // SQLite caps bound variables per statement (999 on older Android): DELETE ... IN (...)
+        // batches stay under it, so deletes on very large catalogues do not fail.
         private const val SQLITE_DELETE_BATCH_SIZE = 900
 
-        // A partial/glitched sync (dropped connection mid-stream, server hiccup) can return a
-        // handful of items instead of nothing at all — the seenIds.isEmpty() check above doesn't
-        // catch that. Below this floor a sync response is too small to trust as "the whole
-        // catalog shrank"; abort the delete phase rather than wipe out everything it didn't see.
+        // A partial sync (a dropped connection, a server hiccup) can return a few items instead
+        // of none, which the seenIds.isEmpty() check misses. Below this floor a response is too
+        // small to trust as a real shrink, and the delete phase stops.
         private const val MIN_EXISTING_COUNT_FOR_PURGE_GUARD = 50
         private const val MIN_SYNC_SURVIVAL_RATIO = 0.2
 
         private const val SECONDS_PER_MINUTE = 60L
     }
 
-    /** True if [seenCount] out of [existingCount] previously-known items is too small a
-     * response to trust for deletion — likely a partial/glitched sync, not a real shrink. */
+    /**
+     * True when [seenCount] of [existingCount] known items is too few to trust for deletion: likely
+     * a partial sync, not a real shrink.
+     */
     private fun isSuspiciousPartialSync(
         seenCount: Int,
         existingCount: Int,
@@ -610,8 +601,8 @@ class XtreamContentManager(
                             commitAsync { putLong(key, System.currentTimeMillis()) }
                         }
                     } catch (e: CancellationException) {
-                        // Not a sync failure — let RefreshQueue see the real cancellation instead
-                        // of this task silently completing as if it had succeeded.
+                        // Not a sync failure: RefreshQueue must see the cancellation, not a task that
+                        // looks successful.
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing data", e)
@@ -959,9 +950,8 @@ class XtreamContentManager(
                 }
                 if (episodesToInsert.isNotEmpty()) {
                     storeEpisodes(seriesId, guardSeriesLevelEpisodeTmdbIds(episodesToInsert))
-                    // Only stamped when episodes actually came back — an empty list already
-                    // reads as "no usable cache" to buildCachedSeriesDetail regardless of this
-                    // timestamp, so there's nothing worth marking fresh in that case.
+                    // Stamped only when episodes came back: an empty list already reads as no
+                    // usable cache in buildCachedSeriesDetail.
                     seriesDao.updateEpisodesFetchedAt(providerId, seriesId, System.currentTimeMillis())
                 }
 
@@ -1100,16 +1090,16 @@ class XtreamContentManager(
                 ?.seriesId
         }
 
-    /** Cached series row — checked for both a still-fresh persisted TMDB content rating and episode-list freshness (see [XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS]). */
+    /**
+     * Cached series row, for a fresh stored TMDB content rating and the episode-list freshness (see
+     * [XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS]).
+     */
     suspend fun getCachedSeriesEntity(seriesId: Int): XtreamSeriesEntity? =
         withContext(Dispatchers.IO) { seriesDao.getSeriesById(providerId, seriesId) }
 
     /**
-     * Forces the next [getSeriesInfo] call for [seriesId] to hit Xtream instead of being served
-     * from the persisted episode-list cache — the counterpart to [saveSeriesDetailCache]'s `0L`
-     * expiry trick, called from [XtreamMediaProvider.invalidateCachedDetail] so the header
-     * Refresh button (TV) / pull-to-refresh (Mobile) actually goes back to the network instead of
-     * re-serving what's already on disk.
+     * Makes the next [getSeriesInfo] for [seriesId] ask Xtream, not the stored episode list, so a
+     * manual refresh ([XtreamMediaProvider.invalidateCachedDetail]) goes back to the network.
      */
     suspend fun expireEpisodeListCache(seriesId: Int) =
         withContext(Dispatchers.IO) { seriesDao.updateEpisodesFetchedAt(providerId, seriesId, 0L) }
@@ -1148,10 +1138,8 @@ class XtreamContentManager(
     /**
      * The series as it was last stored — series row plus every episode row — with no network call.
      *
-     * Both halves are already written on every [getSeriesInfo]: the series row picks up the plot,
-     * cast and genre, and every episode is inserted. Reading them back as a whole lets opening a
-     * show after a restart draw at once instead of waiting on a fresh get_series_info, which on a
-     * series the size of Law & Order is a several-hundred-episode response.
+     * [getSeriesInfo] writes both halves, so a show opened after a restart draws at once, without
+     * waiting for a get_series_info of hundreds of episodes.
      *
      * See [buildCachedSeriesDetail] for what a stored row does and doesn't carry.
      */
@@ -1161,7 +1149,7 @@ class XtreamContentManager(
             buildCachedSeriesDetail(series, episodeDao.getEpisodes(providerId, seriesId))
         }
 
-    /** Backfills episode plots that TMDB filled in (Xtream itself rarely provides episode synopses) — never overwrites an existing plot. */
+    /** Stores the episode plots TMDB filled in (Xtream rarely sends synopses); never overwrites a plot. */
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
@@ -1204,8 +1192,7 @@ class XtreamContentManager(
 
     /**
      * The catch-up URL for [durationSec] of live stream [streamId] from [startEpochSec], written in
-     * the panel's clock (rounded down to the minute; the duration rounded up). See
-     * the catchup plan.
+     * the panel's clock (rounded down to the minute; the duration rounded up). See the catchup plan.
      */
     fun buildTimeshiftUrl(
         streamId: Int,
@@ -1396,9 +1383,8 @@ class XtreamContentManager(
     }
 
     /**
-     * Episode count per series id, from the local cache only — one grouped query, no network.
-     * Feeds the series-row watch bar's denominator; series never opened aren't in the cache and
-     * are simply absent from the map.
+     * Episode count per series id, from the local cache only (one grouped query). The denominator of
+     * the series-row watch bar; a series never opened has no entry.
      */
     suspend fun getEpisodeCountsBySeries(): Map<String, Int> =
         withContext(Dispatchers.IO) {

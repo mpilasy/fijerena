@@ -9,8 +9,7 @@ import androidx.room.Index
     primaryKeys = ["xmltv_id", "source_id"],
     indices = [
         // Backs EpgIndexDao's per-source staging queries (clearStagingChannelsForSources,
-        // transferChannelsFromStaging) — source_id is the second column of the primary key, not
-        // the leading one, so those "WHERE source_id IN (...)" queries had no usable index.
+        // transferChannelsFromStaging): source_id is the second column of the primary key.
         Index(value = ["source_id"], name = "idx_channel_staging_source"),
     ],
 )

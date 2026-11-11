@@ -5,9 +5,8 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeEntity
 
 /**
- * The mandatory guard ahead of Phase 5 dedup (the watch state durable storage plan): a
- * panel-supplied `tmdb_id` copied onto every episode of a series is a series-level value, not
- * episode identity, and must be nulled before it ever reaches the sibling-completion query.
+ * The data-hygiene guard (the watch state durable storage plan): a panel's `tmdb_id` copied onto
+ * every episode of a series is a series value, not an episode identity, and is nulled.
  */
 class GuardSeriesLevelEpisodeTmdbIdsTest {
     private fun episode(

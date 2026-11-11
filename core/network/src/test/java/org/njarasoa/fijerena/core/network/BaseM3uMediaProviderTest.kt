@@ -67,9 +67,8 @@ class BaseM3uMediaProviderTest {
 
             provider.trimMemory()
 
-            // Marking disconnected is what makes this transparent: every read connects again when
-            // !connected, so a trimmed provider must fall back into that path on next use instead
-            // of permanently looking empty.
+            // Marked disconnected, so the next read connects again and the provider does not stay
+            // empty.
             assertTrue(!provider.isConnected())
             assertEquals(1, provider.search("dune", ContentType.MOVIES).getOrNull()!!.size)
             assertEquals(1, provider.connects)

@@ -24,10 +24,10 @@ import java.net.URI
  * login when the guide is downloaded, so `providers.db` and exports never carry the password. Rows
  * written before that (and records from older builds) carry it in the query; they still count as
  * automatic, and [withoutLogin] strips it. There is at most one per Xtream source, and it exists
- * only while the account has live channels. It is
- * enabled while the source's "Provides a guide" ([ProviderSettings.providesGuide]) is on and
- * disabled, never deleted, while it is off — detected, turned off when the guide comes back empty
- * ([onEmptyIngest]), and changeable in Edit Source ([reconcileStored]).
+ * only while the account has live channels. It is enabled while the source's "Provides a guide"
+ * ([ProviderSettings.providesGuide]) is on and disabled, never deleted, while it is off: detected,
+ * turned off when the guide comes back empty ([onEmptyIngest]), and changeable in Edit Source
+ * ([reconcileStored]).
  *
  * No column marks it: a source is automatic when its URL is the provider's server (same scheme,
  * host, port and path) plus `/xmltv.php` (with no query, or `?username=…&password=…`) and its label
@@ -37,8 +37,7 @@ import java.net.URI
  * Every write goes through [EpgSourceDao], so live sync carries it to the group's other devices
  * (the URL update and the deletions included). Live sync sends it with the login in the query
  * ([syncUrl], inside the end-to-end encrypted record) as older builds expect, and the receiver
- * strips it again. See the ux overhaul plan → GD0c and
- * the public release plan → R1.
+ * strips it again. See the ux overhaul plan → GD0c and the public release plan → R1.
  */
 object AutoXmltvSources {
     private const val TAG = "AutoXmltvSources"
@@ -49,7 +48,7 @@ object AutoXmltvSources {
     /** The automatic source's URL as stored: the server's `xmltv.php`, without the login. */
     fun storedUrl(providerUrl: String): String = "${providerUrl.trim().trimEnd('/')}$XMLTV_PATH"
 
-    /** [storedUrl] with the login, as the server wants it. Built as it always was (no encoding), so older builds still match it. */
+    /** [storedUrl] with the login, as the server wants it. No encoding, so older builds still match it. */
     fun withLogin(
         storedUrl: String,
         username: String,
@@ -193,8 +192,8 @@ object AutoXmltvSources {
      *   back on) re-enables the kept one with its stats; otherwise its enabled state stays as it is.
      *
      * [currentUrl] is the [storedUrl] of the provider's server; null (no credentials at hand) keeps
-     * the row's URL as it is. [previousProviderUrl]
-     * is the server the provider used before a URL change: its automatic source is carried over.
+     * the row's URL as it is. [previousProviderUrl] is the server the provider used before a URL
+     * change: its automatic source is carried over.
      */
     fun plan(
         providerId: Long,

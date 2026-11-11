@@ -40,9 +40,8 @@ class XtreamEpgManager(
             encodeDefaults = true
         }
 
-    // See MediaRepository's identical writeScope/commitAsync for the full rationale. Kept here
-    // only for the one-time legacy-prefs purge and for the fire-and-forget cache invalidations,
-    // which must not block the caller.
+    // As MediaRepository's writeScope/commitAsync. Only for the one-time legacy-prefs purge and the
+    // cache invalidations, which must not block the caller.
     private val writeScope = AppScopes.create("XtreamEpgManager.write", Dispatchers.IO.limitedParallelism(1))
 
     // Whether this panel's guide stamps its wall time as UTC; kept across restarts, re-measured on
@@ -61,19 +60,13 @@ class XtreamEpgManager(
     }
 
     /**
-     * Sweep EPG rows that are already past the expiry.
+     * Sweeps the EPG rows past the expiry. Reads filter `updatedAt >= cutoff`, so expired rows were
+     * never read but stayed on disk: on a Shield the table reached 1.2 GB, 83% of `xtream_v2.db`
+     * (the tv ui performance plan).
      *
-     * The cache expired but never evicted: reads filter `updatedAt >= cutoff`, so stale rows went
-     * unread while still occupying disk. Measured on a Shield, the table reached 1.2 GB — 83% of
-     * `xtream_v2.db` — of which *none* was inside the 6-hour window, so it held no usable EPG at
-     * all. See the tv ui performance plan.
-     *
-     * Batched, with a pause between batches, for the reason in [XtreamEpgCacheDao.deleteStaleBatch]:
-     * this database is `auto_vacuum = FULL`, so one unbounded delete tries to reshuffle the whole
-     * file in a single transaction. Runs once per process — the sweep is not provider-scoped, so a
-     * second manager would only re-scan a table it just swept — and off the caller's thread.
-     *
-     * Failures are logged, not swallowed.
+     * Batched with a pause, for the reason in [XtreamEpgCacheDao.deleteStaleBatch] (`auto_vacuum =
+     * FULL`). Once per process, as the sweep is not per provider, and off the caller's thread.
+     * Failures are logged.
      */
     private fun evictStaleCache() {
         if (!staleEvictionDone.compareAndSet(false, true)) return
@@ -101,12 +94,8 @@ class XtreamEpgManager(
     }
 
     /**
-     * Drop the pre-SQLite `epg_*` blobs from SharedPreferences.
-     *
-     * A full live catalogue wrote one string + one long per channel into this file; on a 53k
-     * channel provider that reached 84 MB, all of it parsed into RAM for the lifetime of every
-     * process that touched the prefs, and rewritten whole on each commit. One purge shrinks the
-     * file back to the handful of keys that belong there.
+     * Drops the old `epg_*` blobs from SharedPreferences: on a 53k-channel provider they reached
+     * 84 MB, parsed into RAM by each process that read the prefs and rewritten whole on each commit.
      */
     private fun purgeLegacyPrefsCache() {
         if (sharedPreferences.getBoolean(KEY_LEGACY_EPG_PREFS_PURGED, false)) return
@@ -150,16 +139,13 @@ class XtreamEpgManager(
         }
 
     /**
-     * Fetches EPG data for multiple streams, [CHUNK_SIZE] requests in flight at a time.
+     * Fetches EPG data for many streams, [CHUNK_SIZE] requests in flight at a time. Coroutines are
+     * made one chunk at a time on purpose: one `async {}` per id up front made 53k coroutines for a
+     * 53k-channel catalogue, with every response held at once, enough GC pressure to stall video
+     * into an ANR.
      *
-     * Coroutines are created one chunk at a time on purpose. Mapping every id to an `async {}`
-     * up front — with a Semaphore gating only the in-flight requests — meant a 53k-channel
-     * catalogue allocated 53k coroutines and held every response at once, hundreds of MB
-     * resident and enough GC pressure to stall video playback into an ANR.
-     *
-     * Uses [fetchEpgDirect] to avoid per-call overhead from [getEpgForStream]
-     * (redundant dispatcher switches, Result wrapping, and unstructured background
-     * coroutines for cache refreshes). The API service is resolved once upfront.
+     * Uses [fetchEpgDirect], without [getEpgForStream]'s overhead per call. The API service is
+     * resolved once.
      */
     suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
         withContext(Dispatchers.IO) {
@@ -231,8 +217,8 @@ class XtreamEpgManager(
 
     /**
      * Compare [fresh] answers with the source's own `xmltv.php` and keep the verdict when there is
-     * one ([PanelGuideTimes.labelsLocalAsUtc]); off the caller's thread. See
-     * the panel guide local time plan.
+     * one ([PanelGuideTimes.labelsLocalAsUtc]); off the caller's thread. See the panel guide local
+     * time plan.
      */
     private fun remeasure(fresh: Collection<EpgResponse>) {
         val own = ownXmltv ?: return
@@ -303,11 +289,9 @@ class XtreamEpgManager(
         val rows =
             entries.mapNotNull { (streamId, epg) ->
                 val payload = json.encodeToString(epg)
-                // A handful of channels carry enormous listings — the largest measured was a single
-                // 1.7 MB blob, and the 634 rows above this threshold accounted for ~236 MiB on their
-                // own. They are the least worth caching too: a channel with that many programmes is
-                // no cheaper to re-parse from disk than to refetch. Over the cap, skip the write and
-                // let the next read go to the network.
+                // A few channels have huge listings (one 1.7 MB blob; the 634 rows over this cap held
+                // ~236 MiB). They are no cheaper to parse from disk than to refetch: over the cap,
+                // no write, and the next read goes to the network.
                 if (payload.length > MAX_CACHED_PAYLOAD_CHARS) {
                     null
                 } else {

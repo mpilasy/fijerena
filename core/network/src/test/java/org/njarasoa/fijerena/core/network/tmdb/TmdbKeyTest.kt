@@ -9,8 +9,8 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * The user-entered TMDB key (D4, the public release plan): no
- * key and a refused key both turn TMDB off, before any request is made.
+ * The user-entered TMDB key (D4, the public release plan): no key and a refused key both turn TMDB
+ * off, before any request is made.
  */
 class TmdbKeyTest {
     @Test

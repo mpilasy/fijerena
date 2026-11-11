@@ -12,8 +12,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * Search's "Not in your sources" section: the films and shows TMDB finds for a query that none of
  * the profile's Xtream sources has (TMDB id, then title and year, the original title too: TMDB
  * answers in the app language, and the sources often name a title in another). A child profile,
- * or no usable TMDB key, gets nothing, and TMDB is never called then. See
- * the wanted titles plan → Search.
+ * or no usable TMDB key, gets nothing, and TMDB is never called then. See the wanted titles plan →
+ * Search.
  */
 class TmdbTitleSearch(
     private val context: Context,

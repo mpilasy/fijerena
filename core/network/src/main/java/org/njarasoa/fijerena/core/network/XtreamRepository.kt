@@ -152,8 +152,7 @@ class XtreamRepository(
     /**
      * [this] without the titles a child profile may not see ([ParentalRules.hidesTitle], also in a
      * kids' category), when the profile in use is one; as it is otherwise. Categories are hidden by
-     * the filters; this catches the titles inside the others
-     * (the parental controls plan).
+     * the filters; this catches the titles inside the others (the parental controls plan).
      */
     private fun List<XtreamStream>.forProfile(): List<XtreamStream> {
         if (!appSettings.isChildProfile(appSettings.activeProfileId)) return this
@@ -293,9 +292,7 @@ class XtreamRepository(
 
     fun getAppSettings(): AppSettings = appSettings
 
-    /**
-     * Get cache statistics per content type (based on DB counts)
-     */
+    /** Cache statistics per content type, from database counts. */
     data class ContentTypeCacheStats(
         val size: Long, // kept for compatibility, always 0
         val categoryCount: Int,

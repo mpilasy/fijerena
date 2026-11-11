@@ -14,15 +14,14 @@ object XmltvParser {
     private const val TAG = "XmltvParser"
 
     /**
-     * Timezone offset override (hours) for XMLTV timestamps.
-     * When non-zero, replaces the timezone offset from the XMLTV data.
-     * Set from AppSettings.epgTimezoneOffsetHours at app startup.
+     * Default timezone offset override (hours) for the parse functions: when not 0, it replaces the
+     * offset in the XMLTV data. Nothing sets it; the guide index passes each source's own offset.
      */
     @Volatile
     var timezoneOverrideHours: Int = 0
 
     /**
-     * Parse XMLTV data with optional filtering to handle large files (500MB+).
+     * Parses XMLTV data, with optional filters for large files (500 MB+).
      *
      * @param channelFilter Called after all channels are parsed (before programmes).
      *   Receives the channel map, returns the set of XMLTV channel IDs to keep.
@@ -286,8 +285,8 @@ object XmltvParser {
     }
 
     /**
-     * Cache for SimpleDateFormat and TimeZone objects to reduce GC pressure.
-     * Large XMLTV files can have 200,000+ programmes, each with 2 timestamps.
+     * Cached SimpleDateFormat and TimeZone objects, for less GC: a large XMLTV file has 200,000+
+     * programmes with 2 times each.
      */
     private val dateFormatThreadLocal =
         object : ThreadLocal<SimpleDateFormat>() {
@@ -332,9 +331,8 @@ object XmltvParser {
 
             val format = dateFormatThreadLocal.get()!!
 
-            // If user has configured a timezone override, use it instead of
-            // the XMLTV-provided offset. This fixes sources that encode local
-            // times (e.g. UTC+8) but mislabel them as UTC (+0000).
+            // A timezone override replaces the XMLTV offset, for sources that label local times
+            // (UTC+8) as UTC (+0000).
             val overrideHours = timezoneOverrideHours
             val tzKey = if (overrideHours != 0) "OVERRIDE_$overrideHours" else tzPart ?: "UTC"
 

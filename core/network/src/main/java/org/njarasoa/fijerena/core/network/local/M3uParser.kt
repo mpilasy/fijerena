@@ -52,7 +52,7 @@ object M3uParser {
                 if (trimmedLine.isEmpty()) continue
 
                 if (trimmedLine.startsWith(EXTINF_PREFIX)) {
-                    // Pass the original string and offset to avoid removing prefix allocation
+                    // The original string and an offset: no removePrefix allocation.
                     val offset = EXTINF_PREFIX.length
 
                     val name = extractName(trimmedLine, offset)
@@ -192,10 +192,8 @@ object M3uParser {
     }
 
     private fun isLiveUrl(url: String): Boolean {
-        // Performance note: In benchmarks, creating a lowercase copy was found to be faster
-        // than multiple case-insensitive scans (endsWith/contains with ignoreCase=true).
-        // This is likely because the allocation cost is amortized compared to multiple
-        // character-by-character comparisons.
+        // One lowercase copy measured faster than several case-insensitive scans
+        // (endsWith/contains with ignoreCase = true).
         val lower = url.lowercase()
         return lower.endsWith(".m3u8") ||
             lower.endsWith(".ts") ||

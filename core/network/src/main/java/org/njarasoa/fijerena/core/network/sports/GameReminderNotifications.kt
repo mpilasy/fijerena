@@ -21,8 +21,9 @@ import java.util.Date
 /**
  * The "Reminders" notification of games and guide programmes (both apps; on TV only while the app
  * is not on screen, else the banner shows). Its text is "<home> v <away> starts at <time>" ("<title>
- * starts at <time>" for a programme), then the best channel ("On Sky Sports 1") or the competition. Tapping it opens the app, which tunes the best channel when
- * there is one ([GameReminderAlerts.handleLaunchIntent]).
+ * starts at <time>" for a programme), then the best channel ("On Sky Sports 1") or the competition.
+ * Tapping it opens the app, which tunes the best channel when there is one
+ * ([GameReminderAlerts.handleLaunchIntent]).
  *
  * On the phone it also has the action "Manage reminders", which opens the app on the Reminders
  * page ([handleLaunchIntent], [openReminders]). The TV notification has no such action.

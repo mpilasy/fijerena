@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.Index
 
 /**
- * A game reminder of a profile: the alarm rings 10 minutes before [startEpoch]. Local
+ * A game reminder of a profile: the alarm rings the device's lead time before [startEpoch]. Local
  * only, never synced: a reminder rings on the device where it was set. See the sports teams plan →
  * Reminders.
  *

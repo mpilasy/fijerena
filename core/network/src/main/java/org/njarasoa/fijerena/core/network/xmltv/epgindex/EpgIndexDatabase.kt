@@ -43,12 +43,10 @@ abstract class EpgIndexDatabase : RoomDatabase() {
         /**
          * Creates the database file with a 4 KB page size before Room can put a table in it.
          *
-         * Page size is frozen by the first `CREATE TABLE` and, on a WAL database, not even
-         * `VACUUM` will change it afterwards — so the only opportunity is while the file does not
-         * exist yet. Requery hardcodes 1024 (its `SQLiteGlobal.getDefaultPageSize()` measures the
-         * filesystem block size and then returns a literal), and applies it per connection; that
-         * application is a no-op here because this seeds a header first. Creating and dropping a
-         * throwaway table is what forces the header to be written.
+         * The first `CREATE TABLE` fixes the page size, and on a WAL database not even `VACUUM`
+         * changes it later, so the only chance is before the file exists. Requery applies a
+         * hardcoded 1024 per connection; that is a no-op here because this writes the header first,
+         * with a throwaway table.
          *
          * Existing files are left alone: nothing here can migrate them, only a delete-and-rebuild.
          */
@@ -57,10 +55,9 @@ abstract class EpgIndexDatabase : RoomDatabase() {
             if (dbFile.exists()) return
             try {
                 dbFile.parentFile?.mkdirs()
-                // Framework SQLite, deliberately, not Requery: Requery forces its hardcoded 1024
-                // onto every connection it opens, so seeding through it produces the very file we
-                // are trying to avoid. The framework honours the requested size — which is why
-                // Room's other databases are already on 4 KB pages.
+                // Framework SQLite on purpose, not Requery: Requery forces its 1024 onto every
+                // connection. The framework honours the requested size, as Room's other databases
+                // on 4 KB pages show.
                 android.database.sqlite.SQLiteDatabase
                     .openOrCreateDatabase(dbFile.path, null)
                     .use { raw ->
@@ -108,15 +105,13 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                     object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             try {
-                                // Optimize for performance - run directly on the opened connection
                                 // page_size and auto_vacuum are not here: both are only settable
                                 // before the first table exists, and this callback runs after Room
                                 // has created the schema. See [CreationPragmaFactory].
                                 db.execSQL("PRAGMA synchronous = NORMAL")
-                                // Baseline for every pooled connection, held for its lifetime (not
-                                // a temporary bump like EpgIndexer's rebuild/bulk-ingest PRAGMAs,
-                                // which reset afterward) — 64MB × several pooled connections was
-                                // reserving 200MB+ of native RAM on 1-2GB Android TV devices.
+                                // Baseline of each pooled connection for its lifetime (not a temporary
+                                // bump like EpgIndexer's): 64 MB × several connections reserved
+                                // 200 MB+ of native RAM on 1-2 GB Android TV devices.
                                 db.execSQL("PRAGMA cache_size = -8000") // 8MB cache
 
                                 // journal_size_limit echoes its new value — Requery rejects execSQL
@@ -132,14 +127,11 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 ).build()
 
         /**
-         * Destroy the database instance and delete the file.
-         * Used before re-indexing to start fresh.
+         * Closes the database and deletes the file, before a new index.
          *
-         * File deletion happens inside the same `synchronized(this)` block as the
-         * close()/INSTANCE=null step, not after it — releasing the lock in between left a window
-         * for a racing [getInstance] to see `INSTANCE == null`, build a fresh database at this
-         * same path, and then have its brand-new file deleted out from under it by the deletes
-         * below, silently orphaning whatever it had already written.
+         * The deletes run inside the same `synchronized(this)` block as close()/INSTANCE=null: with
+         * the lock released between them, a racing [getInstance] could build a new database at this
+         * path and then lose its file to the deletes.
          */
         suspend fun destroy(context: Context) {
             synchronized(this) {
@@ -162,11 +154,9 @@ abstract class EpgIndexDatabase : RoomDatabase() {
  * `VACUUM` to change. Room's [RoomDatabase.Callback.onOpen] fires *after* it has created the
  * schema, so setting it there is too late — `onConfigure` runs before Room touches the file.
  *
- * `page_size` belongs here too and is deliberately absent: Requery's `SQLiteGlobal` computes the
- * filesystem block size, discards it, and returns a hardcoded 1024, which it applies per
- * connection before any callback of ours runs. Every Requery-backed database is therefore on 1 KB
- * pages, and no setting from here can change that — only `PRAGMA page_size` followed by a one-time
- * `VACUUM`, after which Requery's re-application is a no-op on the now-populated file.
+ * `page_size` is not set here: Requery applies a hardcoded 1024 to each connection before any
+ * callback of ours runs. Only `PRAGMA page_size` and a one-time `VACUUM` change it on a file that
+ * exists.
  */
 private class CreationPragmaFactory(
     private val delegate: SupportSQLiteOpenHelper.Factory,

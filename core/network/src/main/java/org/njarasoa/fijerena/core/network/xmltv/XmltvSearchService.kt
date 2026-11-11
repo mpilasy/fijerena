@@ -21,8 +21,7 @@ import java.util.Locale
 class EpgIndexBusyException : Exception("EPG index optimizing, please wait...")
 
 /**
- * Searches programme titles in the SQLite FTS index.
- * All I/O is local — no network calls, no XML files on disk.
+ * Searches programme titles in the SQLite FTS index. All local: no network, no XML files.
  */
 class XmltvSearchService(
     private val context: Context,
@@ -34,13 +33,10 @@ class XmltvSearchService(
         // The most programmes a search returns, as each query's LIMIT.
         private const val MAX_RESULTS = 500
 
-        // Pre-compiled regex — avoid recompiling on every search call
         private val WHITESPACE_REGEX = Regex("\\s+")
 
-        // FTS4's actual reserved boolean operators, as whole words — not "any capital letter",
-        // which would mistake an ordinary capitalized query (a channel name like "CNN" or "HBO",
-        // or just "Movie") for hand-written FTS syntax, dropping the prefix wildcard below and
-        // returning only exact-term matches.
+        // FTS4's reserved operators as whole words, not any capital letter: a capitalised query
+        // ("CNN", "Movie") is not FTS syntax and keeps the prefix wildcard below.
         private val FTS_OPERATOR_REGEX = Regex("\\b(AND|OR|NOT|NEAR)\\b")
     }
 
@@ -79,8 +75,7 @@ class XmltvSearchService(
 
     /**
      * The guide sources whose index entries a refresh is still writing are read without FTS, in
-     * titles and descriptions; the others through the index
-     * (the pausable guide indexing plan).
+     * titles and descriptions; the others through the index (the pausable guide indexing plan).
      */
     private suspend fun searchFromIndex(
         query: String,
@@ -165,10 +160,8 @@ class XmltvSearchService(
                         dao.searchByTitleFts(rawFtsQuery, sourceIds, windowStart, windowEnd)
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
-                    // A newer keystroke cancelled this search — not a query failure. Rethrowing
-                    // (rather than falling through to null, which the fallback path below treats as
-                    // "no results, try the safe query") stops a second, equally pointless FTS query
-                    // from running against an already-cancelled search.
+                    // A newer keystroke cancelled this search: not a query failure. Rethrown, or the
+                    // fallback below runs a second FTS query for nothing.
                     throw e
                 } catch (e: Exception) {
                     // Catches SQLite syntax errors if user provided malformed FTS tokens
@@ -202,10 +195,7 @@ class XmltvSearchService(
         return result
     }
 
-    /**
-     * Builds a query that preserves FTS operators like OR, NEAR, and NOT.
-     * Appends a prefix wildcard * to the last word if it's not a reserved token.
-     */
+    /** A query with FTS operators (OR, NEAR, NOT) or quotes as typed; any other with a prefix wildcard *. */
     private fun buildRawFtsQuery(query: String): String {
         val trimmed = query.trim()
         val finalQuery =
@@ -219,9 +209,7 @@ class XmltvSearchService(
         return finalQuery
     }
 
-    /**
-     * Builds a safe "fallback" query by stripping operators and wrapping in quotes.
-     */
+    /** A safe fallback query: operators stripped, words in quotes. */
     private fun buildSafeFtsQuery(query: String): String {
         val sanitized =
             query

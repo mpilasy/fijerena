@@ -41,20 +41,17 @@ interface XtreamEpisodeDao {
     @Query("SELECT COUNT(*) FROM xtream_episodes WHERE providerId = :providerId")
     fun countEpisodes(providerId: Long): Int
 
-    /**
-     * Resolves an episode's series, for a manual watched mark (Phase 6,
-     * the watch state durable storage plan) on an episode with no existing `watch_state` row.
-     * `markWatched`'s repository-level signature carries no `seriesId` — without this lookup a
-     * never-played episode marked watched directly would insert a row with `seriesId` null, and
-     * `getSeriesCompletedCounts`'s `seriesId IS NOT NULL` filter would silently drop it from the
-     * series' progress rollup.
-     */
     @Query("SELECT * FROM xtream_episodes WHERE providerId = :providerId AND id = :episodeId LIMIT 1")
     suspend fun getEpisode(
         providerId: Long,
         episodeId: String,
     ): XtreamEpisodeEntity?
 
+    /**
+     * An episode's series, for a manual watched mark (Phase 6, the watch state durable storage plan)
+     * on an episode with no `watch_state` row: without a `seriesId`, the `seriesId IS NOT NULL`
+     * filter of `getSeriesCompletedCounts` drops the row from the series' progress.
+     */
     @Query("SELECT seriesId FROM xtream_episodes WHERE providerId = :providerId AND id = :episodeId LIMIT 1")
     suspend fun getSeriesIdForEpisode(
         providerId: Long,
@@ -75,17 +72,13 @@ interface XtreamEpisodeDao {
     >
 
     /**
-     * Phase 5 dedup (the watch state durable storage plan). Unlike movies,
-     * where five language variants are five rows in one flat catalogue, five language variants of a
-     * show are five separate `xtream_series` rows, each with its own complete, separately-numbered
-     * episode list. The correlation key is therefore `(season, episodeNum)` under a sibling series
-     * sharing *this* series' `tmdbId` — not `XtreamEpisodeEntity.tmdbId`, which panels leave NULL or
-     * fill with the series' own id. Two-level join: `xtream_series`
-     * finds sibling series by shared `tmdbId`, then `xtream_episodes` finds each sibling's matching
-     * `(season, episodeNum)` row. The sibling-series subquery includes [seriesId] itself (a
-     * series' own `tmdbId` always matches itself), so a directly-completed episode satisfies this
-     * via a self-match — the caller's separate `isCompleted` check becomes redundant against this
-     * result, not incorrect. A series with no `tmdbId` of its own degrades to no dedup.
+     * Phase 5 dedup (the watch state durable storage plan). Language variants of a show are
+     * separate `xtream_series` rows, each with its own episode list, so the key is
+     * `(season, episodeNum)` under a sibling series with *this* series' `tmdbId`, not
+     * `XtreamEpisodeEntity.tmdbId` (panels leave it NULL or fill it with the series id).
+     * `xtream_series` finds the siblings, then `xtream_episodes` their matching rows. The sibling
+     * set includes [seriesId] itself, so a directly completed episode matches too. A series with no
+     * `tmdbId` gives no dedup.
      */
     @Query(
         "SELECT e2.id AS itemId " +
@@ -113,24 +106,18 @@ interface XtreamEpisodeDao {
     ): List<String>
 
     /**
-     * Numerator for the series-row watch bar, with Phase 5 dedup applied — the aggregate form of
-     * [getSiblingCompletedEpisodeIds], for every cached series at once rather than one series at a
-     * time. Without it the bar counts only episodes completed under *this* `seriesId`, so a show
-     * watched through a different language variant reads 0% on the row while its own episode list
-     * correctly shows those episodes checked.
+     * Numerator for the series-row watch bar with Phase 5 dedup: [getSiblingCompletedEpisodeIds]
+     * for every cached series at once, so a show watched through another language variant does not
+     * read 0% on its row.
      *
-     * Shaped as a CTE rather than the `EXISTS` form [getSiblingCompletedEpisodeIds] uses, because
-     * this one is not scoped to a single series: driving from `watch_state` (a handful of completed
-     * rows) and joining outwards keeps it index-only, where the correlated-subquery form re-derived
-     * each series' `tmdbId` per candidate episode. Measured against a real 47,552-series catalogue:
-     * 223ms for the `EXISTS` shape, 0.1ms for this one.
+     * A CTE, not the `EXISTS` form, as it covers every series: driving from `watch_state` (few
+     * completed rows) keeps it index-only. On a 47,552-series catalogue the `EXISTS` shape took
+     * 223 ms, this one 0.1 ms.
      *
-     * Counts `DISTINCT (season, episodeNum)` so a series listing the same episode twice cannot
-     * exceed its own denominator from [countEpisodesBySeries], which counts rows. No duplicates
-     * were present in the catalogue checked, so this is a guard rather than an observed fix.
+     * Counts `DISTINCT (season, episodeNum)`, so a series that lists an episode twice cannot exceed
+     * its denominator from [countEpisodesBySeries], which counts rows (a guard; none seen).
      *
-     * Series whose `tmdbId` is NULL are absent from the result and keep the undeduplicated count
-     * the caller already has — same fail-safe shape as the rest of Phase 5.
+     * Series with a NULL `tmdbId` are absent and keep the caller's count without dedup.
      */
     @Query(
         "WITH done AS (" +
@@ -163,10 +150,9 @@ interface XtreamEpisodeDao {
 
     /**
      * Phase 6 unwatched, episode form of [org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao.clearGroupCompletion].
-     * Same two-level join as [getSiblingCompletedEpisodeIds]: [itemId]'s `(season, episodeNum)`
-     * matched across every sibling series sharing its series' `tmdbId`, not by episode `tmdbId`.
-     * The target itself is included in its own sibling set (a series' `tmdbId` matches itself), so
-     * this clears the one row too — redundant with the direct `markUnwatched` call, not incorrect.
+     * Same two-level join as [getSiblingCompletedEpisodeIds]: [itemId]'s `(season, episodeNum)` in
+     * every sibling series with its series' `tmdbId`. The target is in its own sibling set, so its
+     * own row is cleared too, as the direct `markUnwatched` call does.
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
@@ -194,7 +180,7 @@ interface XtreamEpisodeDao {
         now: Long,
     )
 
-    // Only fills a missing plot (Xtream doesn't provide episode synopses) — never overwrites an existing one.
+    // Fills a missing plot only (Xtream rarely sends episode synopses); never overwrites one.
     @Query(
         "UPDATE xtream_episodes SET plot = :plot, plotFetchedAt = :fetchedAt " +
             "WHERE id = :id AND providerId = :providerId AND (plot IS NULL OR plot = '')",

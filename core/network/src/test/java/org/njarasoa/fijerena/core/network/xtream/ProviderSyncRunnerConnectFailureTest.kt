@@ -19,9 +19,8 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import java.net.ConnectException
 
 /**
- * A sync whose connect fails says why: the server being unreachable is a transient network
- * failure (retried, "network error"), not "Login failed. Check your username and password." and a
- * permanent error, which is what every connect failure used to be reported as.
+ * A sync whose connect fails says why: an unreachable server is a transient network failure
+ * (retried, "network error"), not a permanent "Login failed. Check your username and password."
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderSyncRunnerConnectFailureTest {

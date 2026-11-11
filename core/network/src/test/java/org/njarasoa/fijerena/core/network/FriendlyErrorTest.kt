@@ -29,9 +29,8 @@ class FriendlyErrorTest {
     @Test
     fun executorRejected_mapsToGeneric_notNetwork() {
         // "executor rejected" is OkHttp's InterruptedIOException message when a client's
-        // Dispatcher.executorService was already shut down - an internal lifecycle bug, not a
-        // connectivity problem. It must not fall into the generic IOException/network bucket,
-        // since "check your connection" is actively wrong guidance for it.
+        // Dispatcher was shut down: an internal bug, not a connection problem, so never the
+        // network message.
         val e = IOException("executor rejected")
 
         assertEquals("generic", friendlyErrorMessage(e, context))

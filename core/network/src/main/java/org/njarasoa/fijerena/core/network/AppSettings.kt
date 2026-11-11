@@ -265,8 +265,7 @@ class AppSettings(
     /**
      * [profileId] is a child's: every Xtream source shows it only what Parental controls let through
      * ([org.njarasoa.fijerena.core.network.provider.CategoryFilters.child]) and it is never
-     * Admin. Per profile and synced; off until turned on. See
-     * the household UX plan, Phase 1.
+     * Admin. Per profile and synced; off until turned on. See the household UX plan, Phase 1.
      */
     fun isChildProfile(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHILD_PROFILE, profileId), false)
 
@@ -572,12 +571,12 @@ class AppSettings(
 
     /**
      * A setting received from another device (live sync): written straight to prefs, not through
-     * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
-     * ignored — a newer app version may sync more, and an older one still sends the retired guide
-     * auto-refresh keys. The one exception is `dev_mode`, the Admin flag's old name, which an older
-     * build still sends: it goes to the Admin flag. A value this version can't use (a blank theme, a non-boolean switch) is
-     * dropped, so the local value stays: one bad record must not break every linked device (R-09).
-     * An unknown theme id is kept, since `paletteById` already falls back to the default palette.
+     * the setters, which would queue it to be sent back. Keys not in [SYNCED_SETTING_KEYS] are
+     * ignored: a newer version may sync more, and an older one still sends the retired guide
+     * auto-refresh keys. The exception is `dev_mode`, the Admin flag's old name: it goes to the
+     * Admin flag. A value this version can't use (a blank theme, a switch that is not a boolean) is
+     * dropped and the local value stays, so one bad record can't break every linked device (R-09).
+     * An unknown theme id is kept: `paletteById` falls back to the default palette.
      */
     fun applyRemoteSetting(
         key: String,
@@ -768,10 +767,6 @@ class AppSettings(
             prefs.edit { putInt(KEY_FAVORITES_MAX_SIZE, clampedValue) }
         }
 
-    /**
-     * Default: 24 hours (1 day)
-     * Range: 1-168 hours (1 hour to 7 days)
-     */
     var cacheExpiryHours: Int
         get() = prefs.getInt(KEY_CACHE_EXPIRY_HOURS, DEFAULT_CACHE_EXPIRY_HOURS)
         set(value) {
@@ -948,11 +943,7 @@ class AppSettings(
             remove(profileKey(KEY_POSTER_BACKDROP, profileId))
         }
 
-    /**
-     * Get or set application language (ISO 639-1 code).
-     * Supported: "en", "fr", "mg"
-     * Default: "en"
-     */
+    /** App language, an ISO 639-1 code: "en", "fr" or "mg". */
     var language: String
         get() = prefs.getString(KEY_LANGUAGE, "en") ?: "en"
         set(value) = prefs.edit { putString(KEY_LANGUAGE, value) }
@@ -968,9 +959,9 @@ class AppSettings(
     /**
      * The retired device-wide guide auto-refresh, read only: each guide source has its own
      * interval (`epg_source.refresh_interval_hours`), set on its row. Nothing writes, syncs or
-     * exports these any more; they are the interval
+     * exports these; they are the interval that
      * [org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule.copyLegacyIntervalOnce] copies
-     * once, and the one a source without an interval of its own uses.
+     * once, and the one a source without its own interval uses.
      */
     val epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
@@ -979,26 +970,20 @@ class AppSettings(
     val epgRefreshInterval: Int
         get() = prefs.getInt(KEY_EPG_REFRESH_INTERVAL, DEFAULT_EPG_REFRESH_INTERVAL)
 
-    /**
-     * Enable or disable automatic background refresh of provider content (categories/streams).
-     */
+    /** Automatic background refresh of provider content (categories and streams). */
     var contentAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_CONTENT_AUTO_REFRESH, true)
         set(value) = prefs.edit { putBoolean(KEY_CONTENT_AUTO_REFRESH, value) }
 
-    /**
-     * Content refresh start time (HH:mm format).
-     * Default: 04:00
-     */
+    /** Content refresh start time, HH:mm. */
     var contentRefreshTime: String
         get() = prefs.getString(KEY_CONTENT_REFRESH_TIME, DEFAULT_CONTENT_REFRESH_TIME) ?: DEFAULT_CONTENT_REFRESH_TIME
         set(value) = prefs.edit { putString(KEY_CONTENT_REFRESH_TIME, value) }
 
     /**
-     * Timezone offset override for XMLTV data, in hours (e.g., 8 for UTC+8, -5 for UTC-5).
-     * When non-zero, replaces the timezone offset in XMLTV timestamps during parsing.
-     * This fixes XMLTV sources that encode local times but mislabel them as UTC (+0000).
-     * Default: 0 (use timezone from XMLTV data as-is).
+     * Timezone offset override for XMLTV times, in hours (8 for UTC+8). When not 0, it replaces the
+     * offset in XMLTV timestamps, for sources that label local times as UTC (+0000). 0 keeps the
+     * offset in the data.
      */
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)
@@ -1027,10 +1012,7 @@ class AppSettings(
             prefs.edit { putFloat(KEY_CELLULAR_VOD_MULTIPLIER, clamped) }
         }
 
-    /**
-     * Delay in seconds before a live channel is marked as "watched" (added to Last Watched).
-     * Range: 5-120 seconds. Default: 30 seconds.
-     */
+    /** Delay in seconds before a live channel counts as watched. */
     var watchDelaySeconds: Int
         get() = prefs.getInt(KEY_WATCH_DELAY_SECONDS, DEFAULT_WATCH_DELAY_SECONDS)
         set(value) {
@@ -1165,9 +1147,8 @@ class AppSettings(
         }.distinctUntilChanged()
 
     /**
-     * Cached flag for whether at least one provider exists.
-     * Used for fast startup — avoids Room DB query on cold start.
-     * Must be updated whenever providers are added or removed.
+     * Whether at least one provider exists, for a fast cold start without a Room query. Update it
+     * whenever a provider is added or removed.
      */
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
@@ -1248,14 +1229,10 @@ class AppSettings(
     // Search and EPG search history belong to the active profile, like Admin: stored
     // under `<key>_<profileId>`. Per device and never synced.
 
-    /**
-     * Get the active profile's search history as an ordered list (most recent first).
-     */
+    /** The active profile's search history, most recent first. */
     fun getSearchHistory(): List<String> = readHistory(KEY_SEARCH_HISTORY)
 
-    /**
-     * Add a search term to history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
-     */
+    /** Adds a search term, without duplicates (any case), capped at [MAX_SEARCH_HISTORY]. */
     fun addSearchHistory(query: String) = addToHistory(KEY_SEARCH_HISTORY, query)
 
     fun removeSearchHistory(query: String) = removeFromHistory(KEY_SEARCH_HISTORY, query)
@@ -1264,14 +1241,10 @@ class AppSettings(
         prefs.edit { remove(historyKey(KEY_SEARCH_HISTORY, activeProfileId)) }
     }
 
-    /**
-     * Get the active profile's EPG search history as an ordered list (most recent first).
-     */
+    /** The active profile's EPG search history, most recent first. */
     fun getEpgSearchHistory(): List<String> = readHistory(KEY_EPG_SEARCH_HISTORY)
 
-    /**
-     * Add a search term to EPG history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
-     */
+    /** Adds an EPG search term, without duplicates (any case), capped at [MAX_SEARCH_HISTORY]. */
     fun addEpgSearchHistory(query: String) = addToHistory(KEY_EPG_SEARCH_HISTORY, query)
 
     fun removeEpgSearchHistory(query: String) = removeFromHistory(KEY_EPG_SEARCH_HISTORY, query)

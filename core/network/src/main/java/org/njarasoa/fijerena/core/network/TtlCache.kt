@@ -1,14 +1,12 @@
 package org.njarasoa.fijerena.core.network
 
 /**
- * In-memory cache with a fixed time-to-live per entry, capped at [maxSize] entries. Not
- * persisted across process death — for detail data (movie/series metadata, content ratings)
- * that's expensive to (re)fetch (network + TMDB calls) but rarely changes, so a reopen within
- * the same app session shouldn't hit the network again.
+ * In-memory cache with a fixed time-to-live per entry, capped at [maxSize] entries, for detail
+ * data that is costly to fetch (network and TMDB) but rarely changes: a reopen in the same session
+ * asks the network nothing. Not kept across process death.
  *
- * TTL alone only evicts a key when it's read again — a title opened once and never revisited
- * would otherwise sit here for the full TTL. The size cap (LRU, evicted on insert) bounds that
- * over a long session browsing a large catalogue.
+ * A TTL evicts a key only when it is read again, so the size cap (LRU, evicted on insert) bounds a
+ * long session in a large catalogue.
  */
 class TtlCache<K : Any, V : Any>(
     private val ttlMs: Long,

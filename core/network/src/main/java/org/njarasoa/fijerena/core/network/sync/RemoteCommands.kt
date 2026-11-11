@@ -6,10 +6,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Remote Stop commands addressed to this device that match what it is playing — see
- * the live sync now playing plan → Remote Stop. Here, not in `core:ui`,
- * because [SyncApplier] (this module) decides what fires; the player screens and the app-wide
- * fallback (`core:ui`) collect [stops].
+ * Remote Stop commands addressed to this device that match what it is playing (the live sync now
+ * playing plan → Remote Stop). Here, not in `core:ui`, because [SyncApplier] (this module) decides
+ * what fires; the player screens and the app-wide fallback (`core:ui`) collect [stops].
  */
 object RemoteCommands {
     /** Stop the playback [sessionId]; [fromDeviceName] is shown to whoever was watching. */

@@ -23,9 +23,7 @@ class EpgChannelMatcher(
             fetchStreams: () -> List<XtreamStreamEntity>,
         ): EpgChannelMatcher = cache.getOrPut(providerId) { EpgChannelMatcher(fetchStreams(), providerId) }
 
-        /**
-         * Explicitly clear the cache (e.g., when a provider's streams are refreshed).
-         */
+        /** Clears the cache (for example, after a provider's streams are refreshed). */
         @Synchronized
         fun clearCache() {
             cache.clear()
@@ -41,10 +39,9 @@ class EpgChannelMatcher(
             cache.remove(providerId)
         }
 
-        // Bounds native/JVM heap for very large or noisy XMLTV guides (many distinct channelId/
-        // channelName combinations). A full clear rather than real LRU eviction: hitting this cap
-        // is rare, entries are cheap to recompute, and it stays safe under concurrent access
-        // without hand-rolling a thread-safe LRU.
+        // Bounds the heap for very large or noisy XMLTV guides (many channelId/channelName pairs).
+        // A full clear, not LRU: the cap is rare, entries are cheap to recompute, and a clear is
+        // safe under concurrent access.
         private const val MAX_MEMOIZED_MATCHES = 5_000
     }
 
@@ -125,7 +122,6 @@ class EpgChannelMatcher(
             if (normalizedChannelName.length >= 4) {
                 val chanLen = normalizedChannelName.length
                 var found: XtreamStreamEntity? = null
-                // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
                 for (i in normalizedNames.indices) {
                     val norm = normalizedNames[i]
                     val normLen = norm.length

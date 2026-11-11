@@ -21,10 +21,9 @@ class AccountManager(
     context: Context,
     private val providerId: Long = 0L,
 ) {
-    // Lazy on purpose: keystore unlock + crypto + disk cost ~340ms, and the nav hosts construct
-    // an AccountManager during composition while only reading from it inside coroutines. Built
-    // eagerly it blocked the first frame; deferred, the cost lands on whichever caller reads
-    // first — so [warmUp] exists to make that caller a background one.
+    // Lazy on purpose: keystore unlock, crypto and disk cost ~340 ms, and the nav hosts build an
+    // AccountManager during composition. Eager, it blocked the first frame; lazy, the cost lands on
+    // the first reader, so [warmUp] makes that a background one.
     private val prefs: SharedPreferences by lazy { encryptedPrefs(context, providerId) }
     private val appContext = context.applicationContext
 
@@ -36,11 +35,9 @@ class AccountManager(
 
     companion object {
         // Process-wide, not per instance: EncryptedSharedPreferences.create rebuilds the master
-        // key and the crypto each call, so an AccountManager constructed per screen would pay the
-        // full cost every time instead of sharing one store. Keyed by providerId: providerId 0
-        // is the legacy pre-multi-provider file (kept for migration and single-account flows);
-        // every real provider gets its own file so a background sync of provider B can never
-        // clobber the credentials provider A's session restore is about to read.
+        // key and the crypto on each call. Keyed by providerId: 0 is the legacy file from before
+        // multiple providers (migration and single-account flows); each real provider has its own
+        // file, so provider B's background sync never overwrites what provider A's restore reads.
         private val sharedPrefs = java.util.concurrent.ConcurrentHashMap<Long, SharedPreferences>()
 
         private fun fileName(providerId: Long) =
@@ -125,10 +122,9 @@ class AccountManager(
     }
 
     /**
-     * Resolves the lazy [prefs] delegate — keystore unlock, crypto and disk, together roughly a
-     * third of a second. Call it from a background thread at startup: the deferral above only
-     * moves that cost to the first reader, and the first reader has turned out to be a
-     * LaunchedEffect on the main dispatcher, which puts the whole stall back on the UI thread.
+     * Resolves the lazy [prefs] (keystore unlock, crypto and disk, about a third of a second). Call
+     * it from a background thread at startup: else the first reader, a LaunchedEffect on the main
+     * dispatcher, puts the stall on the UI thread.
      */
     fun warmUp() {
         prefs
@@ -159,8 +155,8 @@ class AccountManager(
     }
 
     /**
-     * Store basic credentials without an auth response.
-     * Used by MediaProviderFactory to seed credentials for XtreamRepository.restoreSession().
+     * Stores a login without an auth response, so XtreamRepository.restoreSession() finds it
+     * (MediaProviderFactory).
      */
     fun storeBasicCredentials(
         url: String,
@@ -181,8 +177,8 @@ class AccountManager(
     }
 
     /**
-     * Exports existing credentials for one-time migration to the multi-provider system.
-     * Returns Triple(url, username, password) or null if no credentials stored.
+     * The stored login for the one-time migration to multiple providers: (url, username, password),
+     * or null when none is stored.
      */
     fun exportForMigration(): Triple<String, String, String>? {
         val url = prefs.getString(KEY_URL, null) ?: return null
@@ -192,8 +188,8 @@ class AccountManager(
     }
 
     /**
-     * Updates only the provider URL while keeping username/password unchanged.
-     * Clears auth response as it will be invalid with the new URL.
+     * Changes the provider URL and keeps the login. Clears the auth response, which the new URL
+     * makes invalid.
      */
     fun updateUrl(newUrl: String) {
         prefs.edit().apply {

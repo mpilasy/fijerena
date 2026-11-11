@@ -20,8 +20,8 @@ import org.robolectric.annotation.Config
 /**
  * The Wanted list's storage and its live sync bookkeeping, against a real in-memory `xtream_v2.db`
  * with the sync triggers installed: every add and update is queued under the no-provider id, a
- * removal leaves a tombstone, re-adding clears it, and linking seeds the list. See
- * the wanted titles plan, Phase 1.
+ * removal leaves a tombstone, re-adding clears it, and linking seeds the list. See the wanted
+ * titles plan, Phase 1.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

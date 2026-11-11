@@ -95,8 +95,8 @@ class SyncCryptoTest {
     }
 
     /**
-     * The envelope and codec exactly as apps before F-07 (`c59005f0`) had them: seal with the key
-     * id as AAD, and an envelope without the sealed `updatedAt`/`deleted` copies.
+     * The envelope and codec exactly as apps before F-07 had them: seal with the key id as AAD, and
+     * an envelope without the sealed `updatedAt`/`deleted` copies.
      */
     @Serializable
     private data class LegacyEnvelope(

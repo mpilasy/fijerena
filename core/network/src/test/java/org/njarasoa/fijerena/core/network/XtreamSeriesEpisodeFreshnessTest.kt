@@ -17,8 +17,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 /**
  * A stored episode list is reused until the catalogue sync says the series changed (it clears
- * `episodesFetchedAt`) or 30 days pass. See the catalog sync cache churn plan,
- * Phase 2.
+ * `episodesFetchedAt`) or 30 days pass. See the catalog sync cache churn plan, Phase 2.
  */
 class XtreamSeriesEpisodeFreshnessTest {
     private val repository = mockk<XtreamRepository>(relaxed = true)

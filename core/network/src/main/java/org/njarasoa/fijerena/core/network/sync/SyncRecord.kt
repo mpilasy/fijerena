@@ -1,12 +1,12 @@
 package org.njarasoa.fijerena.core.network.sync
 
 /**
- * Identity of one synced thing — see the live sync plan → Record model.
- * [profileKey] is a profile id for per-person kinds and [SyncKind.SHARED] otherwise; [providerKey]
- * is the provider's `providerKey` for provider-scoped kinds and empty otherwise; [itemId] and
- * [contentType] are the item within them (empty where a kind has none: a provider record's own
- * item is its [providerKey], a profile's [itemId] is its id, an EPG source's its `source_key`, a
- * setting's its key).
+ * Identity of one synced thing (the live sync plan → Record model). [profileKey] is a profile id
+ * for per-person kinds and [SyncKind.SHARED] otherwise; [providerKey] is the provider's
+ * `providerKey` for provider-scoped kinds and empty otherwise; [itemId] and [contentType] are the
+ * item within them (empty where a kind has none: a provider record's own item is its
+ * [providerKey], a profile's [itemId] is its id, an EPG source's its `source_key`, a setting's its
+ * key).
  */
 data class SyncKey(
     val profileKey: String,

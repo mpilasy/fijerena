@@ -30,9 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Singleton that indexes XMLTV data into SQLite for fast FTS search.
  *
- * Streaming parse with batch INSERT (500 rows per batch) wrapped in
- * Room withTransaction for atomicity. Network drop or parse error
- * triggers transaction rollback — DB stays consistent.
+ * Streaming parse with batch inserts ([BATCH_SIZE_MOBILE] or [BATCH_SIZE_TV] rows), each batch in
+ * its own Room transaction: a network drop or a parse error rolls back only the current batch.
  *
  * Direct path: REPLACE on the unique (channel_id, source_id, start_epoch) index so the database
  * stays searchable during sync, then [deleteProgrammesNotRewritten] drops what the new guide no
@@ -93,11 +92,9 @@ class EpgIndexer private constructor(
             return if (isTv) BATCH_SIZE_TV else BATCH_SIZE_MOBILE
         }
 
-        // Room-generated FTS content-sync trigger names for epg_programme_fts.
-        // These are created in onCreate and kept alive in the SQLite file.
-        // We drop them before bulk ingestion and recreate afterwards so that
-        // per-row FTS maintenance is skipped entirely; a single rebuild() at
-        // the end of the session is cheaper than millions of incremental updates.
+        // Room's FTS content-sync triggers for epg_programme_fts. Dropped before a bulk ingestion
+        // and created again after it: one rebuild() at the end is cheaper than millions of updates
+        // per row.
         private val FTS_TRIGGER_NAMES =
             listOf(
                 "room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE",
@@ -116,9 +113,8 @@ class EpgIndexer private constructor(
                 "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`,`description`) VALUES (NEW.`id`,NEW.`title`,NEW.`description`); END",
             )
 
-        // Query-only indexes on epg_programme that are dropped during bulk
-        // ingestion and rebuilt afterwards.  The dedup unique index is kept
-        // because INSERT … REPLACE needs it for conflict resolution.
+        // Query-only indexes on epg_programme, dropped during a bulk ingestion and rebuilt after
+        // it. The dedup unique index stays: INSERT … REPLACE needs it for conflict resolution.
         private val BULK_DROP_INDEX_NAMES =
             listOf(
                 "idx_programme_end",
@@ -142,10 +138,7 @@ class EpgIndexer private constructor(
     private val _state = MutableStateFlow<EpgIndexState>(EpgIndexState.NotIndexed)
     val state: StateFlow<EpgIndexState> = _state.asStateFlow()
 
-    /**
-     * Ingestion stats for the most recent ingestFromStream() call.
-     * Reset at the start of each ingestion.
-     */
+    /** The stats of one ingestFromStream() call. */
     data class IngestionStats(
         val channelsIngested: Int = 0,
         val programmesIngested: Int = 0,
@@ -158,10 +151,8 @@ class EpgIndexer private constructor(
         private set
 
     /**
-     * Restore Indexed state from stored metadata without re-indexing.
-     * Also restores the ftsStale flag so a background rebuild can be resumed if
-     * the previous session was interrupted before the FTS index was refreshed.
-     * Returns true if the FTS index is stale and a background rebuild should be launched.
+     * Restores the Indexed state and the ftsStale flag from stored metadata, with no new index.
+     * True when the FTS index is stale and a background rebuild must start.
      */
     suspend fun initialize(): Boolean =
         withContext(Dispatchers.IO) {
@@ -255,10 +246,7 @@ class EpgIndexer private constructor(
             false
         }
 
-    /**
-     * Set state to Indexing if not already Indexed.
-     * Call once before parallel ingestion begins.
-     */
+    /** Sets Indexing unless already Indexed. Call once before parallel ingestion begins. */
     fun setIndexing() {
         if (_state.value !is EpgIndexState.Indexed) {
             _state.value =
@@ -384,15 +372,14 @@ class EpgIndexer private constructor(
                                         programmeBatch.clear()
                                         programmeStagingBatch.clear()
 
-                                        // Throttled UI updates to reduce main thread pressure during playback
+                                        // Throttled UI updates, less main thread work during playback.
                                         if (itemsSinceLastProgressUpdate >= 50000) {
                                             onProgress?.invoke(channelCount, programmeCount)
                                             itemsSinceLastProgressUpdate = 0
                                         }
 
-                                        // Only yield when video is actively playing; skip the sleep entirely
-                                        // when the Shield is idle to avoid the multi-hour ingestion caused
-                                        // by accumulated 100ms sleeps across millions of programme rows.
+                                        // Yield only while video plays: 100 ms sleeps over millions of
+                                        // rows made an idle ingestion take hours.
                                         if (isPlaybackActive()) delay(100)
                                     }
                                 }
@@ -440,15 +427,9 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Delete the EPG sources this app used to create for itself — one `xtream://<providerId>` row
-     * per Xtream provider, from the since-removed Xtream-API ingest — along with whatever they put
-     * in the index.
-     *
-     * Those rows were never added by a user: the sync worker inserted one for every configured
-     * Xtream provider, where they sat in the sources list next to hand-added ones. Runs on every
-     * start rather than behind a one-shot flag, because it is a scan of a table with a handful of
-     * rows and staying self-healing is worth more than the microseconds. The FTS rebuild is the
-     * only expensive part, so it happens only when something was actually deleted.
+     * Deletes the `xtream://<providerId>` EPG sources that older builds created for themselves, one
+     * per Xtream provider, with their index rows. Runs at every start, not behind a one-shot flag:
+     * the scan of a small table costs almost nothing. The FTS rebuild runs only after a delete.
      */
     suspend fun purgeXtreamApiSources() =
         withContext(Dispatchers.IO) {
@@ -508,11 +489,8 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Rebuild FTS index and update metadata/state from current DB contents.
-     *
-     * Marks FTS stale at entry (redundant with the mark already set by beginBulkIngestion()
-     * for the ingestion path, but required when this is called standalone, e.g. by the
-     * crash-recovery worker). Marks FTS clean on success so callers don't need to.
+     * Rebuilds the FTS index and updates metadata and state from the database. Marks FTS stale
+     * first (needed when called alone, for example by the recovery worker) and clean on success.
      */
     suspend fun rebuildFtsAndUpdateState() =
         withContext(Dispatchers.IO) {
@@ -530,34 +508,30 @@ class EpgIndexer private constructor(
                     val currentProgrammeCount = dao.getProgrammeCount()
                     _state.value = EpgIndexState.Optimizing(currentChannelCount, currentProgrammeCount)
 
-                    // Checkpoint WAL to reduce contention during rebuild. PASSIVE, not TRUNCATE:
-                    // TRUNCATE needs exclusive access to the whole database and blocks every other
-                    // reader/writer (e.g. "now playing" lookups elsewhere in the app) until it
-                    // finishes, on top of the rebuild statement's own lock below — that's what was
-                    // freezing the UI for tens of seconds on every EPG sync. PASSIVE flushes
-                    // opportunistically and never blocks another connection.
+                    // Checkpoint the WAL for less contention during the rebuild. PASSIVE, not
+                    // TRUNCATE: TRUNCATE needs exclusive access and blocked every other reader and
+                    // writer (now playing lookups) for tens of seconds on each EPG sync. PASSIVE
+                    // never blocks another connection.
                     sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
 
-                    // Optimize rebuild speed. cache_size capped at 16MB: XMLTV files with millions of
-                    // programmes pushed native RSS over 150MB during rebuild at 64MB, risking the Low Memory Killer on 1-2GB Android TV
-                    // devices. synchronous stays NORMAL, never OFF: a power cut mid-write (TV boxes
-                    // get unplugged) could corrupt epg_index.db with OFF; NORMAL under WAL only
-                    // syncs at checkpoints, and no measurement showed OFF to be faster here.
+                    // cache_size capped at 16 MB: at 64 MB, files with millions of programmes pushed
+                    // native RSS above 150 MB, a Low Memory Killer risk on 1-2 GB Android TV devices.
+                    // synchronous stays NORMAL, never OFF: a power cut mid-write (TV boxes get
+                    // unplugged) can corrupt epg_index.db with OFF. NORMAL under WAL syncs only at
+                    // checkpoints, and no measurement showed OFF to be faster here.
                     sdb.execSQL("PRAGMA synchronous = NORMAL")
                     sdb.execSQL("PRAGMA cache_size = -16000")
 
                     try {
                         deleteExpiredProgrammes(dao)
                         Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
-                        // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
-                        // scratch. Required after bulk ingestion because FTS triggers are dropped during
-                        // bulk — 'optimize' only merges existing segments and cannot restore missing entries.
+                        // 'rebuild' fills FTS again from epg_programme. Needed after a bulk ingestion
+                        // because the FTS triggers were dropped; 'optimize' only merges segments.
                         sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
                         optimizeFts(sdb)
                     } finally {
-                        // Room pools this connection, so anything left set here stays set for the
-                        // life of the process — reset even if the rebuild above throws, not just
-                        // on success.
+                        // Room pools this connection, so a value left set here stays for the life of
+                        // the process: reset even when the rebuild throws.
                         sdb.execSQL("PRAGMA synchronous = NORMAL")
                         sdb.execSQL("PRAGMA cache_size = -2000")
                     }
@@ -613,8 +587,8 @@ class EpgIndexer private constructor(
      * A failure or a killed process rolls the swap and the rebuild back together.
      *
      * Costs: the WAL grows by roughly the FTS size before it can checkpoint (the staging path is
-     * only taken with 1.5× the database size free — see EpgFileManager.shouldUseStaging), and
-     * other writers wait on the write lock for the rebuild, as they did before.
+     * only taken with 1.5× the database size free, see EpgFileManager.shouldUseStaging), and
+     * other writers wait on the write lock for the rebuild.
      *
      * Throws if the swap or the rebuild fails, leaving the previous guide and state in place.
      */
@@ -678,8 +652,7 @@ class EpgIndexer private constructor(
 
     /**
      * Moves [sourceIds]' staging rows into the primary tables and brings the search index up to
-     * date for them only, in batches that wait while video plays
-     * (the pausable guide indexing plan):
+     * date for them only, in batches that wait while video plays (the pausable guide indexing plan):
      *
      * 1. Remove: the index entries of the rows the swap deletes (those sources' live rows and the
      *    ended ones), while those rows still exist.
@@ -781,9 +754,8 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Continues an incremental index update a killed run left
-     * (the pausable guide indexing plan, IX2): Add and Merge from where they
-     * stopped. Returns false when there was nothing to continue.
+     * Continues an incremental index update a killed run left (the pausable guide indexing plan,
+     * IX2): Add and Merge from where they stopped. False when there was nothing to continue.
      */
     suspend fun resumeIncrementalIndex(
         pause: PlaybackPause,
@@ -854,10 +826,7 @@ class EpgIndexer private constructor(
             }
         }
 
-    /**
-     * Clear staging rows for just [sourceIds], leaving any other source's in-flight or
-     * pending-retry staging data untouched.
-     */
+    /** Clears the staging rows of [sourceIds] only; other sources' staging rows stay. */
     suspend fun clearStagingForSources(sourceIds: List<Long>) =
         withContext(Dispatchers.IO) {
             val db = EpgIndexDatabase.getInstance(context)
@@ -868,21 +837,16 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Prepare the database for a bulk ingestion session:
-     *  - Drop Room's per-row FTS sync triggers so that millions of inserts don't
-     *    each update the FTS shadow table. A single rebuild() at the end is far
-     *    cheaper than incremental maintenance.
+     * Prepares the database for a bulk ingestion session:
+     *  - Drop Room's per-row FTS sync triggers: one rebuild() at the end is far cheaper than an
+     *    FTS update for each of millions of inserts.
      *  - Keep synchronous=NORMAL (not OFF): under WAL it only syncs at checkpoints, and OFF
      *    risks a corrupt epg_index.db on a power cut (TV boxes get unplugged).
-     *  - Drop the query-only indexes on `epg_programme` — but only when [useStaging] is false.
-     *    On the staging path, ingestion writes go to `epg_programme_staging`, not
-     *    `epg_programme` — the live guide keeps querying the untouched primary table through
-     *    the whole download+ingest window, so dropping its indexes here bought nothing but a
-     *    full table scan on 2M+ rows for every guide lookup until [endBulkIngestion] restored
-     *    them.
+     *  - Drop the query-only indexes on `epg_programme`, only when [useStaging] is false: on the
+     *    staging path the live guide keeps reading the primary table, and without its indexes
+     *    every guide lookup scanned 2M+ rows.
      *
-     * Always call endBulkIngestion() in a finally block to restore state, with the same
-     * [useStaging] value this was called with.
+     * Always call endBulkIngestion() in a finally block, with the same [useStaging] value.
      */
     suspend fun beginBulkIngestion(useStaging: Boolean) =
         withContext(Dispatchers.IO) {
@@ -898,12 +862,10 @@ class EpgIndexer private constructor(
                     }
 
                     if (!useStaging) {
-                        // FTS sync triggers are dropped below, so from this point on writes to
-                        // epg_programme (direct ingestion — the only way it's touched on this
-                        // path) no longer keep the FTS shadow table in sync. Mark stale now, not
-                        // just when rebuildFtsAndUpdateState() later runs, so a search mid-ingest
-                        // gets "still updating" instead of silently querying a mismatched index.
-                        // The staging path never marks stale — see swapAndRebuildFts().
+                        // The FTS triggers are dropped below, so direct writes to epg_programme no
+                        // longer update FTS. Marked stale now, so a search mid-ingest gets "still
+                        // updating" and not a mismatched index. The staging path never marks stale
+                        // (see swapAndRebuildFts()).
                         markFtsStale()
                     }
 
@@ -924,21 +886,16 @@ class EpgIndexer private constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "beginBulkIngestion setup failed: ${e.message}", e)
                 CrashLog.record("guide index: dropping indexes before a refresh failed", e)
-                // Non-fatal but will make ingestion much slower as triggers/indexes remain active
+                // Not fatal, but ingestion is much slower with the triggers and indexes still there.
             }
         }
 
     /**
-     * Restore the database after a bulk ingestion session:
-     *  - Recreate the Room FTS sync triggers that were dropped in beginBulkIngestion().
-     *  - Recreate the query indexes dropped in beginBulkIngestion() — only if [useStaging] is
-     *    false, matching whatever that call actually dropped; recreating indexes that were never
-     *    dropped is a harmless but pointless `CREATE INDEX IF NOT EXISTS`, kept conditional
-     *    anyway so this mirrors beginBulkIngestion() exactly.
+     * Restores the database after a bulk ingestion session:
+     *  - Recreate the Room FTS sync triggers dropped in beginBulkIngestion().
+     *  - Recreate the query indexes dropped in beginBulkIngestion(), only when [useStaging] is
+     *    false, as that call did.
      *  - Restore synchronous=NORMAL.
-     *
-     * Call this before rebuildFtsAndUpdateState() so the triggers are in place
-     * for all incremental updates after the session completes.
      */
     suspend fun endBulkIngestion(useStaging: Boolean) =
         withContext(Dispatchers.IO) {
@@ -970,10 +927,7 @@ class EpgIndexer private constructor(
             }
         }
 
-    /**
-     * Clear all EPG data from the database and reset state to NotIndexed.
-     * User-configured sources live in SettingsDatabase and are preserved.
-     */
+    /** Clears all EPG data and resets the state to NotIndexed. The sources, in SettingsDatabase, stay. */
     suspend fun clearAll() =
         withContext(Dispatchers.IO) {
             try {
@@ -1197,9 +1151,7 @@ class EpgIndexer private constructor(
             }
         }
 
-    /**
-     * Get the number of configured EPG sources (regardless of index state).
-     */
+    /** The number of configured EPG sources, whatever the index state. */
     suspend fun getSourceCount(): Int =
         withContext(Dispatchers.IO) {
             try {
@@ -1213,10 +1165,9 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Reclaim free pages left by delete-heavy operations. Acquires [writeMutex] itself — callers
-     * outside this class must go through this, not [incrementalVacuumLocked], since it runs
-     * `PRAGMA wal_checkpoint(TRUNCATE)`, which needs exclusive database access and would
-     * otherwise race any concurrent writeMutex-protected write elsewhere in this class.
+     * Reclaims the free pages that deletes leave. Takes [writeMutex] itself, so callers outside
+     * this class use this and not [incrementalVacuumLocked]: its `PRAGMA wal_checkpoint(TRUNCATE)`
+     * needs exclusive access.
      */
     suspend fun incrementalVacuum() =
         withContext(Dispatchers.IO) {
@@ -1230,21 +1181,18 @@ class EpgIndexer private constructor(
             val sdb = EpgIndexDatabase.getInstance(context).openHelper.writableDatabase
             var remaining = freelistCount(sdb)
             val started = remaining
-            // One unbounded `PRAGMA incremental_vacuum` would move every free page inside a single
-            // transaction — on a database that has accumulated over a million of them that is a
-            // multi-minute write with the DB locked throughout. Walking it in chunks gives readers
-            // a gap between each batch and keeps any one transaction small.
+            // One unbounded `PRAGMA incremental_vacuum` moves every free page in one transaction: with
+            // a million of them, a write of minutes with the DB locked. Chunks give readers a gap
+            // between batches and keep each transaction small.
             var progressing = true
             while (remaining > 0 && progressing) {
                 sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
                 var left = freelistCount(sdb)
                 if (left >= remaining) {
-                    // A batch that frees nothing usually is not the end of the freelist. In WAL
-                    // mode the moved pages only leave the file when the log is checkpointed, and
-                    // once the log hits journal_size_limit with a reader holding it open the
-                    // vacuum stops making progress. Force a checkpoint and retry the batch before
-                    // concluding there is nothing left to reclaim — on a Shield this was the
-                    // difference between 43 MB and 1.3 GB.
+                    // A batch that frees nothing is usually not the end of the freelist: in WAL mode
+                    // moved pages leave the file only at a checkpoint, and when the log reaches
+                    // journal_size_limit with a reader on it, the vacuum stops. Force a checkpoint
+                    // and retry (on a Shield: 43 MB left instead of 1.3 GB).
                     sdb.execPragma("PRAGMA wal_checkpoint(TRUNCATE)")
                     sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
                     left = freelistCount(sdb)
@@ -1269,8 +1217,8 @@ class EpgIndexer private constructor(
     /**
      * Deletes the programmes that ended more than [KEEP_ENDED_SECONDS] ago, just before a rebuild
      * of the search index. A refresh replaces only the sources it downloads, so a source that stops
-     * refreshing kept its programmes for ever (29% of the guide on the TV emulator). See
-     * the disk footprint plan → Phase 2.
+     * refreshing kept its programmes for ever (29% of the guide on the TV emulator). See the disk
+     * footprint plan → Phase 2.
      */
     private suspend fun deleteExpiredProgrammes(dao: EpgIndexDao) {
         dao.deleteStaleProgrammes(System.currentTimeMillis() / 1000 - KEEP_ENDED_SECONDS)
@@ -1279,8 +1227,8 @@ class EpgIndexer private constructor(
     /**
      * Merges the search index into one segment. A 'rebuild' leaves it in several (96 MB against
      * 84 MB merged on the TV emulator), and searches return the same rows either way: under a second
-     * of work after each rebuild, inside the caller's lock and transaction. See
-     * the disk footprint plan → Phase 1.
+     * of work after each rebuild, inside the caller's lock and transaction. See the disk footprint
+     * plan → Phase 1.
      */
     private fun optimizeFts(sdb: SupportSQLiteDatabase) {
         sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('optimize')")
@@ -1297,10 +1245,9 @@ class EpgIndexer private constructor(
 /**
  * Runs a PRAGMA that Requery refuses through `execSQL` because it can return rows.
  *
- * [SupportSQLiteDatabase.query] alone is not enough: Android's cursors are lazy, so a statement
- * issued that way never executes unless something fills the cursor window. Closing the cursor
- * without stepping it silently discards the PRAGMA — which is how `incremental_vacuum` came to be
- * called after every purge and every ingest while the EPG database sat at 87% free pages.
+ * [SupportSQLiteDatabase.query] alone is not enough: Android's cursors are lazy, so the statement
+ * runs only when something fills the cursor window. A cursor closed without a step discards the
+ * PRAGMA silently (this once left the EPG database at 87% free pages).
  */
 internal fun SupportSQLiteDatabase.execPragma(sql: String) {
     query(sql).use { it.moveToFirst() }

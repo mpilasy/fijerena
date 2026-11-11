@@ -7,17 +7,16 @@ import androidx.room.Index
  * Durable watch state: playback position and completion, per item, kept forever.
  *
  * Replaces the `watch_history_v3` SharedPreferences blob, which truncated to
- * `providerSettings.watchHistorySize` entries on every write and silently evicted anything older —
- * see the watch state durable storage plan. Covers Xtream and the other local-blob
- * providers (SMB, Local, Remote M3U); not `xtream_`-prefixed because `MediaRepository` backs all
- * of them, not just Xtream. Jellyfin is out of scope: it owns this state server-side.
+ * `providerSettings.watchHistorySize` entries on every write (the watch state durable storage
+ * plan). Not `xtream_`-prefixed: `MediaRepository` backs Xtream, SMB, Local and Remote M3U through
+ * it. Jellyfin keeps this state on its server.
  *
  * `updatedAt` is this row's last-modified stamp. `lastPlayedAt` is set by playback only and drives
  * the Recent row; it stays null for a row created by a manual watched/unwatched mark (Phase 6).
  *
- * `profileId` scopes the row to one person — see the live sync plan → User
- * profiles. It is part of the primary key and leads every index after `providerId`, since every
- * read is for one provider *and* one profile.
+ * `profileId` scopes the row to one person (the live sync plan → User profiles). It is part of the
+ * primary key and comes after `providerId` in every index, since every read is for one provider
+ * *and* one profile.
  */
 @Entity(
     tableName = "watch_state",

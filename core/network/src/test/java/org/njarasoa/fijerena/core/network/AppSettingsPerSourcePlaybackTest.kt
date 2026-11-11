@@ -10,7 +10,8 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 
 /**
- * "Items in Recent" (per device), and the one-time move of the per-source sizes it replaces (the settings reorg plan, D2/D4).
+ * "Items in Recent" (per device), and the one-time move of the per-source sizes it replaces (the
+ * settings reorg plan, D2/D4).
  */
 class AppSettingsPerSourcePlaybackTest {
     private lateinit var settings: AppSettings

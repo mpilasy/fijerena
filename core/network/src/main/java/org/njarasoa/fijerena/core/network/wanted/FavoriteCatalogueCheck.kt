@@ -23,8 +23,7 @@ data class GoneFavorite(
  * and records the TMDB id of each film and show favourite that is still there. Never deletes or
  * moves a favourite (CONTRIBUTING.md rule 12). A source whose catalogue of a kind is empty (never
  * downloaded, or cleared) is skipped for that kind, so it never flags every favourite. Blocking:
- * call it on `Dispatchers.IO`. See the wanted titles plan → Favourites gone
- * from their source.
+ * call it on `Dispatchers.IO`. See the wanted titles plan → Favourites gone from their source.
  */
 object FavoriteCatalogueCheck {
     fun run(

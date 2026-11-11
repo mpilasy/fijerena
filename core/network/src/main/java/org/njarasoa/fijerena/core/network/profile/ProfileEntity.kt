@@ -7,15 +7,15 @@ import androidx.room.PrimaryKey
 /**
  * A person using the app. Favourites, watch state, Recent Categories and the last-position
  * bookmarks are scoped to one profile; providers, EPG sources and settings are shared by all of
- * them, though each profile has its own set of sources (`AppSettings.profileSourceKeys`). See the live sync plan → User profiles.
+ * them, though each profile has its own set of sources (`AppSettings.profileSourceKeys`). See the
+ * live sync plan → User profiles.
  *
  * [id] is a random UUID for every profile the user creates, except the one every install starts
- * with, which is [DEFAULT_ID]. A fixed id rather than a per-device UUID so that, once sync lands,
- * every device's pre-existing data converges on the same profile instead of each device
- * contributing its own "Default".
+ * with, [DEFAULT_ID]: a fixed id, so every device's data from before sync joins one profile instead
+ * of each device adding its own "Default".
  *
  * [colorIndex] picks the avatar colour from the UI's fixed palette (`CinemaProfileColors` in
- * core:ui) — an index rather than a colour value, so the palette can be retuned without a migration.
+ * core:ui): an index, not a colour value, so the palette can change with no migration.
  */
 @Entity(tableName = "profiles")
 data class ProfileEntity(

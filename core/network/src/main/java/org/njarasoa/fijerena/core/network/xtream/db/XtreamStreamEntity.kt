@@ -45,7 +45,7 @@ data class XtreamStreamEntity(
     // Unused since schema v24: streams follow their category's flag (see XtreamStreamDao).
     // Dropping the column needs SQLite 3.35; minSdk 30 ships 3.28.
     val excluded: Boolean = false,
-    // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
+    // TMDB and detail cache fields, filled by a detail-screen fetch.
     val contentRating: String? = null,
     val tmdbId: String? = null,
     val containerExtension: String? = null,

@@ -9,8 +9,8 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 /**
  * Whether this device has had to reset an encrypted credentials file it couldn't decrypt (a lost
  * or reset Keystore key) — so a login that now fails can say why instead of "check your username
- * and password". Flags only, in plain prefs: never a secret. See
- * the rock solid stability resilience plan → F-28.
+ * and password". Flags only, in plain prefs: never a secret. See the rock solid stability
+ * resilience plan → F-28.
  */
 object CredentialStoreHealth {
     private const val TAG = "CredentialStoreHealth"

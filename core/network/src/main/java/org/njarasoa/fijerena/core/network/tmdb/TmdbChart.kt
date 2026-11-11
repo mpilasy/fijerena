@@ -29,10 +29,10 @@ enum class TmdbChart(
     TRENDING_SHOWS("trending/tv/week", ContentType.TV_SHOWS),
 
     // Not `movie/popular` / `tv/popular`: those mix long-running daytime shows and short spikes of
-    // titles nobody knows. TMDB's popularity among titles with enough votes (user, 2026-10-29). For
-    // shows, only those first out in the last five years with an episode in the last one, and no
-    // talk, news, soap or reality shows: decades-old shows still on air (Grey's Anatomy, The
-    // Simpsons) and the late-night shows led the list otherwise.
+    // titles nobody knows. TMDB's popularity among titles with enough votes. For shows, only those
+    // first out in the last five years with an episode in the last one, and no talk, news, soap or
+    // reality shows: decades-old shows still on air (Grey's Anatomy, The Simpsons) and the
+    // late-night shows led the list otherwise.
     POPULAR_MOVIES("discover/movie", ContentType.MOVIES, { popular(minVotes = 500) }),
     POPULAR_SHOWS(
         "discover/tv",
@@ -50,12 +50,12 @@ enum class TmdbChart(
     // Not `movie/top_rated` / `tv/top_rated`: those rank by average alone, so a new title with a
     // few perfect votes comes before The Shawshank Redemption. The best average among titles with
     // many votes, out for a year at least: a new release's first voters are its fans, and even with
-    // thousands of votes its average starts high (user, 2026-10-29).
+    // thousands of votes its average starts high.
     TOP_RATED_MOVIES("discover/movie", ContentType.MOVIES, { topRated(minVotes = 5000, releasedBefore = "primary_release_date.lte") }),
     TOP_RATED_SHOWS("discover/tv", ContentType.TV_SHOWS, { topRated(minVotes = 2000, releasedBefore = "first_air_date.lte") }),
 
-    // A child's charts (user, 2026-11-06: Trending and Popular, Popular films up to PG-13). Trending has no
-    // age rating, so its films are the Family genre only: Animation alone also holds adult anime.
+    // A child's charts: Trending and Popular, Popular films up to PG-13. Trending has no age rating,
+    // so its films are the Family genre only: Animation alone also holds adult anime.
     // Its shows are the Kids genre, or Family and Animation together: Animation alone holds adult
     // cartoons (Family Guy), and Family alone holds sitcoms.
     KIDS_TRENDING_MOVIES("trending/movie/week", ContentType.MOVIES, forKids = true, keeps = { FAMILY in it.genreIds }),
@@ -67,9 +67,9 @@ enum class TmdbChart(
     ),
 
     // Popular asks TMDB for the US rating PG-13 at most, in Animation or Family. A show has no
-    // rating filter: the Kids or Family genre (Family also brings sitcoms such as Frasier; user,
-    // 2026-11-06: that is OK), without news, reality, soap or talk shows, as the adult Popular
-    // (Family brought Dancing with the Stars).
+    // rating filter: the Kids or Family genre (Family also brings sitcoms such as Frasier, which is
+    // accepted), without news, reality, soap or talk shows, as the adult Popular (Family brought
+    // Dancing with the Stars).
     KIDS_POPULAR_MOVIES(
         "discover/movie",
         ContentType.MOVIES,
@@ -92,8 +92,8 @@ enum class TmdbChart(
     ;
 
     /**
-     * Whether its row can also show the titles no source has (user, 2026-10-29): Trending only, not
-     * a child's (a TMDB-only card opens the Wishlist, which a child has not).
+     * Whether its row can also show the titles no source has: Trending only, not a child's (a
+     * TMDB-only card opens the Wishlist, which a child has not).
      */
     val canShowMissing: Boolean get() = this == TRENDING_MOVIES || this == TRENDING_SHOWS
 

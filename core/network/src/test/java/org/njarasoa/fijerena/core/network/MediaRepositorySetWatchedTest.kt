@@ -146,10 +146,8 @@ class MediaRepositorySetWatchedTest {
     @Test
     fun `marking a never-played episode watched resolves its seriesId from the catalogue`() =
         runBlocking {
-            // "ep9" has no watch_state row at all yet - the exact case markWatched's INSERT path
-            // has no seriesId parameter for, since MediaRepository.setWatched's own signature
-            // carries none either. Without the catalogue lookup this row would insert with
-            // seriesId = null and silently drop out of getSeriesCompletedCounts's rollup.
+            // "ep9" has no watch_state row yet: without the catalogue lookup it would insert with
+            // seriesId = null and drop out of getSeriesCompletedCounts's rollup.
             coEvery { episodeDao.getSeriesIdForEpisode(1L, "ep9") } returns 42
 
             repository.setWatched("ep9", ContentType.TV_SHOWS, watched = true)
@@ -163,9 +161,7 @@ class MediaRepositorySetWatchedTest {
     @Test
     fun `setWatched no-ops for a server-backed provider`() =
         runBlocking {
-            // Jellyfin owns this state server-side and has no MediaProvider capability to accept
-            // a manual mark through this app — writing local watch_state for it would be dead
-            // data, since getPlaybackPositionSuspend never reads local state back for it.
+            // Jellyfin owns this state on its server: a local watch_state row would never be read.
             val provider = mockk<MediaProvider>(relaxed = true)
             every { provider.capabilities } returns
                 ProviderCapabilities(

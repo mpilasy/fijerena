@@ -106,8 +106,7 @@ class XtreamStatsManager(
             metricsManager.removeFetchTime("category_vod_$categoryId")
             metricsManager.removeFetchTime("category_series_$categoryId")
 
-            // Since we don't know the type easily here without querying, and this method is legacy,
-            // we'll try to delete from all stream types for this category
+            // The type is not known here: delete from every stream type of this category.
             streamDao.deleteByCategoryId(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
             streamDao.deleteByCategoryId(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
             seriesDao.deleteByCategoryId(providerId, categoryId)

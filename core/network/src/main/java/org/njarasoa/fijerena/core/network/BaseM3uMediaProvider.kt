@@ -11,11 +11,10 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 abstract class BaseM3uMediaProvider : MediaProvider {
-    // The lists and the category index as one immutable snapshot, null when not connected.
-    // A reader reads it once: trimMemory() on Main can drop it at any time, and with separate
-    // fields it emptied the lists between a reader's check and its read (thread races plan, 13).
-    // Without the index getItems() would linear-scan the full list on every category open — cheap for a
-    // typical playlist, but a real per-navigation cost on a 50k-100k entry IPTV catalog.
+    // The lists and the category index as one immutable snapshot, null when not connected. A
+    // reader reads it once: trimMemory() on Main can drop it at any time, and with separate fields
+    // it emptied the lists between a reader's check and its read (thread races plan, 13). The index
+    // spares getItems() a scan of the full list (up to 50k-100k entries) on each category open.
     private class Snapshot(
         val categories: List<MediaCategory>,
         val items: List<MediaItem>,
@@ -48,10 +47,9 @@ abstract class BaseM3uMediaProvider : MediaProvider {
 
     override fun isConnected(): Boolean = snapshot != null
 
-    // Large IPTV/local playlists (50k-100k entries) hold the items, the categories, and the
-    // itemsByCategory index in memory indefinitely otherwise. Dropping the snapshot also marks
-    // the provider disconnected, so getCategories()/getItems() connect again on next use instead
-    // of showing a permanently empty provider.
+    // Large playlists (50k-100k entries) would keep the items, categories and index in memory for
+    // good. Dropping the snapshot also marks the provider disconnected, so the next
+    // getCategories()/getItems() connects again instead of showing an empty provider.
     override fun trimMemory() {
         snapshot = null
     }

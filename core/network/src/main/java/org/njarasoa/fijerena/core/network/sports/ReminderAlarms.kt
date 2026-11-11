@@ -26,12 +26,12 @@ interface ReminderAlarms {
 
 /**
  * [ReminderAlarms] on `AlarmManager`: `setExactAndAllowWhileIdle` when the app may set exact
- * alarms, else a 10-minute window that ends at the ring time (10 to 20 minutes before the game with the default lead)
- * ([ReminderSchedule.alarm]). The app may set exact alarms on every supported Android version
- * (see the `core:network` manifest), unless the user turns off "Alarms & reminders" on Android 12
- * or 12L. One alarm per reminder, told apart by its intent's data URI. The alarm intent carries the
- * game's names and start, so [GameReminderReceiver] can ring without the database (crash-loop safe
- * mode).
+ * alarms, else a 10-minute window that ends at the ring time (10 to 20 minutes before the game
+ * with the default lead, [ReminderSchedule.alarm]). The app may set exact alarms on every
+ * supported Android version (see the `core:network` manifest), unless the user turns off "Alarms &
+ * reminders" on Android 12 or 12L. One alarm per reminder, told apart by its intent's data URI.
+ * The alarm intent carries the game's names and start, so [GameReminderReceiver] can ring without
+ * the database (crash-loop safe mode).
  */
 class AndroidReminderAlarms(
     context: Context,

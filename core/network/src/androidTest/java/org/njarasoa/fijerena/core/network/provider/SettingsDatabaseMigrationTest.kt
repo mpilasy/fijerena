@@ -18,11 +18,11 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
  * [SettingsDatabase.MIGRATION_11_12] (`profiles.colorIndex`), [SettingsDatabase.MIGRATION_12_13]
  * (`providers.providerKey`, `sync_tombstone`) and [SettingsDatabase.MIGRATION_13_14]
  * (`epg_source.source_key`, `sync_outbox`, `sync_clock`) and [SettingsDatabase.MIGRATION_14_15]
- * (`sync_outbox` → `sync_version`), run against a database rolled back to
- * v10: built fresh at the current schema via Room, then what v11–v15 added removed — the new
- * tables dropped, `providers` and `epg_source` rebuilt with their exact v12 DDL. Reopening through Room with
- * only those migrations exercises Room's own schema validation; this database has no destructive
- * fallback, so a mismatch throws.
+ * (`sync_outbox` → `sync_version`), run against a database rolled back to v10: built fresh at the
+ * current schema via Room, then what v11–v15 added removed (the new tables dropped, `providers` and
+ * `epg_source` rebuilt with their exact v12 DDL). Reopening through Room with only those migrations
+ * exercises Room's own schema validation; this database has no destructive fallback, so a mismatch
+ * throws.
  *
  * Uses its own on-disk file (never the app's real `providers.db`), deleted before and after.
  */

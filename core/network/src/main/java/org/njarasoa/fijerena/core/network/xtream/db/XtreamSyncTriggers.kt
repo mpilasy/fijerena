@@ -5,17 +5,15 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
  * Queues every local change to favourites, watch state, the Wanted list, followed teams and leagues
- * and deletions for live sync, from inside
- * SQLite: triggers run in the writing transaction, so nothing is changed without being queued, and
- * they catch every write path — including indirect ones such as a TMDB group completion updating
- * sibling rows — without each call site having to remember. See
- * the live sync plan → Flow.
+ * and deletions for live sync, from inside SQLite: triggers run in the writing transaction, so
+ * nothing changes without being queued, and they catch every write path (a TMDB group completion
+ * that updates sibling rows too) with no call site to remember. See the live sync plan → Flow.
  *
  * Each trigger advances [SyncClockEntity.hlc] and records the key in [SyncVersionEntity] at that
- * value, pending. A new [SyncTombstoneEntity] with `deletedAt = 0` is stamped with the clock too. Nothing
- * fires while [SyncClockEntity.applying] is set. Deleting rows fires nothing: a deletion is queued
- * through its tombstone, and rows removed with their provider or profile are covered by that
- * one's own tombstone.
+ * value, pending. A new [SyncTombstoneEntity] with `deletedAt = 0` is stamped with the clock too.
+ * Nothing fires while [SyncClockEntity.applying] is set. Deleting rows fires nothing: a deletion is
+ * queued through its tombstone, and rows removed with their provider or profile are covered by
+ * that one's own tombstone.
  *
  * Dropped and recreated on every open, so fresh installs, migrations and destructive rebuilds all
  * end up with them, and an app update that changes one replaces the old definition. Room doesn't

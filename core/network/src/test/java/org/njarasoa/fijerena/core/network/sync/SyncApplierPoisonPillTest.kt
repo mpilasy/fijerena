@@ -19,12 +19,11 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
- * F-08: one record that throws while being applied — a payload shape from another app version, a
- * provider deleted here mid-apply — must not abort the whole pull before the page's cursor is
- * saved: every later pass would refetch it and fail again, sync stuck for good, no error shown.
- * Such a record is deferred (retried every pass, so a newer app version can still apply it)
- * and the rest of the batch goes on. See
- * the rock solid stability resilience plan → F-08.
+ * F-08: one record that throws while it is applied (a payload from another app version, a provider
+ * deleted here mid-apply) must not abort the pull before the page's cursor is saved, or every
+ * later pass fails on it again. Such a record is deferred (retried every pass, so a newer app
+ * version can still apply it) and the rest of the batch goes on. See the rock solid stability
+ * resilience plan → F-08.
  */
 class SyncApplierPoisonPillTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)

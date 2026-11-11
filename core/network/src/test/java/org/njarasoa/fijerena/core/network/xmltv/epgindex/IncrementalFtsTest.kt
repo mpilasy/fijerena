@@ -19,10 +19,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The incremental guide index (the pausable guide indexing plan): after a
- * refresh of one guide source, the search index finds that source's new programmes and no longer
- * its old ones, the other source's stay found, and SQLite's own check of the index passes. A run
- * killed after its swap continues where it stopped.
+ * The incremental guide index (the pausable guide indexing plan): after a refresh of one guide
+ * source, the search index finds that source's new programmes and no longer its old ones, the
+ * other source's stay found, and SQLite's own check of the index passes. A run killed after its
+ * swap continues where it stopped.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

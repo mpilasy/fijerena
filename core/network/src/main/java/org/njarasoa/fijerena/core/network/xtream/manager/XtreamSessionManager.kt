@@ -57,14 +57,11 @@ class XtreamSessionManager(
     var panelClock: XtreamPanelClock = XtreamPanelClock.UTC
         private set
 
-    // Guards every method that reads-then-replaces apiService. Without it, two callers hitting
-    // connect() around the same time (e.g. AppContainer's initial connect racing a screen's own
-    // CategoryViewModel.connect(), both against the one cached XtreamMediaProvider/session per
-    // provider) can each build their own XtreamApiService and authenticate concurrently; whichever
-    // finishes second closes the first one's client via replaceApiService() while the first
-    // caller is still using it to fetch data, failing that in-flight request with "executor
-    // rejected" against its own now-closed Dispatcher. Serializing here means the second caller
-    // simply waits and reuses the session the first one already finished setting up.
+    // Guards every method that reads, then replaces apiService. Without it, two callers of
+    // connect() at once (AppContainer's first connect and a screen's CategoryViewModel.connect())
+    // each built and authenticated an XtreamApiService, and the second closed the first one's
+    // client mid-request ("executor rejected"). With it, the second caller waits and reuses the
+    // session.
     private val sessionMutex = Mutex()
 
     suspend fun login(
@@ -91,8 +88,8 @@ class XtreamSessionManager(
 
                         accountManager.saveCredentials(url, username, password, authResponse, rememberMe)
 
-                        // Store the API service for future use, closing whatever it replaces so its
-                        // HttpClient (own Dispatcher + ConnectionPool, see XtreamApiService) doesn't leak.
+                        // Closes the service it replaces, so its HttpClient (own Dispatcher and
+                        // ConnectionPool, see XtreamApiService) does not leak.
                         replaceApiService(service, authResponse)
                         serviceAssigned = true
 
@@ -180,10 +177,7 @@ class XtreamSessionManager(
             }
         }
 
-    /**
-     * Updates the provider URL without changing username/password.
-     * Re-authenticates with the new URL and clears cached data.
-     */
+    /** Changes the provider URL and keeps the login: signs in again and clears the cached data. */
     suspend fun updateProviderUrl(newUrl: String): Result<XtreamAuthResponse> =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
@@ -241,8 +235,8 @@ class XtreamSessionManager(
     /**
      * Keeps this source's automatic XMLTV guide source (`<server>/xmltv.php`, the login added only
      * when it is downloaded) in line with the login: duplicates removed, added only when the
-     * account has live channels and removed when it has none; disabled while the source's "Provides a
-     * guide" is off. See [AutoXmltvSources].
+     * account has live channels and removed when it has none; disabled while the source's
+     * "Provides a guide" is off. See [AutoXmltvSources].
      */
     private suspend fun reconcileAutoXmltvSource(
         service: XtreamApiService,
@@ -336,10 +330,9 @@ class XtreamSessionManager(
     fun isAuthenticated(): Boolean = apiService != null && accountManager.hasStoredCredentials()
 
     /**
-     * Tears down the network client only — unlike [logout], keeps stored credentials and the
-     * local catalog cache intact. For a provider that's merely being backgrounded/deselected
-     * (switching to another provider, a settings screen closing), not one the user actually
-     * logged out of or deleted.
+     * Closes the network client only; unlike [logout], keeps the stored login and the catalogue.
+     * For a provider put aside (another provider picked, a settings screen closed), not one logged
+     * out of or deleted.
      */
     suspend fun disconnect() =
         withContext(Dispatchers.IO) {
@@ -360,14 +353,11 @@ class XtreamSessionManager(
         }
 
     /**
-     * Swaps in [newService], closing whatever it replaces. `XtreamApiService` owns its own
-     * Dispatcher and ConnectionPool (not the app-wide shared ones — see its constructor), so
-     * closing it here can't affect Jellyfin/TMDB/EPG/playback traffic; without this, every
-     * login/reconnect/logout left the previous instance's HttpClient (and the coroutine Ktor
-     * parks on it internally) running forever. See the xtream concurrency fixes plan.
+     * Swaps in [newService] and closes the one it replaces. `XtreamApiService` owns its Dispatcher
+     * and ConnectionPool (see its constructor), so the close cannot affect other traffic; without
+     * it, each login left the old HttpClient running. See the xtream concurrency fixes plan.
      *
-     * Caller must hold [sessionMutex] — see its kdoc for why an unsynchronized swap here is
-     * exactly the race that broke category loading and playback with "executor rejected".
+     * Caller must hold [sessionMutex] (see there for the "executor rejected" race).
      */
     private fun replaceApiService(
         newService: XtreamApiService?,

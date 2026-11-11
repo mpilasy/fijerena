@@ -6,8 +6,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * A film or show as TMDB knows it, for Search's "Not in your sources" section and the TMDB
- * details page. [contentType] is `MOVIES` or `TV_SHOWS`. See
- * the wanted titles plan.
+ * details page. [contentType] is `MOVIES` or `TV_SHOWS`. See the wanted titles plan.
  */
 data class TmdbTitle(
     val contentType: String,

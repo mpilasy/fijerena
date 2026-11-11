@@ -98,16 +98,6 @@ fun WatchedItem.resumeProgress(): Float? =
     if (isCompleted || !isResumableAt(playbackPosition, duration)) null else playbackPosition.toFloat() / duration.toFloat()
 
 /**
- * `watch_state` row as a [WatchedItem], for callers that still speak the blob-era shape.
- * `timestamp` becomes `lastPlayedAt` — the value [EpisodeSelectionScreen]'s "most recently played"
- * lookup and the Recent row both actually mean — or 0 when the row has none: one only marked
- * watched ([markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao.markWatched]'s
- * insert), since a mark is not a play and must not become the series screen's "last played"
- * (the watched followups plan → Phase 1), and one `removeFromRecent` cleared,
- * whose `updatedAt` is just "removed just now" and must not outrank a genuinely recently-played row.
- */
-
-/**
  * The title a Recent card names, for [oneRowPerTitle]: a film's or a show's name; null for a
  * channel or a card for a lone episode (two channels or two episodes can share a name).
  */
@@ -127,6 +117,11 @@ internal fun oneRowPerTitle(items: List<MediaItem>): List<MediaItem> {
     return items.filter { item -> recentTitleKey(item)?.let { seen.add(it) } ?: true }
 }
 
+/**
+ * `watch_state` row as a [WatchedItem]. `timestamp` becomes `lastPlayedAt`, or 0 when the row has
+ * none: a row only marked watched (a mark is not a play, the watched followups plan → Phase 1) or
+ * one that `removeFromRecent` cleared, so neither outranks a row that was really played.
+ */
 private fun WatchStateEntity.toWatchedItem(): WatchedItem =
     WatchedItem(
         itemId = itemId,
@@ -286,16 +281,13 @@ internal fun hasGuide(
 class MediaRepository(
     private val context: Context,
     private val providerId: Long,
-    // Whose favourites, watch state, Recent Categories and last-position bookmarks this instance
-    // reads and writes — see the live sync plan → User profiles. Fixed for the
-    // instance's lifetime: switching profile means a new MediaRepository, not a mutable field, so
-    // no in-memory snapshot can ever hold one profile's data under another's id.
+    // Whose favourites, watch state, Recent Categories and bookmarks this instance reads and writes
+    // (the live sync plan → User profiles). Fixed for the instance's lifetime: a profile switch
+    // makes a new MediaRepository, so no snapshot can hold one profile's data under another's id.
     private val profileId: String,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
     private val watchStateDao: WatchStateDao = XtreamDatabase.getInstance(context).watchStateDao(),
-    // Injectable for the same reason as watchStateDao: setWatched/getSiblingCompleted* touch the
-    // Xtream catalogue directly, and this module's unit tests have no Robolectric/Room to back a
-    // real XtreamDatabase.getInstance(context) call under a plain mockk Context.
+    // Injectable because the unit tests have no Room behind a plain mockk Context.
     private val streamDao: XtreamStreamDao = XtreamDatabase.getInstance(context).streamDao(),
     private val episodeDao: XtreamEpisodeDao = XtreamDatabase.getInstance(context).episodeDao(),
     private val favoriteStateDao: FavoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao(),
@@ -361,21 +353,13 @@ class MediaRepository(
     private val removedFavorites = LinkedHashMap<Pair<String, String>, FavoriteItem>()
     private val watchHistoryLock = Any()
 
-    // Dedicated single-thread dispatcher for prefs writes below. commit() (not apply()) blocks
-    // only this background thread until its own write finishes, so it never leaves anything
-    // pending in the process-wide QueuedWork backlog. apply() returns immediately but registers
-    // the write there; a later, unrelated Service dispatch (startService() -> ActivityThread.
-    // handleServiceArgs) synchronously drains that whole backlog on the MAIN thread before
-    // running — a well-known ANR trap when writes pile up faster than they drain. In-memory
-    // caches are updated synchronously on the caller's thread before the write is dispatched,
-    // so reads stay consistent regardless of when the background commit actually lands.
+    // Single-thread dispatcher for prefs writes. commit() blocks only this thread. apply() would
+    // queue the write in QueuedWork, which a later Service start drains on the main thread (an ANR
+    // trap). In-memory caches update on the caller's thread first, so reads stay consistent.
     //
-    // watch_state is the one exception: savePlaybackPosition/saveLastPlayedItem have no
-    // synchronous in-memory mirror of their own, so a read immediately following a write on another
-    // thread can race the upsert. Neither writer is debounced, so the window is however long one
-    // Room upsert takes — narrow, but real. Named as its own property
-    // (rather than inlined into writeScope's constructor) so [awaitPendingWrites] can queue onto
-    // the exact same serialized dispatcher without going through writeScope's Job.
+    // watch_state is the exception: savePlaybackPosition/saveLastPlayedItem have no in-memory
+    // mirror, so a read on another thread right after a write can race the upsert. A named
+    // property so [awaitPendingWrites] can queue onto the same dispatcher.
     private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
     private val writeScope = AppScopes.create("MediaRepository.write", writeDispatcher)
 
@@ -484,31 +468,21 @@ class MediaRepository(
     }
 
     /**
-     * One-time per-provider copy of `watch_history_v3` into `watch_state`, followed by purging
-     * the blob — Phase 2 and Phase 4 of the watch state durable storage plan, combined into
-     * one hook because Phase 4 depends on Phase 2 having actually run for *this* provider.
+     * One-time per-provider copy of `watch_history_v3` into `watch_state`, then a purge of the blob
+     * (the watch state durable storage plan, Phases 2 and 4). The flag is per provider: a provider
+     * not opened since Phase 2 can still carry a blob that is not copied. Hooked off [setProvider],
+     * not the constructor, so a repository with no provider does not count as a use.
      *
-     * Phases 2 and 4 are separate releases, so a provider nobody has opened since Phase 2 shipped
-     * can reach a Phase 4 install still carrying an un-migrated blob — the flag gates on a
-     * per-provider basis (never a single global flag) for exactly that reason. Guarded like
-     * [org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager]'s
-     * `purgeLegacyPrefsCache`, and hooked off [setProvider] rather than the constructor — a
-     * provider-less repository (a unit test, or the brief window in [org.njarasoa.fijerena.core
-     * .network.provider] wiring before a provider is attached) is not a real "use" yet.
-     *
-     * Backfill runs first when the flag is unset, purge always runs after: skipping straight to
-     * purge on an unset flag would delete history that was never copied anywhere, silently and
-     * unrecoverably, on a provider the user simply hasn't gotten around to opening. Backfill
-     * itself is replay-safe — a crash between "rows written" and the flag commit just re-runs
-     * this and re-upserts the same values, because every row goes through the same progress
-     * upsert [savePlaybackPosition] uses rather than a raw insert.
+     * Backfill runs first when the flag is unset and the purge always runs after, so history is
+     * never deleted before it is copied. Replay-safe: every row goes through the same upsert as
+     * [savePlaybackPosition].
      */
     private fun backfillAndPurgeWatchState() {
         val alreadyMigrated = cache.getBoolean(KEY_WATCH_STATE_MIGRATED, false)
         writeScope.launch {
             if (!alreadyMigrated) {
-                // Reads the blob directly, not the public getWatchHistory() — that reads
-                // watch_state since Phase 3, and would make this loop copy the table into itself.
+                // Reads the blob, not getWatchHistory(): that reads watch_state, so this loop
+                // would copy the table into itself.
                 val blobHistory = synchronized(watchHistoryLock) { getWatchHistoryLocked() }
                 for (item in blobHistory) {
                     watchStateDao.upsertProgress(
@@ -534,8 +508,7 @@ class MediaRepository(
                 }
                 cache.edit(commit = true) { putBoolean(KEY_WATCH_STATE_MIGRATED, true) }
             }
-            // The blob is guaranteed copied by this point — either just now, or on an earlier
-            // release that already set the flag — so purging it here is always safe.
+            // The blob is copied by now (here or on an earlier run), so the purge is safe.
             cache.edit(commit = true) {
                 remove(KEY_WATCH_HISTORY)
                 remove(KEY_WATCH_HISTORY_V2)
@@ -548,19 +521,12 @@ class MediaRepository(
 
     /**
      * One-time per-provider copy of the `favorites_v2` and `favorite_categories` blobs into
-     * `favorite_state`, then purging both keys — see
-     * the favorites durable storage plan.
+     * `favorite_state`, then a purge of both keys (the favorites durable storage plan). The flag is
+     * per provider because the hook is: a provider added later starts from its own unset flag.
      *
-     * Per-provider rather than a single global flag, for the reason the watch-state plan sets out:
-     * a provider nobody has opened since this shipped must not have its blob purged before it was
-     * copied. Backfill and purge ship together here, so the "flag set, blob never copied" window
-     * that plan worries about cannot open — the flag is still per-provider because the *hook* is
-     * per-provider, and a second provider added later starts from its own unset flag.
-     *
-     * Runs before the snapshot is first read: [loadFavoriteSnapshotLocked] fills from the table, so
-     * a snapshot taken before this finished would look empty. Reading the blobs here goes straight
-     * to prefs rather than through the public getters, which now read the table and would copy it
-     * into itself. Replay-safe: every row goes through the same upsert a normal favourite does.
+     * Runs before the snapshot is first read, because [loadFavoriteSnapshotLocked] fills from the
+     * table. Reads the blobs from prefs, as the public getters read the table. Replay-safe: every
+     * row goes through the same upsert as a normal favourite.
      */
     private fun backfillAndPurgeFavorites() {
         if (cache.getBoolean(KEY_FAVORITES_MIGRATED, false)) {
@@ -594,10 +560,8 @@ class MediaRepository(
     }
 
     /**
-     * A legacy favourites blob, or an empty list if it is absent or unreadable. The
-     * `catch { emptyList() }` that made a malformed blob indistinguishable from "no favourites"
-     * only survives here, on the one-shot migration read, where there is genuinely nothing better
-     * to do with a corrupt value that is about to be deleted.
+     * A legacy favourites blob, or an empty list if it is absent or unreadable. An empty list is
+     * acceptable only on this one-shot migration read: a corrupt value is about to be deleted.
      */
     private inline fun <reified T> decodeBlob(key: String): List<T> {
         val raw = cache.getString(key, null) ?: return emptyList()
@@ -645,9 +609,8 @@ class MediaRepository(
         val filters = providerSettings.categoryFilters
         if (filters.filtersNothing) return result
 
-        // ScriptDetector.detectScript allocates a map and walks Character.UnicodeBlock per
-        // category. With ~870 categories that is tens of milliseconds, and callers run on
-        // Dispatchers.Main.immediate, so it landed on the UI thread at screen entry.
+        // Filters on Dispatchers.Default: ScriptDetector.detectScript costs tens of milliseconds
+        // for ~870 categories, and callers run on Dispatchers.Main.immediate.
         // A hidden category with a film or series that a Parental controls exception allows shows
         // with only those (Xtream: XtreamCategoryExclusionSync).
         val allowed = if (filters.child == null) emptySet() else allowedCategoryIds(contentType)
@@ -959,8 +922,8 @@ class MediaRepository(
     /**
      * One page of the TV Guide (GD4): [items]' listings overlapping [windowStartSec]..[windowEndSec)
      * — one index query for the page ([XmltvEpgService.getEpgForChannelsInWindow]) when the index
-     * knows these channels, else the source's own EPG (fetched whole, as before, and cut to the
-     * window here). Debug builds log the page's time and which path answered.
+     * knows these channels, else the source's own EPG (fetched whole and cut to the window here).
+     * Debug builds log the page's time and which path answered.
      */
     suspend fun getGuideForItemsInWindow(
         items: List<MediaItem>,
@@ -1205,11 +1168,9 @@ class MediaRepository(
 
     fun getLastContentType(): String? = profileCache.getString(KEY_LAST_CONTENT_TYPE, null)
 
-    // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences
-    // on every call. ConcurrentHashMap: addToCategoryHistory() writes from Dispatchers.IO while
-    // getRecentlyViewedCategories() reads synchronously from the UI thread, and clearCache() can
-    // clear it from either. The memory copy is the truth: the prefs commit runs later on
-    // [writeDispatcher], so a reader of the prefs can see a list without the last entries.
+    // The memory copy of Recent Categories is the truth: the prefs commit runs later on
+    // [writeDispatcher]. ConcurrentHashMap because addToCategoryHistory() writes from
+    // Dispatchers.IO while getRecentlyViewedCategories() reads on the UI thread.
     // [recentCategoriesLock] makes each read-and-update of the list one step (thread races plan, 8).
     private val cachedRecentCategories: MutableMap<String, List<RecentCategory>> = ConcurrentHashMap()
     private val recentCategoriesLock = Any()
@@ -1253,24 +1214,13 @@ class MediaRepository(
         }
     }
 
-    /**
-     * Every watch-state row for this provider, across every content type, unbounded —
-     * `watch_state`-backed since Phase 3 of the watch state durable storage plan. No
-     * production caller as of Phase 3 (the old sync `getRecentItems` was the one caller, and it
-     * folded into [getRecentItemsFromWatchState], which reads the capped/collapsed queries
-     * directly instead); kept for callers that want the whole history, such as a future export.
-     */
+    /** Every watch-state row of this provider and profile, across every content type, unbounded. */
     suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId, profileId).map { it.toWatchedItem() }
 
     /**
-     * The `watch_history_v3`/`v2` blob, decoded and cached. No writer reads this for an "existing
-     * entry" any more — the table's own `COALESCE` upserts do that now — and nothing writes the
-     * blob either (Phase 4). What's left: [backfillAndPurgeWatchState] copies whatever a
-     * pre-Phase-4 install already wrote here into `watch_state` before purging it, and
-     * [clearWatchHistory] can still touch the same keys directly.
-     * `internal` rather than `private` only so tests can assert against the blob directly, now
-     * that [getWatchHistory] no longer does; callers outside a `synchronized(watchHistoryLock)`
-     * block (as every production caller already is) get an unsynchronized read.
+     * The legacy `watch_history_v3`/`v2` blob, decoded and cached. [backfillAndPurgeWatchState]
+     * reads it to copy it into `watch_state` before the purge (Phase 4). `internal` only for tests;
+     * a caller outside `synchronized(watchHistoryLock)` gets an unsynchronized read.
      */
     internal fun getWatchHistoryLocked(): List<WatchedItem> {
         val currentCache = cachedWatchHistory
@@ -1317,23 +1267,17 @@ class MediaRepository(
     }
 
     /**
-     * No-op since Phase 4 (the watch state durable storage plan): there is no longer a
-     * debounced blob write to force out early, and the table upserts were never debounced in the
-     * first place — each dispatches to [writeScope] immediately. Kept, rather than deleted, so
-     * its callers (a pause/stop hook expecting "make sure the last position landed") don't need
-     * their own change; there is nothing left for it to flush.
+     * No-op since Phase 4 (the watch state durable storage plan): each table upsert dispatches to
+     * [writeScope] at once, so there is nothing to flush. Kept so its callers need no change.
      */
     fun flushWatchHistory() {
         // Intentionally empty.
     }
 
     /**
-     * Wipes this provider's watch progress: the `watch_state` rows, the retired blob keys a
-     * pre-Phase-4 install may still carry, and the in-memory views of both.
-     *
-     * Suspending because the rows are the real storage.
-     * Published Recent lists are emptied too, or every surface showing one keeps rendering entries
-     * whose rows are gone.
+     * Wipes this provider's watch progress: the `watch_state` rows, the retired blob keys, and the
+     * in-memory views of both. Also empties the published Recent lists, so no surface keeps
+     * entries whose rows are gone.
      */
     suspend fun clearWatchHistory() {
         // Recorded for live sync unless the provider keeps history itself (Jellyfin) — see
@@ -1367,8 +1311,7 @@ class MediaRepository(
                 val item =
                     removedFavorites.remove(itemId to contentType)?.copy(itemName = itemName, categoryId = categoryId)
                         ?: FavoriteItem(itemId, itemName, categoryId, contentType)
-                // No cap: it would silently evict the oldest favourite once the list filled up. Rows
-                // are unbounded — see the favorites durable storage plan.
+                // No cap: a cap would evict the oldest favourite (the favorites durable storage plan).
                 favorites.add(0, item)
                 cachedFavorites = favorites
                 favoriteIdSet = null
@@ -1398,22 +1341,14 @@ class MediaRepository(
         }
 
     /**
-     * Fills both favourite snapshots from `favorite_state` in one read.
+     * Fills both favourite snapshots from `favorite_state` in one read. Caller must hold
+     * [favoriteLock].
      *
-     * Blocking rather than suspending because Compose asks [isFavorite] synchronously while
-     * composing a row, and `CategoryViewModel.rebuildVirtualCategories` asks
-     * [getFavoriteCategoriesForContentType] from `Dispatchers.Main.immediate` — there is no
-     * coroutine to suspend in at either call site.
-     *
-     * The `runBlocking(Dispatchers.IO)` is load-bearing, not decoration. Room asserts against
-     * blocking queries on the main thread and throws `IllegalStateException`: [setProvider] only
-     * invalidates the snapshot, so the first read after a backfill would run cold on Main and kill the
-     * app on launch. Warming in
-     * [setProvider] (below, on IO) makes that the rare path; this makes it survivable when it is
-     * hit anyway. The stall it can cost is one indexed read of a small table — the blob it replaced
-     * did a prefs read plus a JSON parse on the same thread.
-     *
-     * Caller must hold [favoriteLock].
+     * Blocking, not suspending: Compose asks [isFavorite] while it composes a row, and
+     * `CategoryViewModel.rebuildVirtualCategories` asks [getFavoriteCategoriesForContentType] from
+     * `Dispatchers.Main.immediate`. The `runBlocking(Dispatchers.IO)` is necessary: Room throws on
+     * a blocking query on the main thread. [setProvider] warms the snapshot on IO, so a cold read
+     * here is rare.
      */
     private fun loadFavoriteSnapshotLocked() {
         if (cachedFavorites != null && cachedFavoriteCategories != null) return
@@ -1662,14 +1597,10 @@ class MediaRepository(
         }
 
     /**
-     * Records a resume point, and with it the identity of what was played.
-     *
-     * The episode/series fields matter because this is the write that *creates* the row for a
-     * short session: [saveLastPlayedItem] only runs once a couple of percent has been watched, so
-     * sampling an episode and leaving would mint a history row carrying a position and nothing
-     * that says which episode of which show it was, and Recent would have only the id to go on and read
-     * an episode as a series. Callers that know the metadata must pass it; what they omit falls
-     * back to whatever the existing row already had.
+     * Records a resume point and the identity of what was played. This write can create the row
+     * for a short session ([saveLastPlayedItem] runs only after a few percent), so a caller that
+     * knows the episode and series must pass them, or Recent reads an episode as a series. Omitted
+     * fields keep the values of the existing row.
      */
     fun savePlaybackPosition(
         itemId: String,
@@ -1692,11 +1623,8 @@ class MediaRepository(
             contentType != ContentType.LIVE_TV && !usesServerUserData && !(position <= 0L && duration <= 0L)
         if (shouldRecord) {
             val isCompleted = isWatchedAt(position, duration)
-            // Owns position, duration, completion and lastPlayedAt (Phase 4,
-            // the watch state durable storage plan). No blob read-modify-write to preserve
-            // metadata this call doesn't carry any more — the upsert's own `COALESCE` against
-            // `watch_state`'s existing row does that for real, in SQL, instead of the app fetching
-            // an "existing" entry first to pass back in.
+            // Owns position, duration, completion and lastPlayedAt (Phase 4, the watch state
+            // durable storage plan). The upsert's `COALESCE` keeps the metadata this call omits.
             val progressNow = System.currentTimeMillis()
             writeScope.launch {
                 watchStateDao.upsertProgress(
@@ -1746,15 +1674,12 @@ class MediaRepository(
      * Per-series watch rollup for the TV Shows list: fraction of a series' episodes that are
      * completed, keyed by series id.
      *
-     * Series rows can't use [getPlaybackPositions] directly — watch history is keyed by episode
-     * id, with the series id only carried alongside — so this is a real aggregate over
-     * `watch_state`, divided by the provider's cached episode count. Series the provider can't
-     * count locally are absent, and show no progress rather than a wrong one.
+     * Series rows can't use [getPlaybackPositions]: history is keyed by episode id, so this is an
+     * aggregate over `watch_state` divided by the provider's cached episode count. A series the
+     * provider can't count has no entry, so it shows no progress rather than a wrong one.
      *
      * The numerator applies Phase 5 TMDB dedup, so a series watched through one language variant
-     * reports progress on every variant. Without it this aggregate disagreed with the episode list
-     * directly beneath it: [getSiblingCompletedEpisodeIds] spreads completion across sibling series
-     * for the per-episode check, so the episodes showed checked while the row above them read 0%.
+     * shows progress on every variant, as its episode list does ([getSiblingCompletedEpisodeIds]).
      */
     suspend fun getSeriesWatchProgress(): Map<String, Float> {
         val totals = provider?.getEpisodeCountsBySeries()
@@ -1766,11 +1691,9 @@ class MediaRepository(
             for (row in completedPerSeries) {
                 completed[row.seriesId] = row.completed
             }
-            // Union, not replace. The dedup query reaches only series carrying a `tmdbId` and only
-            // episodes still in the catalogue cache, while the direct count reaches any series with
-            // a `watch_state` row. Taking the larger keeps both: a sibling-completed series gains
-            // the spread, and a series the dedup query cannot see keeps the count it always had.
-            // They overlap rather than sum — the same episode is counted by both — so max, not plus.
+            // Union by max, not plus: the dedup query reaches only series with a `tmdbId` and
+            // episodes still in the catalogue cache, the direct count reaches any series with a
+            // `watch_state` row, and both can count the same episode.
             for ((seriesId, count) in deduped) {
                 val key = seriesId.toString()
                 if (count > (completed[key] ?: 0)) {
@@ -1788,13 +1711,9 @@ class MediaRepository(
     }
 
     /**
-     * TMDB dedup (Phase 5, the watch state durable storage plan): movie ids completed by a
-     * different catalogue entry for the same title — a second language track, a 4K re-rip — under
-     * its own id rather than this one. Xtream-only by construction: SMB, Local and Remote M3U have
-     * no catalogue rows to join `watch_state` against, so the query simply returns nothing for
-     * their `providerId` rather than needing a provider-type branch here. Movies only for now —
-     * episode dedup needs its own call scoped to one series, from wherever an episode list reads
-     * watched state, not this whole-content-type one.
+     * TMDB dedup (Phase 5, the watch state durable storage plan): movie ids completed under a
+     * different catalogue entry for the same title (another language track, a 4K copy). Xtream
+     * only: other sources have no catalogue rows, so the query returns nothing for them.
      */
     suspend fun getSiblingCompletedMovieIds(): Set<String> =
         streamDao
@@ -1802,13 +1721,10 @@ class MediaRepository(
             .toSet()
 
     /**
-     * TMDB dedup (Phase 5, the watch state durable storage plan), episode form: episode ids
-     * of [seriesId] completed by a sibling in a *different* series row that shares this series'
-     * `tmdb_id` — a language/quality variant of the same show is a separate `xtream_series` row
-     * with its own complete episode list, not a duplicate row within this one, so this is not the
-     * same shape as [getSiblingCompletedMovieIds]. Call from wherever an episode list reads watched
-     * state for that series. `seriesId` is a raw Xtream series id everywhere except a non-Xtream
-     * provider, which has none — degrades to no dedup rather than a crash.
+     * TMDB dedup (Phase 5, the watch state durable storage plan) for episodes: episode ids of
+     * [seriesId] completed in a different `xtream_series` row with the same `tmdb_id` (a language
+     * or quality variant of the show). A [seriesId] that is not numeric (a source that is not
+     * Xtream) gives no dedup.
      */
     suspend fun getSiblingCompletedEpisodeIds(seriesId: String): Set<String> {
         val numericSeriesId = seriesId.toIntOrNull()
@@ -1843,14 +1759,9 @@ class MediaRepository(
 
     /**
      * The single "Recent" list: everything watched for [contentType], newest first (in-progress
-     * titles are Continue watching's). Storage in `watch_state` is
-     * unbounded (see the watch state durable storage plan); `AppSettings.recentRowSize` is now a
-     * display cap taken by the query itself, not a retention policy — [getPlaybackPositions] and
-     * [getSeriesWatchProgress] are unaffected by it, since a watched check or a resume bar is an
-     * attribute of a stream, not a history entry.
-     *
-     * The cap is per content type: an in-progress movie can
-     * not be pushed out of its own Recent row by heavy channel surfing on Live TV.
+     * titles are Continue watching's). `watch_state` is unbounded; `AppSettings.recentRowSize` is
+     * a display cap per content type that the query takes, so channel surfing cannot push a film
+     * out of its own row.
      */
     internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> = oneRowPerTitle(recentRows(contentType))
 
@@ -1933,13 +1844,9 @@ class MediaRepository(
      * leaves the shelf once finished. Barely started (under 2%), the card offers that episode itself
      * as up next. See [upNextForShows].
      *
-     * Live TV never appears:
-     * [savePlaybackPosition] never records a position for a live stream, so no live entry can fall
-     * in the resumable band, same reasoning as [getRecentItemsFromWatchState].
+     * Live TV never appears: [savePlaybackPosition] records no position for a live stream.
      *
-     * Server-backed providers (Jellyfin) return empty — they own resume/recency server-side
-     * ([getRecentItemsSuspend]'s `usesServerUserData` branch), and this feature is scoped to
-     * Xtream/local storage only.
+     * Server-backed providers (Jellyfin) return empty: they own resume and recency on the server.
      */
     suspend fun getContinueWatchingItems(limit: Int = 10): List<ContinueWatchingItem> {
         val result =
@@ -1967,8 +1874,6 @@ class MediaRepository(
                 val upNext = upNextForShows(latestPerShow, limit)
                 val seriesRows = latestPerShow.filter { it.isResumable() || upNext[it] != null }.take(limit)
 
-                // rehydrateThumbnails/zip/sortedByDescending all no-op cleanly on empty input, so
-                // there is no dedicated empty-rows branch here — just the one shape below.
                 val movieItems =
                     rehydrateThumbnails(
                         movieRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.MOVIE) },
@@ -2191,9 +2096,7 @@ class MediaRepository(
             if (usesServerUserData) {
                 provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
             } else {
-                // Already name-sorted by getFavoritesForContentType — sorted again below anyway,
-                // since a server-backed provider's own order needs it too and both paths should
-                // read the same regardless of which one served them.
+                // Sorted again below, as the server's list needs it too.
                 rehydrateRatings(
                     rehydrateThumbnails(withoutHiddenCategories(getFavoritesForContentType(contentType), contentType), contentType),
                     contentType,
@@ -2232,9 +2135,9 @@ class MediaRepository(
     /**
      * [items] without those in a category the profile in use's content filters hide on this
      * source: a filter hides a title from Recent, Favourites and Continue watching too, not only
-     * from the catalogue (the household UX plan, Phase 2). The entries stay
-     * stored, so removing the filter brings them back. A title that a Parental controls exception
-     * allows stays, as in the catalogue. See [visibleHistory].
+     * from the catalogue (the household UX plan, Phase 2). The entries stay stored, so removing the
+     * filter brings them back. A title that a Parental controls exception allows stays, as in the
+     * catalogue. See [visibleHistory].
      */
     internal suspend fun withoutHiddenCategories(
         items: List<MediaItem>,
@@ -2398,13 +2301,6 @@ class MediaRepository(
     }
 
     /**
-     * Locally-stored favorites / watch-history keep only id+name+category, not the poster URL.
-     * Look the image back up from the synced Xtream DB (the same source the browse grid uses:
-     * `streamIcon` for movies/live, `cover` for series) so these tiles show art instead of the
-     * letter fallback. Items not yet in the cache are left with a null thumbnail, as before.
-     */
-
-    /**
      * A stored favourite keeps only its id and name: its rating comes from the catalogue row, for
      * the rating on its Home card. Items the catalogue does not have keep none.
      */
@@ -2430,6 +2326,11 @@ class MediaRepository(
         }
     }
 
+    /**
+     * A stored favourite or history entry keeps no poster URL: it comes back from the Xtream
+     * catalogue (`streamIcon` for films and channels, `cover` for series). Items the catalogue does
+     * not have keep a null thumbnail.
+     */
     private suspend fun rehydrateThumbnails(
         items: List<MediaItem>,
         contentType: String,
@@ -2486,11 +2387,8 @@ class MediaRepository(
     }
 
     /**
-     * Track-setting fallback for an episode with no saved audio/subtitle choice of its own — the
-     * series' most recently touched choice, if any. Callers only use this when the episode's own
-     * row has neither index set; an episode that already has one sticks with it, no fallback.
-     * Xtream-only by construction, like the sibling dedup queries: server-backed providers own
-     * this state themselves (see [getPlaybackPositionSuspend]).
+     * Track fallback for an episode with no saved audio or subtitle choice: the series' most
+     * recent choice, if any. Null on a server-backed provider, which owns this state.
      */
     suspend fun getSeriesTrackPrefs(
         seriesId: SeriesId,
@@ -2534,32 +2432,25 @@ class MediaRepository(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan).
-     * Not routed through [savePlaybackPosition]: that method early-returns on
-     * `position <= 0 && duration <= 0`, exactly what a manual mark looks like, so it needs its own
-     * path rather than being mistaken for an empty session.
+     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan). Not routed
+     * through [savePlaybackPosition], which ignores `position <= 0 && duration <= 0`, the shape of
+     * a manual mark.
      *
-     * `watched = true` writes one row; the sibling read query (Phase 5) spreads it across the
-     * TMDB group on its own. `watched = false` has to clear the group itself here — a sibling's
-     * completion would otherwise keep driving the check right back on, making the toggle look
-     * like it did nothing. Xtream-only for the group clear, same as Phase 5: SMB, Local and Remote
-     * M3U have no catalogue to find a group in, so only this one row changes for them.
+     * `watched = true` writes one row; the sibling query (Phase 5) spreads it across the TMDB
+     * group. `watched = false` must clear the group here, or a sibling's completion turns the check
+     * back on. The group clear is Xtream only: other sources have no catalogue.
      */
     suspend fun setWatched(
         itemId: String,
         contentType: String,
         watched: Boolean,
     ) {
-        // Jellyfin owns this state server-side and has no MediaProvider capability to accept a
-        // manual mark through this app — writing to the local watch_state table for it would be
-        // dead data, since getPlaybackPositionSuspend's usesServerUserData branch never reads
-        // local state back for these providers. No-op rather than write something nothing shows.
+        // A server-backed source (Jellyfin) owns this state and the app can't write it: no-op.
         if (!usesServerUserData) {
             val now = System.currentTimeMillis()
             if (watched) {
-                // A never-played episode has no existing row to carry a seriesId forward from, and
-                // this method's own signature has no seriesId parameter to accept one — resolve it
-                // from the catalogue instead, or getSeriesCompletedCounts silently drops the row.
+                // An episode never played has no row with a seriesId: take it from the catalogue,
+                // or getSeriesCompletedCounts drops the row.
                 val seriesId =
                     if (contentType == ContentType.TV_SHOWS) {
                         episodeDao.getSeriesIdForEpisode(providerId, itemId)?.toString()
@@ -2709,16 +2600,10 @@ class MediaRepository(
     }
 
     /**
-     * Removes an item (or all episodes of a series) from the Recent list by clearing its
-     * [WatchStateEntity.lastPlayedAt] timestamp in `watch_state`, preserving any saved position
-     * and completion status. Refreshes the published [recentItems] StateFlow upon completion.
-     *
-     * Returns what it cleared, for [restoreRecent] (the Undo after a removal, the TV recents
-     * and favourites plan, A).
-     *
-     * Server-backed providers own their own recency list and don't support removal — see
-     * [supportsRemoveFromRecent]. Callers must check that before offering this action; this
-     * returns null without touching anything if they don't.
+     * Removes an item (or every episode of a series) from Recent: clears its
+     * [WatchStateEntity.lastPlayedAt], keeps position and completion, then refreshes [recentItems].
+     * Returns what it cleared, for the Undo in [restoreRecent] (the TV recents and favourites
+     * plan, A). Null, with nothing changed, on a server-backed provider ([supportsRemoveFromRecent]).
      */
     suspend fun removeFromRecent(
         itemId: String,
@@ -2786,8 +2671,7 @@ class MediaRepository(
     /**
      * Changes received from another device rewrote this provider's favourites or history rows
      * behind the in-memory views: refill them and re-publish every Recent list, so the UI shows the
-     * new state without a restart. See the live sync plan → Applying remote
-     * records.
+     * new state without a restart. See the live sync plan → Applying remote records.
      */
     suspend fun reloadAfterRemoteChange() {
         synchronized(favoriteLock) {
@@ -2805,9 +2689,8 @@ class MediaRepository(
     }
 
     fun clearCache() {
-        // Only this profile's file: for Default that is media_cache_<providerId> itself, exactly
-        // as before profiles; for anyone else, clearing that shared file would also wipe the
-        // Default profile's Recent Categories and bookmarks.
+        // Only this profile's file. For Default that is media_cache_<providerId>; for any other
+        // profile, a clear of that shared file would wipe Default's Recent Categories and bookmarks.
         profileCache.commitAsync { clear() }
         payloadSizes.clear()
         fetchTimes.clear()
@@ -2857,12 +2740,10 @@ class MediaRepository(
         }
 
     /**
-     * Deliberately leaves the write queue running. Everything on [writeScope] is a short one-shot
-     * write keyed by this repository's provider and profile, so letting it finish is always right —
-     * and a profile or provider switch closes every cached repository while screens may still hold
-     * one: cancelling here dropped whatever was still queued (a favourite toggled, the last progress
-     * save of the stream just left) and silently discarded every later write from those screens.
-     * See the rock solid stability resilience plan → F-15.
+     * Leaves the write queue running on purpose. Each [writeScope] job is a short one-shot write,
+     * and a profile or provider switch closes every cached repository while screens can still hold
+     * one: a cancel here dropped queued writes (a favourite toggle, the last progress save) and
+     * every later write. See the rock solid stability resilience plan → F-15.
      */
     override fun close() = Unit
 }

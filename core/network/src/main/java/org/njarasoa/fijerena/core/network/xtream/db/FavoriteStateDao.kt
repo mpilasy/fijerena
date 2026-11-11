@@ -9,13 +9,11 @@ import org.njarasoa.fijerena.core.network.FavoriteTags
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
- * Favourites storage. Every read here is blocking rather than suspending on purpose: the caller is
- * `MediaRepository`, which serves favourites from an in-memory snapshot because Compose asks
- * `isFavorite()` synchronously during composition. The snapshot is filled from [getAll] inside
- * `setProvider()`, which runs on `Dispatchers.IO`.
+ * Favourites storage. Every read is blocking, not suspending, on purpose: `MediaRepository` serves
+ * favourites from an in-memory snapshot because Compose asks `isFavorite()` during composition.
+ * The snapshot is filled from [getAll] in `setProvider()`, on `Dispatchers.IO`.
  *
- * There is no cap and no trim query. That is the point of the table — see
- * the favorites durable storage plan.
+ * No cap and no trim query, on purpose (the favorites durable storage plan).
  */
 @Dao
 interface FavoriteStateDao {

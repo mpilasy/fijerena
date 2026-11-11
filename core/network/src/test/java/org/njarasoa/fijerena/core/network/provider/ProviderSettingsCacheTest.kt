@@ -21,8 +21,8 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 /**
  * The app builds many ProviderRepository objects, and the settings cache is one for the process:
  * a category filter received through sync's instance would otherwise leave
- * `AppContainer.providerRepository` serving the old one until a restart. See
- * the next level rock solid resilience plan → R-06 step 1.
+ * `AppContainer.providerRepository` serving the old one until a restart. See the next level rock
+ * solid resilience plan → R-06 step 1.
  */
 class ProviderSettingsCacheTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()

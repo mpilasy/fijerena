@@ -6,9 +6,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 
 /**
- * Removes the stream favourites the "Favourite categories" list used to save by mistake: before
- * the fix, the star on one of its rows favourited the row itself, a stream favourite whose id is
- * `fav_cat_<categoryId>`, instead of the category.
+ * Removes the stream favourites that the "Favourite categories" list of older versions saved by
+ * mistake: the star on one of its rows favourited the row itself (a stream favourite with id
+ * `fav_cat_<categoryId>`), not the category.
  *
  * No real stream id can start with `fav_cat_`: Xtream ids are numbers, SMB's are `smb_file_…`,
  * Local's `local_file_…` / `local_saf_…` / `local_m3u_…`, Remote M3U's `rm3u_m3u_…`, and Jellyfin

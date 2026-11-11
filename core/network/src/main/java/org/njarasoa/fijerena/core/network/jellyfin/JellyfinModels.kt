@@ -185,9 +185,8 @@ data class JellyfinPlaybackInfoResponse(
 )
 
 /**
- * MediaSource entry returned by /Items/{id}/PlaybackInfo.
- * Distinct from [JellyfinMediaSource] (used for catalog browsing) — this one
- * carries transcoding decision fields.
+ * A MediaSource of /Items/{id}/PlaybackInfo: unlike [JellyfinMediaSource] (catalogue browsing), it
+ * carries the transcoding decision fields.
  */
 @Serializable
 data class JellyfinPlaybackMediaSource(

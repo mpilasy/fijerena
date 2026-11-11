@@ -45,19 +45,16 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_channel_staging WHERE source_id IN (:sourceIds)")
     suspend fun clearStagingChannelsForSources(sourceIds: List<Long>)
 
-    // Scoped variant of clearStaging(): a blanket DELETE would also wipe staging rows for any
-    // other source concurrently being parsed by a separate refresh, or a still-pending retry.
+    // clearStaging() for some sources only: a blanket DELETE would also wipe the staging rows of a
+    // source in a parallel refresh or a pending retry.
     @Transaction
     suspend fun clearStagingForSources(sourceIds: List<Long>) {
         clearStagingProgrammesForSources(sourceIds)
         clearStagingChannelsForSources(sourceIds)
     }
 
-    // Scoped to :sourceIds, not a blanket copy: staging can hold rows for a source that isn't in
-    // this swap at all — e.g. one source of a multi-source sync failed partway and left its own
-    // partial rows behind while others succeeded. An unfiltered SELECT would carry that source's
-    // incomplete guide into primary even though deleteBySourceIds() below never touched its
-    // (untouched, still-good) existing primary rows.
+    // Scoped to :sourceIds: staging can hold the partial rows of a source that failed in this sync,
+    // which must not reach primary beside its good rows there.
     @Query(
         "INSERT INTO epg_channel (xmltv_id, display_name, icon_url, source_id) " +
             "SELECT xmltv_id, display_name, icon_url, source_id FROM epg_channel_staging WHERE source_id IN (:sourceIds)",

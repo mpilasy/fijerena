@@ -84,7 +84,8 @@ internal object TestHousehold {
      * Adds one Xtream source at [url] for the profile in use, renames that profile [ADMIN] and makes
      * it Admin, then adds [GUEST] (a grown-up, not Admin) and [KID] (a child profile), which get
      * the source as a profile added in Settings does. Returns the source's id, or null (and changes
-     * nothing) when the app has a source already: this is for a fresh install, never a device with data.
+     * nothing) when the app has a source already: this is for a fresh install, never a device with
+     * data.
      */
     suspend fun seed(
         context: Context,

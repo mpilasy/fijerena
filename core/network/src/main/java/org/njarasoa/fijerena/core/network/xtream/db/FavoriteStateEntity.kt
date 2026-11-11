@@ -16,11 +16,9 @@ object FavoriteKind {
 /**
  * Durable favourites, kept forever.
  *
- * Replaces the `favorites_v2` and `favorite_categories` SharedPreferences blobs, which were capped
- * at `providerSettings.favoritesMaxSize` and truncated on every write, silently evicting the oldest
- * entry once the cap was reached — see the favorites durable storage plan. Not
- * `xtream_`-prefixed, for the same reason as `watch_state`: `MediaRepository` backs SMB, Local and
- * Remote M3U through it too, not only Xtream.
+ * Replaces the `favorites_v2` and `favorite_categories` SharedPreferences blobs, which truncated at
+ * `providerSettings.favoritesMaxSize` on every write (the favorites durable storage plan). Not
+ * `xtream_`-prefixed, as `watch_state`: `MediaRepository` backs every source type through it.
  *
  * One table for both blobs rather than two: they asked the same question with different column
  * names, and [kind] keeps a single index serving both. For [FavoriteKind.CATEGORY], [itemId] is the
@@ -29,12 +27,11 @@ object FavoriteKind {
  *
  * [createdAt] orders the favourites list, newest first.
  *
- * [profileId] scopes the row to one person — see the live sync plan → User
- * profiles.
+ * [profileId] scopes the row to one person (the live sync plan → User profiles).
  *
  * [tmdbId] is the film's or show's TMDB id, when the catalogue has one: a favourite whose item the
- * source dropped follows another copy with the same id (added v26, see
- * the wanted titles plan). Always null for live channels and categories.
+ * source dropped follows another copy with the same id (added v26, see the wanted titles plan).
+ * Always null for live channels and categories.
  *
  * [tags] is the profile's own tags on a stream favourite, a JSON list of names such as
  * `["News","Kids"]` (added v31, see the favourite tags plan). Always `[]` for categories. Read and

@@ -197,8 +197,6 @@ class SportsData(
                 matchBroadcasters(teamGames, mlbGames)
             }.toMap()
 
-    // Helpers
-
     /** For each of [games], the broadcasters of the same game in [others]. */
     private fun matchBroadcasters(
         games: List<SportsGame>,

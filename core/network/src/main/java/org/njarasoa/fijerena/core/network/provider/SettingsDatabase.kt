@@ -197,8 +197,8 @@ abstract class SettingsDatabase : RoomDatabase() {
 
         /**
          * Migration 10→11: the `profiles` table, seeded with the Default profile every existing
-         * favourite and watch-state row is assigned to by `XtreamDatabase`'s 19→20.
-         * See the live sync plan → User profiles.
+         * favourite and watch-state row is assigned to by `XtreamDatabase`'s 19→20. See the live
+         * sync plan → User profiles.
          */
         val MIGRATION_10_11 =
             object : Migration(10, 11) {
@@ -602,10 +602,9 @@ abstract class SettingsDatabase : RoomDatabase() {
                             }
                         },
                     )
-                    // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
-                    // silently falls back to TRUNCATE (readers block on writes) on any device
-                    // ActivityManager reports as low-RAM, which several of this app's actual
-                    // Android TV targets plausibly are.
+                    // Explicit, not JournalMode.AUTOMATIC: that falls back to TRUNCATE (readers block
+                    // on writes) on a device ActivityManager reports as low-RAM, as some Android TV
+                    // targets are.
                     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .build()
                     .also { INSTANCE = it }

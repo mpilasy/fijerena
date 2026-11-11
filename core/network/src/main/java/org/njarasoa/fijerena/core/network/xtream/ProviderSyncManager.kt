@@ -17,8 +17,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
- * Manages periodic background synchronization for Xtream IPTV providers.
- * Handles scheduling of XtreamSyncWorker.
+ * Periodic background sync of Xtream providers: schedules XtreamSyncWorker, and on a TV also
+ * refreshes in-process.
  */
 class ProviderSyncManager private constructor(
     private val context: Context,
@@ -92,17 +92,16 @@ class ProviderSyncManager private constructor(
         autoRefreshJob?.cancel()
         val appSettings = AppSettings(context)
 
-        // Enqueued once per call rather than on every loop pass. Re-enqueuing with UPDATE rewrote
-        // initialDelay every 15 minutes, and WorkManager only reads that field before the job's
-        // first ever run — where a shrinking delay against a preserved lastEnqueueTime walked the
-        // first run one tick earlier each pass. Settings changes come back in via updateSchedule().
+        // Enqueued once per call, not on every loop pass: a re-enqueue with UPDATE rewrote
+        // initialDelay every 15 minutes, which moved the first run one tick earlier each pass.
+        // Settings changes come in through updateSchedule().
         if (appSettings.contentAutoRefreshEnabled) {
             updateWorkManagerSchedule(appSettings)
         } else {
             cancelWorkManager()
         }
 
-        // TV/fixed devices additionally refresh in-process whenever the app happens to be running.
+        // TV and other fixed devices also refresh in-process while the app runs.
         if (!isFixedDevice()) return
         autoRefreshJob =
             scope.launch {
@@ -219,14 +218,10 @@ class ProviderSyncManager private constructor(
     }
 
     /**
-     * Runs in [scope] — a singleton scope outside any ViewModel — so the sync itself keeps going
-     * even if the screen that requested it is closed. The returned [Deferred] is just a handle a
-     * caller can await to know when *this* attempt is over; it resolves exactly once on every
-     * path (success, a provider-side error, or bailing out early because the provider or its
-     * password vanished) via `try`/`finally`, so nothing awaiting it is ever left hanging.
-     *
-     * Calls for a provider that is already syncing return that sync's handle instead of starting
-     * a second one.
+     * Runs in [scope], outside any ViewModel, so the sync goes on when the screen that asked for it
+     * closes. The [Deferred] tells when *this* attempt ends; `try`/`finally` resolves it once on
+     * every path, so no awaiter hangs. A provider that is already syncing returns that sync's
+     * handle.
      */
     fun startManualSync(providerId: Long): Deferred<SyncResult> =
         synchronized(inFlightLock) {
@@ -239,9 +234,8 @@ class ProviderSyncManager private constructor(
         }
 
     /**
-     * The manual sync currently running for [providerId], or null if none is. Lets a screen that
-     * was closed and reopened mid-sync re-attach to the sync it started instead of showing an
-     * idle button while the sync is still running.
+     * The manual sync running for [providerId], or null, so a screen reopened mid-sync attaches to
+     * it instead of showing an idle button.
      */
     fun inFlightSync(providerId: Long): Deferred<SyncResult>? = synchronized(inFlightLock) { inFlight[providerId] }
 

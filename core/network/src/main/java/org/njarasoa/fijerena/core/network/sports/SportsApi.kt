@@ -107,7 +107,7 @@ class SportsApi(
 
     /**
      * A league's games of one [day]. The range form (`dates=YYYYMMDD-YYYYMMDD`) answers HTTP 400
-     * ("Failed to get events endpoint") since at least 2026-10-31, so a range is read day by day.
+     * ("Failed to get events endpoint"), so a range is read day by day.
      */
     suspend fun espnScoreboard(
         sport: String,

@@ -32,9 +32,8 @@ class LocalMediaProvider(
             supportsProgressSync = false,
         )
 
-    // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
-    // don't reliably run this on a background thread, and ContentResolver stream reads plus
-    // LocalFileScanner's directory recursion would otherwise execute on Main.
+    // Callers (CategoryViewModel.init through viewModelScope.launch) can be on Main, where the
+    // ContentResolver reads and LocalFileScanner's directory walk would otherwise run.
     override suspend fun connect(): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {

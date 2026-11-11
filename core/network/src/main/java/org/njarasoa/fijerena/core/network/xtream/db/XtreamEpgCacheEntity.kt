@@ -3,12 +3,9 @@ package org.njarasoa.fijerena.core.network.xtream.db
 import androidx.room.Entity
 
 /**
- * Per-stream EPG payload cache.
- *
- * Lives in SQLite rather than SharedPreferences because a full live catalogue is tens of
- * thousands of entries: SharedPreferences keeps every value parsed in RAM for the lifetime of
- * the process and rewrites the whole file on each commit, which grew to an 84 MB xml file and
- * an equivalent permanent heap cost.
+ * Per-stream EPG payload cache, in SQLite: a full live catalogue has tens of thousands of entries,
+ * and SharedPreferences kept them all parsed in RAM and rewrote the whole file (84 MB) on each
+ * commit.
  */
 @Entity(
     tableName = "xtream_epg_cache",

@@ -32,10 +32,10 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
 /**
- * Manages export and import of all application settings to/from a JSON file.
+ * Export and import of the app settings as a JSON file.
  *
  * Exported data:
- * - Global AppSettings (theme, UI scale, Admin, EPG auto-refresh, etc.)
+ * - The active profile's theme, Look and Feel, Admin and Nerd flags
  * - Provider configurations (name, URL, username, type, config, per-provider settings)
  * - EPG sources (URL, label, timezone offset, enabled state), except an Xtream source's own
  *   `xmltv.php` guide, which carries its login: the source's next login adds it again
@@ -56,24 +56,14 @@ class SettingsExportManager(
     companion object {
         private const val TAG = "SettingsExportManager"
 
-        // 4: added providerWatchState (the watch state durable storage plan, Phase 4). A
-        // backup taken before version 4 has no watch state in it at all — SettingsExportManager
-        // never exported watch_history_v3 — so there is no older shape to migrate on import;
-        // providerWatchState simply decodes to its empty default on an old file.
-        // 5: favourites moved from the favorites_v2 / favorite_categories blobs to the
-        // favorite_state table (the favorites durable storage plan). The on-the-wire
-        // shape did not change — providerFavorites still carries the same fields, matched by
-        // provider name+URL — so a version 4 file restores onto this build unchanged, and a
-        // version 5 file restores onto an older build unchanged. Only the storage read from and
-        // written to differs.
-        // 6: added a favourite's tmdbId and the active profile's Wanted list (`wanted`), both with
-        // defaults, so a version 5 file restores unchanged and an older build ignores them
-        // (the wanted titles plan).
-        // 7: added the teams and leagues the active profile follows (`followedSports`), with a
-        // default, so a version 6 file restores unchanged and an older build ignores them (the
-        // sports teams plan).
-        // 8: added a favourite's tags, with a default, so a version 7 file restores unchanged and
-        // an older build ignores them (the favourite tags plan).
+        // 4: added providerWatchState (the watch state durable storage plan, Phase 4); an older
+        //    file decodes it to its empty default.
+        // 5: favourites stored in the favorite_state table (the favorites durable storage plan);
+        //    the file shape did not change, so a version 4 and a version 5 file restore on both.
+        // 6: added a favourite's tmdbId and the Wanted list, `wanted` (the wanted titles plan).
+        // 7: added the followed teams and leagues, `followedSports` (the sports teams plan).
+        // 8: added a favourite's tags (the favourite tags plan).
+        // Each added field has a default: an older file restores unchanged, an older build ignores it.
         private const val EXPORT_VERSION = 8
 
         internal val json =
@@ -86,8 +76,8 @@ class SettingsExportManager(
         /**
          * A guide source's interval on import: its own when the file has one; otherwise (a file
          * from before per-source intervals) off if the file's device-wide auto-refresh was off,
-         * else unset — it then uses this device's retired device-wide interval, as before. That
-         * switch is the only use of [GlobalSettings.epgAutoRefreshEnabled] left.
+         * else unset, so it uses this device's retired device-wide interval. That switch is the
+         * only use of [GlobalSettings.epgAutoRefreshEnabled] left.
          */
         internal fun importedRefreshIntervalHours(
             source: ExportedEpgSource,
@@ -98,8 +88,8 @@ class SettingsExportManager(
 
         /**
          * Whether [url] is [owner]'s own `xmltv.php` guide (automatic or renamed), which is fetched
-         * with, or holds, the Xtream login: never exported, never imported. See
-         * the public release plan → R1.
+         * with, or holds, the Xtream login: never exported, never imported. See the public release
+         * plan → R1.
          */
         internal fun isXtreamOwnGuide(
             url: String,
@@ -359,10 +349,8 @@ class SettingsExportManager(
     )
 
     /**
-     * A provider's `watch_state` rows, identified by provider name+URL rather than the raw
-     * `providerId` a row carries on the source device — that id is `autoGenerate`d and is not
-     * necessarily what the matched provider is called on the target device, so it is remapped at
-     * import time rather than trusted from the file. Same shape [ProviderFavorites] already uses.
+     * A provider's `watch_state` rows, identified by provider name and URL like [ProviderFavorites]:
+     * the `providerId` is generated per device, so it is remapped at import.
      */
     @Serializable
     data class ProviderWatchState(
@@ -410,14 +398,14 @@ class SettingsExportManager(
     fun getQuickImportPath(): String? {
         val fileName = "fijerena_settings.json"
 
-        // 1. Try public Download folder (primary choice for TV/easy access)
+        // 1. The public Download folder (first choice, easy to reach on a TV).
         val downloadPath = "/sdcard/Download/$fileName"
         val downloadFile = java.io.File(downloadPath)
         if (downloadFile.exists() && downloadFile.canRead()) {
             return downloadPath
         }
 
-        // 2. Fallback to app private folder (no permission needed, reliable on all versions)
+        // 2. The app's own folder (no permission needed, works on all versions).
         val privateFile = java.io.File(context.getExternalFilesDir(null), fileName)
         if (privateFile.exists() && privateFile.canRead()) {
             return privateFile.absolutePath
@@ -490,9 +478,8 @@ class SettingsExportManager(
             // profiles (the live sync plan → Decisions).
             val profileId = appSettings.activeProfileId
 
-            // Export favorites per provider. Rows since the favorites durable storage plan;
-            // the on-disk shape is unchanged, so old backups still import and new ones still restore
-            // onto a build that predates the table.
+            // Favourites per provider, in the file shape from before the favorite_state table (see
+            // version 5).
             val favoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao()
             val providerFavorites =
                 allProviders.mapNotNull { entity ->
@@ -650,8 +637,8 @@ class SettingsExportManager(
         }
 
     /**
-     * Parse an import file and detect provider conflicts.
-     * Call this before importFromJson() to check if user confirmation is needed.
+     * Parses an import file and finds provider conflicts. Call it before importFromJson() to know
+     * whether the user must confirm.
      */
     suspend fun parseImportUri(uri: Uri): kotlin.Result<ParsedImport> =
         withContext(Dispatchers.IO) {
@@ -681,7 +668,7 @@ class SettingsExportManager(
         }
 
     /**
-     * Import settings from a URI (file) via the Storage Access Framework.
+     * Imports settings from a file URI (Storage Access Framework).
      * @return A summary of what was imported, or null on error.
      */
     suspend fun importFromUri(
@@ -705,9 +692,7 @@ class SettingsExportManager(
             }
         }
 
-    /**
-     * Import from a pre-parsed import (avoids re-reading the file).
-     */
+    /** Imports a parsed file, with no second read. */
     suspend fun importFromParsed(
         parsed: ParsedImport,
         conflictResolution: ConflictResolution = ConflictResolution.SKIP,
@@ -849,10 +834,8 @@ class SettingsExportManager(
                             providersByNameUrl["${pf.providerName}\u0000${pf.providerUrl}"]
                                 ?: providersByName[pf.providerName]
                                 ?: continue
-                        // providerId is never taken from the file — ProviderEntity.id is
-                        // autoGenerate, so the id the backup was taken under means nothing here.
-                        // Existing rows win: restoring must not renumber a favourite the user
-                        // already has, so anything already present is skipped rather than replaced.
+                        // providerId never comes from the file: ProviderEntity.id is generated per
+                        // device. Existing rows win: a favourite already present is skipped.
                         val existingKeys =
                             favoriteStateDao
                                 .getAll(matchingProvider.id, profileId)
@@ -922,13 +905,9 @@ class SettingsExportManager(
                     }
                 }
 
-                // Import watch state per provider (Phase 4, the watch state durable storage plan).
-                // Rides the same toggle as favorites rather than a checkbox of its own — both are
-                // per-provider local state restored the same way. providerId is never read from
-                // the file: each row is rebuilt under matchingProvider.id, since ProviderEntity.id
-                // is autoGenerate and the id the backup was taken under means nothing here.
-                // restoreAll REPLACEs by primary key, so importing the same backup twice is
-                // harmless — no existing-row merge needed like favorites, which append.
+                // Watch state per provider (Phase 4, the watch state durable storage plan), on the
+                // favourites toggle. Each row is rebuilt under matchingProvider.id, never the file's
+                // id. restoreAll REPLACEs by primary key, so a second import of a file is harmless.
                 var watchStateRestored = 0
 
                 if (options.importFavorites && exported.providerWatchState.isNotEmpty()) {
@@ -1097,8 +1076,8 @@ class SettingsExportManager(
                 parts.add(context.resources.getQuantityString(R.plurals.settings_export_summary_favorites_format, favTotal, favTotal))
             }
 
-            // Watch state — counted separately from favorites even though it rides the same
-            // import toggle, so the summary doesn't claim more "favorites" than were actually favorited.
+            // Counted apart from favourites, though on the same toggle, so the summary does not
+            // claim too many favourites.
             if (watchStateRestored > 0) {
                 parts.add(
                     context.resources.getQuantityString(

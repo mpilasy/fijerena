@@ -19,10 +19,10 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.isMediaPlaying
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
- * One-shot WorkManager worker that rebuilds the FTS index under a foreground-service
- * wake lock. Scheduled by [EpgFileManager.initialize] when a previous session left
- * fts_stale=true in SharedPreferences (e.g. the process was killed by Doze mid-rebuild).
- * Running as a foreground service prevents Doze from interrupting the rebuild again.
+ * One-shot WorkManager worker that rebuilds the FTS index under a foreground-service wake lock.
+ * [EpgFileManager.initialize] schedules it when an earlier session left fts_stale=true in
+ * SharedPreferences (the process was killed mid-rebuild, by Doze for example). As a foreground
+ * service, Doze does not stop the rebuild again.
  */
 class EpgFtsRebuildWorker(
     context: Context,
@@ -63,8 +63,8 @@ class EpgFtsRebuildWorker(
         return try {
             val indexer = EpgIndexer.getInstance(applicationContext)
             // An incremental update a killed run left continues where it stopped, waiting while
-            // something plays (the pausable guide indexing plan, IX2); a stale
-            // index is rebuilt whole.
+            // something plays (the pausable guide indexing plan, IX2); a stale index is rebuilt
+            // whole.
             if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause({ isMediaPlaying(applicationContext) }))) {
                 indexer.rebuildFtsAndUpdateState()
             }

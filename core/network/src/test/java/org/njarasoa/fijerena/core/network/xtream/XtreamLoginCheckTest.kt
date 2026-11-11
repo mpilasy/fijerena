@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.XtreamUserInfo
 
-/** the shared logins plan → Phase 1. */
+/** See the shared logins plan → Phase 1. */
 class XtreamLoginCheckTest {
     private fun info(
         auth: Int = 1,

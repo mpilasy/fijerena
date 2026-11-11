@@ -10,8 +10,8 @@ import org.njarasoa.fijerena.core.network.R
 
 /**
  * The EPG header's one line. It read "Never refreshed" beside 810k programmes because a source
- * that had never run was folded into the same number as one that had — see
- * the id type-safety plan (removed; in git history), and the provider scoping in `EpgBrowserViewModel`.
+ * that had never run was folded into the same number as one that had (the id type-safety plan,
+ * and the provider scoping in `EpgBrowserViewModel`).
  */
 class FreshnessLabelTest {
     private val now = 1_787_184_000L

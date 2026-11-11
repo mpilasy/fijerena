@@ -50,15 +50,14 @@ class JellyfinMediaProvider(
 
     private val SUPPORTED_CONTAINERS = arrayOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
 
-    // PlaySessionId per item, used for transcoding session reporting. ConcurrentHashMap: written
-    // during playback setup, read during periodic progress reports, and removed on stop, each
-    // potentially on a different coroutine.
+    // PlaySessionId per item, for transcoding session reports. ConcurrentHashMap: written at
+    // playback setup, read by progress reports and removed on stop, on different coroutines.
     private val playSessionIds = ConcurrentHashMap<String, String>()
     private val mediaSourceIds = ConcurrentHashMap<String, String>()
     private val playMethods = ConcurrentHashMap<String, String>()
 
-    // Movie/series detail (plot, cast, genre, rating, contentRating, episodes) rarely changes —
-    // cache the assembled result so reopening the same title doesn't re-hit the server.
+    // Movie and series detail rarely changes: the assembled result is cached, so a reopen does
+    // not ask the server again.
     private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
     private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
 
@@ -74,8 +73,8 @@ class JellyfinMediaProvider(
         )
 
     // One sign-in at a time: every request that finds the session gone calls connect(), and a
-    // screen starts several at once — five logins in half a second on a OnePlus (2026-10-09),
-    // all refused, a burst that also counts toward the server's failed-login lockout.
+    // screen starts several at once (five refused logins in half a second on a phone), which also
+    // count toward the server's failed-login lockout.
     private val connectMutex = Mutex()
 
     // A refused login is the answer for [REJECTED_LOGIN_RETRY_MS]: the requests waiting behind it,
@@ -230,9 +229,8 @@ class JellyfinMediaProvider(
     }
 
     private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
-        // Launch all three independent API calls in parallel.
-        // None depend on each other — they all only need seriesId — so running
-        // them concurrently reduces wall-clock time from ~3x to ~1x network latency.
+        // The three API calls are independent: run in parallel, one network latency instead of
+        // three.
         return coroutineScope {
             val seriesDeferred = async { api.getItemById(seriesId) }
             val seasonsDeferred = async { api.getSeasons(seriesId) }
@@ -450,7 +448,7 @@ class JellyfinMediaProvider(
                     ?.split(",")
                     ?.firstOrNull { ext ->
                         val trimmed = ext.trim()
-                        // Zero-allocation file extension matching to avoid lowercase string and set allocation
+                        // Extension match with no allocation (no lowercase string, no set).
                         SUPPORTED_CONTAINERS.any {
                             it.length == trimmed.length &&
                                 trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true)
@@ -770,8 +768,7 @@ class JellyfinMediaProvider(
     }
 
     companion object {
-        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
-        // long TTL avoids re-hitting the server every time a detail screen is reopened.
+        // Detail data rarely changes for a title: a long TTL avoids a server call on each reopen.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
     }
 }

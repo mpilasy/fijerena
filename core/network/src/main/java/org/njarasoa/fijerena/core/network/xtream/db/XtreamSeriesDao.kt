@@ -215,7 +215,7 @@ interface XtreamSeriesDao {
         facts: String? = null,
     )
 
-    /** Stamped every time `get_series_info` successfully persists this series' episode list. */
+    /** Stamped when `get_series_info` stores this series' episode list; 0 makes the next open fetch it. */
     @Query("UPDATE xtream_series SET episodesFetchedAt = :episodesFetchedAt WHERE seriesId = :seriesId AND providerId = :providerId")
     fun updateEpisodesFetchedAt(
         providerId: Long,

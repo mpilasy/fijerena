@@ -24,8 +24,8 @@ import org.njarasoa.fijerena.core.player.model.SeriesDetails
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 
 /**
- * Fetching a show's episode list again shouldn't repeat TMDB work already done. See
- * the catalog sync cache churn plan, Phase 3.
+ * Fetching a show's episode list again shouldn't repeat TMDB work already done. See the catalog
+ * sync cache churn plan, Phase 3.
  */
 class XtreamSeriesTmdbCallsTest {
     private val repository = mockk<XtreamRepository>(relaxed = true)

@@ -8,10 +8,10 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * A profile's optional 4-digit PIN (the profile pin plan): set, removed and
- * checked here. Only a salted PBKDF2 hash is kept ([AppSettings.pinHash], synced per profile);
- * after [FREE_TRIES] wrong PINs in a row each further one waits, from [FIRST_WAIT_MS] doubling up
- * to [MAX_WAIT_MS], counted per device. It keeps kids and guests out; it is no real security.
+ * A profile's optional 4-digit PIN (the profile pin plan): set, removed and checked here. Only a
+ * salted PBKDF2 hash is kept ([AppSettings.pinHash], synced per profile); after [FREE_TRIES] wrong
+ * PINs in a row each further one waits, from [FIRST_WAIT_MS] doubling up to [MAX_WAIT_MS], counted
+ * per device. It keeps kids and guests out; it is no real security.
  */
 class ProfilePins(
     private val settings: AppSettings,

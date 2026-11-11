@@ -30,15 +30,16 @@ object UiThemes {
     const val STANDARD = "standard"
 
     /**
-     * The packaged UI themes. The first four pair each platform-inspired Look and Feel with a colour
-     * theme, under the Look's name (user, 2026-10-21), with Slate after Standard and the streaming-service looks after it; then Console, Meadow dusk and Meadow.
+     * The packaged UI themes, in list order: Standard and Slate; the streaming-service looks; Clay
+     * and Indigo; the platform-inspired Looks and Feels (Rounded, Sharp, Balanced), each with a
+     * colour theme under the Look's name; then Console, Meadow dusk and Meadow.
      */
     val packaged: List<PackagedUiTheme> =
         listOf(
             PackagedUiTheme(STANDARD, themeId = "deep_night", uiStyleId = "material"),
             // Standard's system font and round corners over neutral greys with a light blue accent.
             PackagedUiTheme("slate", themeId = "slate", uiStyleId = "material"),
-            // Streaming-service looks (user, 2026-11-01), each under its colour theme's name.
+            // Streaming-service looks, each under its colour theme's name.
             PackagedUiTheme("crimson", themeId = "crimson", uiStyleId = "bold"),
             PackagedUiTheme("forest", themeId = "forest", uiStyleId = "groove"),
             PackagedUiTheme("aurora", themeId = "aurora", uiStyleId = "modern"),
@@ -50,7 +51,7 @@ object UiThemes {
             PackagedUiTheme("rounded", themeId = "midnight", uiStyleId = "cupertino"),
             PackagedUiTheme("sharp", themeId = "amethyst", uiStyleId = "roku"),
             PackagedUiTheme("balanced", themeId = "amoled_black", uiStyleId = "bravia"),
-            // the Console look plan and the Meadow look plan.
+            // See the Console look plan and the Meadow look plan.
             PackagedUiTheme("console", themeId = "console", uiStyleId = "console"),
             PackagedUiTheme("meadow_dusk", themeId = "meadow_dusk", uiStyleId = "meadow"),
             // Light, so kept for admins as the Meadow and Daylight colour themes are.

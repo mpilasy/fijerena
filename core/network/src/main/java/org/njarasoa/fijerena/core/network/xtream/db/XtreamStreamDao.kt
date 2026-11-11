@@ -56,10 +56,9 @@ interface XtreamStreamDao {
     ): XtreamStreamEntity?
 
     /**
-     * Other VOD entries sharing [tmdbId], for the "other instances of this title" picker on the
-     * detail screen. Only ever finds what's already in the local catalogue with tmdbId cached —
-     * tmdbId is populated per row from its own detail fetch, so this misses instances the user
-     * hasn't opened yet. That's fine: the picker simply doesn't show when nothing turns up.
+     * Other VOD entries with [tmdbId], for the detail screen's picker of other copies. Finds only
+     * rows whose tmdbId is cached (each row's own detail fetch sets it); with none, the picker does
+     * not show.
      */
     @Query(
         "SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type " +
@@ -73,16 +72,14 @@ interface XtreamStreamDao {
     ): List<XtreamStreamEntity>
 
     /**
-     * Phase 5 dedup (the watch state durable storage plan): item ids in this content type
-     * completed by a TMDB sibling — a different catalogue entry for the same title (five language
-     * variants, a 4K re-rip) whose own `watch_state` row is completed. `watch_state` never stores
-     * a `tmdbId` itself (see "No tmdbId column" in the plan), so this reaches it by joining back
-     * to the catalogue. `c.type = :streamType` keeps a completed movie from ever matching a live
-     * channel — `xtream_streams` is keyed `(streamId, providerId, type)` with a panel's own type
-     * string, while `w.contentType` uses this app's domain constants, so the two must be passed
-     * and compared separately. `GROUP BY c.tmdbId` collapses the sibling set before the outer
-     * join, so one watched variant can't multiply-match and duplicate a row in the result.
-     * The caller unions the result into the `watched` set it already builds from
+     * Phase 5 dedup (the watch state durable storage plan): item ids of this content type
+     * completed through a TMDB sibling, another catalogue entry for the same title (a language
+     * variant, a 4K copy) whose own `watch_state` row is completed. `watch_state` stores no
+     * `tmdbId` ("No tmdbId column" in the plan), so this joins back to the catalogue.
+     * `c.type = :streamType` stops a movie from matching a live channel: the panel's type string
+     * and `w.contentType` (the app's constants) are passed and compared apart. `GROUP BY c.tmdbId`
+     * collapses the sibling set before the outer join, so one watched variant cannot duplicate a
+     * row. The caller unions the result into the `watched` set it builds from
      * [getPlaybackPositions][org.njarasoa.fijerena.core.network.MediaRepository.getPlaybackPositions].
      */
     @Query(
@@ -109,11 +106,9 @@ interface XtreamStreamDao {
     ): List<String>
 
     /**
-     * Phase 6 unwatched: clears completion on every `watch_state` row sharing [itemId]'s `tmdbId`
-     * within this content type — the other half of Phase 5's dedup, since marking one variant
-     * unwatched must not leave a sibling's completion still driving the checkmark. `tmdbId IS NOT
-     * NULL` is explicit and load-bearing even though SQL's `= NULL` semantics already prevent a
-     * null-tmdb item from matching: an item with no tmdbId at all must clear only itself.
+     * Phase 6 unwatched: clears completion on every `watch_state` row with [itemId]'s `tmdbId` in
+     * this content type, or a sibling's completion keeps the check on. `tmdbId IS NOT NULL` is
+     * explicit on purpose: an item with no tmdbId must clear only itself.
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +

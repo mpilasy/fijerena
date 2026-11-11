@@ -34,9 +34,7 @@ data class OrphanedDataPruneResult(
 )
 
 /**
- * Manages provider CRUD and per-provider encrypted password storage.
- * Passwords are stored in per-provider EncryptedSharedPreferences files.
- * Cache data uses per-provider namespaced SharedPreferences (handled by XtreamRepository).
+ * Provider CRUD, with each provider's password in its own EncryptedSharedPreferences file.
  */
 class ProviderRepository(
     private val context: Context,
@@ -67,8 +65,8 @@ class ProviderRepository(
          * orphaned by comparing against `providers.db`, and whenever the two databases disagree
          * (providers.db reset or restored, a provider synced in between the sweep's read and its
          * delete) that inference is wrong and would delete every favourite and every history
-         * row. Those go only with [deleteProvider]. See
-         * the next level rock solid resilience plan → R-02.
+         * row. Those go only with [deleteProvider]. See the next level rock solid resilience plan
+         * → R-02.
          */
         internal val ORPHAN_SWEEP_TABLES =
             listOf("xtream_streams", "xtream_series", "xtream_episodes", "new_episode", "xtream_categories", "xtream_epg_cache")
@@ -90,8 +88,8 @@ class ProviderRepository(
             return fileNames.filter { name ->
                 name.endsWith(".xml") &&
                     prefixes.any { prefix ->
-                        // substringBefore: a non-Default profile's file is
-                        // media_cache_<id>_profile_<profileId> (MediaRepository.profileCacheName).
+                        // substringBefore: another profile's file is media_cache_<id>_profile_<profileId>
+                        // (MediaRepository.profileCacheName).
                         val id =
                             if (name.startsWith(prefix)) {
                                 name
@@ -109,11 +107,9 @@ class ProviderRepository(
 
         /**
          * Keyed by (providerId, profileId): the category filters in each entry are that profile's.
-         * One for the whole process, shared by every instance: sync, Settings and the import each
-         * build their own ProviderRepository, and with a cache per instance a write through one
-         * left the others — `AppContainer.providerRepository` among them — serving the old
-         * settings until a restart. See the next level rock solid resilience plan
-         * → R-06 step 1.
+         * One cache for the process: sync, Settings and the import each build their own
+         * ProviderRepository, and with a cache per instance a write through one left the others
+         * on old settings until a restart (the next level rock solid resilience plan → R-06 step 1).
          */
         private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
 
@@ -263,8 +259,9 @@ class ProviderRepository(
         combine(dao.getAllProviders(), AppSettings(context).observeProfileSourceKeys(profileId), ::resolveProfileSources)
 
     /**
-     * [profileSources], re-emitted only when which sources the profile has changes (one turned on or off, added, deleted or renamed), not on every
-     * write to a source's row (a sync's timestamps): what the merged lists reload on.
+     * [profileSources], re-emitted only when the profile's set of sources changes (one turned on or
+     * off, added, deleted or renamed), not on every write to a source's row (a sync's timestamps):
+     * what the merged lists reload on.
      */
     fun profileSourceSet(profileId: String): Flow<List<ProviderEntity>> =
         profileSources(profileId).distinctUntilChanged { old, new ->
@@ -302,8 +299,8 @@ class ProviderRepository(
     suspend fun guideProviderIds(sourceId: Long): List<Long> = db.epgSourceDao().getProviderIds(sourceId)
 
     /**
-     * Add a new provider. Stores the password in a per-provider encrypted prefs file. The new
-     * source is on for the profile in use (multi-source plan, P1); nothing else changes.
+     * Adds a provider, with its password in its own encrypted prefs file. The new source is on for
+     * the profile in use (multi-source plan, P1); nothing else changes.
      */
     suspend fun addProvider(
         name: String,
@@ -367,8 +364,7 @@ class ProviderRepository(
         if (effectiveType == "XTREAM" && existing.url.trim().trimEnd('/') != url.trim().trimEnd('/')) {
             AutoXmltvSources.reconcileStored(context, id, previousProviderUrl = existing.url)
         }
-        // If Jellyfin credentials changed, discard the cached session token so the
-        // provider re-authenticates with the new username/password on next use.
+        // Jellyfin: drop the cached session token, so the next use signs in with the new login.
         if (effectiveType == "JELLYFIN") {
             getProviderPrefs(id, ProfileEntity.DEFAULT_ID).edit {
                 remove(KEY_JELLYFIN_TOKEN)
@@ -379,8 +375,8 @@ class ProviderRepository(
     }
 
     /**
-     * Delete a provider and clean up its encrypted prefs and cache. The deletion is recorded for
-     * live sync; its favourite and history tombstones go with it, the provider's own covers them.
+     * Deletes a provider with its encrypted prefs and cache. The deletion is recorded for live
+     * sync; its favourite and history tombstones go with it, the provider's own covers them.
      * [fromRemote]: another device deleted it. Its key may stay in profiles' sources settings, which
      * skip a source this device doesn't have.
      */
@@ -408,14 +404,11 @@ class ProviderRepository(
     }
 
     /**
-     * `xtream_v2.db`'s catalog rows (streams, series, episodes, categories, favorites, the
-     * per-stream EPG payload cache) are keyed by `providerId` but live in the same app-wide
-     * database file as every other provider's rows, so no SQL cascade reaches them from
-     * `providers.db` — same reasoning as [clearProviderWatchState], delete by hand.
+     * `xtream_v2.db`'s catalogue rows are keyed by `providerId` in a file shared by every provider,
+     * so no SQL cascade from `providers.db` reaches them: they are deleted by hand.
      */
     private suspend fun clearProviderCatalog(providerId: Long) {
-        // Off the caller's dispatcher: ProviderViewModel.deleteProvider calls in from a bare
-        // viewModelScope.launch { }, i.e. Main, and these are blocking database writes.
+        // On IO: callers can be on Main, and these are blocking database writes.
         withContext(Dispatchers.IO) {
             val db = XtreamDatabase.getInstance(context)
             CATALOG_TABLES.forEach { table -> deleteInBatches(db, table, "providerId = $providerId") }
@@ -428,9 +421,8 @@ class ProviderRepository(
      * commit. `xtream_v2.db` runs `auto_vacuum = FULL`, so each commit moves and frees its pages
      * there and then: one unbounded `DELETE` of a whole provider's catalogue piles all of that page
      * movement into one transaction's WAL. Bounded commits keep the WAL small, and the file shrinks
-     * as it goes — which is also why no `VACUUM` follows (see
-     * the rock solid stability resilience plan → F-35). [where] is built from
-     * provider ids only, never from user input.
+     * as it goes, so no `VACUUM` follows (the rock solid stability resilience plan → F-35). [where]
+     * is built from provider ids only, never from user input.
      */
     private fun deleteInBatches(
         db: XtreamDatabase,
@@ -447,9 +439,9 @@ class ProviderRepository(
     }
 
     /**
-     * Sweeps `xtream_v2.db` for downloaded catalogue rows whose `providerId` doesn't match any
-     * provider that exists right now — drift from before [clearProviderCatalog] ran on every
-     * deletion, or a deletion interrupted midway. Never runs if providers cannot be loaded.
+     * Sweeps `xtream_v2.db` for downloaded catalogue rows whose `providerId` matches no provider
+     * that exists now (left by older builds or an interrupted deletion). Never runs if providers
+     * cannot be loaded.
      *
      * Deletes only [ORPHAN_SWEEP_TABLES] and cache SharedPreferences: never favourites or watch
      * history, never sync state. [userRequested] (Settings → Shrink Database) also removes orphaned
@@ -555,9 +547,8 @@ class ProviderRepository(
      *
      * EPG source records carry no provider tag, so the server's provider cascade doesn't reach
      * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
-     * another device's provider deletion must not — that device already sent them, and queueing
-     * them again pushed every one back. See
-     * the rock solid stability resilience plan → F-11.
+     * another device's provider deletion must not: that device already sent them, and queueing
+     * them again pushed every one back. See the rock solid stability resilience plan → F-11.
      */
     internal suspend fun deleteProviderEpgSources(
         id: Long,
@@ -704,8 +695,8 @@ class ProviderRepository(
         )
 
     /**
-     * Persist a Jellyfin session token (from Quick Connect or normal auth) for the source on this
-     * device, so the provider can restore it on next launch without re-authenticating.
+     * Stores a Jellyfin session token (from Quick Connect or a normal sign-in) for the source on
+     * this device, so the next launch needs no new sign-in.
      */
     fun saveJellyfinSession(
         providerId: Long,
@@ -933,8 +924,8 @@ class ProviderRepository(
     private fun activeProfileId(): String = AppSettings(context).activeProfileId
 
     /**
-     * Get the settings for a provider, with the active profile's category filters.
-     * Returns default settings if provider not found or settings are invalid.
+     * A provider's settings, with the active profile's category filters. Defaults when the provider
+     * is not found or its settings do not read.
      */
     suspend fun getProviderSettings(providerId: Long): ProviderSettings {
         val profileId = activeProfileId()
@@ -953,7 +944,7 @@ class ProviderRepository(
     }
 
     /**
-     * Update the settings for a provider. The category filters are saved as the active profile's;
+     * Updates a provider's settings. The category filters are saved as the active profile's;
      * everything else is the provider's, shared by all profiles.
      */
     suspend fun updateProviderSettings(
@@ -979,9 +970,8 @@ class ProviderRepository(
         settingsCache[providerId to profileId] = settings.copy(categoryFilters = applied)
         MediaProviderFactory.providerChanged(providerId)
 
-        // Recompute category-filter exclusion flags immediately, purely locally (no network) —
-        // lets a filter change take effect right away instead of waiting for the next sync.
-        // Runs on IO: the DAO calls inside recompute() are synchronous, non-suspend Room queries.
+        // Recompute the exclusion flags now, locally, so a filter change shows at once and not at
+        // the next sync. On IO: recompute() makes blocking Room queries.
         if (entity.type == "XTREAM") {
             withContext(Dispatchers.IO) {
                 val database =
@@ -1178,9 +1168,7 @@ class ProviderRepository(
     }
 
     suspend fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
-        // We need an instance of XtreamRepository to get accurate DB stats.
-        // Since we don't have dependency injection here, we create a temporary instance.
-        // This is safe because XtreamRepository uses singletons (Database) internally.
+        // A temporary XtreamRepository is safe: it uses the database singletons.
         val accountManager =
             org.njarasoa.fijerena.core.network
                 .AccountManager(context)
@@ -1252,16 +1240,14 @@ class ProviderRepository(
     }
 
     /**
-     * `watch_state` lives in `XtreamDatabase` (one app-wide file) while provider definitions live
-     * in `SettingsDatabase`, so no SQL cascade reaches it — delete by hand. Not Xtream-specific:
-     * `MediaRepository` backs SMB, Local and Remote M3U too, and all of them write rows keyed by
-     * this `providerId`. `media_cache_$providerId` (favorites, favorite categories) is cleared in
-     * the same pass, or that prefs file would leak on every deletion.
-     * See the watch state durable storage plan.
+     * `watch_state` is in `XtreamDatabase` and providers are in `SettingsDatabase`, so no SQL
+     * cascade reaches it: deleted by hand, for every source type. `media_cache_$providerId` goes in
+     * the same pass, or that prefs file leaks on every deletion (the watch state durable storage
+     * plan).
      *
      * Every profile's rows and prefs go with the provider: `watch_state` across all profiles, and
-     * each non-Default profile's own `media_cache_<id>_profile_<profileId>` file alongside the
-     * shared one (the live sync plan → User profiles).
+     * each other profile's own `media_cache_<id>_profile_<profileId>` file (the live sync plan →
+     * User profiles).
      */
     private suspend fun clearProviderWatchState(providerId: Long) {
         XtreamDatabase.getInstance(context).watchStateDao().deleteAllProfiles(providerId)

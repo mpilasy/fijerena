@@ -10,7 +10,7 @@ import java.util.UUID
  * @property url Server URL or connection string
  * @property type Provider type: XTREAM, JELLYFIN, REMOTE_M3U, SMB or LOCAL
  * @property config JSON blob for type-specific configuration (SMB host/share, Local paths)
- * @property providerSettings JSON blob for per-provider settings (cache, history, filters)
+ * @property providerSettings JSON blob for per-provider settings ([ProviderSettings])
  * @property providerKey Random UUID naming this provider in live sync. Unlike [id] (a local
  *   autoincrement) it's the same on every device, and unlike URL + username it survives edits.
  *   See the live sync plan → Record model.

@@ -56,25 +56,21 @@ class XtreamMediaProvider(
     private val repository: XtreamRepository,
     private val tmdb: TmdbApiService,
 ) : MediaProvider {
-    // ConcurrentHashMap: this provider instance is shared across background sync workers,
-    // catalog search coroutines, and UI viewmodels, all of which can read/write these
-    // concurrently on different dispatchers.
+    // ConcurrentHashMap: sync workers, search coroutines and view models share this instance on
+    // different dispatchers.
     private val searchDataSizes = ConcurrentHashMap<String, Long>()
 
-    // Cache: (tmdbSeriesId, season) -> TMDB's episodes of that season (empty when the call failed):
-    // their plots, and their guest stars for an episode's cast. Keeps reopens cheap without hitting
-    // TMDB again this session.
+    // (tmdbSeriesId, season) -> TMDB's episodes of that season (empty when the call failed), for
+    // their plots and guest stars. A reopen asks TMDB nothing more this session.
     private val tmdbSeasonCache = ConcurrentHashMap<Pair<Int, Int>, List<TmdbEpisode>>()
 
-    // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
-    // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully
-    // assembled result so reopening the same title doesn't repeat that work.
+    // The assembled movie or series detail rarely changes but costs a live Xtream call plus TMDB
+    // enrichment: cached, so a reopen does not repeat that work.
     private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
     private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
 
-    // getTmdbLogoUrl and getTmdbBackdropUrl both read `/images`, which returns both in one
-    // response — cache it so a caller that wants both (the TV detail hero) makes one network
-    // round trip instead of two.
+    // One `/images` response holds the logo and the backdrop: cached, so a caller that wants both
+    // (the TV detail hero) makes one round trip.
     private val tmdbImagesCache = TtlCache<Pair<Int, String>, TmdbImagesResponse>(DETAIL_CACHE_TTL_MS)
 
     // getTmdbTitle, getTmdbTrailerUrl and getTmdbCredits all read one details response with the
@@ -156,9 +152,8 @@ class XtreamMediaProvider(
             }
         return when (result) {
             is Result.Success -> {
-                // Callers run on Dispatchers.Main.immediate, and each toDomain allocates a
-                // MediaItem, a providerData map and a MediaMetadata. On the largest category
-                // (9,480 items) that measured 50ms of main-thread work at the moment of the tap.
+                // Off Main: callers run on Dispatchers.Main.immediate, and toDomain for the largest
+                // category (9,480 items) measured 50 ms at the tap.
                 kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
             }
 
@@ -185,9 +180,8 @@ class XtreamMediaProvider(
     override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
 
     /**
-     * One line whenever a lookup ends as an error on screen. Without it a call that never
-     * completed left no trace at all, so in a log capture "the user never opened anything" and
-     * "the provider was unreachable" looked exactly the same.
+     * One log line whenever a lookup ends as an error on screen, so a log capture tells "never
+     * opened" from "provider unreachable".
      */
     private fun XtreamResponse<*>.logAsFailure(
         action: String,
@@ -211,13 +205,9 @@ class XtreamMediaProvider(
     }
 
     /**
-     * Fetches the series info, applying the two recoveries worth trying when the provider answers
-     * with nothing usable — [XtreamResponse] having already decided that it did.
-     *
-     * One retry, because these proxies blip: a second ask often returns the episode list the first
-     * one omitted. Then a re-resolve by name, because a catalogue id the provider has stopped
-     * recognising is the other reason for a permanent nothing — every later visit would show an
-     * empty show forever otherwise.
+     * Fetches the series info, with two recoveries when the provider answers with nothing usable:
+     * one retry (these proxies blip, and a second ask often returns the episode list), then a
+     * re-resolve by name (a catalogue id the provider no longer knows shows an empty show for ever).
      */
     private suspend fun resolveSeriesInfo(id: Int): XtreamResponse<SeriesInfo> {
         val first = repository.getSeriesInfo(id)
@@ -249,10 +239,8 @@ class XtreamMediaProvider(
             repository.getCachedSeriesEntity(id)?.let {
                 repository.saveSeriesDetailCache(id, it.contentRating, it.tmdbId, 0L)
             }
-            // And the persisted episode-list cache (EPISODE_LIST_CACHE_TTL_MS) — without this a
-            // manual refresh (TV's header Refresh button, Mobile's pull-to-refresh) would still
-            // serve the on-disk episode list for the rest of its window, making the refresh
-            // action look like it did nothing.
+            // And the stored episode list (EPISODE_LIST_CACHE_TTL_MS), or a manual refresh still
+            // serves it and looks like it did nothing.
             repository.expireEpisodeListCache(id)
         }
     }
@@ -283,15 +271,14 @@ class XtreamMediaProvider(
                 Exception("Invalid series ID: $rawSeriesId"),
             )
 
-        // Persisted episode-list freshness (see EPISODE_LIST_CACHE_TTL_MS): re-hitting Xtream for the
-        // whole episode list on every open meant calls several times a minute while browsing seasons
-        // back and forth, and a show the size of Law & Order returns several hundred episodes each time.
-        // [getCachedSeriesDetail] already rebuilds a full SeriesDetail from disk with no network call;
-        // this just decides when that's trustworthy enough to use instead of asking Xtream again.
+        // Stored episode-list freshness (EPISODE_LIST_CACHE_TTL_MS): a fetch on every open meant
+        // calls several times a minute while browsing seasons, with hundreds of episodes each for a
+        // long show. [getCachedSeriesDetail] rebuilds a full SeriesDetail from disk; this decides
+        // when to trust it.
         //
-        // New episodes are noticed through the catalogue sync instead: a series whose catalogue
-        // entry changed (panel-a bumps `last_modified` when episodes are added) gets its
-        // episodesFetchedAt cleared, so the next open lands here as not fresh.
+        // New episodes come through the catalogue sync: a series whose catalogue entry changed
+        // (panel-a bumps `last_modified` when episodes are added) gets its episodesFetchedAt
+        // cleared, so the next open lands here as not fresh.
         val cachedEntity = repository.getCachedSeriesEntity(id)
         val episodesFresh =
             cachedEntity?.episodesFetchedAt != null &&
@@ -309,11 +296,10 @@ class XtreamMediaProvider(
             }
         }
 
-        // Xtream re-sends the episode list on every fetch, and it rarely carries synopses — so fill
-        // in the ones TMDB gave us last time before deciding whether to ask TMDB again. Without
-        // this the season fetches below repeat on every fetch, since their in-memory cache dies
-        // with the process. Read before resolveSeriesInfo: storing the new episode list replaces
-        // the episode rows, and the stored plots with them.
+        // Xtream re-sends the episode list on each fetch, rarely with synopses: fill in the ones
+        // TMDB gave last time before deciding to ask TMDB again, or the season fetches below repeat
+        // after each restart. Read before resolveSeriesInfo, which replaces the episode rows and
+        // their stored plots.
         val storedPlots = repository.getPersistedEpisodePlots(id)
         return when (val result = resolveSeriesInfo(id)) {
             is XtreamResponse.Ok -> {
@@ -391,10 +377,8 @@ class XtreamMediaProvider(
                     }
                 }
                 repository.persistEpisodeOverviews(enriched.episodes)
-                // A series with no episodes is never a legitimate answer — it means the provider
-                // returned nothing useful this time. Caching it would serve the empty screen for
-                // the cache's whole lifetime, which no amount of clearing the provider's stored
-                // catalogue would fix, since this cache lives in memory.
+                // A series with no episodes means the provider returned nothing useful this time:
+                // cached, it would serve an empty screen for the cache's whole lifetime.
                 if (enriched.episodes.values.any { it.isNotEmpty() }) {
                     seriesDetailCache.put(rawSeriesId, enriched)
                 }
@@ -496,9 +480,8 @@ class XtreamMediaProvider(
             ?: byCountry.firstNotNullOfOrNull { it.second?.takeIf { c -> c.isNotBlank() } }
 
     /**
-     * Fetches per-episode overviews from TMDB (one call per season) and injects them
-     * into each episode's metadata.plot. Xtream providers typically don't return
-     * episode synopses, so this fills that gap.
+     * Fills each episode's metadata.plot from TMDB (one call per season): Xtream providers rarely
+     * send episode synopses.
      */
     private suspend fun enrichWithTmdbOverviews(
         detail: SeriesDetail,
@@ -602,9 +585,9 @@ class XtreamMediaProvider(
 
     /**
      * The guest stars of episode [episode] of season [season] of the TMDB show [tmdbId], in billing
-     * order (the episode cast plan): from the season call the plots use, kept
-     * with them, so a season asked for its plots costs nothing more. Null without a TMDB id or key;
-     * empty when TMDB names none or fails.
+     * order (the episode cast plan): from the season call the plots use, kept with them, so a
+     * season asked for its plots costs nothing more. Null without a TMDB id or key; empty when TMDB
+     * names none or fails.
      */
     suspend fun getTmdbEpisodeGuests(
         tmdbId: String?,
@@ -650,11 +633,9 @@ class XtreamMediaProvider(
                 var enriched = detail
                 var tmdbPosterPath: String? = null
                 if (tmdb.hasApiKey() && tmdbMovieId != null) {
-                    // Independent TMDB calls (neither reads the other's result) — run them
-                    // concurrently instead of stacking two full network round-trips on top of
-                    // get_vod_info. Sequential timeouts here were traced to a real ~60s UI
-                    // freeze on Shield when switching between a movie's alternate stream
-                    // versions, which always misses movieDetailCache/the persisted cache.
+                    // Independent TMDB calls, run at once and not stacked on get_vod_info:
+                    // sequential timeouts here froze the UI for ~60 s on Shield when switching
+                    // between a movie's alternate streams.
                     val (certification, tmdbDetails) =
                         coroutineScope {
                             val certificationDeferred = async { fetchMovieCertification(tmdbMovieId) }
@@ -886,11 +867,8 @@ class XtreamMediaProvider(
         val id = tmdbId?.toIntOrNull() ?: return RelatedTitles()
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return RelatedTitles()
 
-        // Recommendations and the collection are independent endpoints, so ask for both at once
-        // rather than paying the round trips one after the other. Collections are a movie-only
-        // TMDB concept. Similar titles are only ever a fallback for a thin recommendations list
-        // (see below), so that call is not fired here — paying for it when it will not be used
-        // would be wasted.
+        // Recommendations and the collection (movies only) are independent: asked at once. Similar
+        // titles only top up a thin recommendations list, so that call waits (see below).
         val (recommended, collectionFetch) =
             coroutineScope {
                 val recommendedCall = async { fetchRelated(id, contentType, similar = false) }
@@ -900,19 +878,15 @@ class XtreamMediaProvider(
 
         val mediaType = getMediaType(contentType)
         val taken = mutableSetOf<String>()
-        // Runs first, so a title belonging to the same collection as this one is always credited
-        // there even when TMDB also lists it under recommendations/similar — and the collection
-        // itself, being explicit rather than algorithmic, gets a row even with just one match.
-        // TMDB's collection always includes the movie being viewed itself; matchToCatalogue's own
-        // itemId check only catches that exact catalogue row, not the provider's other stream
-        // entries for the same film (multiple qualities/languages are common), so drop it by TMDB
-        // id first.
+        // First, so a title of this movie's collection is credited there even when TMDB also
+        // recommends it; an explicit collection gets a row with one match. TMDB's collection holds
+        // this movie, and matchToCatalogue's itemId check catches only this catalogue row, not the
+        // provider's other streams of the film: dropped by TMDB id.
         val collectionParts = collectionFetch.parts.filter { it.id != id }
         val collectionMatches = matchToCatalogue(collectionParts, itemId, contentType, mediaType, taken, minCount = 1)
 
-        // "More Like This" is recommendations first, similar titles only topping up the rest —
-        // recommendations are the stronger signal, and a similar list that always fills a page
-        // regardless of genuine closeness must never bump a recommended title out of the cap.
+        // "More Like This" is recommendations first, similar titles only top up: a similar list
+        // always fills a page, so it must never push a recommended title out of the cap.
         val recommendedMatches = matchToCatalogue(recommended, itemId, contentType, mediaType, taken, minCount = 0)
         val moreLikeThis =
             if (recommendedMatches.size >= RelatedTitles.MAX_MORE_LIKE_THIS) {
@@ -1010,8 +984,7 @@ class XtreamMediaProvider(
         }
     }
 
-    /** Shared by [getTmdbLogoUrl] and [getTmdbBackdropUrl] — both read the same `/images`
-     * response, cached so asking for both costs one network round trip, not two. */
+    /** Shared by [getTmdbLogoUrl] and [getTmdbBackdropUrl]: one `/images` call, cached. */
     private suspend fun getTmdbImages(
         tmdbId: String?,
         contentType: String,
@@ -1118,9 +1091,8 @@ class XtreamMediaProvider(
 
             val hit = candidatesByIndex[index]?.firstOrNull { it.streamId.toString() != itemId } ?: continue
             taken += key
-            // The card shows this name and the screen it opens is titled with it, so the provider's
-            // "NF - " / "4K-AMZ - " tags come off here rather than at either call site.
-            // The card shows the TMDB title instead ([MediaItem.listTitle]).
+            // The screen it opens is titled with this name, so the provider's "NF - " / "4K-AMZ - "
+            // tags come off here. The card shows the TMDB title ([MediaItem.listTitle]).
             matches +=
                 hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name), listTitle = result.listTitle) }
         }
@@ -1131,12 +1103,10 @@ class XtreamMediaProvider(
      * The catalogue titles that may be each TMDB title, index-aligned with [results]; null where the
      * lookup failed.
      *
-     * The lookup per title is independent and read-only, so the titles are looked up at once: up
-     * to ~40 TMDB titles cost one round trip's worth of wall-clock time instead of N sequential
-     * ones. Only [matchToCatalogue]'s accept/reject decision depends on its `taken`, which is built
-     * up as matches are accepted — looking ahead of that can waste a query on a title already
-     * claimed, never correctness. By TMDB id first; by title only among rows without one, so a row
-     * with another id (a remake with the same name) never matches.
+     * Each lookup is independent and read-only, so all run at once: ~40 TMDB titles cost one round
+     * trip of wall-clock time. Only [matchToCatalogue]'s decision depends on `taken`, so a lookup
+     * ahead of it can waste a query, never give a wrong result. By TMDB id first; by title only
+     * among rows without one, so a row with another id (a remake with the same name) never matches.
      */
     private suspend fun lookUpCandidates(
         results: List<TmdbRecommendation>,
@@ -1174,8 +1144,9 @@ class XtreamMediaProvider(
     /**
      * The catalogue title for each TMDB title, index-aligned with [results]: the first match, its
      * provider tags off and the TMDB title as its [MediaItem.listTitle]; null where this source has
-     * none. For the chart rows and the actor pages (the TMDB charts plan), which
-     * pick across sources and drop repeats themselves. Same matching as More Like This, outside the excluded categories.
+     * none. For the chart rows and the actor pages (the TMDB charts plan), which pick across
+     * sources and drop repeats themselves. Same matching as More Like This, outside the excluded
+     * categories.
      */
     suspend fun findTmdbTitles(
         results: List<TmdbRecommendation>,
@@ -1250,8 +1221,8 @@ class XtreamMediaProvider(
     }
 
     /**
-     * Triggers a full sync of categories and streams/series. Returns how many rows actually changed,
-     * summed across all six sync tasks — all-zero means the provider's catalog didn't change since the last sync.
+     * Runs a full sync of categories and streams/series. Returns how many rows changed, summed
+     * across all six sync tasks: all zero means the catalogue did not change since the last sync.
      *
      * Throws [CatalogSyncException] if any task failed. The tasks that succeeded have committed
      * their rows by then; the delta is dropped, since Settings shows the error instead of it.
@@ -1280,8 +1251,7 @@ class XtreamMediaProvider(
     suspend fun getCategoryTotalCount(contentType: String): Int = repository.getCategoryTotalCount(contentType)
 
     companion object {
-        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
-        // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
+        // Detail data rarely changes for a title: a long TTL avoids Xtream and TMDB calls on each reopen.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
 
         // Separate stamp from DETAIL_CACHE_TTL_MS: this one guards the episode list itself, not

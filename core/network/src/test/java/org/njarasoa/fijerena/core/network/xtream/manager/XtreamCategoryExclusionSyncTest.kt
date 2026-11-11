@@ -17,8 +17,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 
 /**
- * Only categories carry the flag, and only those whose flag changes are written — see
- * the fast profile switch plan.
+ * Only categories carry the flag, and only those whose flag changes are written (the fast profile
+ * switch plan).
  */
 class XtreamCategoryExclusionSyncTest {
     private val categoryDao = mockk<XtreamCategoryDao>(relaxed = true)

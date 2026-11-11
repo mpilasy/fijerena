@@ -2,13 +2,13 @@ package org.njarasoa.fijerena.core.network.sync
 
 /**
  * Decides what a record received from another device does to this one. Pure: the caller looks up
- * the local facts ([Local]) and carries out the [Resolution]. See
- * the live sync plan → Conflicts, Deletions, Jellyfin.
+ * the local facts ([Local]) and carries out the [Resolution]. See the live sync plan → Conflicts,
+ * Deletions, Jellyfin.
  *
- * Last writer wins per record, on the hybrid logical clock: a record applies only if its [SyncRecord.hlc]
- * is newer than everything this device knows about the same key — its own version and its
- * tombstone. A tie keeps the local version: equal clocks from two devices changing the same item in
- * the same millisecond are rare enough to accept the divergence until the next change.
+ * Last writer wins per record, on the hybrid logical clock: a record applies only if its
+ * [SyncRecord.hlc] is newer than everything this device knows about the same key, its own version
+ * and its tombstone. A tie keeps the local version: equal clocks from two devices in the same
+ * millisecond are rare enough to accept the divergence until the next change.
  */
 object SyncMerge {
     /** Whether something a record depends on (its provider, its profile) exists here. */

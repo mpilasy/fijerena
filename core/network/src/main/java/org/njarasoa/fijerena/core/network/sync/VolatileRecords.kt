@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Records of [SyncKind.VOLATILE] kinds waiting to be pushed. Unlike every other kind they have no
  * version row: only the latest state of each key matters, so it is held here, in memory, until a
  * push gets it to the server. Each push stamps it with the next tick of the settings sync clock, so
- * every send of a key is newer than the last and the server's last-write-wins takes it. See
- * the live sync now playing plan.
+ * every send of a key is newer than the last and the server's last-write-wins takes it. See the
+ * live sync now playing plan.
  */
 class VolatileRecords internal constructor() {
     /** One state put for a key; compared by identity, so a newer put is never marked sent by an older push. */

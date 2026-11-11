@@ -11,8 +11,7 @@ import androidx.room.Index
  * sends, so any number of changes to one item collapse into one entry.
  *
  * Local changes are written by SQLite triggers ([XtreamSyncTriggers]) in the same transaction as
- * the change; received ones by the apply path. See the live sync plan → Flow,
- * Conflicts.
+ * the change; received ones by the apply path. See the live sync plan → Flow, Conflicts.
  */
 @Entity(
     tableName = "sync_version",

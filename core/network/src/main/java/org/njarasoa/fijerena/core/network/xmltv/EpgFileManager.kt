@@ -76,7 +76,7 @@ import androidx.work.NetworkType as WorkNetworkType
 
 /**
  * Singleton running the multi-source EPG pipeline: sources are downloaded to cache files and
- * ingested by [EpgIndexer], each in one Room transaction.
+ * ingested by [EpgIndexer] in batches.
  */
 class EpgFileManager private constructor(
     private val context: Context,
@@ -162,10 +162,9 @@ class EpgFileManager private constructor(
         }
 
         /**
-         * Whether a matching content hash is trustworthy enough to skip re-ingesting. A real ingest
-         * is still forced once a day, so a skip never outlives a day. And a skip
-         * only makes sense while the live index actually holds the source's rows ([indexHasRows]) —
-         * see [buildDownloadRequest].
+         * Whether a matching content hash is enough to skip the ingest. A real ingest still runs
+         * once a day, and a skip needs the live index to hold the source's rows ([indexHasRows],
+         * see [buildDownloadRequest]).
          */
         internal fun canSkipIngest(
             source: EpgSourceEntity,
@@ -256,9 +255,11 @@ class EpgFileManager private constructor(
         val programmesIngested: Int = 0,
         val durationMs: Long = 0,
         val error: String? = null,
-        /** True when the refresh confirmed the source is unchanged (304, or matching content
-         * hash) and skipped parsing/ingest entirely. [channelsIngested]/[programmesIngested] are
-         * the counts carried forward from the last real ingest, not new work done this run. */
+        /**
+         * True when the refresh found the source unchanged (304, or the same content hash) and
+         * skipped the ingest. [channelsIngested]/[programmesIngested] are then the counts of the
+         * last real ingest.
+         */
         val unchanged: Boolean = false,
     )
 
@@ -334,9 +335,8 @@ class EpgFileManager private constructor(
         data object Clearing : MultiSourceState
 
         /**
-         * Post-ingestion phase: index rebuild, FTS rebuild, or vacuum.
-         * Emitted after all sources are ingested so the UI can show a working
-         * indicator instead of appearing stuck at 100%.
+         * The phase after ingestion (index rebuild, FTS rebuild or vacuum), so the UI shows work in
+         * progress instead of a stuck 100%.
          */
         data class Finalizing(
             val phase: String,
@@ -369,8 +369,8 @@ class EpgFileManager private constructor(
 
     /**
      * [state] as seen by [providerId]. One pipeline serves every provider, so a screen that reads
-     * [state] directly renders another provider's refresh — its progress, its source labels, its
-     * totals — as though it were its own. This reports Idle for a run that is not this provider's.
+     * [state] directly shows another provider's refresh as its own. This reports Idle for a run
+     * that is not this provider's.
      */
     fun stateFor(providerId: Long): Flow<MultiSourceState> = stateFor(setOf(providerId))
 
@@ -408,9 +408,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Checks if the device has enough free space to safely perform staged ingestion.
-     * Staging temporarily doubles the storage used by epg_programme.
-     * Requires at least 1.5x the current DB size in free space.
+     * Whether there is free space for staged ingestion. Staging doubles epg_programme for a while,
+     * so it needs more than 1.5 times the current DB size free.
      */
     private fun shouldUseStaging(): Boolean {
         return try {
@@ -602,9 +601,8 @@ class EpgFileManager private constructor(
                                     onComplete?.invoke()
                                     return
                                 } catch (e: CancellationException) {
-                                    // Not a failure — the caller cancelled this job. Retrying it
-                                    // would keep the coroutine (and its scheduled delay) alive
-                                    // past the cancellation instead of stopping.
+                                    // Not a failure: the caller cancelled this job. A retry would
+                                    // keep it alive past the cancellation.
                                     throw e
                                 } catch (e: Exception) {
                                     lastException = e
@@ -720,16 +718,13 @@ class EpgFileManager private constructor(
         val tmpFile: File,
         val downloadedBytes: Long,
         val downloadDurationMs: Long = 0,
-        /** True when a `304 Not Modified` or a matching content hash means the download is known
-         * to be unchanged — the caller skips ingestion entirely rather than enqueueing this. */
+        /** True when a `304 Not Modified` or a matching content hash shows the file is unchanged: no ingestion. */
         val unchanged: Boolean = false,
-        /** SHA-256 of the payload as ingested (decompressed for `.gz`). Null for a `.gz` source
-         * whose hash isn't known yet — [ingestDownloadedSource] computes it there instead. */
+        /** SHA-256 of the payload as ingested (decompressed for `.gz`); null when [ingestDownloadedSource] computes it. */
         val contentSha256: String? = null,
         val etag: String? = null,
         val lastModifiedHeader: String? = null,
-        /** Whether the live index held this source's rows when the download started — the
-         * precondition for any "unchanged" skip, see [buildDownloadRequest]. */
+        /** Whether the live index held this source's rows when the download started, which any skip needs. */
         val indexHasRows: Boolean = false,
     )
 
@@ -751,8 +746,7 @@ class EpgFileManager private constructor(
             val startTime = System.currentTimeMillis()
             val fixedDevice = isFixedDevice()
             val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-            // Declared before the try block so the catch block's cleanup
-            // call can pass the same value beginBulkIngestion() was actually called with.
+            // Before the try, so the catch block's cleanup passes the value beginBulkIngestion() got.
             val useStaging = shouldUseStaging()
             try {
                 val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
@@ -786,9 +780,8 @@ class EpgFileManager private constructor(
                 val allStats =
                     try {
                         coroutineScope {
-                            // Start bulk setup in parallel with downloads — downloads write to cache files
-                            // and never touch the DB, so there is no ordering constraint here.
-                            // Consumers await this before touching the DB.
+                            // Bulk setup runs in parallel with the downloads, which write only cache
+                            // files. Consumers await it before they touch the DB.
                             val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
                             // Consumer: ingest downloaded files in parallel (SQLite handles locking)
@@ -851,8 +844,7 @@ class EpgFileManager private constructor(
 
                                             when {
                                                 result != null && result.unchanged -> {
-                                                    // Confirmed unchanged (304 or matching content hash) — skip
-                                                    // ingestion entirely, carry forward the last known counts.
+                                                    // Unchanged (304 or same content hash): no ingestion, keep the last counts.
                                                     val sourceDuration =
                                                         sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
                                                     activeLabels.remove(label)
@@ -872,7 +864,6 @@ class EpgFileManager private constructor(
                                                 }
 
                                                 result != null -> {
-                                                    // Success — send to ingestion pipeline
                                                     activeProgress[source.id] =
                                                         ActiveSourceProgress(
                                                             sourceId = source.id,
@@ -886,7 +877,6 @@ class EpgFileManager private constructor(
                                                 }
 
                                                 else -> {
-                                                    // Download failed — record and clean up
                                                     val sourceDuration =
                                                         sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
                                                     activeLabels.remove(label)
@@ -906,11 +896,9 @@ class EpgFileManager private constructor(
                                     }
                                 }
 
-                            // Wait for all downloads, then close the ingestion queue
                             downloadJobs.forEach { it.await() }
                             ingestionQueue.close()
 
-                            // Wait for ingestion to drain
                             ingestionJobs.forEach { it.join() }
 
                             completedStats.toList()
@@ -938,8 +926,7 @@ class EpgFileManager private constructor(
                 val indexStartMs = System.currentTimeMillis()
                 var incrementalIndexMs: Long? = null
 
-                // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
-                // Show this phase so the UI doesn't appear stuck after ingestion completes.
+                // Finalizing: rebuild the B-tree query indexes (fast compared to the FTS rebuild).
                 _state.value =
                     MultiSourceState.Finalizing(
                         phase = "Rebuilding indexes\u2026",
@@ -949,17 +936,15 @@ class EpgFileManager private constructor(
                         totalDownloadBytes = totalBytes,
                     )
 
-                // `unchanged` stats carry forward the last known counts (so UI totals don't collapse
-                // to zero) \u2014 they must not count as "ingested" here, or a run where every source was
-                // confirmed unchanged would still trigger a swap and an FTS rebuild for nothing.
+                // `unchanged` stats carry the last counts forward but don't count as ingested, or a run
+                // where every source is unchanged would swap and rebuild FTS for nothing.
                 val anyIngested =
                     allStats.any {
                         it.error == null && !it.unchanged && (it.channelsIngested > 0 || it.programmesIngested > 0)
                     }
 
-                // beginBulkIngestion() marked FTS stale defensively before we knew whether anything
-                // would actually change. Nothing did — the triggers dropped during bulk are the only
-                // thing that could have desynced FTS, and no write happened, so it's still consistent.
+                // beginBulkIngestion() marked FTS stale before it knew. Nothing was written, so FTS
+                // is still consistent.
                 if (!anyIngested) {
                     indexer.markFtsClean()
                 }
@@ -975,8 +960,8 @@ class EpgFileManager private constructor(
                             totalDownloadBytes = totalBytes,
                         )
                     // The index of the refreshed sources only, in batches that wait while video
-                    // plays (the pausable guide indexing plan). A stale index
-                    // (an earlier rebuild was cut off) still needs the full rebuild.
+                    // plays (the pausable guide indexing plan). A stale index (an earlier rebuild was
+                    // cut off) still needs the full rebuild.
                     if (indexer.isFtsStale()) {
                         swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
                         invalidateXmltvCache(sources, allStats)
@@ -1006,10 +991,9 @@ class EpgFileManager private constructor(
                     invalidateXmltvCache(sources, allStats)
                 }
 
-                // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
-                // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
-                // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
-                // The staging path already rebuilt inside swapAndRebuildFts() above.
+                // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock covers all
+                // of it. A kill mid-rebuild leaves fts_stale=true in prefs, which on Shield gave a
+                // permanent LIKE fallback under Doze. The staging path already rebuilt above.
                 if (anyIngested) {
                     try {
                         if (!useStaging) indexer.rebuildFtsAndUpdateState()
@@ -1024,20 +1008,15 @@ class EpgFileManager private constructor(
                     sourceDao.setIndexDuration(syncedIds, incrementalIndexMs ?: (System.currentTimeMillis() - indexStartMs))
                 }
 
-                // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
-                // the staging→primary swap and the full FTS rebuild — not before. 'rebuild' above
-                // repopulates FTS by scanning epg_programme directly and doesn't need the triggers at
-                // all, so leaving them off through the swap means swapAndRebuildFts()'s bulk
-                // INSERT…SELECT no longer fires an AFTER_INSERT trigger per row, only to have the
-                // very next step throw all of that away and rebuild from scratch anyway. Still
-                // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
-                // needs its triggers back for the next incremental write.
+                // Restore the FTS sync triggers dropped in beginBulkIngestion() only after the swap
+                // and the FTS rebuild: the rebuild scans epg_programme and needs no triggers, so with
+                // them off the swap's INSERT…SELECT fires no trigger per row. Unconditional: a run
+                // where nothing changed still needs its triggers for the next incremental write.
                 indexer.endBulkIngestion(useStaging)
 
-                // Completed only now, after the FTS rebuild and index/trigger restore above actually
-                // finish — emitting it earlier let a search fired the instant the UI showed
-                // "Completed" hit EpgIndexBusyException (FTS still marked stale) or a full table scan
-                // (query indexes from beginBulkIngestion() not yet recreated).
+                // Completed only after the FTS rebuild and the index and trigger restore: earlier, a
+                // search hit EpgIndexBusyException (FTS still stale) or a full table scan (query
+                // indexes not yet recreated).
                 val endTime = System.currentTimeMillis()
                 val finalState =
                     MultiSourceState.Completed(
@@ -1059,13 +1038,11 @@ class EpgFileManager private constructor(
                 withContext(NonCancellable) {
                     EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
                 }
-                // Checked before logging/setting Error state: a cancelled run isn't a processing
-                // failure, and flashing a red error onto the EPG management screen for a normal
-                // cancellation (e.g. leaving the screen mid-refresh) is misleading.
+                // Checked before the log and the Error state: a cancelled run (for example, the user
+                // left the screen) is not a failure.
                 if (e is CancellationException) {
-                    // Reset rather than leaving _state stranded on whatever mid-run value (Processing/
-                    // Finalizing) was last set — the refresh this described no longer exists, and the
-                    // next screen open must not show a permanently "in progress" guide sync.
+                    // Idle, not the last mid-run state: that refresh no longer exists, and the next
+                    // screen open must not show a sync that stays in progress.
                     _state.value = MultiSourceState.Idle
                     throw e
                 }
@@ -1074,8 +1051,6 @@ class EpgFileManager private constructor(
                 _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
-
-    /** Each guide source this run couldn't read goes to Settings → Diagnostics: its name, address and why. */
 
     /**
      * With storage low ([StorageSpace]) the refresh does not start: each of [sources] keeps a
@@ -1092,6 +1067,7 @@ class EpgFileManager private constructor(
         return true
     }
 
+    /** Each guide source this run couldn't read goes to Settings → Diagnostics: its name, address and why. */
     private fun noteFailedSources(
         sources: List<EpgSourceEntity>,
         stats: List<SourceStats>,
@@ -1113,10 +1089,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Clear the per-provider parsed XMLTV cache (in memory, 12h TTL) for every
-     * provider affected by a just-completed sync, so the player doesn't keep showing a
-     * pre-sync EPG snapshot until that TTL expires: the cache of every media source that reads a
-     * guide source the sync ingested.
+     * Clears the parsed XMLTV cache (in memory, 12 h TTL) of every media source that reads a guide
+     * source this sync ingested, so the player does not show the old guide until the TTL ends.
      */
     private suspend fun invalidateXmltvCache(
         sources: List<EpgSourceEntity>,
@@ -1156,8 +1130,7 @@ class EpgFileManager private constructor(
         ingestMutex.withLock {
             val startTime = System.currentTimeMillis()
             val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-            // Declared before the try block so the catch block's cleanup
-            // call can pass the same value beginBulkIngestion() was actually called with.
+            // Before the try, so the catch block's cleanup passes the value beginBulkIngestion() got.
             val useStaging = shouldUseStaging()
             try {
                 val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
@@ -1196,7 +1169,7 @@ class EpgFileManager private constructor(
                         )
                 }
 
-                // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
+                // Bulk setup runs in parallel with the download, as in processAllSourcesInternal.
                 val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
                 activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
@@ -1210,8 +1183,8 @@ class EpgFileManager private constructor(
                 var pendingIngest: IngestRecord? = null
                 val stats =
                     if (downloaded != null && downloaded.unchanged) {
-                        // Confirmed unchanged (304 or matching content hash) — downloadSource already
-                        // recorded this via markUnchanged; skip ingestion entirely.
+                        // Unchanged (304 or same content hash): downloadSource recorded it with
+                        // markUnchanged. No ingestion.
                         SourceStats(
                             sourceId = source.id,
                             label = label,
@@ -1272,9 +1245,8 @@ class EpgFileManager private constructor(
                         totalDownloadBytes = stats.downloadBytes,
                     )
 
-                // Swap and FTS rebuild in one transaction (only if staging was used). `unchanged` must
-                // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
-                // delete its primary rows and transfer nothing back (see processAllSourcesInternal).
+                // Swap and FTS rebuild in one transaction, staging only. Never for an unchanged source:
+                // staging has nothing for it, so the swap would delete its primary rows.
                 if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
                     _state.value =
                         MultiSourceState.Finalizing(
@@ -1305,13 +1277,12 @@ class EpgFileManager private constructor(
                     sourceDao.setIndexDuration(listOf(sourceId), System.currentTimeMillis() - indexStartMs)
                 }
 
-                // Restore FTS sync triggers only now — see the identical comment in
-                // processAllSourcesInternal for why this must come after the swap and rebuild, not
-                // before. Still unconditional: an unchanged/skipped source still needs them back.
+                // Restore the FTS sync triggers only after the swap and rebuild, and always (see
+                // processAllSourcesInternal).
                 indexer.endBulkIngestion(useStaging)
 
-                // Completed only now — see the identical comment in processAllSourcesInternal for why
-                // this must come after the FTS rebuild and index/trigger restore above, not before.
+                // Completed only after the FTS rebuild and the index and trigger restore (see
+                // processAllSourcesInternal).
                 val endTime = System.currentTimeMillis()
                 val finalState =
                     MultiSourceState.Completed(
@@ -1337,8 +1308,7 @@ class EpgFileManager private constructor(
                     EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
                 }
                 if (e is CancellationException) {
-                    // See the identical comment in processAllSourcesInternal: don't strand the UI on
-                    // a mid-run state for a refresh that no longer exists.
+                    // Idle, as in processAllSourcesInternal: that refresh no longer exists.
                     _state.value = MultiSourceState.Idle
                     throw e
                 }
@@ -1348,10 +1318,6 @@ class EpgFileManager private constructor(
             }
         }
 
-    /**
-     * Cancel all processing, then clear all EPG data.
-     * Runs entirely on this manager's scope (survives ViewModel destruction).
-     */
     private val _clearing = MutableStateFlow<Map<Long, EpgIndexer.ClearProgress>>(emptyMap())
 
     /** The guide sources whose data is being cleared ([launchClearSource]), with how far each is. */
@@ -1398,6 +1364,7 @@ class EpgFileManager private constructor(
         return true
     }
 
+    /** Cancels all processing, then clears all guide data, on this manager's scope (it outlives the ViewModel). */
     fun launchClearAllData(onComplete: (suspend () -> Unit)? = null) {
         processJob?.cancel()
         processJob = null
@@ -1405,14 +1372,13 @@ class EpgFileManager private constructor(
         scope.launch {
             try {
                 RefreshQueue.cancelAll()
-                // Waits for a still-running processAllSourcesInternal/processSingleSourceInternal to
-                // reach its next suspension point and release the lock after cancellation, so
-                // clearAll() never runs concurrently with an in-flight batch write.
+                // Waits for a cancelled run to release the lock, so clearAll() never runs during a
+                // batch write.
                 ingestMutex.withLock {
                     EpgIndexer.getInstance(context).clearAll()
-                    // The sources' stats and validators describe rows that no longer exist; left in
-                    // place they let the next refresh skip on a 304 / hash match against an empty
-                    // guide (G-11). Bookkeeping columns only — the settings-sync trigger ignores them.
+                    // The sources' stats and validators describe rows that no longer exist: kept, they
+                    // let the next refresh skip on a 304 or hash match against an empty guide (G-11).
+                    // Bookkeeping columns only: the settings-sync trigger ignores them.
                     SettingsDatabase.getInstance(context).epgSourceDao().resetAllIngestionState()
                 }
             } catch (e: CancellationException) {
@@ -1427,20 +1393,16 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Download a source to a cache file with progress tracking.
-     * Returns [DownloadedSource] on success, null on failure (error recorded in sourceDao).
+     * Downloads a source to a cache file with progress. Null on failure (the error is recorded in
+     * sourceDao).
      *
-     * Sends `If-None-Match`/`If-Modified-Since` when the source has validators from a previous
-     * download; a `304` short-circuits to an unchanged result with no body read. Otherwise, for
-     * non-`.gz` sources, a SHA-256 of the payload is computed in the same read pass — if it
-     * matches [EpgSourceEntity.lastContentSha256] (and the source isn't stale enough to force a
-     * refresh regardless, see [canSkipIngest]), this also short-circuits to unchanged. `.gz`
-     * sources can't be hashed meaningfully here (gzip's mtime header taints the raw bytes even
-     * when the decompressed content is identical) — that check happens in
-     * [ingestDownloadedSource] instead, after decompression.
+     * Sends `If-None-Match`/`If-Modified-Since` when the source has validators; a `304` gives an
+     * unchanged result with no body read. For a source that is not `.gz`, the same read computes a
+     * SHA-256, and a match with [EpgSourceEntity.lastContentSha256] also gives unchanged
+     * ([canSkipIngest]). A `.gz` is hashed after decompression in [ingestDownloadedSource]: the
+     * gzip mtime header changes the raw bytes.
      *
-     * Both skips need the live index to hold the source's rows ([buildDownloadRequest]); with an
-     * empty index the validators stay home and the source is treated as changed.
+     * Both skips need the live index to hold the source's rows ([buildDownloadRequest]).
      */
     private suspend fun downloadSource(
         source: EpgSourceEntity,
@@ -1452,8 +1414,7 @@ class EpgFileManager private constructor(
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
-        // Raw throwable retained so we can persist its error kind while keeping the raw
-        // `lastError` string for the HTTP-4xx retry-classification check below.
+        // The throwable gives the stored error kind; `lastError` stays for the HTTP 4xx check below.
         var lastException: Throwable? = null
         var notModified = false
         var responseEtag: String? = null
@@ -1506,9 +1467,8 @@ class EpgFileManager private constructor(
                                 var lastReportedBytes = 0L
                                 var read: Int
                                 while (input.read(buffer).also { read = it } != -1) {
-                                    // Cancel and Clear all data must stop a 100+ MB download, not
-                                    // wait for its end. See R-14 of
-                                    // the next level rock solid resilience plan.
+                                    // Cancel and Clear all data must stop a 100+ MB download, not wait
+                                    // for its end (the next level rock solid resilience plan, R-14).
                                     ensureActive()
                                     output.write(buffer, 0, read)
                                     digest?.update(buffer, 0, read)
@@ -1539,12 +1499,9 @@ class EpgFileManager private constructor(
                                 output.flush()
                             }
 
-                            // input.read() returning -1 just means the connection closed — on its
-                            // own that's indistinguishable from a clean end of body. A connection
-                            // cut short by a flaky CDN reads as "success" here and would only be caught
-                            // when the XML parser choked on it, expensively, well into ingestion.
-                            // Content-Length (when the server sends one) gives an exact expected size
-                            // to check the read against.
+                            // read() returning -1 only means the connection closed, so a download cut
+                            // short looks complete and fails late, in the XML parser. Content-Length,
+                            // when sent, gives the exact size to check.
                             if (contentLength > 0 && totalRead != contentLength) {
                                 lastError = "truncated download: got $totalRead of $contentLength bytes"
                                 lastException = java.io.IOException(lastError)
@@ -1678,8 +1635,7 @@ class EpgFileManager private constructor(
         }
 
     /**
-     * Ingest a previously downloaded source file into the index.
-     * Deletes the temp file when done.
+     * Ingests a downloaded source file into the index, then deletes the file.
      *
      * Off the staging path the source is marked ingested here, as soon as its rows are live. On
      * the staging path the rows only reach the live guide at the swap, so the [IngestRecord] is
@@ -1700,9 +1656,8 @@ class EpgFileManager private constructor(
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         try {
-            // `.gz` sources never get a hash from downloadSource (the raw bytes carry gzip's
-            // mtime, which taints them even when the decompressed content is identical) — hash
-            // the decompressed content here instead, before spending a real parse on it.
+            // A `.gz` gets its hash here, from the decompressed content (see downloadSource),
+            // before a real parse.
             var contentSha256 = downloaded.contentSha256
             if (isGzip) {
                 contentSha256 = withContext(Dispatchers.IO) { hashDecompressedGzip(downloaded.tmpFile) }
@@ -1734,11 +1689,9 @@ class EpgFileManager private constructor(
                         GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE)
                     } catch (e: Exception) {
                         // cancellation-ok: non-suspend, rethrows
-                        // GZIPInputStream's constructor reads and validates the magic bytes
-                        // before this assignment completes — on a corrupt/non-gzip file it
-                        // throws here, before `stream.use { }` below ever gets a stream to
-                        // close. Without this, bufferedStream (and the raw FileInputStream it
-                        // wraps) leaks a file descriptor.
+                        // GZIPInputStream's constructor reads the magic bytes and throws on a bad
+                        // file before `stream.use { }` owns a stream: close bufferedStream here, or
+                        // its file descriptor leaks.
                         bufferedStream.close()
                         throw e
                     }
@@ -1844,8 +1797,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Refresh the enabled sources of [providerId] that are considered stale (last ingested >
-     * interval, [EpgRefreshSchedule.isDue]). Returns true if refresh was started (stale sources found), false otherwise.
+     * Refreshes the enabled sources of [providerId] that are due ([EpgRefreshSchedule.isDue]). True
+     * when a refresh started or one is already running.
      */
     suspend fun refreshOutdatedSources(providerId: Long): Boolean {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
@@ -1878,10 +1831,7 @@ class EpgFileManager private constructor(
         }
     }
 
-    /**
-     * Returns the enabled guide sources that [providerId] reads. Used by [EpgSyncWorker] to query
-     * which sources to process before calling [processAllSources].
-     */
+    /** The enabled guide sources that [providerId] reads, for [EpgSyncWorker]. */
     internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> =
         SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
 
@@ -1918,8 +1868,8 @@ class EpgFileManager private constructor(
         } else {
             // On a device with little memory (a Chromecast HD), the automatic refresh waits until
             // the device is idle (the TV off or asleep), so it never competes with an app in use
-            // (the pausable guide indexing plan, IX4). WorkManager refuses a
-            // backoff on an idle job, so that one has none: it runs at the next idle time.
+            // (the pausable guide indexing plan, IX4). WorkManager refuses a backoff on an idle
+            // job, so that one has none: it runs at the next idle time.
             val idleOnly = isLowMemoryDevice(context)
             val constraints =
                 Constraints

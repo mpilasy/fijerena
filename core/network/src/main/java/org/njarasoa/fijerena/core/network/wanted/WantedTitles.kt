@@ -25,8 +25,8 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
  * The Wanted list of the profile in use, which of its titles the profile's sources have, and the
  * profile's favourites that their source no longer lists — held in memory and worked out again by
  * [refresh]. Availability and gone favourites are never stored: each device works them out from
- * its own catalogue. A child profile gets an empty [State]: the feature is hidden there. See
- * the wanted titles plan.
+ * its own catalogue. A child profile gets an empty [State]: the feature is hidden there. See the
+ * wanted titles plan.
  */
 class WantedTitles internal constructor(
     private val context: Context,

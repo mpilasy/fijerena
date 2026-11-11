@@ -192,10 +192,9 @@ class SyncEngine(
                 val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
                 val deferredNow = (if (retryWaiting) waiting + page.records else page.records).filter { it.key in deferredKeys }
                 waiting = (if (retryWaiting) deferredNow else waiting + deferredNow).takeLast(MAX_DEFERRED)
-                // Together, every page: saving only the cursor here (and the waiting records after
-                // the loop) would lose the records this page deferred whenever a later page failed — the
-                // cursor would already have moved past them, so nothing would ever fetch them again. See
-                // the rock solid stability resilience plan → F-09.
+                // Cursor and waiting records together, on every page: a cursor saved alone moves past
+                // the records this page deferred, and a later failed page loses them for good. See the
+                // rock solid stability resilience plan → F-09.
                 store.savePullProgress(
                     cursor = pageCursor,
                     deferred = waiting.map { json.encodeToString(it) }.toSet(),
@@ -231,10 +230,9 @@ class SyncEngine(
             volatile = emptyList()
             if (outgoing.isEmpty()) break
             val encoded = outgoing.map { it to SyncCodec.encode(it.record, crypto) }
-            // The server refuses payloads over its limit. Sending one anyway would fail the whole
-            // batch, and since the oldest pending records always go first, nothing from this
-            // device would ever be pushed again. It can't succeed later either: drop it, loudly. See
-            // the rock solid stability resilience plan → F-22.
+            // The server refuses a payload over its limit, which fails the whole batch; as the oldest
+            // pending records go first, nothing would be pushed again. It can never succeed: drop it,
+            // loudly. See the rock solid stability resilience plan → F-22.
             val (sendable, oversized) = encoded.partition { (_, wire) -> wire.payload.length <= MAX_PAYLOAD_CHARS }
             oversized.forEach { (pending, wire) ->
                 val e =

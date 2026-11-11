@@ -21,8 +21,8 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
- * Two profiles on the same provider share the tables but never each other's rows — see
- * the live sync plan → User profiles, Phase 1.
+ * Two profiles on the same provider share the tables but never each other's rows (the live sync
+ * plan → User profiles, Phase 1).
  */
 class MediaRepositoryProfileTest {
     private lateinit var context: Context

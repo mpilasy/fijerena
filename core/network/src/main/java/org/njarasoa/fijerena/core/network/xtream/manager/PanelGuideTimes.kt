@@ -10,8 +10,7 @@ import java.util.Locale
  * A panel's own guide (`get_simple_data_table`) that stamps its local wall time as UTC: panel-a gives
  * a 20:45 Amsterdam start as `start_timestamp` 20:45 UTC, two hours late, while its `xmltv.php`
  * says 18:45 UTC and the archive agrees. Detected per source by comparing with that `xmltv.php`,
- * corrected by the panel's own zone ([XtreamPanelClock]). See
- * the panel guide local time plan.
+ * corrected by the panel's own zone ([XtreamPanelClock]). See the panel guide local time plan.
  */
 object PanelGuideTimes {
     /** Fewest exact matches for either reading to win. */

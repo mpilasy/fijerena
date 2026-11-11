@@ -24,8 +24,8 @@ suspend inline fun <T> suspendResultOf(crossinline block: suspend () -> T): Resu
     try {
         Result.Success(block())
     } catch (e: CancellationException) {
-        // Coroutine cancellation, not a failure — rethrow so the cancelling scope completes
-        // instead of this being reported (and potentially retried) as an ordinary error.
+        // Cancellation, not a failure: rethrown, so the cancelling scope completes and nothing
+        // reports or retries it as an error.
         throw e
     } catch (e: Exception) {
         Result.Error(e, e.message)

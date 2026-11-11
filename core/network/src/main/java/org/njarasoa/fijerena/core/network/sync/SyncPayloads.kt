@@ -14,9 +14,8 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 
 /**
  * The payload of each [SyncKind], as it travels in [SyncRecord.payload]: only what another device
- * needs to recreate the item — never local ids (they differ per device), sync statistics or
- * per-device state such as which provider is active or a Jellyfin session token. See
- * the live sync plan → What syncs.
+ * needs to recreate the item, never local ids (they differ per device), sync statistics or
+ * per-device state such as a Jellyfin session token. See the live sync plan → What syncs.
  */
 object SyncPayloads {
     val json = Json { ignoreUnknownKeys = true }
@@ -331,7 +330,8 @@ object SyncPayloads {
      * A device asks for [profileId]'s PIN ([SyncKind.PIN_REQUEST], keyed by the asking device's id).
      * [requestId] is random and used once. [open] false: the asking device stopped waiting (an
      * answer, Cancel, the pad, or the time limit). [sentAt] is the asking device's clock: a device
-     * ignores a request older than [PinRequests.MAX_AGE_MS] by its own clock. See the PIN on the phone plan.
+     * ignores a request older than [PinRequests.MAX_AGE_MS] by its own clock. See the PIN on the
+     * phone plan.
      */
     @Serializable
     data class PinRequest(
@@ -364,7 +364,8 @@ object SyncPayloads {
      * TV's id). [requestId] is random and used once. The route fields are those of the player
      * route, with the source as its [providerKey] (a local id differs per device) and
      * [profileId] the profile it plays for. [title] and [subtitle] are what the TV's banner shows.
-     * [open] false: the phone stopped waiting. [sentAt] is the phone's clock. See the send to TV plan.
+     * [open] false: the phone stopped waiting. [sentAt] is the phone's clock. See the send to TV
+     * plan.
      */
     @Serializable
     data class PlayRequest(

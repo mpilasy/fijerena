@@ -16,11 +16,11 @@ import androidx.room.Entity
  * told the user that it is available) and [seenAt] (the user opened it while available) are only
  * ever set, never cleared.
  *
- * Added v27 (the wishlist ux plan): [askedAt] (the "remove it now you've
- * watched it?" prompt was answered, set once), and the title's release as TMDB gives it, refreshed
- * at most once a week for a title no source has: [releaseDate] (first release, ISO day),
- * [digitalDate] (first digital or disc release), [inCinemas] (a cinema release is known),
- * [showStatus] (TMDB's status of a show) and [releaseCheckedAt].
+ * Added v27 (the wishlist ux plan): [askedAt] (the "remove it now you've watched it?" prompt was
+ * answered, set once), and the title's release as TMDB gives it, refreshed at most once a week for
+ * a title no source has: [releaseDate] (first release, ISO day), [digitalDate] (first digital or
+ * disc release), [inCinemas] (a cinema release is known), [showStatus] (TMDB's status of a show)
+ * and [releaseCheckedAt].
  */
 @Entity(
     tableName = "wanted_title",

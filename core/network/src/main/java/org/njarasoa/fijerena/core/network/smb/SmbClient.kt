@@ -26,9 +26,9 @@ class SmbClient(
 ) {
     private val TAG = "SmbClient"
 
-    // Separate monitor from `this`, held only for brief field reads/writes/swaps — never across
-    // blocking socket I/O. A Main-thread disconnect() (e.g. leaving the SMB screen while it's still
-    // connecting) would otherwise block on the 30-60s connect handshake for its full timeout — an ANR.
+    // A monitor apart from `this`, held only for short field reads, writes and swaps, never across
+    // blocking socket I/O: a disconnect() on Main (leaving the SMB screen while it connects) would
+    // else wait out the 30-60 s handshake, an ANR.
     private val lock = Any()
 
     @Volatile private var generation = 0L
@@ -42,8 +42,8 @@ class SmbClient(
         withContext(Dispatchers.IO) {
             val myGeneration = synchronized(lock) { ++generation }
             try {
-                // The slow handshake runs entirely outside the lock, building fully independent
-                // local objects — nothing here can block a concurrent disconnect().
+                // The slow handshake runs outside the lock, on local objects only, so nothing here
+                // can block a concurrent disconnect().
                 val newClient = SMBClient()
                 val newConnection = newClient.connect(host)
                 val authContext =
@@ -55,10 +55,9 @@ class SmbClient(
                 val newSession = newConnection.authenticate(authContext)
                 val newShare = newSession.connectShare(shareName) as DiskShare
 
-                // Publish is the only part under the lock, and it's a pure field swap — no I/O.
-                // If disconnect() (or a newer connect()) ran while we were handshaking, our
-                // generation is stale: discard what we just built instead of resurrecting a
-                // connection the caller already asked to tear down.
+                // Only the publish is under the lock: a field swap, no I/O. If disconnect() (or a
+                // newer connect()) ran during the handshake, this generation is stale: discard what
+                // was built, not bring back a connection the caller already closed.
                 val superseded =
                     synchronized(lock) {
                         if (generation != myGeneration) {
@@ -132,9 +131,8 @@ class SmbClient(
     fun isConnected(): Boolean = synchronized(lock) { share != null }
 
     fun listDirectory(path: String): List<FileIdBothDirectoryInformation> {
-        // Copy the reference out from under the lock rather than holding it for the network
-        // round-trip below — same reasoning as connect()/disconnect(): a slow/unresponsive host
-        // here would otherwise block a concurrent disconnect() waiting on this same lock.
+        // Copy the reference out from under the lock, as connect()/disconnect() do: a slow host
+        // would else block a concurrent disconnect() on this lock.
         val diskShare = synchronized(lock) { share } ?: throw IllegalStateException("Not connected")
         return diskShare.list(path).filter {
             it.fileName != "." && it.fileName != ".."

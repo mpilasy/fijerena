@@ -6,7 +6,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** the next level rock solid resilience plan → R-22. */
+/** See the next level rock solid resilience plan → R-22. */
 class SmbSourceConfigTest {
     @Test
     fun `quotes and backslashes round-trip`() {

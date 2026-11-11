@@ -9,8 +9,8 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.player.domain.RESUMABLE_SQL
 
 /**
- * See the watch state durable storage plan. Statements mirror the plan's Write path /
- * read-query sections exactly rather than re-deriving SQL at each call site.
+ * See the watch state durable storage plan: the statements follow its Write path and read-query
+ * sections.
  */
 @Dao
 interface WatchStateDao {
@@ -101,17 +101,13 @@ interface WatchStateDao {
     )
 
     /**
-     * Manual mark watched (Phase 6). Insert path supplies `positionMs`/`durationMs` = 0 and
-     * `lastPlayedAt` = NULL, same discipline as [upsertRecency] — a manual mark is not a play, so
-     * it must not enter the Recent row (filtered on `lastPlayedAt IS NOT NULL`). Update path
-     * touches only `isCompleted`/`updatedAt`, leaving position, duration, `lastPlayedAt` and
-     * metadata exactly as playback left them, so a later `setWatched(false)` brings the resume bar
-     * back where it was rather than erasing it.
+     * Manual mark watched (Phase 6). The insert path writes `positionMs`/`durationMs` = 0 and
+     * `lastPlayedAt` = NULL, as [upsertRecency] does: a mark is not a play, so it stays out of
+     * Recent (`lastPlayedAt IS NOT NULL`). The update path changes only `isCompleted`/`updatedAt`,
+     * so a later `setWatched(false)` brings the resume bar back where it was.
      *
-     * [seriesId]/[episodeId] are insert-only, same as everything else here — an episode with no
-     * existing row has none to carry forward on conflict. `MediaRepository.setWatched` resolves
-     * [seriesId] from the catalogue before calling this for a TV Shows mark; without it, a
-     * never-played episode marked watched directly would silently drop out of
+     * [seriesId]/[episodeId] are insert-only. `MediaRepository.setWatched` resolves [seriesId] from
+     * the catalogue for a TV Shows mark; without it, an episode never played drops out of
      * [getSeriesCompletedCounts]'s `seriesId IS NOT NULL` rollup.
      */
     @Query(
@@ -132,9 +128,9 @@ interface WatchStateDao {
     )
 
     /**
-     * Manual mark unwatched for this one row (Phase 6). A no-op if the row doesn't exist — nothing
-     * to unmark. Spreading this across a completed TMDB sibling group (Phase 5) is a separate,
-     * Xtream-specific call from [MediaRepository.setWatched]; this DAO has no catalogue to join.
+     * Manual mark unwatched for this one row (Phase 6); no-op without a row. The TMDB sibling group
+     * (Phase 5) is cleared by a separate call in [MediaRepository.setWatched]: this DAO has no
+     * catalogue to join.
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
@@ -149,10 +145,9 @@ interface WatchStateDao {
     )
 
     /**
-     * Clear lastPlayedAt, removing a row from the Recent list — an individual item (movie, live
-     * channel, or a lone episode) when [seriesId] is its own itemId, or every episode of a series
-     * at once when it's a real series id. `seriesId` is null on every non-series row, so the OR
-     * already collapses to plain `itemId = :seriesId` for those; one query serves both callers.
+     * Clears lastPlayedAt, which takes rows out of Recent: one item (film, channel or lone episode)
+     * when [seriesId] is its itemId, or every episode of a series for a real series id. `seriesId`
+     * is null on rows that are not series, so one query serves both.
      */
     @Query(
         "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
@@ -276,9 +271,8 @@ interface WatchStateDao {
     ): List<WatchStateEntity>
 
     /**
-     * "Jump Back In" shelf, Movies half — genuinely in-progress rows only: the same rule as
-     * `WatchedItem.resumeProgress` ([RESUMABLE_SQL]), computed here in SQL so the LIMIT lands on the right rows
-     * instead of over-fetching and filtering in Kotlin.
+     * "Jump Back In" shelf, Movies half: in-progress rows only, by the rule of
+     * `WatchedItem.resumeProgress` ([RESUMABLE_SQL]), in SQL so the LIMIT lands on the right rows.
      */
     @Query(
         "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
@@ -337,10 +331,9 @@ interface WatchStateDao {
     ): WatchStateEntity?
 
     /**
-     * Track-setting fallback for an episode with no saved choice of its own: the series' most
-     * recently touched row that actually carries a track choice. Uses the
-     * `(providerId, profileId, seriesId)` index. Excludes rows with both indices null so a series where nobody has ever picked a
-     * track doesn't return an arbitrary row that has nothing to offer.
+     * Track fallback for an episode with no saved choice: the series' most recently changed row
+     * with a track choice, by the `(providerId, profileId, seriesId)` index. Rows with both indices
+     * null are left out, so a series with no choice returns nothing.
      */
     @Query(
         "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND seriesId = :seriesId AND " +
@@ -403,9 +396,8 @@ interface WatchStateDao {
     suspend fun deleteAllProfiles(providerId: Long)
 
     /**
-     * Bulk restore from a settings-export import: the whole row is known and authoritative, so a
-     * straight replace is correct here — unlike the production writers, which only ever know part
-     * of a row and use the field-targeted upserts above instead.
+     * Bulk restore from a settings import: the whole row is known, so a plain replace is correct,
+     * unlike the production writers, which know only part of a row.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun restoreAll(entities: List<WatchStateEntity>)

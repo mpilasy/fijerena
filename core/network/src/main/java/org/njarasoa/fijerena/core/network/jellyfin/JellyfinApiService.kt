@@ -64,13 +64,10 @@ class JellyfinApiService(
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
                     // Own Dispatcher and ConnectionPool, not the shared ones: ktor-client-okhttp
-                    // 3.5.2's createOkHttpClient() only builds a fresh Dispatcher when
-                    // `preconfigured == null`, so leaving this unset means an OkHttpClient built
-                    // here silently shares NetworkModule.okHttpClient's actual Dispatcher object.
-                    // This client has no close() today, but the moment one gets added, calling it
-                    // would shut down the app-wide shared executor — see
-                    // core/player/api/XtreamApiService.kt's engine block for the incident this
-                    // caused there on 2026-09-21.
+                    // 3.5.2 builds a fresh Dispatcher only when `preconfigured == null`, else the
+                    // client shares NetworkModule.okHttpClient's, and a future close() would shut
+                    // down the app-wide executor. See core/player/api/XtreamApiService.kt's engine
+                    // block for the incident this caused there.
                     dispatcher(okhttp3.Dispatcher())
                     connectionPool(okhttp3.ConnectionPool(5, 5, java.util.concurrent.TimeUnit.MINUTES))
                 }
@@ -79,8 +76,8 @@ class JellyfinApiService(
                 json(json)
             }
             // An overall deadline per call: a server that trickles bytes never trips the per-read
-            // timeout. The library listings opt out — a big recursive library legitimately takes
-            // long. See the next level rock solid resilience plan → R-14.
+            // timeout. The library listings opt out: a big recursive library takes long. See the
+            // next level rock solid resilience plan → R-14.
             install(HttpTimeout) {
                 requestTimeoutMillis = REQUEST_TIMEOUT_MS
             }
@@ -170,7 +167,7 @@ class JellyfinApiService(
             val user = client.get("$serverUrl/Users/Me").body<JellyfinUser>()
             userId = user.id
             postCapabilities()
-            // Return a synthetic auth response so callers don't need to change
+            // A synthetic auth response, so callers stay the same.
             Result.success(JellyfinAuthResponse(user = user, accessToken = apiKey))
         } catch (e: CancellationException) {
             throw e
@@ -302,8 +299,8 @@ class JellyfinApiService(
                 timeout { requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS }
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    // For Jellyfin, we'll decode the whole object but pass items individually
-                    // to stay consistent with the repository pattern.
+                    // Decodes the whole object, then passes the items one by one, as the other
+                    // sources do.
                     val result = json.decodeFromStream<JellyfinItemsResponse>(stream)
                     result.items.forEach { onItem(it) }
                 }

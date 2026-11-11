@@ -15,8 +15,8 @@ import java.io.File
  * no longer wipes the data silently, it fails to open. These catch that before a device does:
  * an unbroken chain of migrations from v7 to [XtreamDatabase.DB_VERSION], and a committed schema
  * for every version since the history starts. The upgrade itself, with data, runs on a device:
- * `XtreamDatabaseUpgradeTest` (androidTest). See
- * the rock solid stability resilience plan → F-20, F-33.
+ * `XtreamDatabaseUpgradeTest` (androidTest). See the rock solid stability resilience plan → F-20,
+ * F-33.
  */
 class XtreamDatabaseMigrationChainTest {
     private val schemaDir = File("schemas/${XtreamDatabase::class.java.name}")

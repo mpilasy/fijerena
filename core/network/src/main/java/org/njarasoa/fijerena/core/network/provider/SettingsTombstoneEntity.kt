@@ -8,8 +8,8 @@ import androidx.room.Index
  * [org.njarasoa.fijerena.core.network.sync.SyncKind.PROVIDER] (with [itemKey] the provider's
  * `providerKey`) or [org.njarasoa.fijerena.core.network.sync.SyncKind.PROFILE] (with the profile
  * id). Written in the same transaction as the delete. The favourite and watch-history deletions
- * live in `xtream_v2.db`'s own `sync_tombstone`, next to their rows. See
- * the live sync plan → Deletions (tombstones).
+ * live in `xtream_v2.db`'s own `sync_tombstone`, next to their rows. See the live sync plan →
+ * Deletions (tombstones).
  */
 @Entity(
     tableName = "sync_tombstone",

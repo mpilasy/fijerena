@@ -27,9 +27,9 @@ data class ProfileFavorite(
 
 /**
  * Any profile's favourites, read and written from another profile's Settings: a parent fills a
- * child's Home without switching to it (the kids' Home plan, Phase 3). The rows
- * are `favorite_state`'s, written through the paths that record sync tombstones, so the child's
- * other devices follow.
+ * child's Home without switching to it (the kids' Home plan, Phase 3). The rows are
+ * `favorite_state`'s, written through the paths that record sync tombstones, so the child's other
+ * devices follow.
  */
 class ProfileFavorites(
     private val context: Context,

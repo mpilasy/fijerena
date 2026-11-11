@@ -45,9 +45,8 @@ class RemoteM3uMediaProvider(
     // not keep serving the old playlist for the rest of CACHE_TTL_MS.
     private val cacheFile = File(context.cacheDir, "remote_m3u_${providerId}_${m3uUrl.hashCode()}.m3u")
 
-    // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
-    // don't reliably run this on a background thread, and the raw HttpURLConnection I/O below
-    // would otherwise throw NetworkOnMainThreadException on Main.
+    // Callers (CategoryViewModel.init through viewModelScope.launch) can be on Main, where the
+    // HttpURLConnection I/O below would throw NetworkOnMainThreadException.
     override suspend fun connect(): Result<Unit> = load(forceDownload = false)
 
     /** Refresh: download the playlist again even when the cached copy is fresh. */

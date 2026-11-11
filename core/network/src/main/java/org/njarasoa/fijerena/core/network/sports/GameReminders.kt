@@ -18,7 +18,8 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Game reminders per profile (`game_reminder`, local, not synced): an alarm rings the device's
- * lead time ([leadMinutes], `AppSettings.reminderLeadMinutes`) before a game. See the sports teams plan → Reminders.
+ * lead time ([leadMinutes], `AppSettings.reminderLeadMinutes`) before a game. See the sports teams
+ * plan → Reminders.
  *
  * - [set] / [clear] / [isSet] / [observe]: one game's bell.
  * - [setForTeam] / [clearForTeam] / [isSetForTeam]: "every game of this team". A standing team row

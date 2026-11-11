@@ -119,7 +119,10 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        /** Migration 11→12: persist TMDB-derived detail fields (content rating, tmdbId) so movie/series detail screens don't need TMDB/Xtream detail calls on a warm reopen, even after a process restart. */
+        /**
+         * Migration 11→12: store the TMDB-derived detail fields (content rating, tmdbId), so a warm
+         * reopen of a detail screen needs no TMDB or Xtream call, even after a restart.
+         */
         private val MIGRATION_11_12 =
             object : Migration(11, 12) {
                 override fun migrate(db: SupportSQLiteDatabase) {
@@ -157,8 +160,7 @@ abstract class XtreamDatabase : RoomDatabase() {
         /**
          * Migration 15→16: durable favourites, replacing the `favorites_v2` and
          * `favorite_categories` SharedPreferences blobs that truncated at
-         * `providerSettings.favoritesMaxSize` on every write.
-         * See the favorites durable storage plan.
+         * `providerSettings.favoritesMaxSize` on every write. See the favorites durable storage plan.
          */
         private val MIGRATION_15_16 =
             object : Migration(15, 16) {
@@ -179,8 +181,8 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * Migration 14→15: durable watch state (position + completion), replacing the
-         * `watch_history_v3` SharedPreferences blob that truncated on every write.
-         * See the watch state durable storage plan.
+         * `watch_history_v3` SharedPreferences blob that truncated on every write. See the watch
+         * state durable storage plan.
          */
         private val MIGRATION_14_15 =
             object : Migration(14, 15) {
@@ -209,9 +211,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        /**
-         * Migration 16→17: add `posterPath` column to `xtream_streams` and `xtream_series` for TMDB poster caching.
-         */
+        /** Migration 16→17: `posterPath` on `xtream_streams` and `xtream_series`, for TMDB poster caching. */
         private val MIGRATION_16_17 =
             object : Migration(16, 17) {
                 override fun migrate(db: SupportSQLiteDatabase) {
@@ -387,9 +387,8 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * Migration 23→24: streams and series follow their category's `excluded` flag at query
-         * time, so a profile switch no longer rewrites the catalogue (see
-         * the fast profile switch plan). Their own `excluded` columns stay,
-         * unused; only the indexes on them go.
+         * time, so a profile switch no longer rewrites the catalogue (see the fast profile switch
+         * plan). Their own `excluded` columns stay, unused; only the indexes on them go.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
         internal val MIGRATION_23_24 =
@@ -402,9 +401,8 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * Migration 24→25: the `allowed` flag on streams and series. A Parental controls exception
-         * lets a child see a film or series in a hidden category (see
-         * the parental controls plan). The old `excluded` item columns are not
-         * reused: rows from before v24 can hold 1 there.
+         * lets a child see a film or series in a hidden category (see the parental controls plan).
+         * The old `excluded` item columns are not reused: rows from before v24 can hold 1 there.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
         internal val MIGRATION_24_25 =
@@ -441,8 +439,8 @@ abstract class XtreamDatabase : RoomDatabase() {
             }
 
         /**
-         * Migration 26→27: the Wishlist's ask-once answer and release data on `wanted_title`. See
-         * the wishlist ux plan, Phases 1 and 3.
+         * Migration 26→27: the Wishlist's ask-once answer and release data on `wanted_title`. See the
+         * wishlist ux plan, Phases 1 and 3.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigration26To27Test.
         internal val MIGRATION_26_27 =
@@ -642,20 +640,16 @@ abstract class XtreamDatabase : RoomDatabase() {
                     name,
                 ).addMigrations(*ALL_MIGRATIONS)
                 .fallbackToDestructiveMigrationFrom(dropAllTables = true, *PRE_USER_DATA_VERSIONS)
-                // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
-                // silently falls back to TRUNCATE (readers block on writes) on any device
-                // ActivityManager reports as low-RAM, which several of this app's actual
-                // Android TV targets plausibly are.
+                // Explicit, not JournalMode.AUTOMATIC: that falls back to TRUNCATE (readers block on
+                // writes) on a device ActivityManager reports as low-RAM, as some Android TV
+                // targets are.
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
-                            // NORMAL is safe under WAL (only FULL protects against an OS
-                            // crash, not an app crash, and this is WAL — see SQLite docs) and
-                            // avoids an fsync on every transaction. journal_size_limit caps
-                            // how large the WAL file is allowed to grow before SQLite
-                            // truncates it back down after a checkpoint, instead of the file
-                            // growing unbounded across this catalogue's frequent syncs.
+                            // NORMAL is safe under WAL and avoids an fsync on each transaction.
+                            // journal_size_limit lets SQLite truncate the WAL after a checkpoint,
+                            // so it does not grow without limit across the frequent syncs.
                             try {
                                 db.execSQL("PRAGMA synchronous = NORMAL")
                                 db.execPragma("PRAGMA journal_size_limit = 10485760") // 10MB

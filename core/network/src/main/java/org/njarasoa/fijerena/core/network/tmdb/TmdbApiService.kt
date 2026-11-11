@@ -33,24 +33,18 @@ enum class TmdbKeyCheck { VALID, REJECTED, UNREACHABLE }
 class TmdbKeyMissingException : IOException("No usable TMDB key")
 
 /**
- * Minimal TMDB v3 client. Used to enrich Xtream series episodes with overviews,
- * since most Xtream providers only include a TMDB episode id and poster URL —
- * not the episode synopsis itself.
+ * Minimal TMDB v3 client: episode synopses (most Xtream providers send only a TMDB id and a
+ * poster), ratings, related titles, images and people.
  *
- * The key is the user's own (D4, the public release plan):
- * [activeKey] is read on every call, so entering, changing or removing it in Settings applies at
- * once. Without one every call fails before reaching the network and [hasApiKey] is false, so
- * callers skip TMDB altogether. A 401 hands the key to [onRejected] (`TmdbKeyStore.markRejected`),
- * after which [activeKey] returns null: a revoked key then behaves exactly like no key.
+ * The key is the user's own (D4, the public release plan): [activeKey] is read on every call, so a
+ * change in Settings applies at once. Without one every call fails before the network and
+ * [hasApiKey] is false, so callers skip TMDB. A 401 hands the key to [onRejected]
+ * (`TmdbKeyStore.markRejected`), after which [activeKey] returns null, as with no key.
  *
- * Construct via [getInstance], not directly: the key is app-wide with no per-provider variation,
- * so there's nothing to gain from a separate instance per
- * [org.njarasoa.fijerena.core.network.XtreamMediaProvider] — only a separate `HttpClient` (and the
- * Ktor-internal `Dispatcher`/coroutine that comes with it, see
- * the xtream concurrency fixes plan, Finding 2) to leak if it's ever
- * discarded without being closed, which nothing here does.
+ * Construct via [getInstance]: the key is app-wide, and each instance has its own `HttpClient`, which
+ * leaks if discarded without close() (the xtream concurrency fixes plan, Finding 2).
  *
- * Every call goes through [limiter] (the cast tab plan, CT-D0). The single instance makes the limit
+ * Every call goes through [limiter] (the cast tab plan, CT-D0); the single instance makes the limit
  * process-wide.
  */
 class TmdbApiService(
@@ -68,14 +62,11 @@ class TmdbApiService(
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
-            // `preconfigured` does NOT guarantee an isolated Dispatcher.
-            // ktor-client-okhttp 3.5.2 (the version actually resolved here) only builds a fresh
-            // Dispatcher() when `preconfigured == null` — when it's set, the built client shares
-            // NetworkModule.okHttpClient's real Dispatcher object. This client has no close()
-            // today, so it isn't actively triggering it, but see
-            // core/player/api/XtreamApiService.kt's engine block for the incident this exact
-            // pattern caused there once its close() calls landed. Own Dispatcher + ConnectionPool
-            // set explicitly below so this stays safe if a close() is ever added.
+            // `preconfigured` does NOT give an isolated Dispatcher: ktor-client-okhttp 3.5.2 builds a
+            // fresh Dispatcher() only when `preconfigured == null`, else the client shares
+            // NetworkModule.okHttpClient's. See core/player/api/XtreamApiService.kt's engine block
+            // for the incident this caused there with close(). Own Dispatcher and ConnectionPool
+            // below, so a future close() stays safe.
             engine {
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
@@ -84,8 +75,8 @@ class TmdbApiService(
                 }
             }
             install(ContentNegotiation) { json(json) }
-            // An overall deadline per call, not only per read: see
-            // the next level rock solid resilience plan → R-14.
+            // An overall deadline per call, not only per read (the next level rock solid resilience
+            // plan → R-14).
             install(HttpTimeout) { requestTimeoutMillis = REQUEST_TIMEOUT_MS }
             recordFailedCalls()
             install(ContentEncoding) {
@@ -96,10 +87,7 @@ class TmdbApiService(
         }
     }
 
-    /**
-     * Fetch a full season from TMDB. One call returns overviews for every episode
-     * in that season, so we batch at the season level.
-     */
+    /** A full TMDB season: one call gives the overviews of every episode in it. */
     suspend fun getSeason(
         tvId: Int,
         seasonNumber: Int,
@@ -222,8 +210,10 @@ class TmdbApiService(
             mapOf("include_video_language" to "${appLanguage()},en,null"),
         ).body()
 
-    /** Backdrops/posters/logos for a movie. `logos` (wordmark art) and `backdrops` (hero
-     * background) are used; posters come from the Xtream catalogue instead. */
+    /**
+     * A movie's images: `logos` (wordmark art) and `backdrops` (hero background) are used; posters
+     * come from the Xtream catalogue.
+     */
     suspend fun getMovieImages(movieId: Int): TmdbImagesResponse = fetch("movie/$movieId/images").body()
 
     /** As [getMovieImages], for a TV series. */
@@ -468,10 +458,8 @@ class TmdbApiService(
             logos: List<TmdbImage>,
             language: String = "en",
         ): String? {
-            // Ascending comparator, `maxWithOrNull` below: compareByDescending here would have
-            // maxWithOrNull pick the *lowest*-voted/narrowest logo, since maxWithOrNull returns
-            // the comparator's greatest element and a descending comparator inverts what "greatest"
-            // means relative to the actual field values.
+            // Ascending comparator with `maxWithOrNull` below: a descending one makes it pick the
+            // lowest-voted, narrowest logo.
             val ranked = compareBy<TmdbImage> { it.voteAverage }.thenBy { it.width }
             val best =
                 logos.filter { it.language == language }.maxWithOrNull(ranked)

@@ -17,8 +17,7 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Creating, editing and deleting profiles. See the live sync plan → User
- * profiles.
+ * Creating, editing and deleting profiles. See the live sync plan → User profiles.
  */
 class ProfileRepository(
     private val context: Context,
@@ -42,8 +41,8 @@ class ProfileRepository(
     ): String {
         val id = UUID.randomUUID().toString()
         dao.insert(ProfileEntity(id = id, name = name.trim(), createdAt = System.currentTimeMillis(), colorIndex = colorIndex))
-        // Starts with the creator's category filters, sources, colour theme and Look and Feel; dev
-        // mode starts off (no flag stored).
+        // Starts with the creator's category filters, sources, colour theme and Look and Feel;
+        // Admin starts off (no flag stored).
         val settings = AppSettings(context)
         if (child) settings.setChildProfile(id, true)
         if (nerd && !child) settings.setNerdMode(id, true)
@@ -161,10 +160,10 @@ class ProfileRepository(
         }
 
     /**
-     * Keeps at least one Admin profile, whatever changed it — an
-     * upgrade, a deletion, a sync from another device, a backup import: with none, the oldest
-     * profile gets it, synced like any change (the same oldest profile on every device, so they
-     * agree). Returns that profile's id, or null when there was an Admin already (or no profile).
+     * Keeps at least one Admin profile, whatever changed it (an upgrade, a deletion, a sync from
+     * another device, a backup import): with none, the oldest profile gets it, synced like any
+     * change (the same oldest profile on every device, so they agree). Returns that profile's id,
+     * or null when there was an Admin already (or no profile).
      * The profile pages also refuse to turn off the last one; this is the backstop.
      */
     suspend fun ensureAnAdmin(): String? =
@@ -210,8 +209,9 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories and bookmarks on every
-     * provider, and its Admin flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
-     * left, since the app always needs somebody to be.
+     * provider, and its Admin flag, PIN, colour theme and Look and Feel, search history, category
+     * filters and sources. Refuses the profile this device is using (switch away first) and the
+     * last one, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
         withContext(Dispatchers.IO) {
@@ -228,8 +228,8 @@ class ProfileRepository(
                 // SharedPreferences): each database's part is atomic, every step is an idempotent
                 // delete, and the profile's own row goes last. Killed part-way, the profile is
                 // still listed and deleting it again finishes the job; a deletion received from
-                // another device is re-pulled and re-applied the same way. See
-                // the rock solid stability resilience plan → F-14.
+                // another device is re-pulled and re-applied the same way. See the rock solid
+                // stability resilience plan → F-14.
                 else -> {
                     val xtreamDb = XtreamDatabase.getInstance(context)
                     xtreamDb.withTransaction {

@@ -79,9 +79,8 @@ class SmbMediaProvider(
 
     override suspend fun disconnect() =
         withContext(Dispatchers.IO) {
-            // SmbClient.disconnect() doesn't block on the lock a slow connect() might hold, but it
-            // still does real socket-close syscalls — suspend alone doesn't move those off whatever
-            // dispatcher the caller happens to be on.
+            // SmbClient.disconnect() does not wait for a slow connect()'s lock, but it still makes
+            // socket-close syscalls, which suspend alone does not move off the caller's dispatcher.
             scanned = false
             smbClient.disconnect()
             categories = emptyList()
@@ -210,7 +209,7 @@ class SmbMediaProvider(
         }
     }
 
-    // Zero-allocation file extension matching to avoid substring and lowercase allocations.
+    // Extension match with no allocation (no substring, no lowercase).
     private fun isVideoFile(name: String): Boolean {
         val dotIndex = name.lastIndexOf('.')
         if (dotIndex == -1 || dotIndex == name.length - 1) return false

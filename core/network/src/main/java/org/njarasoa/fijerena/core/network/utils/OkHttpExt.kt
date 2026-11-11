@@ -8,9 +8,7 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/**
- * By using the asynchronous enqueue method, we avoid blocking the coroutine dispatcher thread.
- */
+/** Awaits the call through enqueue(), so no dispatcher thread blocks. */
 suspend fun Call.await(): Response {
     return suspendCancellableCoroutine { continuation ->
         enqueue(
@@ -20,8 +18,8 @@ suspend fun Call.await(): Response {
                     response: Response,
                 ) {
                     // Cancelled while the response was on its way: nobody will read it, so close
-                    // it here or its connection is never returned to the pool. See
-                    // the next level rock solid resilience plan → R-14.
+                    // it here or its connection never goes back to the pool. See the next level rock
+                    // solid resilience plan → R-14.
                     continuation.resume(response) { _, unread, _ -> unread.close() }
                 }
 

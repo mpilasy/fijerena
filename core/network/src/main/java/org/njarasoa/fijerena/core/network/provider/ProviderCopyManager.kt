@@ -7,14 +7,13 @@ import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
- * On-device provider-to-provider copy: connection/credentials, [ProviderSettings], favorites and
- * watch history, moved directly between two [ProviderEntity] rows via Room/EncryptedSharedPreferences.
- * No JSON, no file I/O — that's [org.njarasoa.fijerena.core.network.SettingsExportManager]'s job
- * (cross-device backup), which this does not touch.
+ * On-device copy from one [ProviderEntity] to another: connection and login, [ProviderSettings],
+ * favourites and watch history, through Room and EncryptedSharedPreferences. No JSON or files: that
+ * is [org.njarasoa.fijerena.core.network.SettingsExportManager]'s job (backup across devices).
  *
- * Favorites and watch history copy with "existing wins" merge semantics: a row already present on
- * the target (by its natural key) is left alone, only genuinely new rows are added. Connection and
- * settings copies are plain overwrites of the target — there's nothing to merge there.
+ * Favourites and watch history merge with "existing wins": a row already on the target (by its
+ * natural key) stays, and only new rows are added. Connection and settings copies overwrite the
+ * target.
  */
 class ProviderCopyManager(
     private val context: Context,
@@ -67,9 +66,8 @@ class ProviderCopyManager(
     private val providerRepo = ProviderRepository(context)
 
     /**
-     * Copies [options]-selected data from [sourceId] into [targetId]. Both providers must already
-     * exist; [targetId]'s own `name` is never touched — this repoints/merges data into it, it
-     * doesn't rename it. EPG sources are out of scope.
+     * Copies the data [options] selects from [sourceId] into [targetId]. Both providers must exist;
+     * [targetId]'s `name` never changes. EPG sources are out of scope.
      */
     suspend fun copyProviderData(
         sourceId: Long,

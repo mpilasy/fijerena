@@ -40,8 +40,8 @@ private fun playingSessionNow(): String? = StreamingPlaybackService.nowPlaying.v
 
 /**
  * Applies records received from another device: looks up what this device knows about each key,
- * asks [SyncMerge] what to do, and does it — without queueing the change to be sent back. See
- * the live sync plan → Applying remote records.
+ * asks [SyncMerge] what to do, and does it, without queueing the change to be sent back. See the
+ * live sync plan → Applying remote records.
  *
  * Each applied record also becomes this device's version of its key ([SyncVersionEntity] /
  * [SettingsVersionEntity], not pending), and every received clock value is taken into both sync
@@ -216,12 +216,11 @@ class SyncApplier(
     }
 
     /**
-     * [applyOne], but a record that throws — a payload shape from another app version, or a
-     * provider deleted locally mid-apply — waits with the deferred ones instead of failing the
-     * pass. An exception would abort the whole pull before the page's cursor was saved, so
-     * every later pass would refetch the same record and fail on it again: sync stuck for good on
-     * that device, with no error shown. Deferred rather than skipped so a newer app version can
-     * still apply it. See the rock solid stability resilience plan → F-08.
+     * [applyOne], but a record that throws (a payload from another app version, or a provider
+     * deleted here mid-apply) waits with the deferred ones instead of failing the pass: an
+     * exception aborts the pull before the page's cursor is saved, so every later pass fails on the
+     * same record and sync stops for good. Deferred, not skipped, so a newer app version can still
+     * apply it. See the rock solid stability resilience plan → F-08.
      */
     private suspend fun applyGuarded(record: SyncRecord): Outcome =
         try {

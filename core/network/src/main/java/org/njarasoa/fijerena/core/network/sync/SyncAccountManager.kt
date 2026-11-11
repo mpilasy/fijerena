@@ -8,9 +8,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import java.security.KeyPair
 
 /**
- * Linking this device to a sync account: creating one, joining one by scanning a QR code, or —
- * for a device that can't scan — being handed one by a device that can; and leaving it. See
- * the live sync plan → Security (pairing).
+ * Linking this device to a sync account: creating one, joining one by scanning a QR code, or (for
+ * a device that can't scan) being handed one by a device that can; and leaving it. See the live
+ * sync plan → Security (pairing).
  */
 class SyncAccountManager(
     private val context: Context,

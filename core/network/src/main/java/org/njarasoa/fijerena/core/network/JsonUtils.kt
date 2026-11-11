@@ -13,11 +13,11 @@ fun JsonElement?.asString(): String? {
 }
 
 /**
- * Xtream panels send an empty string, or the literal `"0"`, for a title with no TMDB match — not
- * `null`. Both pass a plain `IS NOT NULL`/non-null check, so every unmatched title ends up sharing
- * one fake "tmdbId" and gets treated as the same catalogue title by the TMDB-dedup joins in
- * `XtreamStreamDao`/`XtreamSeriesDao`/`XtreamEpisodeDao` (see `docs/DATABASE_SCHEMA.md` "TMDB
- * dedup"). Apply this wherever a provider-supplied tmdbId is about to be persisted or compared.
+ * Xtream panels send an empty string or the literal `"0"`, not `null`, for a title with no TMDB
+ * match. Both pass an `IS NOT NULL` check, so every unmatched title would share one fake tmdbId in
+ * the TMDB-dedup joins of `XtreamStreamDao`/`XtreamSeriesDao`/`XtreamEpisodeDao` (see
+ * `docs/DATABASE_SCHEMA.md` "TMDB dedup"). Apply this wherever a provider's tmdbId is stored or
+ * compared.
  */
 fun String?.normalizeTmdbId(): String? = this?.takeIf { it.isNotBlank() && it != "0" }
 

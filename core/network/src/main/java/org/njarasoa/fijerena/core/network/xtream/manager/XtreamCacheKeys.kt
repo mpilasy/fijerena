@@ -6,7 +6,7 @@ object XtreamCacheKeys {
     const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_timestamp"
     const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_timestamp_"
 
-    // Legacy keys (kept for backwards compatibility but not used)
+    // Legacy keys: nothing uses them.
     const val KEY_LAST_CATEGORY_ID = "last_category_id"
     const val KEY_LAST_STREAM_ID = "last_stream_id"
 
@@ -21,7 +21,7 @@ object XtreamCacheKeys {
     // Whether this source's own guide stamps its local time as UTC (PanelGuideTimes).
     const val KEY_PANEL_GUIDE_LOCAL_AS_UTC = "panel_guide_local_as_utc"
 
-    // Matches MediaRepository's XTREAM_EPG_TTL_MS. At 10 minutes the entire catalogue expired
-    // between ingest runs, so every pass re-fetched every channel over the network.
+    // 6 hours: at 10 minutes the whole catalogue expired between ingest runs, so every pass
+    // fetched every channel again.
     const val EPG_CACHE_EXPIRY_MS = 6L * 60 * 60 * 1000
 }

@@ -8,7 +8,7 @@ data class ParsedQuery(
 }
 
 object SearchUtils {
-    // Pre-parse the query so we don't perform substring operations or prefix checks in the hot loop
+    // Parsed once, so the hot loop does no substring or prefix work.
     fun parseQuery(query: String): ParsedQuery {
         val words = query.lowercase().split(" ").filter { it.isNotBlank() }
         val positive = mutableListOf<String>()

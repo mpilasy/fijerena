@@ -17,8 +17,8 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
 /**
  * Turns this device's pending versions into [SyncRecord]s to send, reading the current row, value
- * or tombstone of each key; and, on linking, queues everything that already exists. See
- * the live sync plan → Flow.
+ * or tombstone of each key; and, on linking, queues everything that already exists. See the live
+ * sync plan → Flow.
  */
 class LocalRecords(
     private val context: Context,

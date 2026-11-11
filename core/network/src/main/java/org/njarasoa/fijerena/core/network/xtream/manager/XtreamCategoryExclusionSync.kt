@@ -9,20 +9,19 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 
 /**
- * Recomputes the `excluded` flag on categories from the current [CategoryFilters], purely via
- * local DB reads/writes (no network, no session).
+ * Recomputes the `excluded` flag on categories from the current [CategoryFilters], with local
+ * database reads and writes only (no network, no session).
  *
  * Only categories carry the flag: a stream or series is hidden when its category is, which the
  * queries check (see XtreamStreamDao / XtreamSeriesDao). So a profile switch or a filter edit
- * writes a few hundred category rows, never the catalogue. See
- * the fast profile switch plan.
+ * writes a few hundred category rows, never the catalogue. See the fast profile switch plan.
  *
  * For a child profile it also sets the `allowed` flag on the films and series that a Parental
- * controls exception lets through from a hidden category (the parental controls plan).
- * This also writes a few hundred rows at most.
+ * controls exception lets through from a hidden category (the parental controls plan): a few
+ * hundred rows at most.
  *
- * Kept independent of [XtreamContentManager] so it can be called directly from a
- * settings-save flow (e.g. `ProviderRepository`) without constructing a session manager.
+ * Kept apart from [XtreamContentManager], so a settings save (`ProviderRepository`) can call it
+ * with no session manager.
  */
 object XtreamCategoryExclusionSync {
     private const val SQLITE_BATCH_SIZE = 900

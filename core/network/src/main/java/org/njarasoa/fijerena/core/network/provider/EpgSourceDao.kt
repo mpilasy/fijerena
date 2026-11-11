@@ -223,11 +223,10 @@ interface EpgSourceDao {
     suspend fun forgetIngest(id: Long)
 
     /**
-     * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the
-     * timestamp and clear any prior error, but leave the channel/programme counts and validators
-     * as they were. Reusing [markIngested] here would zero the counts, making a genuinely
-     * unchanged source look like one that suddenly lost its whole guide. A success: the failure
-     * time and count are cleared.
+     * A refresh found the source unchanged (304, or the same content hash): a success, so the
+     * timestamp moves and the error, failure time and count are cleared; the channel and programme
+     * counts and validators stay. [markIngested] would zero the counts, so an unchanged source
+     * would look as if it lost its guide.
      */
     @Query(
         "UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_failed_at_ms = NULL, " +

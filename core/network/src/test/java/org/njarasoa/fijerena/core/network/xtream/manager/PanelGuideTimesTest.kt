@@ -11,9 +11,9 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
- * panel-a' guide: Flamengo x Fluminense, 20:45 Amsterdam (18:45 UTC), comes from `get_simple_data_table`
- * as `start_timestamp` 1791751500 = 20:45 UTC, while its `xmltv.php` says `20261011204500 +0200`.
- * See the panel guide local time plan.
+ * panel-a's guide: Flamengo x Fluminense, 20:45 Amsterdam (18:45 UTC), comes from
+ * `get_simple_data_table` as `start_timestamp` 1791751500 = 20:45 UTC, while its `xmltv.php` says
+ * `20261011204500 +0200`. See the panel guide local time plan.
  */
 class PanelGuideTimesTest {
     private val amsterdam = ZoneId.of("Europe/Amsterdam")

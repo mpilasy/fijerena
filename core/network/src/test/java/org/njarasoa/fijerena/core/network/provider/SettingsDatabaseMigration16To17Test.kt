@@ -12,8 +12,8 @@ import org.robolectric.annotation.Config
 /**
  * [SettingsDatabase.MIGRATION_16_17] drops the login from each Xtream source's automatic guide
  * source and leaves every other URL as it is, queueing nothing for live sync. On the JVM under
- * Robolectric, against the exported schemas (`core/network/schemas`). See
- * the public release plan → R1.
+ * Robolectric, against the exported schemas (`core/network/schemas`). See the public release plan
+ * → R1.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

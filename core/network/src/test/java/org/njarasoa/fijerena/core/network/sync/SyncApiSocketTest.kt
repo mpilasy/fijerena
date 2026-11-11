@@ -8,8 +8,8 @@ import org.junit.Test
  * F-26: the app's text `ping` is never checked for a `pong`, so after a Wi-Fi drop or an expired
  * NAT entry (no FIN) sends kept succeeding into the void and live updates silently stopped. The
  * socket client pings at protocol level instead: OkHttp fails a socket whose pong doesn't come
- * back, and `SyncManager` reconnects it (see SyncManagerSocketTest). See
- * the rock solid stability resilience plan → F-26.
+ * back, and `SyncManager` reconnects it (see SyncManagerSocketTest). See the rock solid stability
+ * resilience plan → F-26.
  */
 class SyncApiSocketTest {
     @Test

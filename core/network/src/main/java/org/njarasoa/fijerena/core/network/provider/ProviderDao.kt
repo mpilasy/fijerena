@@ -67,9 +67,8 @@ interface ProviderDao {
     // A success ([error] null) writes the time, the duration and the counts, and clears the error,
     // the failure time and the failure count. A failure keeps the last success's time, duration
     // and counts, and writes the error, the failure time ([timestamp]) and one more failure.
-    // inserted/updated/deleted are nullable and COALESCE onto the existing value when null: a
-    // failed sync (delta unknown) must leave the last real delta in place rather than overwrite
-    // it with zeros, which would read identically to a sync that genuinely found no changes.
+    // Null counts COALESCE onto the existing value: zeros from a failed sync would read as a sync
+    // that found no changes.
     @Query(
         """
         UPDATE providers SET

@@ -8,10 +8,7 @@ import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-/**
- * Per-provider settings that can be customized independently for each provider.
- * Stored as JSON in ProviderEntity.providerSettings field.
- */
+/** The settings of one provider, stored as JSON in ProviderEntity.providerSettings. */
 @Serializable
 data class ProviderSettings(
     /** Retired: Recent rows are one size per device, AppSettings.recentRowSize (D4); read once to move it. */
@@ -20,18 +17,18 @@ data class ProviderSettings(
     val favoritesMaxSize: Int = 100,
     /** Retired: films and episodes always resume. Kept so stored settings keep decoding. */
     val autoResumeEnabled: Boolean = true,
-    /** Cache expiry time in hours (1-168, i.e., 1 hour to 1 week) */
+    /** Cache expiry time in hours (1-168). */
     val cacheExpiryHours: Int = 24,
     /** Retired: the source's short-guide cache is always on (Settings reorg, D5). Kept so stored settings keep decoding. */
     val cachingEnabled: Boolean = true,
     val categoryFilters:
         @Serializable(with = CategoryFiltersSerializer::class)
         CategoryFilters = CategoryFilters(),
-    /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
+    /** Retired: nothing reads it (guide sources replaced it). Kept so stored settings keep decoding. */
     val epgUrl: String = "",
     /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
     val streamOutputFormat: String = "m3u8",
-    /** Playlist type for Xtream API: "m3u_plus" (extended M3U with EPG) or "simple" (basic M3U) */
+    /** Not read anywhere. Kept so stored settings keep decoding. */
     val playlistType: String = "m3u_plus",
     /**
      * Xtream: whether the source's own guide (`xmltv.php`) is added as an automatic guide source
@@ -44,8 +41,7 @@ data class ProviderSettings(
     /**
      * Xtream: usernames of the source's extra logins on the same panel, which playback shares with
      * the main one. Passwords live in `provider_creds_<id>`. Changed only through
-     * [ProviderRepository]'s login functions, never by a settings save. See
-     * the shared logins plan.
+     * [ProviderRepository]'s login functions, never by a settings save. See the shared logins plan.
      */
     val extraLogins: List<String> = emptyList(),
     /**
@@ -64,9 +60,7 @@ data class ProviderSettings(
     }
 }
 
-/**
- * Allows hiding or showing categories based on name matchers.
- */
+/** Hides or shows categories by name matchers. */
 @Serializable
 data class CategoryFilters(
     /** Filter mode: EXCLUDE hides matching, INCLUDE shows only matching */
@@ -81,8 +75,7 @@ data class CategoryFilters(
     /**
      * A child profile's Parental controls rules: only the categories they show, whatever the rules
      * say. Null for other profiles. Never stored: [CategoryFiltersStore.get] sets it from the
-     * profile, so the rules editor and sync carry only the rules
-     * (the parental controls plan).
+     * profile, so the rules editor and sync carry only the rules (the parental controls plan).
      */
     @kotlinx.serialization.Transient
     val child: ParentalRules? = null,
@@ -93,9 +86,7 @@ data class CategoryFilters(
      */
     val filtersNothing: Boolean get() = rules.isEmpty() && allowedScripts.isEmpty() && child == null
 
-    /**
-     * Both rule and script filters must pass (AND logic).
-     */
+    /** Both the rule and the script filters must pass. */
     fun shouldShowCategory(
         categoryName: String,
         films: Boolean = false,
@@ -138,11 +129,8 @@ enum class MatchType {
 /**
  * A single category-name matching rule.
  *
- * Deserialized via [CategoryMatcherSerializer] (applied at the [CategoryFilters.rules] usage
- * site), which also accepts a legacy bare JSON string (the pre-migration `prefixes: List<String>`
- * shape), normalizing it to `MatchType.STARTS_WITH` — this is what previously-stored provider
- * settings look like before [org.njarasoa.fijerena.core.network.provider.ProviderRepository]
- * rewrites them.
+ * Deserialized via [CategoryMatcherSerializer] (on [CategoryFilters.rules]), which also accepts a
+ * legacy bare JSON string (the old `prefixes: List<String>` shape) as `MatchType.STARTS_WITH`.
  */
 @Serializable
 data class CategoryMatcher(
@@ -188,10 +176,9 @@ object CategoryMatcherSerializer : JsonTransformingSerializer<CategoryMatcher>(C
 }
 
 /**
- * Maps the legacy `prefixes` JSON key to the current `rules` key before delegating to the
- * normal decoder, so pre-migration stored settings (`{"prefixes": ["Adult", ...]}`) aren't
- * silently dropped by `ignoreUnknownKeys` and defaulted to an empty rule list.
- * [CategoryMatcherSerializer] then normalizes each individual bare-string entry.
+ * Maps the legacy `prefixes` key to `rules` before the normal decoder, so old stored settings
+ * (`{"prefixes": ["Adult", ...]}`) are not dropped by `ignoreUnknownKeys`.
+ * [CategoryMatcherSerializer] then normalises each bare-string entry.
  */
 object CategoryFiltersSerializer : JsonTransformingSerializer<CategoryFilters>(CategoryFilters.serializer()) {
     override fun transformDeserialize(element: JsonElement): JsonElement {

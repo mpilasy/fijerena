@@ -14,10 +14,9 @@ import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
- * Where a TMDB key stands. No build carries a key (D4 of
- * the public release plan): TMDB is on only with a key the user
- * entered, and a key TMDB refused (401) counts as no key until a different one is entered, so a
- * revoked key costs no request and shows no error anywhere but Settings.
+ * Where a TMDB key stands. No build carries a key (D4 of the public release plan): TMDB is on only
+ * with a key the user entered, and a key TMDB refused (401) counts as no key until a different one
+ * is entered, so a revoked key costs no request and shows no error anywhere but Settings.
  */
 sealed interface TmdbKeyState {
     data object None : TmdbKeyState

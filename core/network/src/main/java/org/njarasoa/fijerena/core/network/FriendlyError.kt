@@ -11,10 +11,9 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
 /**
- * Map an exception to a short, user-facing message. Internal exception text
- * (Room internals, DNS/host details, HTTP stack fragments) must never reach the UI
- * on its own — this keeps "silly alerts" like Room's "Cannot access database on the
- * main thread…" from being shown to users as if the operation had really failed.
+ * Maps an exception to a short message for the user. Internal text (Room internals, DNS or host
+ * details, HTTP stack fragments) never reaches the UI alone, so Room's "Cannot access database on
+ * the main thread…" does not look like a real failure.
  *
  * Nerd callers append the raw text via the [includeRaw] overload.
  */
@@ -33,12 +32,9 @@ fun errorKind(
     val cause = e.networkCause()
     if (cause != null && cause !== e) return errorKind(cause, context)
     return when {
-        // OkHttp's own message when a client's Dispatcher.executorService has already been
-        // shut down (e.g. closed while still in use) and something tries to submit one more
-        // call through it. It's an InterruptedIOException, so it would otherwise fall into the
-        // generic network-error bucket below — but it has nothing to do with the user's
-        // connection, and telling them to "check your connection" for an internal lifecycle bug
-        // sends them chasing the wrong thing. No connectivity check would ever fix this.
+        // OkHttp's message when a call goes to a client whose Dispatcher was shut down (closed while
+        // in use). An InterruptedIOException, but not a connection problem: "check your
+        // connection" would send the user the wrong way.
         e.message?.contains("executor rejected", ignoreCase = true) == true -> {
             ErrorKind.GENERIC
         }
@@ -63,8 +59,8 @@ fun errorKind(
             ErrorKind.NO_INTERNET
         }
 
-        // HttpRequestTimeoutException: a call that outran its overall deadline (R-14), e.g. a
-        // server trickling bytes. It's an IOException, so it would otherwise read as "network error".
+        // HttpRequestTimeoutException: a call past its overall deadline (R-14), such as a server
+        // that trickles bytes. An IOException, which would otherwise read as "network error".
         e is SocketTimeoutException || e is HttpRequestTimeoutException -> {
             ErrorKind.TIMEOUT
         }

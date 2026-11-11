@@ -30,8 +30,8 @@ import org.robolectric.annotation.Config
 
 /**
  * [WantedTitles] works out, for the profile in use, its Wanted list, which titles its Xtream
- * sources have, and its gone favourites; a child profile gets nothing. See
- * the wanted titles plan, Phase 2.
+ * sources have, and its gone favourites; a child profile gets nothing. See the wanted titles plan,
+ * Phase 2.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
