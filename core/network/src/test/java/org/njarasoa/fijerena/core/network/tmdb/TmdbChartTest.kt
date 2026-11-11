@@ -11,7 +11,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 
-/** The chart pages cache and the chart rows (docs/plans/20261029_tmdb-charts-plan.md, Phases 1–2). */
+/** The chart pages cache and the chart rows (the TMDB charts plan, Phases 1–2). */
 class TmdbChartTest {
     private val dir: File = Files.createTempDirectory("charts").toFile()
     private val calls = mutableListOf<Pair<TmdbChart, Int>>()

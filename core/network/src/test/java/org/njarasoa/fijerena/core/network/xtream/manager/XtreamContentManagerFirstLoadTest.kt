@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamStream
 /**
  * A first load (nothing stored yet) applies the Parental controls exceptions as the recompute does:
  * a child sees an allowed film of a hidden category, and the row is stored with `allowed` set
- * (docs/plans/20261020_parental-controls-plan.md, Phase 4).
+ * (the parental controls plan, Phase 4).
  */
 class XtreamContentManagerFirstLoadTest {
     private val streamDao = mockk<XtreamStreamDao>(relaxed = true)

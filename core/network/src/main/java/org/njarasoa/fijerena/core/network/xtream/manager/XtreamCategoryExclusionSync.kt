@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
  * the fast profile switch plan.
  *
  * For a child profile it also sets the `allowed` flag on the films and series that a Parental
- * controls exception lets through from a hidden category (docs/plans/20261020_parental-controls-plan.md).
+ * controls exception lets through from a hidden category (the parental controls plan).
  * This also writes a few hundred rows at most.
  *
  * Kept independent of [XtreamContentManager] so it can be called directly from a

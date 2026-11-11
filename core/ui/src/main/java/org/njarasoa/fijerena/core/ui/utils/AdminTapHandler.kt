@@ -24,7 +24,7 @@ fun rememberAdminTapHandler(
     val resources = LocalResources.current
     var taps by remember { mutableIntStateOf(0) }
     return taps@{
-        // A child profile is never Admin (docs/plans/20261019_tv-household-ux-plan.md): its taps count nothing.
+        // A child profile is never Admin (the household UX plan): its taps count nothing.
         val settings = AppSettings(context.applicationContext)
         if (settings.isChildProfile(settings.activeProfileId)) return@taps
         val outcome = AdminTaps.onTap(taps, adminExists)

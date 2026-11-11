@@ -46,7 +46,7 @@ import java.util.Date
 
 /**
  * The clock at the top right of every phone screen, at the player controls' clock's place
- * (docs/plans/20261025_tv-clock-and-full-screen-recent-plan.md). The phone copy of TV's TvClock.
+ * (the TV clock plan). The phone copy of TV's TvClock.
  *
  * - The nav host owns one [MobileClockState], provides it as [LocalMobileClock] and draws
  *   [MobileClockOverlay] over the screens.

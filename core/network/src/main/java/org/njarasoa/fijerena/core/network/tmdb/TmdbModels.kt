@@ -58,7 +58,7 @@ data class TmdbEpisode(
     val runtime: Int? = null,
     @SerialName("vote_average")
     val voteAverage: Double? = null,
-    // The episode's own cast, beside the show's regulars (docs/plans/20261030_episode-cast-plan.md).
+    // The episode's own cast, beside the show's regulars (the episode cast plan).
     @SerialName("guest_stars")
     val guestStars: List<TmdbGuestStar> = emptyList(),
 )

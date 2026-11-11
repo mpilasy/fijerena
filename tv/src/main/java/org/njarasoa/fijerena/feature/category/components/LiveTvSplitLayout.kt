@@ -97,7 +97,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Live-TV-only split layout: a small preview player + now/next EPG card on the left, the channel
- * list on the right. See docs/live-tv-preview-pane-plan.md.
+ * list on the right. See the Live TV preview pane plan.
  *
  * The preview plays what OK picks, never what focus rests on: moving through the list or across its
  * tabs leaves the playing channel alone. OK on another row stops the channel playing at once and
@@ -151,7 +151,7 @@ internal fun LiveTvSplitLayout(
      */
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     /**
-     * A child profile's (docs/plans/20261019_kids-home-plan.md, Phase 2): the Favourites list only,
+     * A child profile's (the kids' Home plan, Phase 2): the Favourites list only,
      * no Recent or category tab, no row menu — it zaps through what its Home shows.
      */
     favoritesOnly: Boolean = false,
@@ -281,7 +281,7 @@ internal fun LiveTvSplitLayout(
             }
         }
 
-    // Newest first, as the repository orders it (docs/plans/20261025_live-recent-order-plan.md): the
+    // Newest first, as the repository orders it (the Live TV Recent order plan): the
     // order changes only when a channel is written, which follows a change of channel.
     val publishedRecentStreams by categoryViewModel.recentItems.collectAsStateWithLifecycle()
     val recentStreams = publishedRecentStreams.orEmpty()

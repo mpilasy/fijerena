@@ -18,7 +18,7 @@ internal const val SQLITE_MAX_VARIABLES = 900
  * schema v24. See the fast profile switch plan.
  *
  * Since v25 a film with `allowed` = 1 shows also in an excluded category: a Parental controls
- * exception for a child profile (docs/plans/20261020_parental-controls-plan.md). So the filter is
+ * exception for a child profile (the parental controls plan). So the filter is
  * `(categoryId NOT IN (…) OR rowid IN (… allowed films …))`. The `rowid` form is load-bearing: the
  * (providerId, type, categoryId) index holds the rowid, so SQLite rejects a hidden film from the
  * index alone. With `allowed = 1` it reads every film row: all films of a 182k-film catalogue took

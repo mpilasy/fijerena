@@ -282,7 +282,7 @@ fun SearchScreen(
     // of them shows the latest.
     val profileId = remember { AppSettings(context.applicationContext).activeProfileId }
     // A child profile finds films and shows only, each opening its page: no channels (its Live TV
-    // is its favourites), categories, Guide tab or menus (docs/plans/20261019_kids-home-plan.md, K-D7).
+    // is its favourites), categories, Guide tab or menus (the kids' Home plan, K-D7).
     val child = remember { AppSettings(context.applicationContext).isChildProfile(profileId) }
     // People only with a TMDB key (PS-D1), never for a child.
     val hasTmdbKey = remember { TmdbApiService.getInstance(context.applicationContext).hasApiKey() }

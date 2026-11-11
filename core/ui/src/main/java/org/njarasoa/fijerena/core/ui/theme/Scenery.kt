@@ -18,7 +18,7 @@ sealed interface Scenery {
     data object Flat : Scenery
 
     /**
-     * A painted sky over rolling hills (Meadow, docs/plans/20261021_meadow-look-plan.md): the sky
+     * A painted sky over rolling hills (Meadow, the Meadow look plan): the sky
      * from [skyTop] to [skyBottom], three hill bands back to front in [hills], and at [night] a few
      * stars and a moon.
      */

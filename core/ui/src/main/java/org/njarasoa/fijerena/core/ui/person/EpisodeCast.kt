@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.network.tmdb.episodeCredits
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 
 /**
- * The cast section of [episode]'s details (docs/plans/20261030_episode-cast-plan.md, EC-D1): its
+ * The cast section of [episode]'s details (the episode cast plan, EC-D1): its
  * guest stars, from the TMDB season call the plots use, and the show's cast ([show], the Cast
  * tab's), apart. Null until the guest stars are known, so the cards do not move when they come, and null
  * when TMDB has nobody: the screen then shows the source's cast names or nothing.

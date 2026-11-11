@@ -21,8 +21,8 @@ import org.njarasoa.fijerena.ui.components.rememberCinemaSnackbar
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Settings › Parental controls on the phone (docs/plans/20261020_parental-controls-plan.md → The
- * page): a list's words with their counts and Undo, and the check view. Settings' entry is a row
+ * Settings › Parental controls on the phone (the parental controls plan, "The
+ * page"): a list's words with their counts and Undo, and the check view. Settings' entry is a row
  * of the Admin page (SettingsAdminTest).
  */
 @RunWith(RobolectricTestRunner::class)

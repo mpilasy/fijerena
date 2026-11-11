@@ -127,7 +127,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import kotlin.math.roundToInt
 
-/** Home's rows, read together (docs/plans/20261019_phone-home-tab-plan.md). */
+/** Home's rows, read together (the phone Home tab plan). */
 private data class HomeRows(
     val continueWatching: List<ContinueWatchingItem>,
     val channels: List<LiveRowEntry>,
@@ -266,7 +266,7 @@ fun MobileHomeScreen(
         val settings = AppSettings(context.applicationContext)
         rows = loadRows(lists, supportedTypes, child = settings.isChildProfile(settings.activeProfileId))
     }
-    // The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md, Phase 4): read apart from the
+    // The TMDB chart rows (the TMDB charts plan, Phase 4): read apart from the
     // other rows, as they may ask TMDB, and again when the Admin switch or the Trending rows' switch
     // (follow-up F3: the titles no source has) changes. A child gets the kids' charts.
     val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
@@ -1214,7 +1214,7 @@ private fun continueWatchingLine(item: ContinueWatchingItem): String {
 /**
  * Every row from stored data: an offline source holds nothing up. A [child] profile's Home has
  * only Continue watching and its favourite channels, films and shows: no Channels (recent) row
- * (docs/plans/20261019_kids-home-plan.md, K-D8, the phone's light version).
+ * (the kids' Home plan, K-D8, the phone's light version).
  */
 private suspend fun loadRows(
     merged: MergedLists,

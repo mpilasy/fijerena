@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The rail's groups (docs/plans/20261111_admin-sections-direct-plan.md): Your Profile, the five
+ * The rail's groups (the Admin sections plan): Your Profile, the five
  * Admin sections (only for an Admin) and About (a child profile has no Settings on TV). Only the
  * Admin sections ask the PIN on the way in, in the order the Admin list had.
  */

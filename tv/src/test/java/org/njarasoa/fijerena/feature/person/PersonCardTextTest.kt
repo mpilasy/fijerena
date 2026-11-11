@@ -16,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The text of an actor page's cards and of the lines of a person's appearances in a show
- * (docs/plans/20261030_episode-cast-plan.md, EC-D2).
+ * (the episode cast plan, EC-D2).
  */
 @RunWith(RobolectricTestRunner::class)
 class PersonCardTextTest {

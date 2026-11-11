@@ -77,7 +77,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A person's page on TV (docs/plans/20261030_cast-tab-plan.md, Design 3): the photo, the name, the
+ * A person's page on TV (the cast tab plan, Design 3): the photo, the name, the
  * birth and death dates and place, the biography (a few lines; OK shows all of it), then the
  * person's Movies and TV Shows that the profile's sources have, as Home's rows. Each row starts with
  * its own switch for the titles no source has (UX-D7: off on each opening, none for a child), and
@@ -85,7 +85,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * the title on its own source, or a TMDB-only card its TMDB page ([onTitleSelected], with `MOVIES`
  * or `TV_SHOWS`). A show card of a role opens the episode, or the list of the person's episodes or
  * seasons in the show ([ShowAppearancesOverlay]), each opening the show there ([onShowSelected];
- * docs/plans/20261030_episode-cast-plan.md, EC-D2).
+ * the episode cast plan, EC-D2).
  *
  * Focus: on the first card on entry, else on the biography, else on a row's switch; Back from a
  * title returns to the card left.

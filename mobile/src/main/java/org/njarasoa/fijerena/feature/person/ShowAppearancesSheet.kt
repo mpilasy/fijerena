@@ -26,7 +26,7 @@ import org.njarasoa.fijerena.ui.components.CinemaSheetHeader
 
 /**
  * A person's appearances in one show, as a sheet over the person page
- * (docs/plans/20261030_episode-cast-plan.md, EC-D2): one row per episode ("S9E17 · Authority") or
+ * (the episode cast plan, EC-D2): one row per episode ("S9E17 · Authority") or
  * per season ("Season 3"), a row the source lacks marked "Not in your source". A tap on a row calls
  * [onSelect]; the sheet stays, for Back from the show. Dismissing it calls [onDismiss].
  */

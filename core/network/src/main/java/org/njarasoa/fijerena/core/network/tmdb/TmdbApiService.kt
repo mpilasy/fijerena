@@ -300,7 +300,7 @@ class TmdbApiService(
     /**
      * One credit of a person (`credit/{credit_id}`): for a show, the episodes of a guest or recurring
      * role, or the seasons of a regular role. Asked only when the user opens a show card on an actor
-     * page (docs/plans/20261030_episode-cast-plan.md).
+     * page (the episode cast plan).
      */
     suspend fun getCredit(creditId: String): TmdbCredit = fetch("credit/$creditId").body()
 

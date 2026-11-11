@@ -9,7 +9,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
 /**
- * Holds guide indexing back while something plays (docs/plans/20261105_pausable-guide-indexing-plan.md):
+ * Holds guide indexing back while something plays (the pausable guide indexing plan):
  * [await] returns at once when nothing has played for [quietMs], else waits, checking every
  * [pollMs], until that is true. The quiet time covers the moments playback stops on its own: a
  * channel change, a reconnect, the preview going full screen. One instance per run, so the last
@@ -62,7 +62,7 @@ fun isVideoPlaying(): Boolean {
 /**
  * Whether anything plays on the device: this app's video, or sound from any app (YouTube, a game
  * with sound), which Android tells every app without a permission. Guide indexing waits for both
- * (docs/plans/20261105_pausable-guide-indexing-plan.md → IX4).
+ * (the pausable guide indexing plan, IX4).
  */
 fun isMediaPlaying(context: Context): Boolean =
     isVideoPlaying() || context.getSystemService(AudioManager::class.java)?.isMusicActive == true

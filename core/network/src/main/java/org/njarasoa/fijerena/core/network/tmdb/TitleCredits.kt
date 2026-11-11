@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
 /**
- * The people of a film or show that the Cast tab shows (docs/plans/20261030_cast-tab-plan.md):
+ * The people of a film or show that the Cast tab shows (the cast tab plan):
  * the crew lines at the top, then the cast cards. Made by [titleCredits]. [cast] is TMDB's full
  * cast in billing order; the tab shows the first [MAX_CAST_CARDS] until the user asks for more.
  * For a show, [cast] is its regular cast and [guests] the guest stars of all seasons, each its own
@@ -166,7 +166,7 @@ fun episodeGuests(episode: TmdbEpisode?): List<CastMember> =
         }.distinctBy { it.personId }
 
 /**
- * An episode's cast section (docs/plans/20261030_episode-cast-plan.md, EC-D1): the episode's
+ * An episode's cast section (the episode cast plan, EC-D1): the episode's
  * [guests] in one row and the show's regular cast ([show], the Cast tab's) in another (user,
  * 2026-10-31), each person once: a guest is not again among the regulars. No crew lines. Null
  * when TMDB has nobody for it: the section then is not shown.

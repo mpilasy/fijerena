@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The stats and extra information follow the Nerd flag, not the Admin flag
- * (docs/plans/20261103_nerd-role-sync-failures-plan.md, Lane G): the source badge and the raw
+ * (the Nerd role plan, Lane G): the source badge and the raw
  * text of a kept error.
  */
 @RunWith(RobolectricTestRunner::class)

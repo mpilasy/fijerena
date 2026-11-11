@@ -4,7 +4,7 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * The five word lists of Settings › Parental controls (docs/plans/20261020_parental-controls-plan.md).
+ * The five word lists of Settings › Parental controls (the parental controls plan).
  * They decide what a child profile sees, on every source. They are the same for every child profile,
  * synced to every device, and edited by the admin. [defaults] fills a list once; after that only the
  * admin changes it.

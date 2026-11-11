@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
  * A film or series with `allowed` = 1 (a Parental controls exception) shows also in an excluded
  * category, in every query that hides the items of excluded categories, and the search count
  * leaves it out. One test per query, against a real in-memory `xtream_v2.db` under Robolectric.
- * See docs/plans/20261020_parental-controls-plan.md, Phase 4.
+ * See the parental controls plan, Phase 4.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

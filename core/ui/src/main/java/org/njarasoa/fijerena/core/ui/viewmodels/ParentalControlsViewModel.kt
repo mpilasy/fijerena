@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
- * Settings › Parental controls (docs/plans/20261020_parental-controls-plan.md), for TV and phone:
+ * Settings › Parental controls (the parental controls plan), for TV and phone:
  * the five lists, each entry's match count on the child profiles' sources, and the check view of
  * one source. Every change is stored, sent to the other devices and applied at once.
  */

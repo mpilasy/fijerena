@@ -64,7 +64,7 @@ internal const val SPORTS_SECTION = "SPORTS"
  * Sports while Admin's Sports switch is on ([sports], SP-D9), Search, Settings. The Browse entries
  * go between those and Search (`TvNavRail`). A [child] profile has only the avatar, Home and
  * Search: it watches what is on its Home or what it finds, never browses
- * (docs/plans/20261019_kids-home-plan.md, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
+ * (the kids' Home plan, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
  */
 internal fun railItems(
     sections: Set<String>?,

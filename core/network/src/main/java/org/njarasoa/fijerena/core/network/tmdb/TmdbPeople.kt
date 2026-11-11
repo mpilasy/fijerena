@@ -17,12 +17,12 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
 
 /**
- * The people read from TMDB, kept 7 days for the device (docs/plans/20261030_cast-tab-plan.md,
+ * The people read from TMDB, kept 7 days for the device (the cast tab plan,
  * Design 5): an actor page opened again asks TMDB nothing. Kept in memory and in one file per
  * person under [dir]. A person read in another TMDB language ([language]) is read again.
  *
  * The credits of the person opened on an actor page ([credit], `credit/{credit_id}`) are kept with
- * the person, for as long as the person (docs/plans/20261030_episode-cast-plan.md).
+ * the person, for as long as the person (the episode cast plan).
  */
 class TmdbPeople(
     private val dir: File,

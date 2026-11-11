@@ -293,7 +293,7 @@ fun ProfileEditPane(
     var themeId by remember(profile.id) { mutableStateOf(viewModel.themeOf(profile.id)) }
     var uiStyleId by remember(profile.id) { mutableStateOf(viewModel.uiStyleOf(profile.id)) }
     var posterBackdrop by remember(profile.id) { mutableStateOf(viewModel.posterBackdropOf(profile.id)) }
-    // A packaged UI theme sets the colour theme and the Look and Feel (docs/plans/20261021_ui-themes-plan.md).
+    // A packaged UI theme sets the colour theme and the Look and Feel (the UI themes plan).
     var uiThemeId by remember(profile.id) { mutableStateOf(viewModel.uiThemeOf(profile.id)) }
     val lookLocked = uiThemeId != UiThemes.CUSTOM
     var choosingUiTheme by rememberSaveable { mutableStateOf(false) }

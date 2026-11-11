@@ -77,7 +77,7 @@ class EpgGuideLookup(
                 patterns().flatMap { pattern -> read { dao.searchByTitleLike(pattern, sourceIds, fromSec, toSec) } }.distinctBy { it.id }
             } else {
                 // Sources a refresh is still indexing: titles and descriptions without FTS
-                // (docs/plans/20261105_pausable-guide-indexing-plan.md).
+                // (the pausable guide indexing plan).
                 val pending = pendingSourceIds().intersect(sourceIds.toSet()).toList()
                 val indexed = sourceIds.filter { it !in pending }
                 val query = ftsQuery(terms)

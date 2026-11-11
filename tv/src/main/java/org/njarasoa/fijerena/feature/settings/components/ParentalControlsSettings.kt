@@ -64,7 +64,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /*
- * Settings › Parental controls on TV (docs/plans/20261020_parental-controls-plan.md, "The page"),
+ * Settings › Parental controls on TV (the parental controls plan, "The page"),
  * for the admin only: the group's rows (one per list, then Check a source), a list's pane and the
  * check view. The panes open in place of the group's rows, like the other Settings pickers.
  */

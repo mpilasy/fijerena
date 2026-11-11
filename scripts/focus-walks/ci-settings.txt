@@ -19,7 +19,7 @@
 # list, Back closes it on its row; Shrink Database ends Sources & Guide. Edited by hand from the
 # focus tests, not yet run.
 # Admin sections on the rail (2026-11-11): the five Admin sections are rail rows under an "Admin"
-# heading; the Admin list is gone (docs/plans/20261111_admin-sections-direct-plan.md). Edited by hand.
+# heading; the Admin list is gone (the Admin sections plan). Edited by hand.
 # About page (2026-11-11): About is About Fijerena, Device Info and Logs; the version, Terms,
 # Licences and the credits moved to the About Fijerena page, walked here. Edited by hand.
 @start Admin

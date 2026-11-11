@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
 /**
- * One line of a person's appearances in a show (docs/plans/20261030_episode-cast-plan.md, EC-D2):
+ * One line of a person's appearances in a show (the episode cast plan, EC-D2):
  * an episode ([episode] set, "S9E17 · Authority") for a guest or recurring role, or a whole season
  * ([episode] null, "Season 3") for a regular role. [episodeId] is the source's episode, null when
  * the source does not have it or for a season. [inSource]: whether the source has the episode or

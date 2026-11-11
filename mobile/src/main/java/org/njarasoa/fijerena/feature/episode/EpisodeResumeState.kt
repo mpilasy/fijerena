@@ -108,7 +108,7 @@ fun rememberEpisodeResumeState(
 /**
  * Whether [episodeId] has been played: a resume position or a play time, not only a watched mark.
  * The route's episode is the resume episode ("Continue watching") only then; an actor's episode
- * opens the screen on it without being one (docs/plans/20261030_episode-cast-plan.md).
+ * opens the screen on it without being one (the episode cast plan).
  */
 internal suspend fun wasPlayed(
     mediaRepository: MediaRepository,

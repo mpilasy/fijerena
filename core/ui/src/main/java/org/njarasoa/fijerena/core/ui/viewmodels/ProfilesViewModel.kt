@@ -44,7 +44,7 @@ data class ProfileUi(
 data class ProfileSettings(
     val admin: Boolean,
     val autoplayNextEpisode: Boolean,
-    /** A child profile (docs/plans/20261019_tv-household-ux-plan.md): adult categories hidden, never Admin. */
+    /** A child profile (the household UX plan): adult categories hidden, never Admin. */
     val child: Boolean = false,
     /** A Nerd ([AppSettings.nerdMode]): sees the stats and extra information. Never a child. */
     val nerd: Boolean = false,
@@ -179,7 +179,7 @@ class ProfilesViewModel(
 
     /**
      * There is a child profile and no Admin has a PIN: Settings asks the admin to set one
-     * (docs/plans/20261019_tv-household-ux-plan.md, Phase 3), since without it anyone can open
+     * (the household UX plan, Phase 3), since without it anyone can open
      * Settings, change the filters or become Admin with the 7 taps.
      */
     fun needsAdminPin(): Boolean = profiles.value.any { appSettings.isChildProfile(it.id) } && adminPinHolders().isEmpty()
@@ -287,7 +287,7 @@ class ProfilesViewModel(
         }
     }
 
-    // A child profile's Favourites pane (docs/plans/20261019_kids-home-plan.md, Phase 3): what its
+    // A child profile's Favourites pane (the kids' Home plan, Phase 3): what its
     // Home shows, read and changed from the admin's Settings.
     private val profileFavorites by lazy { ProfileFavorites(context) }
 

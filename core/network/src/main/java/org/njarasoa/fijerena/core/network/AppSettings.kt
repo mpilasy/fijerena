@@ -266,7 +266,7 @@ class AppSettings(
      * [profileId] is a child's: every Xtream source shows it only what Parental controls let through
      * ([org.njarasoa.fijerena.core.network.provider.CategoryFilters.child]) and it is never
      * Admin. Per profile and synced; off until turned on. See
-     * docs/plans/20261019_tv-household-ux-plan.md, Phase 1.
+     * the household UX plan, Phase 1.
      */
     fun isChildProfile(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHILD_PROFILE, profileId), false)
 
@@ -289,7 +289,7 @@ class AppSettings(
     /**
      * The active profile is a Nerd: it sees the stats and extra information (source badges, stream
      * statistics, raw error text). Per profile and synced; off until turned on. A child is never a
-     * Nerd. See docs/plans/20261103_nerd-role-sync-failures-plan.md.
+     * Nerd. See the Nerd role plan.
      */
     val isNerdMode: Boolean get() = nerdMode(activeProfileId)
 
@@ -842,7 +842,7 @@ class AppSettings(
 
     /**
      * The active profile's UI theme ([UiThemes.CUSTOM] or a packaged one's id). Per profile and
-     * synced, like [themeId]. See docs/plans/20261021_ui-themes-plan.md.
+     * synced, like [themeId]. See the UI themes plan.
      */
     var uiThemeId: String
         get() = uiThemeId(activeProfileId)
@@ -1039,7 +1039,7 @@ class AppSettings(
         }
 
     /**
-     * The screens' clock at the top right (docs/plans/20261025_tv-clock-and-full-screen-recent-plan.md).
+     * The screens' clock at the top right (the TV clock plan).
      * This device's: not per profile, not synced, not exported. Off by default: many phones show
      * the time all the time. The player's controls always show it.
      */
@@ -1094,7 +1094,7 @@ class AppSettings(
         }.distinctUntilChanged()
 
     /**
-     * The TMDB chart rows on Home and the Charts lists (docs/plans/20261029_tmdb-charts-plan.md).
+     * The TMDB chart rows on Home and the Charts lists (the TMDB charts plan).
      * This device's, set in Admin: not per profile, not synced, not exported. On by default; they
      * show only with a TMDB key anyway. Off, no chart page is read.
      */
@@ -1180,7 +1180,7 @@ class AppSettings(
      */
 
     /**
-     * The entries of a Parental controls list (docs/plans/20261020_parental-controls-plan.md): the
+     * The entries of a Parental controls list (the parental controls plan): the
      * same for the whole household, synced. Its [ParentalList.defaults] until
      * [seedParentalListsOnce] has stored them.
      */

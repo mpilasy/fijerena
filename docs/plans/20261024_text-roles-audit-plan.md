@@ -1,6 +1,6 @@
 # Text fonts and colours audit
 
-**Status:** Built 2026-10-24 (Phases 1–3). Checked on the phone emulator (phase 1's dock in Meadow; Home card titles in Console) and the TV emulator (Settings group names, section headings and the Live TV preview's Next line in Console).
+**Status:** Built 2026-10-24 (Phases 1–3). Checked on the phone emulator (phase 1's dock in Meadow; Home card titles in Console) and the TV emulator (Settings group names, section headings and the Live TV preview's Next line in Console). Left: the phone accents that Phase 3 did not review (see Notes).
 
 ## Goal
 

@@ -4,7 +4,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Where an incremental update of the guide search index stands
- * (docs/plans/20261105_pausable-guide-indexing-plan.md). [sourceIds] are the refreshed guide
+ * (the pausable guide indexing plan). [sourceIds] are the refreshed guide
  * sources; [cursor] the last programme id done in [phase]; [cutoff] the end time below which the
  * swap deletes a programme as ended; [boundary] the highest programme id before the swap, so the
  * new rows of [sourceIds] are those above it.

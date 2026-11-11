@@ -25,7 +25,7 @@ a Jellyfin source has only its own **Browse <source>** entry, and is read live f
 | # | Question | Options |
 |---|----------|---------|
 | JM-Q1 | Where does the local copy live? | (a) **One shared catalogue** — the `xtream_*` tables take Jellyfin rows; their integer ids become text ids (a migration of the biggest tables). Merged screens and search read one place. Recommended. (b) **New Jellyfin tables** next to the Xtream ones; no migration of the Xtream tables, but every merged query and the search index read two places. |
-| JM-Q2 | One Jellyfin login per household (the one Jellyfin login plan, docs/plans/20261024_jellyfin-one-login-plan.md) means every profile shares one Jellyfin user's history and favourites. Merging makes this more visible (a film the Kid watches shows in the Admin's Continue Watching). | (a) Keep it, and say so in Edit Source. (b) A Jellyfin user per profile, as a later plan. |
+| JM-Q2 | One Jellyfin login per household (the one Jellyfin login plan) means every profile shares one Jellyfin user's history and favourites. Merging makes this more visible (a film the Kid watches shows in the Admin's Continue Watching). | (a) Keep it, and say so in Edit Source. (b) A Jellyfin user per profile, as a later plan. |
 
 ## What exists (survey 2026-10-31)
 

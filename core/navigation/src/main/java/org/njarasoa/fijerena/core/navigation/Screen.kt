@@ -115,7 +115,7 @@ sealed interface Screen {
     @Serializable
     data object SportsTab : Screen
 
-    /** The phone's Home tab: the rows of every section (docs/plans/20261019_phone-home-tab-plan.md). */
+    /** The phone's Home tab: the rows of every section (the phone Home tab plan). */
     @Serializable
     data object HomeTab : Screen
 
@@ -157,7 +157,7 @@ sealed interface Screen {
 
     /**
      * A person as TMDB knows them: the photo, the facts, and the films and shows of the person that
-     * the profile's sources have. The Cast tab opens it. See docs/plans/20261030_cast-tab-plan.md.
+     * the profile's sources have. The Cast tab opens it. See the cast tab plan.
      *
      * @param tmdbId The TMDB person id.
      * @param name The name to show until TMDB answers.
@@ -321,7 +321,7 @@ sealed interface Screen {
 
     /**
      * Settings › Parental controls on the phone (admin only): the word lists and Check a source. See
-     * docs/plans/20261020_parental-controls-plan.md → The page.
+     * the parental controls plan, "The page".
      */
     @Serializable
     data object ParentalControls : Screen

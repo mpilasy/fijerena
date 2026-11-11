@@ -13,7 +13,7 @@ data class ProfileLook(
 /**
  * A packaged UI theme: it sets the colour theme and the Look and Feel together, and while a
  * profile uses it these cannot be changed one by one. The poster background stays the profile's own
- * (docs/plans/20261021_ui-themes-plan.md). [adminOnly]: only an Admin can pick it (a light theme).
+ * (the UI themes plan). [adminOnly]: only an Admin can pick it (a light theme).
  */
 data class PackagedUiTheme(
     val id: String,
@@ -50,7 +50,7 @@ object UiThemes {
             PackagedUiTheme("rounded", themeId = "midnight", uiStyleId = "cupertino"),
             PackagedUiTheme("sharp", themeId = "amethyst", uiStyleId = "roku"),
             PackagedUiTheme("balanced", themeId = "amoled_black", uiStyleId = "bravia"),
-            // docs/plans/20261020_lcars-look-plan.md and docs/plans/20261021_meadow-look-plan.md.
+            // the Console look plan and the Meadow look plan.
             PackagedUiTheme("console", themeId = "console", uiStyleId = "console"),
             PackagedUiTheme("meadow_dusk", themeId = "meadow_dusk", uiStyleId = "meadow"),
             // Light, so kept for admins as the Meadow and Daylight colour themes are.

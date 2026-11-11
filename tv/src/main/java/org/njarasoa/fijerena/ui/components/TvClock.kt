@@ -30,7 +30,7 @@ import java.util.Date
 
 /**
  * The clock at the top right of every TV screen, at the player controls' clock's place
- * (docs/plans/20261025_tv-clock-and-full-screen-recent-plan.md).
+ * (the TV clock plan).
  *
  * - The nav host owns one [TvClockState], provides it as [LocalTvClock] and draws [TvClockOverlay]
  *   over the screens.

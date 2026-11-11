@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 
-/** The Parental controls lists: filled once, shared and synced (docs/plans/20261020_parental-controls-plan.md). */
+/** The Parental controls lists: filled once, shared and synced (the parental controls plan). */
 class AppSettingsParentalListsTest {
     private lateinit var settings: AppSettings
 

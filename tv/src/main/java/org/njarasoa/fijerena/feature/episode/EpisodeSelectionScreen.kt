@@ -252,7 +252,7 @@ fun EpisodeSelectionScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // A child profile's (docs/plans/20261019_kids-home-plan.md, Phase 2): no way on to the category,
+    // A child profile's (the kids' Home plan, Phase 2): no way on to the category,
     // and no favourite to undo — it reached this show from its Home. More Like This stays, filtered.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()

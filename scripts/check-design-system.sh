@@ -15,7 +15,7 @@
 #   - a palette colour read directly (CinemaTextSecondary, CinemaAccent, …) — use a role
 #   - a phone top bar (TopAppBar and its variants, TopAppBarDefaults) — use MobileScreenHeader
 #   - dialog buttons laid out by the caller (confirmButton = / dismissButton =): a dialog takes its
-#     actions as data and the Look and Feel lays them out (docs/plans/20261101_style-layout-tokens-plan.md)
+#     actions as data and the Look and Feel lays them out (the style layout tokens plan)
 #   - outside the icon components (ICON_COMPONENTS): a raw IconButton( — phone CinemaIconButton /
 #     IconAction, TV TvIconAction / CinemaIconButton; and a colour set on an icon (tint = ,
 #     iconTint = ) — an icon's colour is a tone: CinemaIcon(tone = …) (TV TvIcon)
@@ -27,7 +27,7 @@
 #     ListItem() and a fill or outline set in place (.background(, .border() — CinemaPanel /
 #     Modifier.panel (PanelFill, PanelCorner, PanelOutline), TV TvPanel, TvCard with a TvCardLooks
 #     look, the focus modifiers (FocusModifiers.kt), the phone CinemaChoiceRow and SettingsListRow
-#     (docs/plans/20261101_style-layout-tokens-plan.md, Phase 5)
+#     (the style layout tokens plan, Phase 5)
 #   - an alpha number (alpha = 0.5f, .copy(alpha = 0.5f)) — use a CinemaAlpha token; and a type
 #     value set in place (fontSize = , fontSize * , FontFamily.) — use a TextRole, CinemaCodeText for
 #     machine text, or the Look's fonts (UiFonts)
@@ -67,7 +67,7 @@ cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
 PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|MaterialTheme\.typography|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])(confirmButton|dismissButton)[[:space:]]*=|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
-# Phone top bars: MobileScreenHeader is the only one (docs/plans/20261101_style-layout-tokens-plan.md, Phase 3).
+# Phone top bars: MobileScreenHeader is the only one (the style layout tokens plan, Phase 3).
 TOP_BAR_PATTERN='(^|[^A-Za-z0-9_.])(TopAppBar|CenterAlignedTopAppBar|MediumTopAppBar|LargeTopAppBar)\(|TopAppBarDefaults'
 PATTERN="$PATTERN|$TOP_BAR_PATTERN"
 # Alpha numbers and type values set in place (same plan, Phase 6). An alpha computed from a value
@@ -178,7 +178,7 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(grep -rn --include='*.kt' 'CinemaDialogActionButton(' mobile/src/main | grep -v '/ui/components/' | cut -d: -f1,2 || true)
 
-# Feedback and empty states (docs/plans/20261101_consistency-round-2-plan.md, Phase 3). Lines are
+# Feedback and empty states (the consistency round 2 plan, Phase 3). Lines are
 # file:line hits of Kotlin code (not comments, not lines marked `// look-ok: <reason>` or under one).
 code_hits() {
     local pat="$1"
@@ -229,7 +229,7 @@ done < <(find tv/src/main/java mobile/src/main/java -name '*.kt' -not -name '*Em
     ' "$f"
 done || true)
 
-# Dialog bodies and menus (docs/plans/20261101_consistency-round-2-plan.md, Phase 1), outside the
+# Dialog bodies and menus (the consistency round 2 plan, Phase 1), outside the
 # components (ui/components):
 #   - a button in a CinemaAlertDialog( call (its body): the dialog takes its buttons as data
 #     (main, others, danger, cancel); a list of actions is an action menu (phone CinemaActionMenu,
@@ -291,7 +291,7 @@ while IFS= read -r hit; do
     failures=$((failures + 1))
 done < <(grep -rn --include='*.kt' -E '(^|[^A-Za-z0-9_.])(DropdownMenu(Item)?|ExposedDropdownMenu(Box)?)\(' tv/src/main mobile/src/main |
     grep -v '/ui/components/' | cut -d: -f1,2 || true)
-# Leftover raw Material (docs/plans/20261101_consistency-round-2-plan.md, Phase 4): an icon is
+# Leftover raw Material (the consistency round 2 plan, Phase 4): an icon is
 # CinemaIcon / TvIcon with a tone, the phone's slider CinemaSlider, pull to refresh
 # CinemaPullToRefresh, a tooltip CinemaTooltip (or IconAction, which has one); only ui/components
 # call the Material ones.
@@ -325,7 +325,7 @@ done < <(find mobile/src/main/java -name '*.kt' -not -path '*/ui/components/*' |
     fi
 done)
 
-# Choice and toggle rows (docs/plans/20261101_consistency-round-2-plan.md, Phase 2):
+# Choice and toggle rows (the consistency round 2 plan, Phase 2):
 #   - a check box, radio or switch outside the components (ui/components, core/ui/components): a
 #     row of options is a toggle row (phone CinemaCheckRow / CinemaRadioRow / CinemaSwitchRow, TV
 #     TvCheckRow / TvRadioRow / TvSwitchRow), the whole row tappable. A card's own control is marked

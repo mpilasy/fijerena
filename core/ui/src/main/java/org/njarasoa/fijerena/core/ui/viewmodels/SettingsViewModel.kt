@@ -167,7 +167,7 @@ class SettingsViewModel(
      * is Admin (the profile rules plan, PR-3). Returns whether it is on now.
      */
     fun enableAdmin(): Boolean {
-        // A child profile is never Admin (docs/plans/20261019_tv-household-ux-plan.md).
+        // A child profile is never Admin (the household UX plan).
         val allowed = !appSettings.isChildProfile(appSettings.activeProfileId) && !adminExists()
         if (allowed) appSettings.isAdmin = true
         refreshAdmin()

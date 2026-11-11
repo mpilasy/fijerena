@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.ui.components.CinemaTooltip
 
 /**
- * The phone's bottom bar tabs (docs/plans/20261019_phone-home-tab-plan.md), in bar order. [route] is
+ * The phone's bottom bar tabs (the phone Home tab plan), in bar order. [route] is
  * the tab's root destination; [contentType] the section it opens.
  */
 enum class MobileTab(

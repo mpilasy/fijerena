@@ -61,7 +61,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * A person's page on the phone (docs/plans/20261030_cast-tab-plan.md, Design 3): the photo, the
+ * A person's page on the phone (the cast tab plan, Design 3): the photo, the
  * name, the birth and death dates and place, the biography (a few lines; a tap shows all of it),
  * then the person's Movies and TV Shows that the profile's sources have, as Home's rows. Each row's
  * title line ends with its own switch for the titles no source has (UX-D7: off on each opening,
@@ -69,7 +69,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * sources" under its title. A tap on a card opens the title on its own source, or a TMDB-only card
  * its TMDB page ([onTitleSelected]). A show card of a role opens the episode, or a sheet of the
  * person's episodes or seasons in the show ([ShowAppearancesSheet]), each opening the show there
- * ([onShowSelected]; docs/plans/20261030_episode-cast-plan.md, EC-D2).
+ * ([onShowSelected]; the episode cast plan, EC-D2).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

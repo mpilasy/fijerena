@@ -22,7 +22,7 @@ enum class CurrentChannelPolicy {
 
     /**
      * Put it first: the channel playing is the most recent, whether or not its delayed write has
-     * landed. For TV Live TV's preview panel (docs/plans/20261025_live-recent-order-plan.md).
+     * landed. For TV Live TV's preview panel (the Live TV Recent order plan).
      */
     FIRST,
 

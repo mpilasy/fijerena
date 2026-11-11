@@ -206,12 +206,12 @@ class StreamingPlaybackService : MediaSessionService() {
     private var pendingRetry: Runnable? = null
 
     // A film paused this long gives its connection back (shown as still Paused there); the next
-    // Play reopens it where it was (docs/plans/20261017_xtream-stream-release-plan.md → Phase 5).
+    // Play reopens it where it was (the Xtream stream release plan, Phase 5).
     private var freedWhilePaused: PlaybackState.Paused? = null
 
     // A retry that came due while paused: reopening the stream then would play it (and take an
     // Xtream connection) against the pause. The next Play runs it
-    // (docs/plans/20261017_xtream-stream-release-plan.md → Phase 2).
+    // (the Xtream stream release plan, Phase 2).
     private var heldRetry: Runnable? = null
     private val accountBusyWait = AccountBusyWait()
 
@@ -291,7 +291,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
     // Named so stop() can remove it: posted just before a stop, it ran after and left the closed
     // stream in Error, which the auto-retry below then reopened when the network came back
-    // (docs/plans/20261017_xtream-stream-release-plan.md → Phase 1).
+    // (the Xtream stream release plan, Phase 1).
     internal val recoveryExhaustedHandler =
         Runnable {
             val isLive = _currentMetadata.value.isLive
@@ -1442,7 +1442,7 @@ class StreamingPlaybackService : MediaSessionService() {
         NetworkModule.streamCalls.cancelAll()
         // Nothing may reopen a stopped stream from the session — a headset or car Play, the
         // shade's controls — with no screen, holding an Xtream connection: the app restarts
-        // through playStream(), never this item (docs/plans/20261017_xtream-stream-release-plan.md → Phase 4).
+        // through playStream(), never this item (the Xtream stream release plan, Phase 4).
         mediaSession?.player?.clearMediaItems()
         _playbackState.value = PlaybackState.Idle
         // A stopped stream is not kept on screen: whatever plays next starts from black.

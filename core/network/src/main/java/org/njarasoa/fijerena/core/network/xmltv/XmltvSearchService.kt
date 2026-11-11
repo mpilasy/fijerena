@@ -80,7 +80,7 @@ class XmltvSearchService(
     /**
      * The guide sources whose index entries a refresh is still writing are read without FTS, in
      * titles and descriptions; the others through the index
-     * (docs/plans/20261105_pausable-guide-indexing-plan.md).
+     * (the pausable guide indexing plan).
      */
     private suspend fun searchFromIndex(
         query: String,

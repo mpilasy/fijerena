@@ -54,7 +54,7 @@ import org.robolectric.RobolectricTestRunner
  * on, Left and Right between the panes, OK on a category, and where focus lands on Back from the
  * Live TV preview or a film's details. See docs/plans/20260914_codebase-robustness-plan.md, Phase 5.
  * The tab row over the items (the picked category, Recent, Favourites) follows the D-pad map of
- * docs/plans/20261027_tv-browse-tabs-plan.md. A category's tab and its row share its name: a step
+ * the TV browse tabs plan. A category's tab and its row share its name: a step
  * after landing on one tells them apart.
  *
  * The test holds the selection and the rows, as `TvCategoryGridScreen` does with its view model's

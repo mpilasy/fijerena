@@ -382,7 +382,7 @@ val SlatePalette =
         onAccentOverride = Color(0xFF062E6F),
     )
 
-/** A starship-console look: a flat black ground, orange and lavender blocks, pale blue text (docs/plans/20261020_lcars-look-plan.md). */
+/** A starship-console look: a flat black ground, orange and lavender blocks, pale blue text (the Console look plan). */
 val ConsolePalette =
     CinemaThemePalette(
         id = "console",
@@ -414,7 +414,7 @@ val ConsolePalette =
         onAccentOverride = Color.Black,
     )
 
-/** A painted night: a blue-violet sky with stars and a moon over dark hills, amber lantern accent (docs/plans/20261021_meadow-look-plan.md). */
+/** A painted night: a blue-violet sky with stars and a moon over dark hills, amber lantern accent (the Meadow look plan). */
 val MeadowDuskPalette =
     CinemaThemePalette(
         id = "meadow_dusk",

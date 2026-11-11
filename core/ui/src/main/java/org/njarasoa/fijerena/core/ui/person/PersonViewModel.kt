@@ -36,7 +36,7 @@ import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
- * A person's page (docs/plans/20261030_cast-tab-plan.md, Design 3): the person TMDB knows, then
+ * A person's page (the cast tab plan, Design 3): the person TMDB knows, then
  * their films and shows that the profile's sources have. With [crew], the titles the person directed
  * or wrote (CT-D4). The Movies row and the TV Shows row each have their own switch for the titles
  * no source has (UX-D7); both start off each time the page opens and are not stored (CT-D8); a
@@ -87,7 +87,7 @@ class PersonViewModel(
     )
 
     /**
-     * What a show card on the page is doing (docs/plans/20261030_episode-cast-plan.md, EC-D2): the
+     * What a show card on the page is doing (the episode cast plan, EC-D2): the
      * credit call in flight ([Loading]), the list of the person's appearances open ([Lines]), or
      * the show page to open now ([Open], once: the screen navigates, then calls [opened]).
      */

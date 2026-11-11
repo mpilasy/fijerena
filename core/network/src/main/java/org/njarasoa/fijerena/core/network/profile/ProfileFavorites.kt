@@ -27,7 +27,7 @@ data class ProfileFavorite(
 
 /**
  * Any profile's favourites, read and written from another profile's Settings: a parent fills a
- * child's Home without switching to it (docs/plans/20261019_kids-home-plan.md, Phase 3). The rows
+ * child's Home without switching to it (the kids' Home plan, Phase 3). The rows
  * are `favorite_state`'s, written through the paths that record sync tombstones, so the child's
  * other devices follow.
  */

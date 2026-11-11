@@ -41,7 +41,7 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * A person's appearances in one show, over the person page (docs/plans/20261030_episode-cast-plan.md,
+ * A person's appearances in one show, over the person page (the episode cast plan,
  * EC-D2): one row per episode ("S9E17 · Authority") or per season ("Season 3"), a row the source
  * lacks marked "Not in your source". OK on a row calls [onSelect]; Back calls [onClose], and the
  * person page gives focus back to the show card. An in-tree overlay: focus stays in it.

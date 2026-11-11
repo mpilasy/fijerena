@@ -1008,7 +1008,7 @@ private const val PANE_WEIGHT = 0.7f
 
 /**
  * The groups of Settings, in rail order (the settings reorg plan): Your Profile (PROFILES), the
- * five Admin sections under an "Admin" heading (docs/plans/20261111_admin-sections-direct-plan.md),
+ * five Admin sections under an "Admin" heading (the Admin sections plan),
  * and About.
  */
 enum class SettingsGroup(

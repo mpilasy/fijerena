@@ -213,7 +213,7 @@ written (no shared transaction): provider passwords (`provider`; a Jellyfin sour
 category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
 profile `shared`, is ignored), `admin` (per profile; a `dev_mode` record from an older build is applied to it, but `dev_mode` is no longer sent), `child_profile` (per profile), `nerd_mode` (per profile), `autoplay_next_episode` (per
-profile), `pin_hash` (per profile; a removed PIN is sent as blank), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
+profile), `pin_hash` (per profile; a removed PIN is sent as blank), the five Parental Controls lists (`parental_*`, one shared record per list), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, each live sync device's build as one shared record per device, `device_build:<deviceId>` = a JSON `DeviceBuild` (version, build type, Android release), stored the same way, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
 
@@ -280,6 +280,14 @@ Provides full-text search over `epg_programme`.
 | `programme_count` | INTEGER | `epg_programme` rows at that time; 0 or no row means "not indexed" at start (unless the tables hold rows, which repairs it) |
 | `timezone_offset_hours`| INTEGER | Always written as 0 (default 0); offsets are per source, on `epg_source` |
 
+### Table: `epg_fts_progress`
+Room does not manage this table (`IncrementalFts`). It has one row (`id` = 1) while an incremental
+index update runs: `phase` (REMOVE, ADD or MERGE), `source_ids`, `cursor` (the last programme id
+done), `cutoff` and `boundary` (the highest programme id before the swap). Each batch commits its
+work and this row in one transaction, so a batch never runs twice: an FTS4 entry deleted twice
+damages the index. A staged refresh with a clean index updates the index in these batches
+(`swapAndIndexIncrementally`); only a stale index gets the full rebuild.
+
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
@@ -310,7 +318,7 @@ v20 added `profileId` to the primary key of
 which are no longer used — items follow their category's flag at query time, see
 the fast profile switch plan; v25 added `allowed` and an index on
 `(providerId, allowed)` to `xtream_streams` and `xtream_series`: a Parental controls exception lets a
-child see a film or series in a hidden category, see `docs/plans/20261020_parental-controls-plan.md`;
+child see a film or series in a hidden category, see the parental controls plan;
 v26 added `wanted_title` (a profile's Wanted list) and `tmdbId` on `favorite_state`, see
 the wanted titles plan; v27 added the ask-once answer and release data to
 `wanted_title`, see the wishlist ux plan; v28 added `facts` to `xtream_streams` and `xtream_series`
@@ -756,6 +764,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `admin` |
 | `pin_hash_<profileId>` | TEXT | That profile's optional 4-digit PIN as `ProfilePins` stores it (`salt:hash`, salted PBKDF2); absent or blank = no PIN. Synced per profile (a removal as blank); removed with the profile — see the profile pin plan |
 | `pin_failures_<profileId>`, `pin_wait_until_<profileId>` | INT, LONG | Wrong PINs in a row for that profile on this device, and when it may be tried again (epoch ms; 0 = now). Per device, never synced; removed with the profile |
+| `parental_kids_categories`, `parental_kids_film_categories`, `parental_adult_categories`, `parental_hidden_titles`, `parental_exceptions` | TEXT | The five Parental Controls lists, each a JSON array of entries. One for the household, synced as one shared record per list, so the later edit replaces the whole list. Filled once with the app's words (`AppSettings.seedParentalListsOnce`). |
 | `child_lock_failures`, `child_lock_wait_until` | INT, LONG | Wrong PINs in a row typed to leave a child profile on this device, and when one may be tried again (epoch ms; 0 = now). The child lock's own count, apart from each profile's. Per device, never synced |
 | `last_tab_<profileId>` | TEXT | The tab (`HOME` or a section's `ContentType`) that profile last had open in the phone's bottom bar, opened at the next start. Per device, never synced; removed with the profile |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
@@ -767,6 +776,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see the live sync now playing plan |
 | `theme_id_<profileId>` | TEXT | That profile's colour theme (absent = `deep_night`). Synced per profile; a new profile copies the profile in use's; removed with the profile. Replaced the device-wide `theme_id`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
 | `ui_style_id_<profileId>` | TEXT | That profile's Look and Feel, independent of colour (absent = `material`). Synced, copied, removed and upgraded from the device-wide `ui_style_id` like `theme_id_<profileId>` |
+| `ui_theme_id_<profileId>`, `poster_backdrop_<profileId>` | TEXT, BOOLEAN | That profile's UI theme (absent = `custom`; an unknown id reads as Custom) and its Poster in the Background switch (absent = on). Synced per profile; removed with the profile |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
 | `epg_refresh_interval_copied_v1` | BOOLEAN | One-time flag, per install (never synced): `EpgRefreshSchedule.copyLegacyIntervalOnce` has written the retired device-wide interval (`epg_auto_refresh` off or `epg_refresh_interval` -1 → -1, else the interval) into every `epg_source` row whose `refresh_interval_hours` is null. Set only after it succeeds |

@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * A child profile's rules with the app's starting lists, on names from three real catalogues
- * (docs/plans/20261020_parental-controls-plan.md).
+ * (the parental controls plan).
  */
 class ParentalRulesTest {
     private val rules = ParentalRules()

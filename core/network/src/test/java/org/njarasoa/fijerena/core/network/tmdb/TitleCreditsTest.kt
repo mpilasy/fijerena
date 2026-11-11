@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** The Cast tab's people from TMDB's credits (docs/plans/20261030_cast-tab-plan.md, Phase 1). */
+/** The Cast tab's people from TMDB's credits (the cast tab plan, Phase 1). */
 class TitleCreditsTest {
     private val json =
         Json {

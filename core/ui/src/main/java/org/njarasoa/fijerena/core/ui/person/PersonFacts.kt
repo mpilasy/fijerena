@@ -29,7 +29,7 @@ fun personFactsLine(person: TmdbPerson): String? =
 fun personRoleText(role: PersonRole?): String? = personRoleText(LocalResources.current, role)
 
 /**
- * "as Paul", for a show's role "24 episodes · as Olivia Benson" (docs/plans/20261030_episode-cast-plan.md,
+ * "as Paul", for a show's role "24 episodes · as Olivia Benson" (the episode cast plan,
  * EC-D2), or on a crew page "Director, Writer": a person's part in a title; null when TMDB has none.
  */
 fun personRoleText(

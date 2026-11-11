@@ -150,7 +150,7 @@ interface EpgIndexDao {
 
     /**
      * Title and description substring search that doesn't touch FTS, for guide sources whose index
-     * entries are still being written after a refresh (docs/plans/20261105_pausable-guide-indexing-plan.md).
+     * entries are still being written after a refresh (the pausable guide indexing plan).
      * A scan of those sources' rows. [pattern] as in [searchByTitleLike].
      */
     @Query(

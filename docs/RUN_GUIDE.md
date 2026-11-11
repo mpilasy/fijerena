@@ -88,6 +88,8 @@ scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateExc
 scripts/check-design-system.sh      # no raw colours, sizes or Material controls outside the theme (per-file allow-list)
 ```
 
+`scripts/check-sports-apis.sh` calls each sports endpoint (ESPN, NHL, MLB) once and prints OK or FAIL. These APIs have no public contract: run it by hand when sports data looks wrong. CI does not run it, because it calls outside services.
+
 CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these workflows under `.github/workflows/`:
 - `checks.yml`: a grep for blanket destructive Room fallbacks and the five gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
@@ -188,7 +190,7 @@ scripts/deploy-tv-emulator.sh [<tv-emulator-id>]
 scripts/deploy-mobile-emulator.sh [<mobile-emulator-id>]
 ```
 
-HEVC testing on an emulator is limited, and Jellyfin content will be transcoded.
+HEVC testing on an emulator is limited, and Jellyfin content will be transcoded. On the TV emulator, full screen from the Live TV preview can freeze with a full buffer and no picture: the emulator's decoder causes this, and real TVs do not show it.
 
 #### Test source: Jellyfin as Xtream
 

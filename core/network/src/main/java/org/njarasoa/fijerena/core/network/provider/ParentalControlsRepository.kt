@@ -9,7 +9,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
- * What Settings › Parental controls shows besides the lists (docs/plans/20261020_parental-controls-plan.md):
+ * What Settings › Parental controls shows besides the lists (the parental controls plan):
  * how much each entry matches on the child profiles' sources, and, for one source, which
  * categories a child sees. Local only, no network.
  */

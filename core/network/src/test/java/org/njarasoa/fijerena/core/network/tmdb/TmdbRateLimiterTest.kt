@@ -8,7 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** The limit on TMDB calls (docs/plans/20261030_cast-tab-plan.md, CT-D0). */
+/** The limit on TMDB calls (the cast tab plan, CT-D0). */
 class TmdbRateLimiterTest {
     private fun TestScope.limiter() = TmdbRateLimiter(now = { testScheduler.currentTime })
 

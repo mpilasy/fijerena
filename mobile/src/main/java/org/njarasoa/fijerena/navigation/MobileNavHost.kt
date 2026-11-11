@@ -149,7 +149,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     LaunchedEffect(showClock) { clock.off = !showClock }
     val coroutineScope = rememberCoroutineScope()
 
-    // The bottom bar's tabs (docs/plans/20261019_phone-home-tab-plan.md): Home, then the profile's
+    // The bottom bar's tabs (the phone Home tab plan): Home, then the profile's
     // merged sections (its Xtream sources', multi-source plan Phase 6), read at startup, on each visit
     // to a tab's root and after every switch; its other sources are Browse entries.
     var profileSections by remember { mutableStateOf<ProfileSections?>(null) }

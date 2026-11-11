@@ -82,7 +82,7 @@ data class CategoryFilters(
      * A child profile's Parental controls rules: only the categories they show, whatever the rules
      * say. Null for other profiles. Never stored: [CategoryFiltersStore.get] sets it from the
      * profile, so the rules editor and sync carry only the rules
-     * (docs/plans/20261020_parental-controls-plan.md).
+     * (the parental controls plan).
      */
     @kotlinx.serialization.Transient
     val child: ParentalRules? = null,

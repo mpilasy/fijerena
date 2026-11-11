@@ -12,7 +12,7 @@ import androidx.room.Index
         Index(value = ["categoryId", "providerId"]),
         // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
         Index(value = ["providerId", "type", "categoryId"]),
-        // Serves Phase 5 TMDB dedup lookups (see 20260828_watch-state-durable-storage-plan.md)
+        // Serves Phase 5 TMDB dedup lookups (see the watch state durable storage plan)
         Index(value = ["providerId", "tmdbId"]),
         // Finds the allowed films of a provider for the Parental controls recompute (v25).
         Index(value = ["providerId", "allowed"]),

@@ -19,7 +19,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
- * What a panel is for (docs/plans/20261101_style-layout-tokens-plan.md, Phase 5). The colour theme
+ * What a panel is for (the style layout tokens plan, Phase 5). The colour theme
  * and the Look and Feel give its colour through [CinemaTheme]; a screen names the kind, never a
  * colour.
  */

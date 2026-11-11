@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 
 /**
- * The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md): each chart of a section cut down
+ * The TMDB chart rows (the TMDB charts plan): each chart of a section cut down
  * to the titles the profile's Xtream sources have, each card on its own source. Nothing when the
  * Admin switch is off or without a TMDB key; a chart with no match has no row. A child profile gets
  * the kids' charts instead (`TmdbChart.forKids`, the kids' charts plan), cut down to what the

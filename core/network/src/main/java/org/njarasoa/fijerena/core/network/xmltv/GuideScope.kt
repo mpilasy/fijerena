@@ -12,7 +12,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
  * Local), which kept their guide while they could be the source in use
  * (docs/plans/20261012_multi-source-search-history-plan.md, Phases 6 and 7). A guide source can
  * serve more than one source: [providerIdsBySourceId] keeps the searched sources that read each one,
- * in the profile's source order (docs/plans/20261103_one-guide-per-url-plan.md, Design G).
+ * in the profile's source order (the one guide per URL plan, Design G).
  */
 data class GuideScope(
     val providers: List<ProviderEntity>,

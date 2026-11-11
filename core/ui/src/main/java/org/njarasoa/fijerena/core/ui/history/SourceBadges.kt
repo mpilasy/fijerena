@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 /**
  * The profile in use is a Nerd: it sees the stats and extra information, source badges first. Read
  * by every composable that shows them; view models read [AppSettings.isNerdMode]. See
- * docs/plans/20261103_nerd-role-sync-failures-plan.md.
+ * the Nerd role plan.
  */
 val LocalNerd = compositionLocalOf { false }
 

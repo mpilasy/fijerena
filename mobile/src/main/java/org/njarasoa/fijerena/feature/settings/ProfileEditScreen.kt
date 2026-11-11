@@ -414,7 +414,7 @@ internal fun ProfileOwnRows(
     var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
     var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
     var posterBackdrop by remember(profileId) { mutableStateOf(viewModel.posterBackdropOf(profileId)) }
-    // A packaged UI theme sets the colour theme and the Look and Feel (docs/plans/20261021_ui-themes-plan.md).
+    // A packaged UI theme sets the colour theme and the Look and Feel (the UI themes plan).
     var uiThemeId by remember(profileId) { mutableStateOf(viewModel.uiThemeOf(profileId)) }
     val lookLocked = uiThemeId != UiThemes.CUSTOM
     var choosingUiTheme by rememberSaveable { mutableStateOf(false) }

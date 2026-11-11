@@ -357,7 +357,7 @@ val GroteskStyle =
     )
 
 /**
- * A starship-console look (docs/plans/20261020_lcars-look-plan.md): pill buttons and chips, Antonio
+ * A starship-console look (the Console look plan): pill buttons and chips, Antonio
  * titles, headings and labels (labels in capitals) over Inter text, no zoom and no glow on focus.
  */
 val ConsoleStyle =
@@ -390,7 +390,7 @@ val ConsoleStyle =
         spacing = 0.9f,
     )
 
-/** A hand-painted look (docs/plans/20261021_meadow-look-plan.md): Klee One titles over Zen Maru Gothic, round 20 dp corners, a gentle lift. */
+/** A hand-painted look (the Meadow look plan): Klee One titles over Zen Maru Gothic, round 20 dp corners, a gentle lift. */
 val MeadowStyle =
     UiStyle(
         id = "meadow",

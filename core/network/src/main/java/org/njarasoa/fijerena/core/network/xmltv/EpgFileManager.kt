@@ -975,7 +975,7 @@ class EpgFileManager private constructor(
                             totalDownloadBytes = totalBytes,
                         )
                     // The index of the refreshed sources only, in batches that wait while video
-                    // plays (docs/plans/20261105_pausable-guide-indexing-plan.md). A stale index
+                    // plays (the pausable guide indexing plan). A stale index
                     // (an earlier rebuild was cut off) still needs the full rebuild.
                     if (indexer.isFtsStale()) {
                         swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
@@ -1918,7 +1918,7 @@ class EpgFileManager private constructor(
         } else {
             // On a device with little memory (a Chromecast HD), the automatic refresh waits until
             // the device is idle (the TV off or asleep), so it never competes with an app in use
-            // (docs/plans/20261105_pausable-guide-indexing-plan.md → IX4). WorkManager refuses a
+            // (the pausable guide indexing plan, IX4). WorkManager refuses a
             // backoff on an idle job, so that one has none: it runs at the next idle time.
             val idleOnly = isLowMemoryDevice(context)
             val constraints =

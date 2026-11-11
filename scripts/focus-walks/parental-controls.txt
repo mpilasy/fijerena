@@ -1,4 +1,4 @@
-# Settings › Parental controls (docs/plans/20261020_parental-controls-plan.md, Phase 5), TV
+# Settings › Parental controls (the parental controls plan, Phase 5), TV
 # emulator, the profiles of settings.txt: atr in use (the only Admin, no PIN), Kid (the child
 # profile) with Xtream sources. The lists hold the app's words (no admin change yet).
 # Recorded on the TV emulator 2026-10-20: the first child profile's first source is "panel-a".

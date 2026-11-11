@@ -403,7 +403,7 @@ abstract class XtreamDatabase : RoomDatabase() {
         /**
          * Migration 24→25: the `allowed` flag on streams and series. A Parental controls exception
          * lets a child see a film or series in a hidden category (see
-         * docs/plans/20261020_parental-controls-plan.md). The old `excluded` item columns are not
+         * the parental controls plan). The old `excluded` item columns are not
          * reused: rows from before v24 can hold 1 there.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).

@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
 /**
  * [XtreamDatabase.MIGRATION_24_25] adds the `allowed` flag (0 on every row) and its index to
  * streams and series, keeping every row. On the JVM under Robolectric, against the exported schemas
- * (`core/network/schemas`). See docs/plans/20261020_parental-controls-plan.md, Phase 3.
+ * (`core/network/schemas`). See the parental controls plan, Phase 3.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

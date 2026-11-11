@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * A Look's screen frame (Console, docs/plans/20261020_lcars-look-plan.md, D6): a bar down the left
+ * A Look's screen frame (Console, the Console look plan, D6): a bar down the left
  * edge and a bar across the top, joined by a rounded elbow, drawn in the TV's safe margins so no
  * content moves. Null on [UiStyle.frame]: no frame.
  */

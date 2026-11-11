@@ -602,7 +602,7 @@ class XtreamMediaProvider(
 
     /**
      * The guest stars of episode [episode] of season [season] of the TMDB show [tmdbId], in billing
-     * order (docs/plans/20261030_episode-cast-plan.md): from the season call the plots use, kept
+     * order (the episode cast plan): from the season call the plots use, kept
      * with them, so a season asked for its plots costs nothing more. Null without a TMDB id or key;
      * empty when TMDB names none or fails.
      */
@@ -1174,7 +1174,7 @@ class XtreamMediaProvider(
     /**
      * The catalogue title for each TMDB title, index-aligned with [results]: the first match, its
      * provider tags off and the TMDB title as its [MediaItem.listTitle]; null where this source has
-     * none. For the chart rows and the actor pages (docs/plans/20261029_tmdb-charts-plan.md), which
+     * none. For the chart rows and the actor pages (the TMDB charts plan), which
      * pick across sources and drop repeats themselves. Same matching as More Like This, outside the excluded categories.
      */
     suspend fun findTmdbTitles(

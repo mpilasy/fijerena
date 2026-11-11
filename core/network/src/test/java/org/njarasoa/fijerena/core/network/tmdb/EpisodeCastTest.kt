@@ -10,7 +10,7 @@ import java.nio.file.Files
 
 /**
  * The cast of an episode and the episodes of an actor's show credit
- * (docs/plans/20261030_episode-cast-plan.md, Phase 1): TMDB's payloads as they come (Law & Order:
+ * (the episode cast plan, Phase 1): TMDB's payloads as they come (Law & Order:
  * SVU, Robin Williams in S9E17 and Mariska Hargitay as a regular), the lines of the appearances
  * list and where each one opens the show.
  */

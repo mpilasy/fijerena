@@ -51,7 +51,7 @@ class EpgIndexer private constructor(
     fun isFtsStale(): Boolean = ftsStale.get()
 
     // The guide sources whose index entries an incremental update is still writing: search reads
-    // their rows without FTS (docs/plans/20261105_pausable-guide-indexing-plan.md).
+    // their rows without FTS (the pausable guide indexing plan).
     @Volatile
     private var pendingSourceIds: Set<Long> = emptySet()
 
@@ -219,7 +219,7 @@ class EpgIndexer private constructor(
             wasStale || (progressChecked.compareAndSet(false, true) && restoreIncrementalProgress())
         }
 
-    // An incremental index update a killed run left (docs/plans/20261105_pausable-guide-indexing-plan.md
+    // An incremental index update a killed run left (the pausable guide indexing plan
     // → IX2). Add or Merge unfinished: true, the worker continues it. Remove unfinished: the swap
     // never happened and some entries are gone, so the index is marked stale for a full rebuild
     // (true too); the next refresh imports those sources again.
@@ -679,7 +679,7 @@ class EpgIndexer private constructor(
     /**
      * Moves [sourceIds]' staging rows into the primary tables and brings the search index up to
      * date for them only, in batches that wait while video plays
-     * (docs/plans/20261105_pausable-guide-indexing-plan.md):
+     * (the pausable guide indexing plan):
      *
      * 1. Remove: the index entries of the rows the swap deletes (those sources' live rows and the
      *    ended ones), while those rows still exist.
@@ -782,7 +782,7 @@ class EpgIndexer private constructor(
 
     /**
      * Continues an incremental index update a killed run left
-     * (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2): Add and Merge from where they
+     * (the pausable guide indexing plan, IX2): Add and Merge from where they
      * stopped. Returns false when there was nothing to continue.
      */
     suspend fun resumeIncrementalIndex(

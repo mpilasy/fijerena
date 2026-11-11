@@ -254,7 +254,7 @@ fun ContentTypeSelectionScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
-    // A child profile's Home (docs/plans/20261019_kids-home-plan.md, Phase 1): their name in the
+    // A child profile's Home (the kids' Home plan, Phase 1): their name in the
     // header, only what a parent put there, bigger cards, no card menus. Read once: a profile
     // switch builds Home again.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }

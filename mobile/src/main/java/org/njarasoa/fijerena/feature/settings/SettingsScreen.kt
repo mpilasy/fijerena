@@ -89,7 +89,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * Settings as one grouped preference list: Your Profile (the personal rows of the profile in use,
  * in place) and About, which everyone opens. For an Admin, the five Admin sections between them,
- * each opening its own page after the PIN (docs/plans/20261111_admin-sections-direct-plan.md).
+ * each opening its own page after the PIN (the Admin sections plan).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -659,7 +659,7 @@ private fun ShrinkDatabaseRows(
 
 /**
  * The phone's Admin sections, in TV's rail order: rows of Settings under an Admin heading, for an
- * Admin only (docs/plans/20261111_admin-sections-direct-plan.md). Each one opens its own page after
+ * Admin only (the Admin sections plan). Each one opens its own page after
  * the PIN; Parental Controls opens its own screen.
  */
 enum class AdminGroup(

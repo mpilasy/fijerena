@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
 import java.nio.file.Files
 
-/** The people cache and the actor page's rows (docs/plans/20261030_cast-tab-plan.md, Phase 1). */
+/** The people cache and the actor page's rows (the cast tab plan, Phase 1). */
 class TmdbPeopleTest {
     private val dir: File = Files.createTempDirectory("people").toFile()
     private val calls = mutableListOf<Int>()

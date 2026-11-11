@@ -47,7 +47,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A child profile's Favourites, in place of its page like its Sources (docs/plans/20261019_kids-home-plan.md,
+ * A child profile's Favourites, in place of its page like its Sources (the kids' Home plan,
  * Phase 3): what its Home shows, filled from the admin's Settings. The field searches the child's
  * sources for what the child may see; with no search, the list is the child's favourites. OK on a
  * row adds it or takes it out, the star saying which, and the row stays, so a second OK undoes.

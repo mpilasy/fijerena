@@ -593,8 +593,8 @@ class SearchViewModel(
             }
 
         // "N hidden" is for a Nerd: told what the filters hide, a child or a teenager only goes
-        // looking for it (docs/plans/20261019_tv-household-ux-plan.md, Phase 2; Nerd since
-        // docs/plans/20261103_nerd-role-sync-failures-plan.md, RQ-4).
+        // looking for it (the household UX plan, Phase 2; Nerd since
+        // the Nerd role plan, RQ-4).
         val excludedCountByType =
             if (appSettings.isNerdMode) {
                 targetContentTypes

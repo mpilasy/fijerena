@@ -63,7 +63,7 @@ class EpgFtsRebuildWorker(
         return try {
             val indexer = EpgIndexer.getInstance(applicationContext)
             // An incremental update a killed run left continues where it stopped, waiting while
-            // something plays (docs/plans/20261105_pausable-guide-indexing-plan.md → IX2); a stale
+            // something plays (the pausable guide indexing plan, IX2); a stale
             // index is rebuilt whole.
             if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause({ isMediaPlaying(applicationContext) }))) {
                 indexer.rebuildFtsAndUpdateState()

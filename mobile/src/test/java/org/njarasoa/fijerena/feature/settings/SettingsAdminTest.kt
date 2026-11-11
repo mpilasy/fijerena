@@ -47,7 +47,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The phone's Settings by role (the admin settings plan): a grown-up sees its own rows under Your
  * Profile on Settings itself, never the Admin rows; then an Admin sees the five Admin sections
- * (docs/plans/20261111_admin-sections-direct-plan.md), any other grown-up Add Profile, and About.
+ * (the Admin sections plan), any other grown-up Add Profile, and About.
  * A child has no Settings: its profile menu does not offer it. A section asks the PIN once per
  * session on the way in (Cancel stays on Settings) and opens its own page (Parental Controls its
  * own screen); Back returns to Settings, and a recreate keeps the page. Profiles → a profile has

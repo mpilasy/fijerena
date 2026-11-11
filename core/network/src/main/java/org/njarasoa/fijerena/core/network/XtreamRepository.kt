@@ -153,7 +153,7 @@ class XtreamRepository(
      * [this] without the titles a child profile may not see ([ParentalRules.hidesTitle], also in a
      * kids' category), when the profile in use is one; as it is otherwise. Categories are hidden by
      * the filters; this catches the titles inside the others
-     * (docs/plans/20261020_parental-controls-plan.md).
+     * (the parental controls plan).
      */
     private fun List<XtreamStream>.forProfile(): List<XtreamStream> {
         if (!appSettings.isChildProfile(appSettings.activeProfileId)) return this

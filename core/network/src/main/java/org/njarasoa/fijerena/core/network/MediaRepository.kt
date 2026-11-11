@@ -2232,7 +2232,7 @@ class MediaRepository(
     /**
      * [items] without those in a category the profile in use's content filters hide on this
      * source: a filter hides a title from Recent, Favourites and Continue watching too, not only
-     * from the catalogue (docs/plans/20261019_tv-household-ux-plan.md, Phase 2). The entries stay
+     * from the catalogue (the household UX plan, Phase 2). The entries stay
      * stored, so removing the filter brings them back. A title that a Parental controls exception
      * allows stays, as in the catalogue. See [visibleHistory].
      */
@@ -2713,8 +2713,8 @@ class MediaRepository(
      * [WatchStateEntity.lastPlayedAt] timestamp in `watch_state`, preserving any saved position
      * and completion status. Refreshes the published [recentItems] StateFlow upon completion.
      *
-     * Returns what it cleared, for [restoreRecent] (the Undo after a removal, docs/plans/
-     * 20261009_tv-recents-favorites-plan.md → A).
+     * Returns what it cleared, for [restoreRecent] (the Undo after a removal, the TV recents
+     * and favourites plan, A).
      *
      * Server-backed providers own their own recency list and don't support removal — see
      * [supportsRemoveFromRecent]. Callers must check that before offering this action; this

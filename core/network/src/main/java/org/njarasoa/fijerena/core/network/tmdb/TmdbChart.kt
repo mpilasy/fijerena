@@ -15,7 +15,7 @@ import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 
-/** The TMDB charts Home shows, cut down to the catalogue (docs/plans/20261029_tmdb-charts-plan.md). */
+/** The TMDB charts Home shows, cut down to the catalogue (the TMDB charts plan). */
 enum class TmdbChart(
     val path: String,
     val contentType: String,

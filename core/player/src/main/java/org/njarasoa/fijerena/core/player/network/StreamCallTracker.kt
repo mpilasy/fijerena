@@ -10,7 +10,7 @@ import kotlin.concurrent.thread
  * loads, but a load blocked reading a stalled stream ignores that until the read timeout (30 s),
  * and an Xtream panel counts the open socket as a stream all that time: reopening on a
  * 1-connection account then fails as busy. Cancelling the call closes the socket mid-read
- * (docs/plans/20261017_xtream-stream-release-plan.md → Phase 3).
+ * (the Xtream stream release plan, Phase 3).
  */
 class StreamCallTracker(
     private val runInBackground: (Runnable) -> Unit = { thread(name = "StreamCallTracker") { it.run() } },

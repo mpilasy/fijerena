@@ -663,7 +663,7 @@ fun TvPlayerControlsOverlay(
                 }
 
                 // Button row (only when full controls are visible). Icon buttons, each naming itself
-                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats (Nerd);
+                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats;
                 // VOD the same without Channels, with Play/Pause then Chapters first and Next episode
                 // before Stats. Left/Right move along it and stop at its ends; Up/Down zap on live
                 // (PlayerKeyHandler); on VOD Up goes to the seek bar.

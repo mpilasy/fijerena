@@ -1,8 +1,8 @@
 # Multi-source: no current source
 
-**Status:** In progress, 2026-10-12. Decisions Q1–Q7, P1–P5 and O1–O4 made 2026-10-12 (P1–P5 widened the
-plan: there is no current source any more, browsing is merged too). Phase 1 can start. Nothing has
-been built.
+**Status:** In progress. Phases 1–7 done 2026-10-12; Phase 8 (device walks, docs) not started. Decisions
+Q1–Q7, P1–P5 and O1–O4 made 2026-10-12 (P1–P5 widened the plan: there is no current source any more,
+browsing is merged too).
 
 ## Today
 
