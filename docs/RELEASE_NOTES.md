@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261111200651
 
 - **Up next waits for you:** the Up next card near the end of an episode still offers the next one, with Watch now chosen, but the next episode no longer starts by itself when nobody answers: the player closes, back to the episode list. The card also appears at most 4 minutes before the end, so it no longer covers the last minutes of a long episode. TV and phone.
 
