@@ -385,9 +385,8 @@ class EpgViewModel(
                     cancelPageLoads()
                     channels = null
                     pager.clear()
-                    // Call the suspending internal loader directly (not the fire-and-forget
-                    // loadEpgData() wrapper), so isRefreshing only flips back once the reload
-                    // actually finishes instead of immediately after merely scheduling it.
+                    // The suspending loader, not the fire-and-forget loadEpgData(), so isRefreshing turns off
+                    // only when the reload finishes.
                     loadEpgDataInternal(currentDate)
                 } finally {
                     _isRefreshing.value = false

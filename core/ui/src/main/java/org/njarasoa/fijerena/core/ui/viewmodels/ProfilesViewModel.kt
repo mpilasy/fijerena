@@ -50,9 +50,8 @@ data class ProfileSettings(
     val nerd: Boolean = false,
 ) {
     /**
-     * The page shows the Name and PIN rows. A child's own page (seen by a profile that is not an Admin,
-     * [adminView] false) does not: a child does not rename itself or set, change or remove its
-     * PIN. An Admin on the child's page still edits both.
+     * The page shows the Name and PIN rows, except on a child's own page seen by a profile that is not
+     * an Admin ([adminView] false): a child does not rename itself or set, change or remove its PIN.
      */
     fun showsNameAndPin(adminView: Boolean): Boolean = adminView || !child
 }
@@ -360,11 +359,10 @@ class ProfilesViewModel(
             ?.let { appSettings.setProfileSourceKeys(profileId, it) }
     }
 
-    /** [id]'s own settings — not necessarily the profile this device uses. */
-
     /** The profile in use is an Admin: it may change sources and content filters. */
     val viewerIsAdmin: Boolean get() = appSettings.isAdmin
 
+    /** [id]'s own settings — not necessarily the profile this device uses. */
     fun settingsOf(id: String): ProfileSettings =
         ProfileSettings(
             appSettings.admin(id),
@@ -373,14 +371,13 @@ class ProfilesViewModel(
             appSettings.nerdMode(id),
         )
 
-    /** [id]'s colour theme and Look and Feel; set at once, like its sources (the profile in use repaints). */
-
     /** [id]'s colour theme as applied: a retired or unknown one reads as the one shown instead. */
     fun themeOf(id: String): String = paletteById(appSettings.themeId(id)).id
 
     /** [id]'s Look as applied: a retired or unknown one reads as the one shown instead. */
     fun uiStyleOf(id: String): String = styleById(appSettings.uiStyleId(id)).id
 
+    /** [id]'s colour theme and Look and Feel; set at once, like its sources (the profile in use repaints). */
     fun setTheme(
         id: String,
         themeId: String,

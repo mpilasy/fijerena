@@ -9,11 +9,8 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.toRoute
 
 /**
- * Navigates only if the current back stack entry is RESUMED, guarding against a
- * duplicate push when a D-pad auto-repeat or accidental double-click fires two
- * click events during a screen transition. Without this, destinations that create
- * fresh state per push (e.g. [Screen.Player], which instantiates a new player
- * engine) can briefly end up pushed twice.
+ * Navigates only if the current back stack entry is RESUMED, so a D-pad auto-repeat or a double
+ * click during a screen transition cannot push twice (for [Screen.Player], a second player engine).
  */
 fun NavController.navigateOnce(route: Any) {
     val currentEntry = currentBackStackEntry

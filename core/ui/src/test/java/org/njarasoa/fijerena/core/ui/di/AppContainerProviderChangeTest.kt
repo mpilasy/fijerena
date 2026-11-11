@@ -18,9 +18,9 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 
 /**
  * A provider's settings, URL or login changed: the container drops its cached MediaRepository and
- * the factory's provider together. Dropping only the factory's copy left the repository
- * reconnecting its old, disconnected provider with the old login. See
- * the next level rock solid resilience plan → R-06 step 2.
+ * the factory's provider together. Dropping only the factory's copy would leave the repository
+ * reconnecting its old provider with the old login. See the next level rock solid resilience plan
+ * → R-06 step 2.
  */
 class AppContainerProviderChangeTest {
     private val context = mockk<Context>(relaxed = true)

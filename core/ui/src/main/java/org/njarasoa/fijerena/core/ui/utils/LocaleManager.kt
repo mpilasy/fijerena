@@ -37,14 +37,11 @@ object LocaleManager {
         val locale = localeFor(language)
         Locale.setDefault(locale)
 
-        // Locale-only delta, NOT a copy of the current configuration: createConfigurationContext
-        // treats every non-default field of the passed Configuration as a permanent override, so
-        // copying the live config freezes orientation/screenWidthDp/uiMode/density at launch
-        // values. MainActivity declares configChanges=orientation|screenSize, so it is never
-        // recreated on rotation and attachBaseContext never re-runs — the frozen values would
-        // stay wrong for the whole process (broke the landscape Live TV preview: LocalConfiguration
-        // kept reporting portrait). Configuration.updateFrom() ignores unset fields, so an empty
-        // Configuration with only the locale set overrides only the locale.
+        // A locale-only delta, not a copy of the current configuration: createConfigurationContext
+        // treats every non-default field as a permanent override, so a copy freezes orientation,
+        // screenWidthDp, uiMode and density at launch values. MainActivity handles orientation|screenSize
+        // itself, so attachBaseContext never runs again and the frozen values stay wrong (LocalConfiguration
+        // reported portrait in landscape). updateFrom() ignores unset fields, so only the locale changes.
         val config = Configuration()
         // setToDefaults() (run by the constructor) sets fontScale = 1, which would override the
         // user's system font scale; 0 means "not set".
@@ -56,7 +53,7 @@ object LocaleManager {
 
     /**
      * The app's locale for [language]: English is UK English (en-GB), so dates, numbers and the
-     * region used for release dates are British whatever the device's region (user, 2026-10-22).
+     * region used for release dates are British whatever the device's region.
      */
     fun localeFor(language: String): Locale = if (language == ENGLISH) Locale.UK else Locale.forLanguageTag(language)
 
@@ -68,11 +65,10 @@ object LocaleManager {
         language: String,
     ) {
         AppSettings(context).language = language
-        // The application's Resources follow [currentLanguage] at once, so text looked up through
-        // the application context (ViewModels) switches with the recreated activity rather than at
-        // the next launch. Patching the application's Resources in place did not hold: the next
-        // configuration change put the launch language back (English device info, Malagasy dates
-        // in a French app).
+        // The application's Resources follow [currentLanguage] at once, so text looked up through the
+        // application context (ViewModels) switches with the recreated activity. Patching the
+        // application's Resources in place does not hold: the next configuration change puts the launch
+        // language back.
         currentLanguage = language
         Locale.setDefault(localeFor(language))
     }

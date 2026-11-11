@@ -116,7 +116,7 @@ data class CinemaColorRoles(
                 accentSoft = palette.accentLight,
                 onAccent = palette.onAccent,
                 danger = palette.error,
-                // White or black from the danger colour itself: the primary text was dark on a light theme's red.
+                // White or black from the danger colour itself, so it reads on a light theme's red too.
                 onDanger = contentOn(palette.error),
                 success = palette.success,
                 warning = palette.warning,
@@ -136,7 +136,7 @@ data class CinemaColorRoles(
                 scenery = palette.scenery,
                 focusFill = palette.focusFill ?: palette.textPrimary,
                 focusGlow = palette.focusGlow ?: palette.accent,
-                // The background on the white focus, as before; the theme's dark text on a stated (light) fill.
+                // The background on the default white focus; the theme's dark text on a stated (light) fill.
                 onFocusFill = if (palette.focusFill == null) palette.background else palette.onAccentOverride ?: Color.Black,
                 badgeFill = palette.badgeFill,
                 onBadge = palette.badgeFill?.let { contentOn(it) } ?: palette.textSecondary,

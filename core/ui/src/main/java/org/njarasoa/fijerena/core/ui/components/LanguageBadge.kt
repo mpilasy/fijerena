@@ -291,9 +291,7 @@ fun SourceBadge(
     )
 }
 
-/**
- * Star rating badge standardizing the `"★ ${formatRating(rating)}"` pattern across mobile and TV.
- */
+/** Star rating badge (`★ 7.5`), the same on mobile and TV. */
 @Composable
 fun RatingBadge(
     rating: String,

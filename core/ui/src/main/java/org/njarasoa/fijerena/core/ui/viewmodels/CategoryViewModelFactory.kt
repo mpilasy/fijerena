@@ -10,9 +10,8 @@ class CategoryViewModelFactory(
     private val initialCategoryId: String? = null,
     private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
-    // Store only the application context, not the raw parameter: a `val` constructor property
-    // would hold whatever Context the caller passed (typically an Activity) for as long as this
-    // factory instance is retained (e.g. remember { }'d in Compose across recompositions).
+    // Store only the application context: a `val` constructor property would keep the caller's
+    // Context (often an Activity) for as long as this factory lives (e.g. remembered in Compose).
     private val appContext = context.applicationContext
 
     @Suppress("UNCHECKED_CAST")

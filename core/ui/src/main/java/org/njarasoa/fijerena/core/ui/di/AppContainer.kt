@@ -21,12 +21,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 
-/**
- * Dependency Injection container for the app.
- *
- * Provides singletons for repositories to avoid redundant instantiation and
- * to ensure consistent state across the app.
- */
+/** Dependency injection container: singleton repositories, so state stays consistent across the app. */
 class AppContainer(
     private val context: Context,
 ) {
@@ -71,10 +66,9 @@ class AppContainer(
      * source: there is no device or current source to fall back to (multi-source plan, Phase 6).
      */
     suspend fun getMediaRepository(providerId: Long): MediaRepository =
-        // Everything below touches disk: provider Room lookups, several SharedPreferences loads
-        // (MediaRepository's cache, XtreamRepository's cache) and an OkHttp/Ktor client build.
-        // Callers reach this from LaunchedEffect, which runs on Main, so without this the whole
-        // ~500ms lands on the UI thread during startup — measured with StrictMode on a Shield.
+        // Everything below touches disk (Room lookups, SharedPreferences loads, an OkHttp/Ktor client
+        // build). Callers reach this from LaunchedEffect on Main; without IO about 500 ms lands on the UI
+        // thread at startup (measured with StrictMode on a Shield).
         withContext(Dispatchers.IO) {
             val repo = cachedOrNewRepository(providerId)
 
@@ -159,14 +153,12 @@ class AppContainer(
 
     /**
      * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
-     * previous profile (see its `profileId`), so all of them are closed and dropped; the next
-     * getMediaRepository() builds one for the new profile. Provider sessions are kept — every
-     * source, Jellyfin included, has one login for the whole household, so switching person
-     * doesn't mean signing in again. Xtream providers whose category filters
-     * differ between the two profiles get their hidden-category flags recomputed. No source moves:
-     * the lists reload over the new profile's own sources (multi-source plan, Phase 6). Callers must
-     * also drop any screen still holding a repository, which the nav hosts do by rebuilding the back
-     * stack from home.
+     * previous profile (see its `profileId`), so all are closed and dropped; the next
+     * getMediaRepository() builds one for the new profile. Provider sessions stay: every source has
+     * one login for the whole household. Xtream providers whose category filters differ between the
+     * two profiles get their hidden-category flags recomputed. The lists reload over the new
+     * profile's own sources (multi-source plan, Phase 6). Callers must also drop any screen still
+     * holding a repository: the nav hosts rebuild the back stack from home.
      */
     suspend fun switchProfile(profileId: String) {
         withContext(Dispatchers.IO) {
@@ -216,9 +208,8 @@ class AppContainer(
 
     /**
      * Another device deleted a source the profile in use had: announced on [sourceDeletions] so no
-     * screen stays on it. Its cached repository is
-     * already dropped ([onProvidersChanged]); the other sources' stay. See
-     * the next level rock solid resilience plan → R-06 step 3.
+     * screen stays on it. Its cached repository is already dropped ([onProvidersChanged]); the other
+     * sources' stay. See the next level rock solid resilience plan → R-06 step 3.
      */
     suspend fun providerDeletedExternally() {
         _sourceDeletions.emit(Unit)
@@ -237,9 +228,9 @@ class AppContainer(
     /**
      * The settings, URL or login of [providerIds] changed, here or on another device: their cached
      * MediaRepository and the factory's provider go together, under [mutex], so the next
-     * getMediaRepository() builds both from the new values. A screen still
-     * holding the old repository keeps it until it asks again; playback in progress keeps its
-     * stream URL. See the next level rock solid resilience plan → R-06 step 2.
+     * getMediaRepository() builds both from the new values. A screen that holds the old repository
+     * keeps it until it asks again; playback keeps its stream URL. See the next level rock solid
+     * resilience plan → R-06 step 2.
      */
     suspend fun onProvidersChanged(providerIds: Set<Long>) {
         mutex.withLock {

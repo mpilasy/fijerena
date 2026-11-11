@@ -6,11 +6,9 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 /**
- * @Immutable wrappers for collection types passed to Compose functions.
- *
- * Compose treats raw List/Map/Set as unstable — every emission causes full recomposition
- * of all children that receive them. Wrapping in @Immutable tells the compiler the
- * data is effectively immutable and safe to skip when the reference hasn't changed.
+ * @Immutable wrappers for collections passed to Compose functions. Compose treats a raw
+ * List/Map/Set as unstable, so each emission recomposes every child that gets one; @Immutable lets
+ * it skip them while the reference is the same.
  */
 
 @Immutable

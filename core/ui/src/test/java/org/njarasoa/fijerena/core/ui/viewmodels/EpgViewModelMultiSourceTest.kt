@@ -41,7 +41,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 /**
  * The TV Guide of Recent or Favourites lists every Xtream source's channels of the profile, each
  * row on its own source: its listings, catch-up days and favourite from that source, and opening it
- * goes to that source. Before, it showed only the route's source's channels.
+ * goes to that source.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgViewModelMultiSourceTest {

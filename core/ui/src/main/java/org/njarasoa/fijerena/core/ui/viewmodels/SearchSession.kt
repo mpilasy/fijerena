@@ -30,10 +30,10 @@ object SearchSession {
     const val NOT_IN_SOURCES = "NOT_IN_SOURCES"
 
     /**
-     * A Search screen opened anew (not reached with Back): the term stays, as the app has one
-     * search, but the choices around it are the ones this screen brings — its type pill, source and
-     * tab, and no decade or genre. Choices left from an earlier Search hid results under a count of
-     * everything ("All content (839)" over 4 results) and kept the People tab open in a new Search.
+     * A Search screen opened anew (not reached with Back): the term stays, as the app has one search,
+     * but the choices around it are the ones this screen brings (its type pill, source and tab, and no
+     * decade or genre). Old choices would hide results under a count of everything ("All content
+     * (839)" over 4 results) and keep the People tab open in a new Search.
      */
     fun arrive(
         query: String? = null,

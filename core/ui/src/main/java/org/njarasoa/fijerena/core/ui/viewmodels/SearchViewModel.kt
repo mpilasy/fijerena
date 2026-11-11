@@ -59,9 +59,9 @@ class SearchViewModel(
 
     /**
      * The sources searched (docs/plans/20261012_multi-source-search-history-plan.md Phase 3): every
-     * Xtream source of the profile in use, each in its own cached catalogue. A profile with no
-     * Xtream source searches its other sources (Jellyfin, M3U…) instead, each its own way, as the
-     * one in use was before Phase 6; one with no source searches nothing.
+     * Xtream source of the profile in use, each in its own cached catalogue. A profile with no Xtream
+     * source searches its other sources (Jellyfin, M3U…), each its own way; one with no source
+     * searches nothing.
      */
     private suspend fun ensureSources(): List<SearchSource> =
         sources ?: run {
@@ -484,8 +484,8 @@ class SearchViewModel(
     private fun formatSeconds(ms: Long): String = String.format(java.util.Locale.US, "%.1fs", ms / 1000.0)
 
     /**
-     * Searches every source in parallel and merges their results, ranked together as before. A
-     * source whose search fails is left out; when every one fails, the screen shows the error.
+     * Searches every source in parallel and ranks their results together. A source whose search
+     * fails is left out; when every one fails, the screen shows the error.
      */
     private suspend fun doSearch(query: String) {
         try {
@@ -561,9 +561,8 @@ class SearchViewModel(
 
         val targetContentTypes = targetContentTypes(repo)
 
-        // The background prefetch may not have populated the category list yet (a search fired
-        // right after the screen opened). Fall back to loading categories now — they're
-        // DB-cached and cheap — so category matching never silently sees an empty list.
+        // The background prefetch may not have the category list yet (a search right after the screen
+        // opened): load the categories now (DB-cached, cheap), so category matching never sees an empty list.
         val realCategories =
             prefetchedCategories[source.providerId]?.takeIf { it.isNotEmpty() }
                 ?: targetContentTypes.flatMap { type ->
@@ -574,10 +573,9 @@ class SearchViewModel(
                         ?.map { SearchableCategory(it, type) }
                         ?: emptyList()
                 }
-        // Build the id→name map from the UNFILTERED category list: a stream can belong to a
-        // category hidden from browse by the provider's script/prefix filter (e.g. names with
-        // non-Latin unicode like "FR| PRIME ᴿᴬᵂ"), and we still want its name shown on results
-        // instead of a blank "Category:" line.
+        // Build the id→name map from the unfiltered category list: a stream's category can be hidden
+        // from browse by the provider's script/prefix filter (e.g. "FR| PRIME ᴿᴬᵂ"), and the results
+        // still show its name instead of a blank "Category:" line.
         val categoryNameById =
             targetContentTypes
                 .flatMap { type -> repo.getCategories(type).getOrNull().orEmpty() }
@@ -592,9 +590,8 @@ class SearchViewModel(
                 }
             }
 
-        // "N hidden" is for a Nerd: told what the filters hide, a child or a teenager only goes
-        // looking for it (the household UX plan, Phase 2; Nerd since
-        // the Nerd role plan, RQ-4).
+        // "N hidden" is for a Nerd only: a child or a teenager told what the filters hide only goes
+        // looking for it (the household UX plan, Phase 2; the Nerd role plan, RQ-4).
         val excludedCountByType =
             if (appSettings.isNerdMode) {
                 targetContentTypes
@@ -684,9 +681,8 @@ class SearchViewModel(
         return SourceResults(matchingCategories, results, excludedCountByType, serverSearchSuccess)
     }
 
-    // O(N) bucketing rather than expensive string matching inside `compareBy`: the string
-    // matching is evaluated exactly once per item, and the simple string sorting happens only
-    // within the smaller buckets.
+    // Bucket first (O(N)) instead of string matching inside `compareBy`: each item is matched once,
+    // and only the small buckets are sorted by string.
     private fun sortResults(
         results: List<SearchResult>,
         normalizedQuery: String,
@@ -773,11 +769,9 @@ class SearchViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan). Unlike
-     * [isFavorite], this has no synchronous in-memory cache to read — `watch_state` reads are
-     * suspend since Phase 3 — so building the long-press menu target for a search result means an
-     * explicit fetch rather than an inline call. Null when the source keeps watched state on its
-     * server (no such action).
+     * Manual watched/unwatched mark (the watch state durable storage plan, Phase 6). Unlike
+     * [isFavorite] there is no synchronous cache (`watch_state` reads suspend), so the long-press menu
+     * fetches it. Null when the source keeps watched state on its server (no such action).
      */
     suspend fun isWatchedSuspend(
         providerId: Long,
@@ -820,10 +814,9 @@ class SearchViewModel(
     }
 
     /**
-     * For a show result's "Mark show watched / unwatched"
-     * (the season show watched plan Phase 3): null when the source keeps watched
-     * state on its server (no such action), else whether every episode is watched (true) or not
-     * (false, also when the show was never opened here or the read failed).
+     * For a show result's "Mark show watched / unwatched" (the season show watched plan Phase 3):
+     * null when the source keeps watched state on its server, else whether every episode is watched
+     * (false also when the show was never opened here or the read failed).
      */
     suspend fun showWatchedMarkState(
         providerId: Long,

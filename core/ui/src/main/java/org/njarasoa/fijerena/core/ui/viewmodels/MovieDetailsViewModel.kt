@@ -47,7 +47,7 @@ class MovieDetailsViewModel(
             val isWatched: Boolean,
             /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
             val categoryName: String? = null,
-            /** Id of the category button above, and of [onCategorySelected][MovieDetailsViewModel] target — tracks [switchToAlternateStream]. */
+            /** Id of the category button above — tracks [switchToAlternateStream]. */
             val categoryId: String,
             /** The catalogue's raw name for the stream on screen — tracks [switchToAlternateStream]. */
             val streamName: String,
@@ -140,16 +140,14 @@ class MovieDetailsViewModel(
             }
     }
 
-    /**
-     * Switches this screen to a different local catalogue entry for the same TMDB title —
-     * called from the alternate-stream picker. Reuses the screen already on the backstack: no
-     * navigation, and [uiState] never passes through [UiState.Loading], so the current content
-     * stays on screen until the new stream's detail is ready and swaps in place.
-     */
-
     /** The film shown's category: the route's, or the copy's after [switchToAlternateStream] — what Play records. */
     val currentCategoryId: String get() = categoryId
 
+    /**
+     * Switches this screen to another local catalogue entry for the same TMDB title (the
+     * alternate-stream picker). No navigation, and [uiState] never passes through [UiState.Loading]:
+     * the current content stays until the new detail is ready.
+     */
     fun switchToAlternateStream(alternate: MediaItem) {
         if (alternate.id == movieId || otherSourceOf(alternate) != null) return
         movieId = alternate.id
@@ -157,7 +155,7 @@ class MovieDetailsViewModel(
         streamName = alternate.name
         val shown = ShownFilm(movieId, categoryId, streamName)
         // The copies stay listed until the new ones load: the picker row is focused across the
-        // switch, and with no copies it is plain text that cannot hold focus (TV focus went dead).
+        // switch, and with no copies it is plain text that cannot hold focus, so TV focus is lost.
         loadJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) { loadMovieDetail(shown) }
     }
@@ -300,10 +298,9 @@ class MovieDetailsViewModel(
     }
 
     /**
-     * Sets both [logoUrl] and [backdropUrl] from one job: `getTmdbLogoUrl` and
-     * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
-     * fetching them back to back here costs one network round trip, not two. The backdrop falls
-     * back to the poster when TMDB has none — see the tv detail hero ui plan.
+     * Sets [logoUrl] and [backdropUrl] from one job: both read the same TMDB `/images` response
+     * (cached in the provider), so one network round trip. The backdrop falls back to the poster
+     * (the tv detail hero ui plan).
      */
     private fun loadArtwork(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -354,10 +351,9 @@ class MovieDetailsViewModel(
             positionMs = watched.playbackPosition
             durationMs = watched.duration
         }
-        // TMDB dedup (Phase 5, the watch state durable storage plan): a different catalogue
-        // entry for the same title (a second language track, a 4K re-rip) completed under its own
-        // id still has to show this one watched — otherwise the grid checks it (CategoryViewModel
-        // does this same union) while its own details page contradicts that.
+        // TMDB dedup (the watch state durable storage plan, Phase 5): another catalogue entry for the
+        // same title (a second language track, a 4K re-rip) completed under its own id shows this one
+        // watched too, as the grid does (CategoryViewModel).
         val isWatched = watched?.isCompleted == true || movieId in repo.getSiblingCompletedMovieIds()
         return ResumeState(positionMs, durationMs, isWatched = isWatched)
     }
@@ -403,12 +399,10 @@ class MovieDetailsViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan). Marking
-     * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
-     * hides this screen's own resume bar immediately rather than waiting for a reload, matching
-     * `WatchedItem.resumeProgress()`'s rule that a completed item never offers one. Marking
-     * unwatched re-derives the bar from a fresh lookup instead: the UI state doesn't cache the
-     * pre-mark position anywhere once the bar is hidden, so restoring it means asking again.
+     * Manual watched/unwatched mark (the watch state durable storage plan, Phase 6). Marking watched
+     * keeps the stored position in `watch_state` (a rewatch still resumes) but hides the resume bar at
+     * once, as `WatchedItem.resumeProgress()` gives a completed item none. Marking unwatched reads the
+     * bar again: the UI state keeps no copy of the old position.
      */
     fun toggleWatched() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -416,11 +410,9 @@ class MovieDetailsViewModel(
             val repo = mediaRepository ?: return@launch
             val id = movieId
             repo.setWatched(id, "MOVIES", !currentState.isWatched)
-            // Re-derived rather than assumed: setWatched is a suspend call, not fire-and-forget,
-            // so its write (if any) has already landed by the time it returns — but it silently
-            // no-ops for a server-backed provider (Jellyfin owns this state server-side and has
-            // no local write to accept), so blindly flipping isWatched here would show a check
-            // that the server was never told about.
+            // Read again, not assumed: setWatched has landed when it returns, but it does nothing for a
+            // server-backed provider (Jellyfin keeps this state on its server), so flipping isWatched here
+            // could show a check the server never got.
             val resume = resolveResumeState(repo, id)
             _uiState.update { it.sameFilm(currentState)?.withResume(resume) ?: it }
         }

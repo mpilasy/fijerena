@@ -13,17 +13,14 @@ import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 
 /**
- * A detail screen's headline: TMDB's transparent-PNG wordmark art when it has one for this
- * title, otherwise [fallback] — same treatment the player OSD uses. Used on both mobile and TV
- * movie/series detail screens so a title's branded logo shows consistently everywhere it
- * appears, not just during playback.
+ * A detail screen's headline: TMDB's transparent-PNG wordmark when it has one for this title, else
+ * [fallback], as the player OSD does. Used on the mobile and TV movie/series detail screens.
  *
- * [fallback] is a caller-supplied `Text` rather than a `text`+`style` pair here, because mobile
- * and TV draw from different `Text` composables (`androidx.compose.material3.Text` vs
- * `androidx.tv.material3.Text`, each reading its own `MaterialTheme` composition local) — this
- * component has no correct single choice between them.
+ * [fallback] is a caller's `Text`, not a `text`+`style` pair: mobile and TV use different `Text`
+ * composables (`androidx.compose.material3.Text` vs `androidx.tv.material3.Text`), each reading
+ * its own `MaterialTheme`.
  *
- * A logo that fails to load falls back to [fallback] too — otherwise the screen had no title at all (TV UI audit, #12).
+ * A logo that fails to load shows [fallback] too, so the screen always has a title.
  */
 @Composable
 fun TitleLogoOrText(

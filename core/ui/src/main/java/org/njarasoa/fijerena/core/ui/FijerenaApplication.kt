@@ -57,8 +57,7 @@ class FijerenaApplication :
     Application(),
     SingletonImageLoader.Factory {
     // The application context in the app's chosen language too, not only the activities: text
-    // looked up through it (ViewModels, services) stayed in the phone's language — Recent,
-    // Favorites, Recent Categories in English on a Malagasy app (phone UI audit, spot check).
+    // looked up through it (ViewModels, services) otherwise stays in the phone's language.
     override fun attachBaseContext(base: Context) {
         launchBase = base
         super.attachBaseContext(LocaleManager.wrap(base))
@@ -69,10 +68,9 @@ class FijerenaApplication :
     @Volatile
     private var languageResources: Pair<String, Resources>? = null
 
-    // The application's Resources in the app language in use, not only the one at launch: after a
-    // change in Settings the application context's text, dates and numbers stayed in the launch
-    // language (English device info, Malagasy dates in a French app). One Resources per language,
-    // made from the launch context the same way as at launch.
+    // The application's Resources in the app language in use, not only the one at launch: otherwise,
+    // after a change in Settings, the application context's text, dates and numbers stay in the
+    // launch language. One Resources per language, made from the launch context as at launch.
     override fun getResources(): Resources {
         val base = launchBase
         val language = LocaleManager.currentLanguage
@@ -104,10 +102,9 @@ class FijerenaApplication :
         // Before anything opens providers.db: one written by a newer build can't be opened at all —
         // see ProvidersDbGuard.
         ProvidersDbGuard.check(this)
-        // Debug-only: log any main-thread disk/DB access (with a stack trace) to pinpoint UI-thread
-        // jank/ANRs. Gated on the debuggable flag so it never runs in release. Network work on the
-        // main thread stops the app, as Android's default policy does in a release build: this
-        // policy replaces the default one, and without it the debug build hid such a crash.
+        // Debug only: log main-thread disk/DB access with a stack trace, to find UI-thread jank and ANRs.
+        // Network work on the main thread stops the app, as Android's default policy does in release:
+        // this policy replaces the default one, so it must keep that rule.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy
@@ -246,21 +243,18 @@ class FijerenaApplication :
         }
     }
 
-    // A busy day of browsing a large catalogue lets the poster memory cache and providers'
-    // detail/search caches (see XtreamMediaProvider) grow for as long as the process lives —
-    // nothing else ever shrinks them. RUNNING_LOW is the first level that reflects real system
-    // pressure (below it, MODERATE only means "not foreground"), and every higher level implies
-    // it, so this alone covers both foreground and background pressure.
+    // A day of browsing a large catalogue grows the poster memory cache and the providers'
+    // detail/search caches (see XtreamMediaProvider), and nothing else shrinks them. RUNNING_LOW is
+    // the first level that means real system pressure (MODERATE only means "not foreground"), and
+    // every higher level implies it.
     //
-    // The OkHttp connection pool is a separate, more disruptive step: it's shared with the
-    // player's streaming DataSource, so evicting it mid-playback would tear down an active
-    // connection. It only runs once the app has actually left the foreground (UI_HIDDEN+), and
-    // only when nothing is playing — background/PIP audio keeps that pool legitimately in use.
+    // The OkHttp connection pool is shared with the player's streaming DataSource, so it is evicted
+    // only once the app has left the foreground (UI_HIDDEN+) and nothing plays (background/PiP audio
+    // uses it).
     //
-    // TRIM_MEMORY_RUNNING_LOW is deprecated as of API 34 (the OS stopped delivering the
-    // foreground RUNNING_* levels to apps targeting it) — the Shields this app actually ships
-    // to mostly run well below that, where it's still the only mid-session pressure signal, and
-    // on newer OS it's a harmless no-op: cache clearing simply happens later, at UI_HIDDEN.
+    // TRIM_MEMORY_RUNNING_LOW is deprecated from API 34 (not delivered to apps that target it). The
+    // Shields mostly run older versions, where it is the only mid-session pressure signal; on newer
+    // versions the caches are cleared later, at UI_HIDDEN.
     private val trimScope by lazy { AppScopes.create("FijerenaApplication.trim", Dispatchers.IO) }
 
     @Suppress("DEPRECATION")
@@ -297,12 +291,10 @@ class FijerenaApplication :
                 // TV: nothing decoded past 1080p — a 4K Shield laid images out at 3840 px.
                 if (packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) add(MaxImageSizeInterceptor())
             }.coroutineContext(Dispatchers.IO)
-            // Posters/thumbnails rarely change and there are thousands of them across a large
-            // catalog — a generously sized disk cache means scrolling back through a category or
-            // reopening a detail screen doesn't refetch images that were already downloaded.
-            // The memory cache stays modest (largeHeap is on for both apps, so 25% of the app's
-            // heap on a Shield was easily 60-100MB+ of decoded bitmaps); onTrimMemory() above
-            // sweeps it under real pressure regardless.
+            // Posters rarely change and a large catalogue has thousands, so a large disk cache saves
+            // refetching them on scroll back or a reopened detail screen. The memory cache stays small
+            // (largeHeap is on, so 25% of the heap on a Shield was 60-100 MB+ of bitmaps); onTrimMemory()
+            // sweeps it under pressure.
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.15).build() }
             .diskCache {
                 DiskCache

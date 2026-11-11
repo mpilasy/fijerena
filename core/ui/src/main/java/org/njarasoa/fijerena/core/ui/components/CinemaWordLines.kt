@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
  * A short name on [maxLines] lines that breaks only between words: a name on a narrow tile (a
  * followed team, "Manchester City"). A word that is wider than the line ends with "…" on its own
  * line; the words that do not fit on the last line end it with "…". Every line is kept, so the
- * tiles of a row are one height. Plain [CinemaText] broke the word ("Manchest" / "er City").
+ * tiles of a row are one height. Plain [CinemaText] would break the word ("Manchest" / "er City").
  */
 @Composable
 fun CinemaWordLines(

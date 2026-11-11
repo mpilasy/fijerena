@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 /**
  * The Stream name picker's other copies of a title: one on the screen's source switches the screen
- * in place, as before; one on another source opens on that source (its route's), not on this one.
+ * in place; one on another source opens on that source (its route's), not on this one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AlternateStreamSourceTest {

@@ -312,9 +312,8 @@ class CategoryViewModel(
     val categoryNames: StateFlow<Map<String, String>> =
         uiState
             .map { state -> (state as? UiState.Success)?.categories.orEmpty() }
-            // Rebuilt only when the categories themselves change (a new list, not every state
-            // change: a selection, a load, the last played), and off the main thread: thousands
-            // across a profile's sources.
+            // Rebuilt only when the category list itself changes, and off the main thread: a profile's
+            // sources can hold thousands.
             .distinctUntilChanged { old, new -> old === new }
             .map { categories -> categories.associate { it.key to it.name } }
             .flowOn(Dispatchers.Default)
@@ -495,18 +494,15 @@ class CategoryViewModel(
     private val _watchedIds = MutableStateFlow<Set<String>>(emptySet())
     val watchedIds: StateFlow<Set<String>> = _watchedIds.asStateFlow()
 
-    // Resolved in the init coroutine to avoid blocking the UI thread. Every suspend call site
-    // awaits this, so a call made before it is set (loadStreams(), favorite/watched toggles,
-    // removeFromRecent() — see its own comment on why that race is real) waits instead of being
-    // dropped. The handful of synchronous call sites Compose reads directly during composition
-    // (which cannot suspend) go through [repositoryOrNull] instead and degrade to defaults.
-    // Replaced, already completed, when the list is built again on other sources ([followProfileSources]).
+    // Resolved in the init coroutine so the UI thread does not block. Suspend call sites await it,
+    // so an early call waits instead of being dropped (see [removeFromRecent]). Synchronous reads
+    // during composition use [repositoryOrNull] and fall back to defaults. Replaced, already
+    // completed, when [followProfileSources] builds the list again.
     @Volatile
     private var repositoryDeferred = CompletableDeferred<MediaRepository>()
 
-    // Mirrors repositoryDeferred's result once completed — set in the same init coroutine, right
-    // alongside repositoryDeferred.complete(). CompletableDeferred.getCompleted() would do the
-    // same thing but is @ExperimentalCoroutinesApi; this avoids that opt-in for no real benefit.
+    // Mirrors repositoryDeferred's result. CompletableDeferred.getCompleted() does the same but
+    // needs @ExperimentalCoroutinesApi.
     @Volatile
     private var repositorySnapshot: MediaRepository? = null
 
@@ -606,9 +602,8 @@ class CategoryViewModel(
             launch { _recentItems.filterNotNull().collectLatest { goneRecent.value = goneRecentOf(merged, it) } }
             loadCategoriesInternal()
             if (wantedKind != null) launch { loadCharts(merged, wantedKind) }
-            // Entering on a real category (from the EPG, search, or a saved selection) never
-            // loads the Recent row, but the Live TV preview panel shows that list regardless of
-            // what was browsed into — without this warm-up it would sit on its spinner forever.
+            // The Live TV preview panel shows Recent even when the list opens on a real category (EPG,
+            // search, a saved selection); without this warm-up it spins forever.
             merged.loadRecentItems(contentType)
         }
 
@@ -675,9 +670,8 @@ class CategoryViewModel(
 
     private suspend fun loadCategoriesInternal() {
         val repo = awaitRepository()
-        // Keep whatever is already on screen and mark it refreshing, rather than blanking the
-        // grid to a full-screen spinner on every reload. Only a genuinely empty screen (first
-        // load, or a previous failure) falls back to Loading.
+        // Keep what is on screen and mark it refreshing. Only an empty screen (first load, a previous
+        // failure) shows Loading.
         val current = _uiState.value
         _uiState.value =
             if (current is UiState.Success && current.categories.isNotEmpty()) {
@@ -739,9 +733,9 @@ class CategoryViewModel(
     }
 
     /**
-     * [repo]'s categories of this list's type. Not logged in yet, the ones it has saved, its login
-     * left to run behind them — a server that doesn't answer no longer holds the list; with none
-     * saved, after its login. A source that takes longer than [SOURCE_LOAD_TIMEOUT_MS] fails.
+     * [repo]'s categories of this list's type. Before login, its saved ones, with the login running
+     * behind them, so a server that does not answer does not hold the list up; with none saved,
+     * after login. A source slower than [SOURCE_LOAD_TIMEOUT_MS] fails.
      */
     private suspend fun sourceCategories(repo: MediaRepository): List<MediaCategory> =
         withTimeoutOrNull(SOURCE_LOAD_TIMEOUT_MS) {
@@ -840,8 +834,7 @@ class CategoryViewModel(
     }
 
     /**
-     * Shared implementation for loading streams by category. Handles both initial load
-     * and refresh paths.
+     * Loads [categoryId]'s streams, for the first load and for a refresh.
      * @param isRetryEnabled when true, retries once on empty/failed initial load (loadStreams path)
      */
     private suspend fun loadStreamsInternal(
@@ -1011,11 +1004,8 @@ class CategoryViewModel(
                     _nowPlaying.value = indexResult
                 }
 
-                // Phase 2: Xtream API fallback for unmatched items
-                // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
-                // to five times per list load (50 items / 10 per request), and every one of those is a
-                // new ImmutableNowPlaying that recomposes the whole channel list — interleaved with the
-                // network waits between chunks, so the list churned for as long as the fallback ran.
+                // Phase 2: Xtream API fallback for unmatched items. Collect across chunks and emit once:
+                // each emit recomposes the whole channel list.
                 val collected = mutableMapOf<String, EpgProgram>()
                 val now = System.currentTimeMillis() / 1000
                 for ((source, rows) in bySource) {
@@ -1034,9 +1024,8 @@ class CategoryViewModel(
                     _nowPlaying.value = _nowPlaying.value + collected
                 }
 
-                // No catalogue-wide EPG ingest from here: that is EpgSyncWorker's job. Run from a
-                // list load, a whole-catalogue fetch competed with video decode in the same
-                // process, which stuttered playback and eventually ANR'd.
+                // No catalogue-wide EPG ingest here: that is EpgSyncWorker's job. In this process it
+                // competes with video decode, which stutters playback and can cause an ANR.
             }
     }
 
@@ -1260,11 +1249,9 @@ class CategoryViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan), same
-     * refresh discipline as [toggleFavoriteStream]: [setWatched][org.njarasoa.fijerena.core.network
-     * .MediaRepository.setWatched] then [refreshPerItemData] republishes [watchedIds], costing
-     * nothing extra since watch state is looked up separately from the catalogue rather than
-     * joined into it — no catalogue re-query, no list invalidation.
+     * Manual watched/unwatched mark (the watch state durable storage plan, Phase 6). Same refresh as
+     * [toggleFavoriteStream]: setWatched, then [refreshPerItemData] republishes [watchedIds]. Watch
+     * state is read apart from the catalogue, so there is no catalogue re-query.
      */
     fun toggleWatchedStream(
         itemId: String,
@@ -1321,9 +1308,8 @@ class CategoryViewModel(
     }
 
     /**
-     * Removes an item (or all episodes of a series) from the Recent list.
-     * Updates the local UI state streams list if the current category is RECENT_CATEGORY_ID.
-     * Returns the Undo, which puts back what was removed (the tv recents favorites plan → A).
+     * Removes an item (or all episodes of a series) from Recent and returns the Undo, which puts
+     * back what was removed (the tv recents favorites plan → A).
      */
     fun removeFromRecent(
         itemId: String,
@@ -1335,10 +1321,8 @@ class CategoryViewModel(
         var removal: RecentRemoval? = null
         val removing =
             viewModelScope.launchGuarded("CategoryViewModel.removeFromRecent") {
-                // The Recent row (unlike category streams) can be visible before loadCategories()
-                // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
-                // into — so this can race ahead of the repository's assignment.
-                // awaitMerged() below waits for it rather than dropping the removal.
+                // Recent can show before loadCategories() has run (the Live TV preview panel), so this can
+                // race the repository. awaitMerged() waits instead of dropping the removal.
                 val merged = awaitMerged()
                 removal = merged.removeFromRecent(rowSource, itemId, contentType, seriesId)
                 showRecentChange(merged)
@@ -1380,11 +1364,10 @@ class CategoryViewModel(
     }
 
     /**
-     * The Live TV section entered again (back from another section, Home, the TV Guide or Search):
-     * Recent on screen reloads, last watched first (closing the preview layer reloads it through
-     * [loadStreams] on Recent). The rows are replaced
-     * in place, with no loading state: the screen's own focus hand-back (a header button, a row)
-     * has already run on the list it found.
+     * The Live TV section entered again (from another section, Home, the TV Guide or Search):
+     * Recent reloads, last watched first. The rows change in place with no loading state, because
+     * the screen's focus hand-back has already run on the list it found. (Closing the preview
+     * layer reloads Recent through [loadStreams].)
      */
     fun reloadRecentOnEntry() {
         val state = _uiState.value
@@ -1421,13 +1404,10 @@ class CategoryViewModel(
     private suspend fun readLastPlayed(): Pair<Long, String>? = awaitMerged().lastPlayed(contentType).also { lastPlayed = it }
 
     /**
-     * Re-reads favorites/watch progress/watched checks for whatever's currently on screen. Call
-     * on resume alongside [refreshLastPlayedItem] — same reason: a favorite or watched mark made
-     * on a screen this ViewModel doesn't own (movie details, an episode list, search) writes
-     * straight to the repository with no way to reach this instance's cached [watchedIds]/
-     * [favoriteIds]/[watchProgress], so without an explicit re-read on return they'd sit stale
-     * until something *else* changes the stream list identity and trips [refreshPerItemData]'s
-     * own guard.
+     * Re-reads favourites, watch progress and watched checks for the rows on screen. Call on resume
+     * with [refreshLastPlayedItem]: a mark made on another screen (details, episodes, search) goes
+     * straight to the repository, so [watchedIds], [favoriteIds] and [watchProgress] stay stale
+     * without this re-read.
      */
     fun refreshWatchStateOnResume() {
         // refreshPerItemData no-ops on its own until repository is initialized.
@@ -1613,9 +1593,8 @@ class CategoryViewModel(
     }
 
     /**
-     * Reloads the shared Recent list — for callers (the Live TV preview panel) that show it
-     * independently of whatever category is actually selected, without disturbing that
-     * selection or its streams list. The result arrives via [recentItems].
+     * Reloads the shared Recent list for a caller that shows it apart from the selected category
+     * (the Live TV preview panel), without changing the selection. The result arrives via [recentItems].
      */
     suspend fun refreshRecentItems() {
         awaitMerged().refreshRecentItems(contentType)

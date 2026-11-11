@@ -8,18 +8,14 @@ import java.util.Date
 import org.njarasoa.fijerena.core.player.model.TimeFormat as CoreTimeFormat
 
 /**
- * Composable time formatting wrappers. Context is grabbed automatically —
- * callers just pass the value to format.
+ * Composable time formatting wrappers; they read the context themselves.
  *
- * Every wrapper memoizes on its inputs. The underlying core call runs
- * `DateFormat.is24HourFormat(context)` plus an `Instant`/`ZoneId` conversion, and the EPG grid
- * calls these once per visible cell — without the `remember` that whole chain re-ran on every
- * recomposition of every cell, for values (a programme's start time) that never change.
+ * Each wrapper remembers its inputs: the core call runs `DateFormat.is24HourFormat(context)` plus an
+ * `Instant`/`ZoneId` conversion, and the EPG grid calls it once per visible cell on every
+ * recomposition, for values that never change.
  *
- * Trade-off: if the OS 12h/24h setting is flipped while a screen is composed, already-formatted
- * strings hold their old shape until their inputs change or they leave and re-enter composition.
- * Formatting was never re-driven by that setting anyway — only by incidental recomposition — so
- * this narrows an existing gap rather than opening a new one.
+ * Trade-off: if the OS 12h/24h setting changes while a screen shows, formatted strings keep their
+ * old shape until their inputs change or they leave and enter composition again.
  */
 object TimeFormat {
     @Composable

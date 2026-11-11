@@ -25,15 +25,13 @@ import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
- * TMDB logo art for [contentDescription], TMDB isn't guaranteed to be light-on-transparent —
- * some titles' only logo is a dark wordmark meant for a light background (e.g. "Pluribus"'s is
- * near-black), which would otherwise vanish against this app's dark UI. Samples the loaded image
- * and adds a backing plate only when the logo is the same lightness as the theme behind it: a light
- * plate for a dark logo on a dark theme, a dark plate for a light logo (the common case) on a light
- * theme. Otherwise the logo shows bare.
+ * TMDB logo art for [contentDescription]. A TMDB logo is not always light on transparent: some
+ * titles' only logo is a dark wordmark (e.g. "Pluribus"), which would vanish on the dark UI. This
+ * samples the loaded image and adds a backing plate only when the logo has the same lightness as
+ * the theme behind it: a light plate for a dark logo on a dark theme, a dark plate for a light logo
+ * (the common case) on a light theme.
  *
- * [modifier] should carry the caller's sizing (e.g. `.height(x)`); the plate, when needed, wraps
- * around that.
+ * [modifier] carries the caller's sizing (e.g. `.height(x)`); the plate, when needed, wraps it.
  */
 @Composable
 fun AdaptiveLogoImage(
@@ -44,10 +42,9 @@ fun AdaptiveLogoImage(
     alignment: Alignment = Alignment.CenterStart,
 ) {
     // Null until this logo's tone is known: cached from an earlier showing, or worked out off the
-    // main thread once it loads (on the main thread, copying the hardware bitmap's pixels drew a
-    // ~250 ms StrictMode disk read on a Shield — see
-    // the next level rock solid resilience plan → R-28). Kept invisible until then, a frame or two, so a dark logo never flashes bare on the
-    // dark UI and the plate's padding never shifts the layout after it has shown.
+    // main thread once it loads (on Main, copying the hardware bitmap's pixels is a ~250 ms disk read
+    // under StrictMode; the next level rock solid resilience plan → R-28). Invisible until then, a
+    // frame or two, so a dark logo never flashes bare and the plate never shifts the layout.
     var isDark by remember(logoUrl) { mutableStateOf(LogoToneCache.get(logoUrl)) }
     val scope = rememberCoroutineScope()
     val c = CinemaTheme.colors
@@ -65,9 +62,8 @@ fun AdaptiveLogoImage(
                 scope.launch {
                     val dark =
                         withContext(Dispatchers.Default) {
-                            // Best-effort: a plate-less light logo (the common case, and the prior
-                            // behavior) is a far better failure mode than crashing the player over
-                            // a decorative check.
+                            // Best effort: a light logo with no plate (the common case) is a far better failure than
+                            // a crash over a decorative check.
                             runCatching { bitmap?.let(::isDarkLogo) ?: false }.getOrDefault(false)
                         }
                     LogoToneCache.put(logoUrl, dark)
@@ -124,15 +120,14 @@ internal object LogoToneCache {
 }
 
 /**
- * Average perceived luminance of the bitmap's opaque pixels, sampled off a tiny (16x16) scaled
- * copy. Off the main thread: StrictMode flags the hardware-bitmap copy there as a disk read. Transparent pixels
- * (the vast majority of a wordmark's own bounding box) are skipped so they don't pull a light
- * logo's average toward "dark" just because most of the image is empty — see [isDarkPixels].
+ * Average perceived luminance of the bitmap's opaque pixels, sampled from a tiny (16x16) scaled
+ * copy. Off the main thread: StrictMode flags the hardware-bitmap copy there as a disk read.
+ * Transparent pixels (most of a wordmark's bounding box) are skipped, so they do not pull a light
+ * logo toward "dark" ([isDarkPixels]).
  */
 private fun isDarkLogo(bitmap: Bitmap): Boolean {
-    // Coil hands back a Config.HARDWARE bitmap by default (GPU-backed, for efficient drawing) —
-    // its pixels can't be read directly (getPixel() throws), on this or any bitmap scaled from
-    // it. Bitmap.copy() is the supported way to pull a hardware bitmap's pixels onto the CPU.
+    // Coil gives a Config.HARDWARE bitmap by default, whose pixels cannot be read (getPixel() throws),
+    // also on a copy scaled from it. Bitmap.copy() moves them onto the CPU.
     val readable =
         if (bitmap.config == Bitmap.Config.HARDWARE) {
             // A hardware bitmap that won't copy leaves nothing readable to judge — treat as light.

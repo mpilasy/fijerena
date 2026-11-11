@@ -21,12 +21,11 @@ private const val ENTRANCE_DURATION_MS = 350L
 private const val ENTRANCE_TRANSLATION_PX = 40f
 
 /**
- * Fades + slides an item up the first time it enters composition, delayed by
- * `min(index, 12) * 40ms` so long lists don't have a silly total stagger delay.
+ * Fades and slides an item up the first time it enters composition, delayed by
+ * `min(index, 12) * 40ms` so long lists keep a short total stagger.
  *
- * Implemented as a Modifier.Node (not `composed {}`) to avoid per-element composition
- * overhead in dense lists (100-200+ stream/category rows) — same rationale as
- * `FocusModifiers.kt`/`BounceMarquee.kt`.
+ * A Modifier.Node (not `composed {}`) to avoid per-element composition overhead in dense lists
+ * (100-200+ stream/category rows), as `FocusModifiers.kt`/`BounceMarquee.kt`.
  */
 fun Modifier.staggeredEntrance(index: Int): Modifier = this then StaggeredEntranceElement(index)
 
@@ -66,15 +65,10 @@ private class StaggeredEntranceNode(
                     val eased = 1f - (1f - progress) * (1f - progress)
                     alpha = eased
                     translationY = (1f - eased) * ENTRANCE_TRANSLATION_PX
-                    // Placement, not measurement: alpha and translationY are applied by the
-                    // graphics layer in placeWithLayer below and cannot change the measured size,
-                    // so invalidateMeasurement() was dragging this item *and its parent lazy list*
-                    // through a full measure pass on every frame of the animation.
-                    //
-                    // Correctness, not a measured win: this was tried as the fix for the ~1s stall
-                    // after a Live TV back-out and made no difference to it (see
-                    // the tv ui performance plan task 6b). Kept because invalidating
-                    // measurement for a placement-only animation is simply wrong.
+                    // Placement, not measurement: alpha and translationY are applied by the graphics layer in
+                    // placeWithLayer below and cannot change the measured size. invalidateMeasurement() would
+                    // run this item and its parent lazy list through a full measure pass on every frame. (This
+                    // did not fix the stall after a Live TV back-out: the tv ui performance plan task 6b.)
                     invalidatePlacement()
                 }
                 alpha = CinemaAlpha.opaque

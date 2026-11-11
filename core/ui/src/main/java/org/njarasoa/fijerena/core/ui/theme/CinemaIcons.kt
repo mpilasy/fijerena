@@ -216,20 +216,14 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Per-style icon resolution: the app already draws every icon from the `Rounded` family
- * (Material's soft, filled default). This swaps that family based on the active [UiStyle.icon] —
- * [IconStyle.FILLED] keeps `Rounded` (Material/Roku's soft-filled look), [IconStyle.OUTLINED]
- * switches to the `Outlined` family (Cupertino's hairline look), [IconStyle.BOLD_OUTLINED]
- * switches to the `Sharp` family (BRAVIA's bolder, more geometric look — Material Icons has no
- * dedicated "thick outline" weight, `Sharp`'s squared-off silhouette is the closest fit).
+ * Per-style icons: the app draws every icon from the `Rounded` family, and this swaps the family by
+ * the active [UiStyle.icon]. [IconStyle.FILLED] keeps `Rounded`, [IconStyle.OUTLINED] uses
+ * `Outlined` (Cupertino's hairline look), [IconStyle.BOLD_OUTLINED] uses `Sharp` (BRAVIA's bolder
+ * look: Material Icons has no thick outline weight, and `Sharp` is the closest).
  *
- * Only icons actually used in the app are listed here; call sites reference `CinemaIcons.X`
- * instead of `Icons.Rounded.X` (or `Icons.AutoMirrored.Rounded.X`).
- *
- * Kotlin allows importing multiple extension properties that share a simple name (e.g. `Search`)
- * as long as their receiver types differ (`Icons.Rounded` vs `Icons.Outlined` vs `Icons.Sharp`) —
- * no aliasing needed, each `Icons.Rounded.Search` / `Icons.Outlined.Search` / `Icons.Sharp.Search`
- * call below resolves via its receiver.
+ * Only icons the app uses are listed; call sites use `CinemaIcons.X`, not `Icons.Rounded.X` (or
+ * `Icons.AutoMirrored.Rounded.X`). Extension properties with the same name (`Search`) on different
+ * receivers (`Icons.Rounded`, `Icons.Outlined`, `Icons.Sharp`) import without aliases.
  */
 object CinemaIcons {
     @Composable

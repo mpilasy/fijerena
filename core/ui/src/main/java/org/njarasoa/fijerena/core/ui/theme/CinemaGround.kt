@@ -8,8 +8,9 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * The screen ground behind the content: the theme's [Scenery] when it has one (no tint); else
- * [CinemaColorRoles.background] with a wash of [tint] (or the accent) from the top; in a theme with a ground glow, that colour glows from the top right over
- * the background fading to [CinemaColorRoles.groundEnd] corner to corner.
+ * [CinemaColorRoles.background] with a wash of [tint] (or the accent) from the top. In a theme with
+ * a ground glow, that colour glows from the top right over the background, fading to
+ * [CinemaColorRoles.groundEnd] corner to corner.
  */
 fun Modifier.cinemaGround(
     colors: CinemaColorRoles,

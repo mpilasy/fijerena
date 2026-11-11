@@ -41,9 +41,9 @@ import kotlin.math.sqrt
 /**
  * A profile's avatar: its colour, with the letters of its name ([avatarLetters]). One letter has the
  * size of [initialRole], times [initialScale] for an avatar that is much larger than the text.
- * Several letters are one block in the Look's title font, in its emphasis weight: 2 or 3 in one line, 4 as 2 above
- * 2, centred on the letters' own outlines and as large as the avatar allows, so they touch its edge.
- * The avatar is as round as the Look's buttons ([CinemaShapeRoles.avatar]).
+ * Several letters are one block in the Look's title font, in its emphasis weight: 2 or 3 in one
+ * line, 4 as 2 above 2, centred on the letters' own outlines and as large as the avatar allows, so
+ * they touch its edge. The avatar is as round as the Look's buttons ([CinemaShapeRoles.avatar]).
  */
 @Composable
 fun ProfileAvatar(
@@ -112,11 +112,8 @@ private fun LetterBlock(
         val columnGap = rowHeights.max() * COLUMN_GAP_SHARE
         val rowGap = rowHeights.max() * ROW_GAP_SHARE
         val blockWidth = columnWidths.sum() + columnGap * (columns - 1)
-        // Where each letter goes at the measuring size: in a grid each leans toward the centre (the
-        // left column's to the right of its cell, the right column's to the left), each row on one
-        // baseline. One row is one word, centred.
-        // The letters' exact outlines (glyph paths) at the measuring size: each centred in its
-        // column, each row on one baseline (rows sit close, so they lean toward the centre).
+        // The letters' exact outlines (glyph paths) at the measuring size, each row on one baseline. In
+        // a grid each letter is centred in its column and the rows sit close; one row is one word, centred.
         val ink = Path()
         var rowTop = 0f
         rows.forEachIndexed { r, row ->

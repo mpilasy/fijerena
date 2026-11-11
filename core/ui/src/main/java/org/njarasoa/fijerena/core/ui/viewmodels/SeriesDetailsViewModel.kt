@@ -141,9 +141,9 @@ class SeriesDetailsViewModel(
     }
 
     /**
-     * Explicit user refresh: drop what the provider cached for this series first, so the reload
-     * actually goes back to the server. Without it the refresh action re-serves the cached detail
-     * — including an empty one — and appears to do nothing.
+     * Explicit user refresh: drop the provider's cached detail for this series first, so the reload
+     * goes back to the server. Otherwise the refresh re-serves the cached detail (even an empty one)
+     * and seems to do nothing.
      */
     fun refreshSeriesInfo() {
         val shown = PlayedSeries(seriesId, seriesName, categoryId)
@@ -151,8 +151,7 @@ class SeriesDetailsViewModel(
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
                 suspendRunCatching { ensureRepo().invalidateCachedDetail(shown.seriesId) }
-                // Deliberately not from the cache: an explicit refresh that redraws the stored copy
-                // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
+                // Not from the cache: a refresh that redraws the stored copy first seems to do nothing.
                 loadSeriesDetail(shown, useCache = false, isSwitch = false)
             }
     }
@@ -166,16 +165,14 @@ class SeriesDetailsViewModel(
             }
     }
 
-    /**
-     * Switches this screen to a different local catalogue entry for the same TMDB title —
-     * called from the alternate-stream picker. Reuses the screen already on the backstack: no
-     * navigation, and [uiState] never passes through [UiState.Loading], so the current content
-     * stays on screen until the new stream's detail is ready and swaps in place.
-     */
-
     /** The show shown: the route's, or the copy's after [switchToAlternateStream] — what Play records. */
     fun playedSeries(): PlayedSeries = PlayedSeries(seriesId, seriesName, categoryId)
 
+    /**
+     * Switches this screen to another local catalogue entry for the same TMDB title (the
+     * alternate-stream picker). No navigation, and [uiState] never passes through [UiState.Loading]:
+     * the current content stays until the new detail is ready.
+     */
     fun switchToAlternateStream(alternate: MediaItem) {
         if (alternate.id == seriesId || otherSourceOf(alternate) != null) return
         seriesId = alternate.id
@@ -222,17 +219,15 @@ class SeriesDetailsViewModel(
         _backdropUrl.value = null
         alternateStreamsJob?.cancel()
         alternateStreamsJob = null
-        // Kept across a switch until the new copies load: the focused picker row is plain text,
-        // unable to hold focus, while the list is empty (TV focus went dead).
+        // Kept across a switch until the new copies load: while the list is empty the focused picker
+        // row is plain text and cannot hold focus, so TV focus is lost.
         if (!isSwitch) _alternateStreams.value = emptyList()
         try {
             val repo = ensureRepo()
 
-            // Draw what was stored last time before asking the provider. Xtream re-sends the
-            // whole episode list on every visit and never caches it server-side, so a show the
-            // size of Law & Order left the screen on a spinner for twenty seconds after a
-            // restart — showing episodes it already had on disk the whole time. The fetch below
-            // still runs: only it can notice episodes added since.
+            // Draw what was stored last time before asking the provider. Xtream re-sends the whole episode
+            // list on every visit and never caches it server-side, so a large show sat on a spinner for
+            // twenty seconds. The fetch below still runs: only it sees episodes added since.
             val cached =
                 if (useCache) suspendRunCatching { repo.getCachedSeriesDetail(SeriesId(shown.seriesId)) }.getOrNull() else null
             if (cached != null) {
@@ -279,10 +274,9 @@ class SeriesDetailsViewModel(
                     loadTmdbTrailer(detail)
                     loadAlternateStreams(detail)
                 },
-                // A failed refresh must not blank a screen already drawn from the cache — the
-                // episodes on it are still playable. A failed switch is different: uiState may
-                // still be showing the *previous* stream under the id this just switched to, so
-                // it must surface the error rather than silently leave that mismatch on screen.
+                // A failed refresh must not blank a screen drawn from the cache: its episodes still play. A
+                // failed switch shows the error, because uiState may still show the previous stream under the
+                // new id.
                 onFailure = { e -> if (isSwitch) reportSwitchFailure(e) else reportFailure(e) },
             )
         } catch (e: CancellationException) {
@@ -362,14 +356,11 @@ class SeriesDetailsViewModel(
     }
 
     /**
-     * As [loadRelatedTitles]: the cached detail draws first and the fetched one follows with the
-     * same TMDB id, so fetch only for the first of them.
+     * As [loadRelatedTitles]: fetch only for the first of the cached and the fetched detail.
      *
-     * Sets both [logoUrl] and [backdropUrl] from one job: `getTmdbLogoUrl` and
-     * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
-     * fetching them back to back here costs one network round trip, not two. The backdrop falls
-     * back to the provider's own backdrop, then the poster, when TMDB has none — see
-     * the tv detail hero ui plan.
+     * Sets [logoUrl] and [backdropUrl] from one job: both read the same TMDB `/images` response
+     * (cached in the provider), so one network round trip. The backdrop falls back to the provider's
+     * own backdrop, then the poster (the tv detail hero ui plan).
      */
     private fun loadArtwork(detail: SeriesDetail) {
         val tmdbId = detail.metadata.tmdbId

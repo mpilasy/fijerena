@@ -12,8 +12,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * Fades the top and the bottom edge of a scrolled body while there is more to scroll that way, so a
- * line cut by the edge reads as "scroll for more", not as text cut short (phone walk A, item 4).
- * Put it before the `verticalScroll(state)` of the same [state]. Draws nothing while it all fits.
+ * line cut by the edge reads as "scroll for more", not as text cut short. Put it before the
+ * `verticalScroll(state)` of the same [state]. Draws nothing while it all fits.
  */
 fun Modifier.scrollEdgeFade(state: ScrollState): Modifier =
     graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

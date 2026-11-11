@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.core.ui.components
 
 /**
  * What a Settings row does on a tap or OK, the same on both apps: the row shows the chevron (›)
- * for [Navigation] only (phone walk A, item 2).
+ * for [Navigation] only.
  */
 enum class SettingsRowKind {
     /** Opens a page, a picker or a dialog to choose in: the row ends with a chevron. */

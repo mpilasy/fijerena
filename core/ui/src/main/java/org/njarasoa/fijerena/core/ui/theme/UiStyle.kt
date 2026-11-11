@@ -565,10 +565,10 @@ val AllUiStyles: List<UiStyle> =
         DialStyle,
     )
 
-/** Looks no longer offered, and the one each profile that had it now gets: Serif went 2026-10-19. */
+/** Looks no longer offered, and the one each profile that had it now gets. */
 private val RETIRED_STYLES = mapOf("serif" to "cinema")
 
-/** The Look with [id] (a retired one's replacement); Modern (the default since 2026-10-17) for an unknown one. */
+/** The Look with [id] (a retired one's replacement); Modern (the default) for an unknown one. */
 fun styleById(id: String): UiStyle = (RETIRED_STYLES[id] ?: id).let { look -> AllUiStyles.firstOrNull { it.id == look } } ?: ModernStyle
 
 /** Non-composable access mirror, see [CinemaThemeHolder]. */
@@ -589,16 +589,6 @@ fun UiShapeTokens.shape(radius: Dp): CornerBasedShape = RoundedCornerShape(radiu
 fun cornerShape(radius: Dp): CornerBasedShape = LocalUiStyle.current.shapes.shape(radius)
 
 val LocalUiStyle = staticCompositionLocalOf { ModernStyle }
-
-/**
- * Applies this style's weight/tracking character to a base [TextStyle] without disturbing the
- * platform's existing per-slot size/line-height scale: [FontWeight.Bold] is remapped to
- * [UiTypeTokens.weightEmphasis] and [FontWeight.Normal] to [UiTypeTokens.weightRegular] (other
- * weights, e.g. Medium/SemiBold used for intermediate slots, are left as-is to preserve the
- * scale's internal hierarchy). Tracking is nudged by [UiTypeTokens.trackingTitleSp] when
- * [fontFamily] matches [displayFontFamily] (display/headline slots), else by
- * [UiTypeTokens.trackingBodySp].
- */
 
 /**
  * [applyUiTypeTokens] for a title or heading slot: in the Look's [UiTypeTokens.titleFontFamily] and
@@ -623,6 +613,12 @@ fun TextStyle.applyUiLabelTokens(
         tokens.labelFontFamily?.let { base.copy(fontFamily = it) } ?: base
     }
 
+/**
+ * Applies the Look's weights and tracking without changing the platform's size and line-height
+ * scale: [FontWeight.Bold] becomes [UiTypeTokens.weightEmphasis], [FontWeight.Normal] becomes
+ * [UiTypeTokens.weightRegular], and other weights stay. Tracking adds [UiTypeTokens.trackingTitleSp]
+ * when the font is [displayFontFamily] (display/headline slots), else [UiTypeTokens.trackingBodySp].
+ */
 fun TextStyle.applyUiTypeTokens(
     tokens: UiTypeTokens,
     displayFontFamily: FontFamily,

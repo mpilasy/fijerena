@@ -128,8 +128,8 @@ class SyncSettingsViewModel(
 
     /**
      * The list's "Last seen" ages while the screen is open, and [NowPlayingStore.Entry.isCurrent]
-     * leans on it: so when a newer record arrives, reload the list, at most once per
-     * [DEVICES_REFRESH_MS] (conflate keeps the latest while waiting). Best effort.
+     * depends on it, so a newer record reloads the list, at most once per [DEVICES_REFRESH_MS]
+     * (conflate keeps the latest while waiting). Best effort.
      */
     private fun refreshDevicesOnNewRecords() {
         viewModelScope.launch {
@@ -187,10 +187,9 @@ class SyncSettingsViewModel(
     }
 
     /**
-     * Asks [deviceId] to stop the playback it is sharing right now: queues a
-     * [SyncKind.REMOTE_COMMAND] naming that playback's session and pushes it at once. The device
-     * obeys only while that same playback is on. See
-     * the live sync now playing plan → Remote Stop.
+     * Asks [deviceId] to stop the playback it is sharing now: queues a [SyncKind.REMOTE_COMMAND]
+     * naming that playback's session and pushes it at once. The device obeys only while that same
+     * playback is on. See the live sync now playing plan → Remote Stop.
      */
     fun requestStop(deviceId: String) {
         val sessionId = nowPlaying.value[deviceId]?.sessionId
@@ -408,9 +407,9 @@ class SyncSettingsViewModel(
                 .mapValues { (_, request) -> if (now - request.sentAt > STOP_TIMEOUT_MS) StopState.UNREACHABLE else StopState.STOPPING }
 
         /**
-         * [entries] joined to the listed, not revoked [devices] by id, keeping only what is
-         * current at [now] (see [NowPlayingStore.Entry.isCurrent], given the device's server `lastSeen`): a record of a device no
-         * longer listed is never shown.
+         * [entries] joined by id to the listed devices that are not revoked, keeping only what is
+         * current at [now] (see [NowPlayingStore.Entry.isCurrent], given the device's server
+         * `lastSeen`): a record of a device no longer listed never shows.
          */
         fun currentNowPlaying(
             devices: List<SyncWire.Device>,

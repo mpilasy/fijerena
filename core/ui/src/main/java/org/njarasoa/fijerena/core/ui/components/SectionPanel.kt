@@ -12,9 +12,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 
 /**
- * One section's rows on Home, grouped (user, 2026-10-29): a faint tint of the section's colour
- * behind them, with the Look and Feel's card corner. It does not clip, so a focused card can grow
- * past its edge.
+ * One section's rows on Home, grouped: a faint tint of the section's colour behind them, with the
+ * Look and Feel's card corner. It does not clip, so a focused card can grow past its edge.
  */
 @Composable
 fun SectionPanel(

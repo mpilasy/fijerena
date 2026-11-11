@@ -28,8 +28,8 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 /**
- * A screen opened on a route's source reads that source's repository; 0 still means the active
- * one. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
+ * A screen opened on a route's source reads that source's repository. See
+ * docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RouteSourceViewModelTest {

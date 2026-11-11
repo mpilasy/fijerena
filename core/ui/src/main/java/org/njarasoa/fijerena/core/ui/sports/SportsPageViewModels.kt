@@ -106,11 +106,9 @@ sealed interface GamesState {
  * Reads the games ([loadGames]) into [state], then each game's channels as the [matcher] finds
  * them, [MATCH_PARALLEL] games at a time in the games' order, so the first rows fill first. A game
  * whose match takes longer than [matchTimeoutMs] finds no channel: its row says "Not found" and
- * never stays on "Looking for channels…" (phone walk A, item 11: with ten games of a team page
- * matched all at once, each one's guide reads waited behind all the others'). A failed read sets [GamesState.Failed]
- * ([rawOf]: its raw text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets
- * the games before their channels. Shared by the team and league pages and the Teams search's best
- * team.
+ * never stays on "Looking for channels…". A failed read sets [GamesState.Failed] ([rawOf]: its raw
+ * text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets the games before
+ * their channels. Shared by the team and league pages and the Teams search's best team.
  */
 internal suspend fun readGamesAndChannels(
     state: MutableStateFlow<GamesState>,

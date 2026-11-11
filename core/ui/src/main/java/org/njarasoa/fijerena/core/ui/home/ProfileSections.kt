@@ -60,8 +60,7 @@ data class ProfileSections(
 
         /**
          * [sources] are the profile's, in its order; [noChannels] the Xtream ones whose last sync
-         * found no live categories (Live TV is left out when every one of them has none, as one
-         * source's empty Live TV was).
+         * found no live categories (Live TV is left out when every one of them has none).
          */
         internal fun of(
             sources: List<ProviderEntity>,

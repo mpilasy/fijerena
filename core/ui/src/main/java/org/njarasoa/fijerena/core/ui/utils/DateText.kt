@@ -24,8 +24,7 @@ import org.njarasoa.fijerena.core.player.model.TimeFormat as CoreTimeFormat
  * The system has no Malagasy day or month names (it wrote "1978 Jan 20"), so Malagasy uses its own.
  *
  * The locale is always the app language of the Resources in use ([appLocale]), never the default
- * locale: the system sets the default back to the phone language on a configuration change, which
- * gave Malagasy dates in the French app.
+ * locale: the system sets the default back to the phone language on a configuration change.
  */
 object DateText {
     /** "Today", "Tomorrow", "Yesterday", else the full date ("Tuesday, 3 November 2026"). For day headers in lists. */

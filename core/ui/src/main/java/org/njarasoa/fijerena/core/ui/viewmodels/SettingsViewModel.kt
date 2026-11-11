@@ -32,7 +32,6 @@ data class SettingsUiState(
      * row shows (every source on the device, not only the profile's: the one guide sources page plan).
      */
     val hasGuideSources: Boolean = false,
-    /** Each of [profileSources] with its URL and subscription, in the same order. */
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
     val isAdmin: Boolean = false,
@@ -229,8 +228,7 @@ class SettingsViewModel(
     }
 
     fun updateUiScale(scale: Float?) {
-        // uiScale is typically handled via a global callback in the screens,
-        // but we keep it here for state consistency.
+        // The screens apply uiScale through a global callback; it is kept here so the state agrees.
         _uiState.value = _uiState.value.copy(uiScale = scale)
     }
 

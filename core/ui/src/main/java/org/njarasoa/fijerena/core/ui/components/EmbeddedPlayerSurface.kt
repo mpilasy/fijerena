@@ -21,14 +21,10 @@ import org.njarasoa.fijerena.core.ui.R
 import java.lang.ref.WeakReference
 
 /**
- * Bare ExoPlayer surface bound to the single app-wide playback engine
- * ([StreamingPlaybackService]), sized entirely by [modifier]. No focus grabbing, no key handling,
- * no overlays — safe to embed as a small preview pane (TV Live TV split / mobile docked
- * mini-player) or as the full-screen surface.
- *
- * The full-screen player and the embedded preview share this one surface implementation. The
- * surface always shows whatever the shared engine is currently playing; the caller decides what
- * that is.
+ * Bare ExoPlayer surface bound to the single app-wide playback engine ([StreamingPlaybackService]),
+ * sized by [modifier]. No focus grabbing, no key handling, no overlays: used for the preview panes
+ * (TV Live TV split, mobile docked mini-player) and for full screen. It shows whatever the shared
+ * engine plays; the caller decides what that is.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -76,10 +72,8 @@ fun EmbeddedPlayerSurface(
                 useController = false
                 keepScreenOn = true
                 setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                // PlayerView itself is transparent by default, so whatever sits behind it (the
-                // app's themed background, e.g. a dark navy, not black) shows through the
-                // letterbox/pillarbox bars RESIZE_MODE_FIT leaves around content whose aspect
-                // ratio doesn't match the view's. Cinema bars read as black regardless of theme.
+                // PlayerView is transparent by default, so the themed background (a dark navy, say) would
+                // show through the letterbox/pillarbox bars RESIZE_MODE_FIT leaves. Bars are black in every theme.
                 setBackgroundColor(android.graphics.Color.BLACK)
                 // Media3 closes its shutter (black) whenever the player has no tracks: on every
                 // reconnect of the same stream too. Kept open here; the update block closes it for a
@@ -125,12 +119,9 @@ fun EmbeddedPlayerSurface(
                 sceneFrame.videoView = WeakReference(view.videoSurfaceView)
             }
         },
-        // The shared engine's ExoPlayer instance outlives this composable and keeps whatever
-        // SurfaceView/TextureView it was last bound to as its video output. Without detaching
-        // here, every leave-and-return (closing the player, or the Live TV preview pane
-        // unmounting as focus/layout changes) leaks the old PlayerView — and the Surface behind
-        // it, a SurfaceFlinger-tracked resource, not just Java heap — for the rest of the process
-        // lifetime.
+        // The shared ExoPlayer outlives this composable and keeps the last view it was bound to as its
+        // video output. Without detaching here, every leave-and-return leaks the old PlayerView and its
+        // Surface (a SurfaceFlinger resource, not only Java heap) for the life of the process.
         onRelease = { view ->
             view.player = null
             sceneFrame?.videoView = null

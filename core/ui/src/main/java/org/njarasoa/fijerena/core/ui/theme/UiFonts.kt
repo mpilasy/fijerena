@@ -56,7 +56,7 @@ object UiFonts {
             Font(R.font.zen_maru_gothic_bold, FontWeight(700)),
         )
 
-    /** Cinema's and Calm's titles: a calm, readable serif (user, 2026-11-01, in place of DM Serif Display). */
+    /** Cinema's and Calm's titles: a calm, readable serif. */
     val SourceSerif4 = variable(R.font.source_serif_4_variable)
 
     /** Machine text (log lines, stack traces): the system's fixed-width font, in every Look. */

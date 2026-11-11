@@ -5,9 +5,9 @@ import java.util.Locale
 
 /**
  * The same genre in several languages, so Search's filter has one choice for it: a title TMDB
- * filled in has its genres in the app language ("Comédie"), another keeps its source's ("Comedy"),
- * and the filter listed both. Each genre's key is its English name in lower case; its spellings are
- * by language (ISO 639), and the filter shows the spelling of the app language when a result has it.
+ * filled in has its genres in the app language ("Comédie"), another keeps its source's ("Comedy").
+ * Each genre's key is its English name in lower case; its spellings are by language (ISO 639), and
+ * the filter shows the spelling of the app language when a result has it.
  */
 internal object GenreNames {
     // First: the lookup below is built with them.

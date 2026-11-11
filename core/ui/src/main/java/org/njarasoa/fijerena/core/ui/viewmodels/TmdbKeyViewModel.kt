@@ -23,9 +23,8 @@ data class TmdbKeyUiState(
 )
 
 /**
- * The TMDB key row and its editor on TV and phone (D4,
- * the public release plan). A key TMDB has refused shows here,
- * and only here, as [TmdbKeyState.Rejected].
+ * The TMDB key row and its editor on TV and phone (D4, the public release plan). A key TMDB has
+ * refused shows here, and only here, as [TmdbKeyState.Rejected].
  */
 class TmdbKeyViewModel(
     context: Context,

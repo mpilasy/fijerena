@@ -79,9 +79,7 @@ class EpgBrowserViewModel(
     /** The source of the TV Guide it was opened from; 0 when not opened from one. */
     private val contextProviderId: Long = 0L,
 ) : ViewModel() {
-    /**
-     * Internal key for grouping programs without allocating new lowercase strings.
-     */
+    /** Key for grouping programmes without allocating new lowercase strings. */
     private class ProgramGroupKey(
         title: String,
         description: String?,
@@ -173,11 +171,10 @@ class EpgBrowserViewModel(
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
 
-    // Each airing is matched on its own source's channels and hidden live categories, re-read with
-    // each search: an airing matched to a stream in a hidden category is dropped like an excluded
-    // stream — it can't be opened, and a filter (a Kid profile's) must not be bypassed through the
-    // guide. Kept out of EpgChannelMatcher, which is cached across profiles
-    // (the guide watch wrong channel plan, fix 3).
+    // Each airing is matched on its own source's channels and hidden live categories, read again for
+    // each search: an airing matched to a stream in a hidden category is dropped, so a filter (a Kid
+    // profile's) cannot be bypassed through the guide. Kept out of EpgChannelMatcher, which is cached
+    // across profiles (the guide watch wrong channel plan, fix 3).
     @Volatile private var airingMatcher: GuideAiringMatcher? = null
 
     // Cache AppSettings instance to avoid constructing a new object on every property read
@@ -207,8 +204,8 @@ class EpgBrowserViewModel(
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
-     * Another provider's refresh must not drive this screen's progress UI — one pipeline serves
-     * every provider, so reading EpgFileManager.state directly showed its sources and totals here.
+     * Only the searched providers' refresh drives this screen's progress UI: one pipeline serves
+     * every provider, and EpgFileManager.state shows them all.
      */
     val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> =
         searchedProviderIdsFlow
@@ -221,9 +218,8 @@ class EpgBrowserViewModel(
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
 
     /**
-     * The guide sources of the sources searched, not of every provider configured: a source that
-     * isn't searched has no business reporting on this screen — reading them all is what let a
-     * provider whose EPG had never run make a freshly-synced one read as "Never refreshed".
+     * The guide sources of the searched sources only, not of every provider: an unsearched provider
+     * whose EPG never ran would make a fresh one read as "Never refreshed".
      */
     private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
         combine(
@@ -236,10 +232,9 @@ class EpgBrowserViewModel(
         }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
-     * Oldest `lastIngestedAtMs` among enabled sources that have actually run — the data is only as
-     * fresh as its stalest source, but a source that has never run is not a freshness figure at
-     * all, it is a count. It shows up in [staleSourceCount] instead, so one never-run source no
-     * longer hides how current everything else is.
+     * Oldest `lastIngestedAtMs` among enabled sources that have run: the data is as fresh as its
+     * stalest source. A source that never ran is counted in [neverRunSourceCount] instead, so it does
+     * not hide how current the others are.
      *
      * `null` when there are no enabled sources, `0L` when none of them has ever run.
      */

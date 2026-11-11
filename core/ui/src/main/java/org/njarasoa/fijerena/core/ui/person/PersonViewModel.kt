@@ -385,9 +385,9 @@ class PersonViewModel(
 
     companion object {
         /**
-         * Where a show card goes once its appearances are known (EC-D2): the list, also for a role
-         * of one episode, so the user sees which episode before it opens (user, 2026-10-31); a role
-         * TMDB names no line of opens the show.
+         * Where a show card goes once its appearances are known (EC-D2): the list, also for a role of
+         * one episode, so the user sees which episode before it opens; a role TMDB names no line of opens
+         * the show.
          */
         fun showOpeningOf(
             show: MediaItem,

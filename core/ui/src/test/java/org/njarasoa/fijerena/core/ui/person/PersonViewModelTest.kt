@@ -40,8 +40,8 @@ import java.util.concurrent.Executors
 
 /**
  * A person's page (cast tab plan, Phase 3): each row's switch for missing titles starts off, flips
- * only its own row (UX-D7) and is not for a child, the crew flag reaches the matching, a failed or impossible TMDB call is an error, and a
- * catalogue sync makes the rows again.
+ * only its own row (UX-D7) and is not for a child; the crew flag reaches the matching; a failed or
+ * impossible TMDB call is an error; and a catalogue sync makes the rows again.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonViewModelTest {

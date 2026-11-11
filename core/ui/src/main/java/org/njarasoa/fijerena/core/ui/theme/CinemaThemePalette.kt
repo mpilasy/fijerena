@@ -48,16 +48,16 @@ data class CinemaThemePalette(
     /** Dims what is behind a dialog or over a picture. */
     val scrim: Color,
     /**
-     * A ground with depth (the 2026-10-17 themes): a soft glow of this colour from the top right,
-     * over [background] fading to [groundEnd] corner to corner. Null: the plain ground.
+     * A ground with depth: a soft glow of this colour from the top right, over [background] fading
+     * to [groundEnd] corner to corner. Null: the plain ground.
      */
     val groundGlow: Color? = null,
     val groundEnd: Color? = null,
     /** A painted or flat ground in place of the wash and the glow (null: those). */
     val scenery: Scenery? = null,
     /**
-     * The fill of a focused TV button, tab or chip (null: [textPrimary], the white focus of the
-     * 2026-10-17 refresh). Console's is a pale cream.
+     * The fill of a focused TV button, tab or chip (null: [textPrimary], a white focus). Console's
+     * is a pale cream.
      */
     val focusFill: Color? = null,
     /** A focused TV card's glow (null: [accent]). Indigo's is its yellow focus: its accent is white. */
@@ -69,7 +69,7 @@ data class CinemaThemePalette(
 ) {
     /**
      * Text and icons on the accent (filled buttons, the selected tab): white on a dark accent,
-     * black on a light one — AMOLED Black's light grey accent left white button text unreadable.
+     * black on a light one, so a light grey accent (AMOLED Black) still has readable button text.
      */
     val onAccent: Color get() = onAccentOverride ?: if (accent.luminance() > 0.5f) Color.Black else Color.White
 }
@@ -130,7 +130,7 @@ val AmoledBlackPalette =
         scrim = Color(0x80000000),
     )
 
-/** Plum into black, violet accent: its own ground since 2026-10-19 (was Deep night's). */
+/** Plum into black, violet accent. */
 val AmethystPalette =
     CinemaThemePalette(
         id = "amethyst",
@@ -161,7 +161,7 @@ val AmethystPalette =
         groundEnd = Color(0xFF08060D),
     )
 
-/** Black and dark greys with a bright green accent: a music-app look (until 2026-11-01, a green-tinted ground with a jade accent). */
+/** Black and dark greys with a bright green accent: a music-app look. */
 val ForestPalette =
     CinemaThemePalette(
         id = "forest",
@@ -291,7 +291,7 @@ val EmberPalette =
         groundEnd = Color(0xFF0B0909),
     )
 
-/** Near-black with a neon green accent: a streaming-service look (until 2026-11-01, deep teal fading to violet with a mint accent). */
+/** Near-black with a neon green accent: a streaming-service look. */
 val AuroraPalette =
     CinemaThemePalette(
         id = "aurora",
@@ -320,7 +320,7 @@ val AuroraPalette =
         scrim = Color(0x99000000),
     )
 
-/** Neutral greys, lime accent (electric blue until 2026-10-19, too close to Deep night's). */
+/** Neutral greys, lime accent. */
 val GraphitePalette =
     CinemaThemePalette(
         id = "graphite",
@@ -651,7 +651,7 @@ fun palettesFor(
     current: String,
 ): List<CinemaThemePalette> = AllPalettes.filter { admin || !it.adminOnly || it.id == current }
 
-/** Themes no longer offered, and the one each profile that had it now gets: Teal went 2026-10-19. */
+/** Themes no longer offered, and the one each profile that had it now gets. */
 private val RETIRED_THEMES = mapOf("teal" to "aurora")
 
 /** The theme with [id] (a retired one's replacement); Deep night, the default, for an unknown one. */

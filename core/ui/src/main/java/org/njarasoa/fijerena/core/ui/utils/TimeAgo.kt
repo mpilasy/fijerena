@@ -11,7 +11,7 @@ import java.util.Locale
 
 /**
  * "2 hours ago" in the app's language. DateUtils.getRelativeTimeSpanString uses the device's
- * language, so a French app on an English phone said "Mis à jour 1 hour ago".
+ * language, so a French app on an English phone would say "Mis à jour 1 hour ago".
  */
 @Composable
 fun timeAgo(
@@ -20,7 +20,7 @@ fun timeAgo(
 ): String {
     val locale = LocalConfiguration.current.locales[0]
     if (locale.language != MALAGASY) return timeAgo(atMs, now, locale)
-    // Android's ICU has no Malagasy data: it fell back to the root form, "-36 min".
+    // Android's ICU has no Malagasy data: it falls back to the root form, "-36 min".
     val (count, unit) = elapsed(atMs, now)
     val res =
         when (unit) {

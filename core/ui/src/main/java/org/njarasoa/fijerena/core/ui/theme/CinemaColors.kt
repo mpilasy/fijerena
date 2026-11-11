@@ -24,13 +24,13 @@ val CinemaSurfaceLight get() = CinemaThemeHolder.current.surfaceLight
 val CinemaGlassBackground get() = CinemaThemeHolder.current.glassBackground
 val CinemaGlassBorder get() = CinemaThemeHolder.current.glassBorder
 
-// Status colors (remain constant across themes in current design)
+// Status colors
 val CinemaSuccess get() = CinemaThemeHolder.current.success
 val CinemaWarning get() = CinemaThemeHolder.current.warning
 val CinemaError get() = CinemaThemeHolder.current.error
 val CinemaLive get() = CinemaThemeHolder.current.live
 
-// Text colors (remain constant across themes in current design)
+// Text colors
 val CinemaTextPrimary get() = CinemaThemeHolder.current.textPrimary
 val CinemaTextSecondary get() = CinemaThemeHolder.current.textSecondary
 val CinemaTextTertiary get() = CinemaThemeHolder.current.textTertiary

@@ -36,10 +36,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
- * Startup splash replacement displayed until provider configuration is resolved.
- *
- * The system splash is dismissed the moment Compose renders anything, which used to be inside this
- * window, so a cold start was a blank window of indeterminate length.
+ * Startup splash replacement, shown until provider configuration is resolved. The system splash
+ * is dismissed as soon as Compose renders anything, so without this a cold start shows a blank
+ * window for an unknown time.
  *
  * The launcher art (blue marble in anaglyph glasses) breathes while an accent arc sweeps around
  * it. Painted on solid black rather than the theme background on purpose: the launcher foreground

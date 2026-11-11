@@ -34,13 +34,12 @@ enum class CurrentChannelPolicy {
 }
 
 /**
- * This list re-ordered to match what is already on screen: rows the viewer can see keep their
- * relative positions, and only genuinely new entries appear (at the top, newest-first).
+ * This list re-ordered to match what is on screen: visible rows keep their positions, and only new
+ * entries appear (at the top, newest first).
  *
- * Recent is ordered by recency, so recording a watch promotes that entry to the front. Doing
- * that live would slide rows around under a viewer who is mid-scroll — the channel they were
- * about to press jumps somewhere else. Freezing the order while the list is displayed keeps it
- * predictable; it is re-sorted the next time the list is opened or explicitly refreshed.
+ * A recorded watch moves its entry to the front; doing that live would move the row the viewer
+ * was about to press. The order stays frozen while the list shows, and is sorted again when the
+ * list is opened again or refreshed.
  */
 fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem> =
     inStableOrder(stableOrder(displayed.map { it.sourceKey }))

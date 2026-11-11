@@ -20,9 +20,8 @@ import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * A detail-screen score, TV hero treatment: a dark rounded chip with the number over its label
- * (e.g. "8.7" over "Community Rating"). [RatingBadge] stays as-is for list rows — this is only
- * for the hero, and for any second score source (Rotten Tomatoes, say) should one ever exist.
- * See the tv detail hero ui plan Phase 2.
+ * (e.g. "8.7" over "Community Rating"). List rows keep [RatingBadge]. See the tv detail hero ui
+ * plan Phase 2.
  */
 @Composable
 fun ScoreChip(

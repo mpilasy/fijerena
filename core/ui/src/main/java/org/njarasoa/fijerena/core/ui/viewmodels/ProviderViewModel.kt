@@ -404,9 +404,8 @@ class ProviderViewModel(
     }
 
     fun syncProvider(providerId: Long) {
-        // Delegate to ProviderSyncManager so the sync itself persists outside the ViewModel
-        // scope — only the await below is scoped to this ViewModel, which is fine: if this
-        // screen closes mid-sync the sync keeps running, this just stops watching it.
+        // ProviderSyncManager runs the sync outside the ViewModel scope; only the await below is
+        // scoped to it, so closing the screen mid-sync only stops watching.
         awaitSync(
             org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
                 .getInstance(context)
@@ -561,9 +560,8 @@ class ProviderViewModel(
                             config = config,
                         )
                     try {
-                        // create() caches by provider id, and every validation shares id 0: without
-                        // evicting first, a retry after a wrong password reused the provider built
-                        // with it and kept failing until the app restarted.
+                        // create() caches by provider id, and every validation shares id 0: without this eviction,
+                        // a retry after a wrong password reuses the provider built with it and keeps failing.
                         MediaProviderFactory.clearCache(tempEntity.id)
                         val provider = MediaProviderFactory.create(tempEntity, context, password)
                         val result = provider.connect()

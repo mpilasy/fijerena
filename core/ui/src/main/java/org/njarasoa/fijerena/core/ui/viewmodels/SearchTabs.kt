@@ -18,8 +18,8 @@ fun showsGuideTab(
 ): Boolean = hasGuide && (contentType == SearchViewModel.CONTENT_TYPE_ALL || contentType == ContentType.LIVE_TV)
 
 /**
- * The People type shows only with a TMDB key (PS-D1), never on a child profile (user,
- * 2026-10-31), and not over live channels alone: TMDB knows no channel.
+ * The People type shows only with a TMDB key (PS-D1), never on a child profile, and not over live
+ * channels alone: TMDB knows no channel.
  */
 fun showsPeopleTab(
     contentType: String,

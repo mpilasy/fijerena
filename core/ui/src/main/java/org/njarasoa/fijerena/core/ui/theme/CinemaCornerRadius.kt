@@ -6,8 +6,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Provides consistent corner radii for UI elements throughout the app, driven by the active
- * [UiStyle] ([LocalUiStyle]) so a look-and-feel switch retheme every call site for free.
+ * Corner radii for UI elements, driven by the active [UiStyle] ([LocalUiStyle]), so a Look and Feel
+ * change reaches every call site.
  */
 object CinemaCornerRadius {
     val none: Dp = 0.dp // Sharp edges — not style-driven, "sharp" is always sharp

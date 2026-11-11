@@ -148,12 +148,10 @@ class EpgManagementViewModel(
             .getLatestStats()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Flow that emits latest programme end times for all sources. Keyed off the set of source
-    // IDs, not the full `sources` list: during an active sync, `sources` re-emits on every
-    // progress field update (lastIngestedAtMs, lastError, ...), which used to restart this
-    // flatMapLatest and re-run a MAX(end_epoch) full scan per source on every one of those
-    // emissions. `_dbGeneration` (bumped below on sync completion, and on a full DB wipe) is
-    // what actually signals new data to query for.
+    // The latest programme end time per source. Keyed off the set of source IDs, not `sources`:
+    // during a sync `sources` re-emits on every progress field change, and each emit would re-run a
+    // MAX(end_epoch) scan per source. `_dbGeneration` (bumped on sync completion and on a full DB
+    // wipe) signals new data.
     val latestProgrammeTimes: StateFlow<Map<Long, Long>> =
         sources
             .distinctUntilChangedBy { list -> list.map { it.id } }
@@ -763,14 +761,13 @@ class EpgManagementViewModel(
                 else -> UiText.PluralResource(R.plurals.epg_automation_freq_hours, hours, hours)
             }
 
-        /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
-
         /** A guide source's refresh line: "Off" while it is switched off, whatever its interval, as nothing refreshes it then. */
         fun refreshSummary(
             enabled: Boolean,
             hours: Int,
         ): UiText = if (enabled) refreshIntervalSummary(hours) else UiText.StringResource(R.string.epg_source_off_summary)
 
+        /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
         fun refreshIntervalSummary(hours: Int): UiText =
             when (hours) {
                 EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.epg_source_refresh_off)

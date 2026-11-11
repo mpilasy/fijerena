@@ -1,8 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
-/**
- * Centralizes all alpha values used across the app for consistent transparency.
- */
+/** Every alpha value of the app, in one place. */
 object CinemaAlpha {
     // Ends of the range
     const val none = 0f // Fully clear: the colour's own hue at the clear end of a fade
@@ -27,7 +25,7 @@ object CinemaAlpha {
     const val cardHairline = 0.12f // Faint top-highlight border on list-row cards
     const val ghost = 0.05f // Barely visible tints
 
-    // Player controls over the video (user, 2026-10-21: a lot lighter than 0.6 and 1)
+    // Player controls over the video
     const val osdPanel = 0.3f // The controls panel: a share of the theme's glass colour
     const val osdScrim = 0.1f // The tint over the whole video while the controls show
     const val osdTextScrim = 0.55f // Behind the controls' text, at its light end: legible over a bright frame
@@ -46,9 +44,8 @@ object CinemaAlpha {
     const val heroChipBackground = 0.18f // Frosted chip behind a hero card's icon or count
 
     // TV detail hero backdrop (the tv detail hero ui plan)
-    // Horizontal scrim over the backdrop: opaque at the left edge (0f), fading to fully
-    // transparent by this fraction of the hero's width, so the text column always sits on solid
-    // ground regardless of what the image behind it looks like.
+    // Horizontal scrim over the backdrop: opaque at the left edge, clear by this fraction of the
+    // hero's width, so the text column always sits on solid ground.
     const val heroScrimFadeStop = 0.6f
     const val detailScoreChipBackground = 0.7f // Dark rounded container behind a ScoreChip
 }

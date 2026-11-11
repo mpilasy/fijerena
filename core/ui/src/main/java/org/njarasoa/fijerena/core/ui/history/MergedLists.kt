@@ -26,8 +26,8 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
  * one list each (docs/plans/20261012_multi-source-search-history-plan.md → Phase 4). Each source
  * keeps its own lists, its own Recent size (P4) included; only what is shown is merged, each row
  * carrying its source (`MediaItem.providerId`), and whatever acts on a row (a removal, its Undo)
- * goes to that row's source. Xtream sources only (Q6): when the screen's source is of another kind,
- * its lists are its own, as before.
+ * goes to that row's source. Xtream sources only (Q6): when the screen's source is of another
+ * kind, its lists are its own.
  */
 class MergedLists(
     /** The screen's source first, then the profile's other Xtream sources. */
@@ -149,8 +149,8 @@ class MergedLists(
         mergeRecentCategories(sources.map { source -> source.providerId to source.repo.getRecentlyViewedCategories(contentType) })
 
     /**
-     * The last channel watched: each source's own (as one source chose it before), the newest of
-     * them; null when none is in its source's Recent.
+     * The last channel watched: the newest of each source's own; null when none is in its source's
+     * Recent.
      */
     suspend fun lastWatchedChannel(): MediaItem? = lastPlayedItem(ContentType.LIVE_TV)
 

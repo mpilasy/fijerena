@@ -54,9 +54,9 @@ fun upNextSecondsLeft(
 fun upNextCountdown(secondsLeft: Int): String = "%d:%02d".format(secondsLeft / 60, secondsLeft % 60)
 
 /**
- * The episode to play when one ends on its own, or null to leave the player as before (back to
- * the episode list): the setting is on, the provider allows it, there is a next episode, and the
- * card wasn't cancelled.
+ * The episode to play when one ends on its own, or null to leave the player as it is (back to the
+ * episode list): the setting is on, the provider allows it, there is a next episode, and the card
+ * wasn't cancelled.
  */
 fun upNextOnEnd(
     autoplayEnabled: Boolean,

@@ -15,7 +15,7 @@ fun startsOnAddSource(
 
 /**
  * A save on Add Source opens Home with the back stack cleared: a new source ([editId] < 0) when
- * there was no source before it ([sourcesBefore] 0). A later new source or an edit goes back as before.
+ * there was no source before it ([sourcesBefore] 0). A later new source or an edit just goes back.
  */
 fun opensHomeAfterSave(
     editId: Long,

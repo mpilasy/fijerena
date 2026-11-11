@@ -18,11 +18,10 @@ val LocalUiScale = compositionLocalOf { 1.0f }
 /**
  * Re-applies [LocalUiScale] to [LocalDensity].
  *
- * Every `Dialog`/`Popup`/`ModalBottomSheet` opens its own window, and each window owns an
- * `AndroidComposeView` that re-provides `LocalDensity` from the *system* density — so the scaled
- * density installed by `MainActivity` stops at the window boundary and dialog content renders at
- * 100% no matter what the user picked. Custom composition locals are not re-provided that way,
- * which is why [LocalUiScale] still reaches in and can be used to restore the density.
+ * Every `Dialog`/`Popup`/`ModalBottomSheet` opens its own window, whose `AndroidComposeView`
+ * provides `LocalDensity` from the system density again: the scaled density from `MainActivity`
+ * stops at the window, and dialog content renders at 100%. Custom composition locals do cross the
+ * window, so [LocalUiScale] can restore the density.
  *
  * Call this as the outermost thing inside any dialog/popup content.
  */

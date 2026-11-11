@@ -97,11 +97,10 @@ fun claimFirstField(): FocusRequester? {
 typealias DialogActionButton = @Composable (action: DialogAction, kind: ButtonKind, modifier: Modifier) -> Unit
 
 /**
- * Themed replacement for [androidx.compose.material3.AlertDialog] — branches on the active
+ * Themed replacement for [androidx.compose.material3.AlertDialog]: the active
  * [org.njarasoa.fijerena.core.ui.theme.UiStyle]'s [org.njarasoa.fijerena.core.ui.theme.UiDialogTokens.position]
- * so Cupertino renders as a bottom sheet and Roku renders full-bleed, matching each platform's
- * real dialog convention; Material/BRAVIA stay centered. Corner radius and scrim
- * alpha come from the same tokens.
+ * decides its form (Cupertino a bottom sheet, Roku full-bleed, Material/BRAVIA centred). Corner
+ * radius and scrim alpha come from the same tokens.
  *
  * The caller gives the actions as data: one [main] action, [others], one [danger] action and
  * [cancel]. The style's [org.njarasoa.fijerena.core.ui.theme.UiDialogTokens.actions] lays them out
@@ -140,15 +139,13 @@ fun CinemaAlertDialog(
     val tokens = LocalUiStyle.current.dialog
     val shape = cornerShape(tokens.cornerRadius)
 
-    // A new Dialog window doesn't inherit Compose's focus state from the screen behind it, so
-    // without an explicit initial-focus request TV's D-pad has nothing to move onto — key
-    // events fall through to the (now invisible) triggering button. Land focus on the safe
-    // default action once per dialog appearance: Cancel when there is a Danger action, else the
-    // main action, else Cancel. A disabled button cannot take focus, so it is skipped.
+    // A new Dialog window does not inherit focus from the screen behind it: without an initial
+    // focus request the TV D-pad has nothing to move to, and key events fall through to the hidden
+    // trigger button. Focus the safe default once per appearance: Cancel when there is a Danger
+    // action, else the main action, else Cancel. A disabled button cannot take focus, so it is skipped.
     //
-    // A dialog whose real content lives in [text] — a list of options to choose from — should pass
-    // [initialFocus] instead, attached to its first item, so the user does not have to D-pad up
-    // through the whole panel to reach it. When it is supplied the buttons are left alone.
+    // A dialog whose content is a list in [text] passes [initialFocus] on its first item instead;
+    // then the buttons are left alone.
     val actions = dialogActions(main, others, danger, cancel, tokens.actions.cancel)
     val focusedAction =
         when {
@@ -167,12 +164,10 @@ fun CinemaAlertDialog(
         }
     }
     LaunchedEffect(Unit) {
-        // The dialog window composes after this screen, and a caller-supplied target may come later
-        // still, so retry each frame until the request takes (an unattached requester returns
-        // false, it doesn't throw). Same shape as the TV app's requestFocusWithRetry, which
-        // core:ui can't depend on.
-        // The body's first input claims its place while the dialog window composes, so the target
-        // is read again on each try.
+        // The dialog window composes after this screen, and a caller's target may come later still, so
+        // retry each frame until the request takes (an unattached requester returns false). Same shape as
+        // the TV app's requestFocusWithRetry, which core:ui cannot depend on. The body's first input
+        // claims its place during composition, so the target is read again on each try.
         val target = {
             initialFocus
                 ?: firstField.requester.takeIf { firstField.claimed }
@@ -187,10 +182,9 @@ fun CinemaAlertDialog(
 
     when (tokens.position) {
         DialogPosition.CENTERED -> {
-            // Material's own AlertDialog composes its padding and its Surface inside the dialog
-            // window, where the scaled density no longer applies — see [ProvideUiScaledDensity].
-            // BasicAlertDialog hands us that content slot, so the whole panel scales with the rest
-            // of the app instead of only the app behind it.
+            // Material's AlertDialog composes its padding and Surface inside the dialog window, where the
+            // scaled density does not apply (see [ProvideUiScaledDensity]). BasicAlertDialog gives us the
+            // content slot, so the whole panel scales with the rest of the app.
             BasicAlertDialog(
                 onDismissRequest = onDismissRequest,
                 modifier = modifier,
@@ -444,10 +438,9 @@ private fun DialogActionArea(
 }
 
 /**
- * Sets the underlying dialog window's dim amount to [alpha] — [Dialog] has no
- * direct scrim-alpha param, unlike [ModalBottomSheet]'s `scrimColor`, so this reaches into the
- * window directly. Must be called from within a [Dialog]'s content. For the dialog and sheet
- * components only.
+ * Sets the dialog window's dim amount to [alpha]: [Dialog] has no scrim-alpha parameter (unlike
+ * [ModalBottomSheet]'s `scrimColor`). Call it from inside a [Dialog]'s content; for the dialog and
+ * sheet components only.
  */
 @Composable
 fun ApplyDialogScrim(alpha: Float) {

@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.panel
 
 // A games list's day headings stay pinned at the top (sticky headers) until the next day's
-// heading takes their place (user, 2026-11-01), on TV and phone.
+// heading takes their place, on TV and phone.
 
 /** Content type of a day heading in a games list: [rememberPinnedDayKey] looks for it. */
 const val DAY_HEADING = "day"

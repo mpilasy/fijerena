@@ -19,8 +19,8 @@ import org.njarasoa.fijerena.core.network.sync.SyncEngine
 
 /**
  * [SyncManager] never runs two passes at once, and a request made while a pass runs gets a pass
- * after it. Thread races plan → 10: a request that came between the last loop check and the clear
- * of the running flag was lost; the flag is now read again after the clear.
+ * after it (the thread races plan → 10): a request between the last loop check and the clear of
+ * the running flag must not be lost, so the flag is read again after the clear.
  */
 class SyncManagerPassTest {
     private val store = mockk<SyncAccountStore>(relaxed = true)

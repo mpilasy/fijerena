@@ -139,9 +139,8 @@ class StreamLoaderViewModel(
     private val _state = MutableStateFlow<StreamState>(StreamState.Loading)
     val state: StateFlow<StreamState> = _state.asStateFlow()
 
-    // The shared Recent list, mirrored from the repository so the channel flyout shows exactly
-    // what the browse row and the preview panel show. Live TV only — no VOD player surface
-    // renders it, and collecting it there would cost a fetch nobody reads.
+    // The shared Recent list, so the channel flyout matches the browse row and the preview panel.
+    // Live TV only: no VOD player shows it, and collecting it there costs a fetch nobody reads.
     private val _recentItems = MutableStateFlow<List<MediaItem>>(emptyList())
     val recentItems: StateFlow<List<MediaItem>> = _recentItems.asStateFlow()
 
@@ -165,11 +164,9 @@ class StreamLoaderViewModel(
     private var lastLoadZapped = false
 
     /**
-     * Stream this loader has most recently been asked to resolve, whether or not that resolution
-     * has finished. Callers that re-point the loader when their target changes read it to skip a
-     * redundant load of the channel it is already on — the split preview constructs the loader
-     * with its target and would otherwise immediately resolve the same stream (and its EPG) a
-     * second time.
+     * Stream this loader was last asked to resolve, finished or not. Callers that re-point the loader
+     * read it to skip a second load of the channel it is already on (the split preview builds the
+     * loader with its target).
      */
     var requestedStreamId: String? = initialStreamId
         private set
@@ -272,11 +269,9 @@ class StreamLoaderViewModel(
         streamId: String,
         streamName: String,
         currentStreams: List<MediaItem>,
-        // Whether to tell the provider a playback session started. Suppressed for embedded
-        // previews: the server counts that as a real session, and a preview re-points on every
-        // focus change, so it would open and close sessions as fast as the user scrolls.
-        // Watch history is NOT gated on this — a preview that lasts past the watch delay is a
-        // real view and is recorded like one (see the history job below).
+        // Whether to tell the provider a playback session started. Off for embedded previews: the
+        // server counts each one as a session, and a preview re-points on every focus change. Watch
+        // history does not depend on this (see the history job below).
         notifyProviderStarted: Boolean = true,
         // Reached by zapping (Up/Down, a swipe) rather than chosen: Recent waits longer for it.
         zapped: Boolean = false,
@@ -321,11 +316,8 @@ class StreamLoaderViewModel(
                     // Catch-up opens on the programme, past the window's lead-in.
                     if (window != null) resumePos = window.programOffsetSec * MILLIS_PER_SECOND
 
-                    // An episode with no saved choice of its own inherits the series' most
-                    // recent one — a fresh episode of a show you've already picked a language/
-                    // subtitle track for shouldn't reset to nothing. Only when this episode has
-                    // neither: one already set (even alone) means the user made a choice for it
-                    // specifically, and that sticks over the series fallback.
+                    // An episode with no saved track choice of its own takes the series' most recent one. If
+                    // the episode has either track set, its own choice wins.
                     if (contentType == ContentType.TV_SHOWS &&
                         series != null &&
                         savedAudioIndex == null &&
@@ -448,9 +440,9 @@ class StreamLoaderViewModel(
             // Catch-up: the programme being replayed, not the one on air.
             val at = catchup?.let { it.startEpochSec + it.programOffsetSec } ?: (System.currentTimeMillis() / 1000)
             val indexed = epgData?.get(streamId)?.listings ?: emptyList()
-            // A channel with an archive (or a catch-up) the index knows nothing about at [at]: the
-            // index holds only the past its guide file had and goes stale, while Start over and the replayed programme's
-            // title need the programme — the source's own guide has it.
+            // A channel with an archive (or a catch-up) that the index does not cover at [at]: the index
+            // holds only its guide file's past and goes stale. Start over and the replayed title need the
+            // programme, so read the source's own guide.
             val listings =
                 if (indexed.none { at in it.startTime until it.endTime } && (archiveDays > 0 || catchup != null)) {
                     repo
@@ -461,8 +453,8 @@ class StreamLoaderViewModel(
                 } else {
                     indexed
                 }
-            // Catch-up: the programme picked, by its title near its start — the two guides (XMLTV,
-            // the source's own) can place a programme half an hour apart (panel-a, RTP 1, 2026-10-10).
+            // Catch-up: the programme picked, by its title near its start. The XMLTV and the source's own
+            // guide can place a programme half an hour apart.
             currentProgram =
                 listings.firstOrNull { catchup != null && it.title == programTitle && abs(it.startTime - at) <= CATCHUP_MATCH_SLACK_SEC }
                     ?: listings.firstOrNull { at in it.startTime until it.endTime }
@@ -688,12 +680,10 @@ class StreamLoaderViewModel(
     }
 
     /**
-     * Lean resolution for embedded previews (e.g. the Live TV split preview pane): resolves the
-     * stream URL + EPG only, skipping the channel-switcher category list refresh that [loadStream]
-     * does — a small preview doesn't render it. That call can be an expensive full-category fetch;
-     * doing it on every focus-driven preview change (potentially once per few hundred ms while
-     * scrolling) saturated CPU and caused ANRs. Watch history is still recorded on the usual
-     * delay, so a channel previewed long enough counts as watched.
+     * Lean resolution for embedded previews (the Live TV split preview): resolves the stream URL and
+     * EPG only, without the category list refresh of [loadStream]. That refresh can fetch a full
+     * category; on every focus change it saturated the CPU and caused ANRs. Watch history is still
+     * recorded after the usual delay.
      */
     fun loadStreamLight(item: MediaItem) {
         lastLoadRequest = item
@@ -832,13 +822,10 @@ class StreamLoaderViewModel(
     }
 
     /**
-     * Call this when playback is stopped/exited to finalize session state. Fire-and-forget on
-     * IO, not awaited — the right choice for a caller that isn't about to navigate away and read
-     * this same data back (e.g. a `DisposableEffect.onDispose`, which has no coroutine scope that
-     * outlives it to await from anyway). A caller that back-navigates to a screen reading this
-     * write's result — the episode-selection screen's resume anchor — needs
-     * [stopPlaybackAwaited] instead: see its kdoc and
-     * the episode selection fragility plan.
+     * Ends the playback session: fire-and-forget on IO, not awaited (for example from a
+     * `DisposableEffect.onDispose`). A caller that goes back to a screen that reads this write (the
+     * episode-selection screen's resume anchor) must use [stopPlaybackAwaited] (the episode
+     * selection fragility plan).
      */
     @kotlin.OptIn(DelicateCoroutinesApi::class) // CoroutineStart.ATOMIC
     fun stopPlayback(
@@ -847,16 +834,12 @@ class StreamLoaderViewModel(
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
     ) {
-        // ATOMIC: NonCancellable below only protects the write once it has started. Called from
-        // a screen's onDispose, this launch can be cancelled with viewModelScope before the IO
-        // dispatcher ever runs it — a DEFAULT start then never runs the body at all, and the
-        // final position is lost. See the rock solid stability resilience plan → F-29.
+        // ATOMIC: NonCancellable below protects the write only once it starts. From onDispose,
+        // viewModelScope can be cancelled before IO runs this launch; with a DEFAULT start the body never
+        // runs and the final position is lost. See the rock solid stability resilience plan → F-29.
         viewModelScope.launchGuarded("StreamLoaderViewModel.stopPlayback", Dispatchers.IO, CoroutineStart.ATOMIC) {
-            // NonCancellable: this coroutine is a child of viewModelScope, which gets cancelled
-            // the moment the screen popping back (e.g. Back press) clears this ViewModel —
-            // without this, that cancellation could land mid-write and truncate the
-            // watch-history/position commit doStopPlayback() is in the middle of. The outer
-            // launch still responds to cancellation normally the instant this block returns.
+            // NonCancellable: the screen popping back clears this ViewModel and cancels viewModelScope,
+            // which could otherwise cut the watch-history/position write in half.
             withContext(NonCancellable) {
                 doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
             }
@@ -864,12 +847,10 @@ class StreamLoaderViewModel(
     }
 
     /**
-     * Same write as [stopPlayback], but suspends until it's actually committed instead of firing
-     * it off unawaited. Use this before navigating back to a screen that reads the result right
-     * back (the episode-selection screen's watch-history-derived resume anchor) — otherwise the
-     * screen's own read can win the race against this write, land on stale watch history, and
-     * silently reset to the wrong season/episode. See
-     * the episode selection fragility plan.
+     * Same write as [stopPlayback], but suspends until it is committed. Use it before going back to a
+     * screen that reads the result at once (the episode-selection screen's resume anchor); otherwise
+     * that read can win the race and land on the wrong season or episode (the episode selection
+     * fragility plan).
      */
     suspend fun stopPlaybackAwaited(
         position: Long,
@@ -974,12 +955,10 @@ private class FinalizeSessionSnapshot(
 ) {
     companion object {
         /**
-         * PlaybackState carries a snapshot taken the last time the player raised an event
-         * (state change, pause, seek, rebuffer). An uninterrupted stretch of playback raises
-         * none, so that snapshot can be many minutes behind by the time the user backs out —
-         * and writing it here would overwrite the fresher position the periodic save loop
-         * already stored. Ask the live player instead, and only fall back to the snapshot when
-         * it's gone (Ended tears the player down, so its position reads 0).
+         * PlaybackState holds a snapshot from the player's last event (state change, pause, seek,
+         * rebuffer). Uninterrupted playback raises none, so the snapshot can be minutes behind and would
+         * overwrite the newer position the periodic save stored. Ask the live player; use the snapshot
+         * only when the player is gone (Ended tears it down, so its position reads 0).
          */
         fun capture(playbackState: PlaybackState): FinalizeSessionSnapshot {
             val service = StreamingPlaybackService.getInstance()
@@ -1017,14 +996,11 @@ private class FinalizeSessionSnapshot(
 }
 
 /**
- * Saves the final playback position/duration and selected audio/subtitle track
- * for the current session, so it's called identically whenever a player screen
- * leaves a stream (back, switching to a new stream, or the composable leaving
- * composition) rather than each call site re-deriving it slightly differently.
+ * Saves the session's final position, duration and audio/subtitle tracks, the same way from every
+ * player exit (back, a new stream, leaving composition).
  *
- * Fire-and-forget (see [StreamLoaderViewModel.stopPlayback]) — use
- * [finalizeSessionAndAwait] instead when the caller is about to navigate back to a screen
- * that reads this write's result right away.
+ * Fire-and-forget (see [StreamLoaderViewModel.stopPlayback]); use [finalizeSessionAndAwait] when
+ * the caller then goes back to a screen that reads this write at once.
  */
 @OptIn(UnstableApi::class)
 fun finalizeSession(
@@ -1036,10 +1012,9 @@ fun finalizeSession(
 }
 
 /**
- * [finalizeSession], but suspends until the write actually commits — see
- * [StreamLoaderViewModel.stopPlaybackAwaited] and the episode selection fragility plan.
- * Use this before navigating back to a screen (episode selection) whose own read of this same
- * data can otherwise win the race against the unawaited version.
+ * [finalizeSession], but suspends until the write commits, so the screen the caller goes back to
+ * (episode selection) reads it. See [StreamLoaderViewModel.stopPlaybackAwaited] and the episode
+ * selection fragility plan.
  */
 @OptIn(UnstableApi::class)
 suspend fun finalizeSessionAndAwait(

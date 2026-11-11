@@ -14,11 +14,9 @@ import androidx.compose.ui.unit.dp
 val LocalSpacingScale = staticCompositionLocalOf { 1f }
 
 /**
- * Base Spacing Grid (8dp)
- * Shared spacing values used across TV and Mobile modules. Each step is the [Base] step times the
- * Look and Feel's density ([LocalSpacingScale]), so a Look can be denser or roomier without a change
- * to the screens. Code that runs outside composition (shapes, drawing, a defaults object) uses the
- * [Base] steps.
+ * The 8 dp spacing grid, shared by TV and phone. Each step is the [Base] step times the Look and
+ * Feel's density ([LocalSpacingScale]), so a Look can be denser or roomier with no change to the
+ * screens. Code outside composition (shapes, drawing, a defaults object) uses the [Base] steps.
  */
 object CinemaSpacing {
     /** The steps at density 1.0, for code outside composition. */

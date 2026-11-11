@@ -4,12 +4,10 @@ import android.os.Debug
 import android.view.Choreographer
 
 /**
- * Process-side playback health: heap pressure, GC activity, and dropped UI frames.
+ * Process-side playback health: heap pressure, GC activity and dropped UI frames.
  *
- * The player's own stats only see what ExoPlayer reports — buffer level, rebuffers, decoder
- * frame drops. A stutter caused by the *app* starving itself (GC thrash, a background job
- * allocating hard) never touches any of those, so the overlay could truthfully report a
- * perfectly healthy stream while the picture juddered. These are the missing signals.
+ * ExoPlayer's stats see only buffer level, rebuffers and decoder frame drops. A stutter caused by
+ * the app starving itself (GC thrash, a background job allocating hard) shows in none of them.
  */
 object AppPerformanceMonitor {
     data class HeapSnapshot(

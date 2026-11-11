@@ -153,9 +153,8 @@ class SyncManager internal constructor(
             }
 
             override fun onProvidersChanged(providerIds: Set<Long>) {
-                // A password, URL, login or filter changed on another device: the next screen to
-                // ask gets a repository built with it. See R-06 step 2 of
-                // the next level rock solid resilience plan.
+                // A password, URL, login or filter changed on another device: the next screen to ask gets a
+                // repository built with it (the next level rock solid resilience plan → R-06 step 2).
                 scope.launch { AppContainer.getInstance(app).onProvidersChanged(providerIds) }
             }
 
@@ -419,10 +418,9 @@ class SyncManager internal constructor(
     }
 
     /**
-     * Watch progress written while something plays is held for up to a minute — a save every 10 s
-     * used to push every ~13 s, and every other linked device then pulled and reloaded its Recent
-     * rows. Anything else goes after the usual debounce. See
-     * the next level rock solid resilience plan → R-18.
+     * Watch progress written during playback is held for up to a minute: a push for each 10 s save
+     * makes every other linked device pull and reload its Recent rows. Anything else goes after the
+     * usual debounce. See the next level rock solid resilience plan → R-18.
      */
     internal fun onLocalChange() {
         if (!foreground || !engine.isLinked) return
@@ -456,11 +454,10 @@ class SyncManager internal constructor(
     private val socketLock = Any()
 
     /**
-     * Reconnect delay, separate from [retryDelayMs]: a server whose HTTP API works but whose
-     * WebSocket doesn't (a reverse proxy that doesn't upgrade) used to reconnect every 5 s forever,
-     * with a full sync pass each time — the pass succeeded, so the shared delay kept resetting.
-     * Doubles per failed attempt; resets only once a socket actually opens. See
-     * the rock solid stability resilience plan → F-12.
+     * Reconnect delay, apart from [retryDelayMs]: when the HTTP API works but the WebSocket does not
+     * (a reverse proxy that does not upgrade), each pass succeeds and resets the shared delay, so the
+     * socket would retry every 5 s forever. Doubles per failed attempt; resets only once a socket
+     * opens. See the rock solid stability resilience plan → F-12.
      */
     private var socketRetryDelayMs = INITIAL_RETRY_MS
 
@@ -476,9 +473,9 @@ class SyncManager internal constructor(
     ) = _status.update { it.copy(connected = connected, reconnectAt = reconnectAt) }
 
     /**
-     * While the socket is down and the app is in the foreground, a pass every
-     * [POLL_WHILE_DISCONNECTED_MS]: without it, nothing pulled the other devices' changes until the
-     * reconnect, up to 5 minutes later. Stops once the socket opens or the app leaves.
+     * While the socket is down in the foreground, a pass every [POLL_WHILE_DISCONNECTED_MS], so other
+     * devices' changes arrive before the reconnect (up to 5 minutes later). Stops once the socket
+     * opens or the app leaves.
      */
     private fun pollWhileDisconnected() {
         synchronized(socketLock) {

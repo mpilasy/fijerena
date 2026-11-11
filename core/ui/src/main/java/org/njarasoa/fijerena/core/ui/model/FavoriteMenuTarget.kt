@@ -24,28 +24,26 @@ sealed class FavoriteMenuTarget {
         val contentType: String,
         val isFavorite: Boolean,
         /**
-         * Null for a content type manual marking doesn't apply to (Live TV has no "watched"
-         * concept), which is also what keeps the watched entry off the menu for it — see
-         * the watch state durable storage plan Phase 6.
+         * Null for a content type with no manual marking (Live TV has no "watched"), which also keeps
+         * the watched entry off its menu (the watch state durable storage plan Phase 6).
          */
         val isWatched: Boolean? = null,
         val isInRecent: Boolean = false,
         val seriesId: String? = null,
         /**
-         * For a show row's "Mark show watched / unwatched"
-         * (the season show watched plan Phase 3): `MediaRepository
-         * .episodesWatchState` for the whole show — true offers "unwatched", false or null (never
-         * opened here) offers "watched". Whether the action shows at all is the menu's
-         * `onToggleShowWatched`.
+         * For a show row's "Mark show watched / unwatched" (the season show watched plan Phase 3):
+         * `MediaRepository.episodesWatchState` for the whole show. True offers "unwatched", false or null
+         * (never opened here) offers "watched". The menu's `onToggleShowWatched` decides whether the
+         * action shows at all.
          */
         val isShowWatched: Boolean? = null,
     ) : FavoriteMenuTarget()
 }
 
 /**
- * Display name and current favorite state, for building a confirm/toggle dialog. A stream's name is
- * the clean title its row shows ("The Matrix", not "4K-EN - The Matrix  (1999)": the row shows the year on its second line): a menu's title
- * is the row's title.
+ * Display name and current favourite state, for a confirm/toggle dialog. A stream's name is the
+ * clean title its row shows ("The Matrix", not "4K-EN - The Matrix  (1999)"): a menu's title is the
+ * row's title.
  */
 fun FavoriteMenuTarget.nameAndFavoriteState(): Pair<String, Boolean> =
     when (this) {
@@ -64,9 +62,8 @@ fun MediaItem.toFavoriteMenuTarget(
         categoryId = categoryId,
         contentType = contentType,
         isFavorite = favoriteIds.contains(id),
-        // This overload's only caller is Live TV, which has no watched concept — see
-        // isWatchableContentType. A caller that needs a real watched lookup should use the other
-        // overload below.
+        // This overload's only caller is Live TV, which has no watched state (see
+        // isWatchableContentType). Use the other overload below for a real watched lookup.
         isWatched = null,
         isInRecent = isInRecent,
         seriesId = seriesId,

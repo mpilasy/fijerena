@@ -20,10 +20,9 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.ui.sync.SyncManager.PendingPush
 
 /**
- * R-18: a position save every 10 s while playing used to push every ~13 s. Watch progress alone is
- * now pushed at most once a minute while something plays, and promptly once it pauses or stops;
- * any other change keeps the 3 s debounce. See
- * the next level rock solid resilience plan → R-18.
+ * Watch progress alone is pushed at most once a minute while something plays (a position save
+ * comes every 10 s), and promptly once it pauses or stops; any other change keeps the 3 s debounce.
+ * See the next level rock solid resilience plan → R-18.
  */
 class SyncManagerWatchPushTest {
     private val dispatcher = StandardTestDispatcher()

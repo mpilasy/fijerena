@@ -66,8 +66,9 @@ val LocalGameBellStore = staticCompositionLocalOf<GameBellStore?> { null }
 
 /**
  * A screen's bells: what has a reminder ([reminded]), and the bell's tap for a game ([toggle]) or
- * for every game of a team ([toggleTeam]); a guide programme's Remind Me ([remindProgramme]). Setting one asks for the notification permission first
- * when the app does not have it ([rememberGameReminderPermission]).
+ * for every game of a team ([toggleTeam]); a guide programme's Remind Me ([remindProgramme]).
+ * Setting one asks for the notification permission first when the app does not have it
+ * ([rememberGameReminderPermission]).
  */
 @Stable
 class GameBells internal constructor(

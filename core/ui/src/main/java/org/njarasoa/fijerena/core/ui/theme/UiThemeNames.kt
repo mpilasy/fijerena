@@ -20,8 +20,8 @@ fun packagedUiThemesFor(
 ): List<PackagedUiTheme> = UiThemes.packaged.filter { admin || !it.adminOnly || it.id == current }
 
 /**
- * The UI theme picker's order (user, 2026-11-01): Custom, then Standard, then the rest by [label]
- * in the app's language, as the Theme and Look and Feel pickers are.
+ * The UI theme picker's order: Custom, then Standard, then the rest by [label] in the app's
+ * language, as the Theme and Look and Feel pickers are.
  */
 fun <T> List<T>.sortedAsUiThemes(
     id: (T) -> String,
