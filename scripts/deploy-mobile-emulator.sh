@@ -36,6 +36,8 @@ if [ -z "$SERIAL" ]; then
 fi
 
 ./gradlew ":mobile:assemble${VARIANT^}"
+# An APK short of classes crashes at start: never install one (see deploy-all.sh).
+scripts/check-apk-classes.py mobile "$VARIANT"
 
 adb -s "$SERIAL" install -r "mobile/build/outputs/apk/$VARIANT/mobile-$VARIANT.apk"
 

@@ -133,6 +133,8 @@ done
 
 command -v sqlite3 >/dev/null || { echo "ERROR: sqlite3 is needed to back up the TVs' user data (apt install sqlite3)." >&2; exit 1; }
 ./gradlew ":tv:assemble${VARIANT^}"
+# An APK short of classes crashes at start: never install one (see deploy-all.sh).
+scripts/check-apk-classes.py tv "$VARIANT"
 mkdir -p "$BACKUP_DIR"
 # Keep a week of backups: anything older than 7 days goes before this run adds its own.
 find "$BACKUP_DIR" -maxdepth 1 \( -name '*.tar' -o -name '*.tar.gz' \) -mtime +7 -print -delete

@@ -54,6 +54,8 @@ if [ "$IS_STREAMING" = true ]; then
 fi
 
 ./gradlew ":tv:assemble${VARIANT^}"
+# An APK short of classes crashes at start: never install one (see deploy-all.sh).
+scripts/check-apk-classes.py tv "$VARIANT"
 
 adb -s "$SERIAL" install -r "tv/build/outputs/apk/$VARIANT/tv-$VARIANT.apk"
 

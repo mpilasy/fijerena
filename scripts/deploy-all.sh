@@ -165,6 +165,16 @@ done
 echo "Building: ${TASKS[*]}"
 ./gradlew "${TASKS[@]}"
 
+# Another Gradle build of this project during this one (an editor importing it) can leave an APK
+# short of classes, and it then crashes at start: never install one that is.
+CHECKED=()
+for i in "${!SERIALS[@]}"; do
+    key="$(module_of "${APPS[$i]}"):${VARIANTS[$i]}"
+    [[ " ${CHECKED[*]} " == *" $key "* ]] && continue
+    CHECKED+=("$key")
+    scripts/check-apk-classes.py "$(module_of "${APPS[$i]}")" "${VARIANTS[$i]}"
+done
+
 # --- 3. Install everywhere at once, each after its own backup ---
 
 command -v sqlite3 >/dev/null || { echo "ERROR: sqlite3 is needed to back up user data (apt install sqlite3)." >&2; exit 1; }

@@ -38,6 +38,8 @@ if [ -z "$SERIAL" ]; then
 fi
 
 ./gradlew ":mobile:assemble${VARIANT^}"
+# An APK short of classes crashes at start: never install one (see deploy-all.sh).
+scripts/check-apk-classes.py mobile "$VARIANT"
 
 # `install -r` can wipe app data with no warning (see deploy-tv-ip.sh), so back up the phone's
 # user data first, into the same folder and with the same 7-day retention.

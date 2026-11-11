@@ -141,6 +141,15 @@ pulls, the debug broadcast receivers and the `run-as` checks in this guide don't
 Settings → Sync & Backup → Back Up to a File first if the data matters, or deploy the debug build
 again (it installs over `localRelease` and keeps the data) before using those tools.
 
+Every deploy script checks the APK after the build and installs nothing when it is short of classes
+(`scripts/check-apk-classes.py <tv|mobile> <variant>`): it compares the classes that the app and the
+core libraries compiled with the classes in the APK's dex files. Another Gradle build of the project
+running at the same time, such as an editor's Kotlin extension importing it, can rewrite a class
+folder while this build dexes it; the dex output then lacks classes, the build cache keeps it, and
+the app crashes at start with `NoClassDefFoundError` (2026-11-11: localRelease lost core:player's
+`AppScopes`). When the check fails, stop the other build, then run
+`./gradlew clean && ./gradlew --no-build-cache <task>` and deploy again.
+
 A real-device script doesn't install on a device that has the app but whose backup failed. Other
 scripts: `scripts/uninstall-app.sh [serial]` is the only sanctioned uninstall (it asks you to type
 `UNINSTALL`).
