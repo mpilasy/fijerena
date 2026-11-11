@@ -1,0 +1,205 @@
+# Match Frame Rate (TV)
+
+**Status:** Planned 2026-11-11, not started. Open questions MF-Q1 to MF-Q6 wait for the user.
+
+## Goal
+
+The TV app plays full-screen video at a display mode whose refresh rate matches the content's frame
+rate: a 24 fps film at 24 Hz, a 50 Hz European channel at 50 Hz. A film at 24 fps on a 60 Hz output
+judders today on the Shields (Android 11) and on the Bravia. A switch in This Device
+turns the feature on and off, per device.
+
+## What exists (survey 2026-11-11)
+
+- **No app code asks for a display mode.** No `preferredDisplayModeId`, `Surface.setFrameRate`,
+  `setVideoChangeFrameRateStrategy` or `Display.getSupportedModes` in core, tv or mobile.
+- **Media3 already asks, but only for seamless changes.** Media3 1.9 (`gradle/libs.versions.toml`)
+  has the default strategy `C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS`.
+  `VideoFrameReleaseHelper` calls the two-argument `Surface.setFrameRate(rate,
+  FRAME_RATE_COMPATIBILITY_FIXED_SOURCE)` on API 30 and later (checked in the 1.9.0 bytecode). Media3
+  has only two strategies, OFF and ONLY_IF_SEAMLESS; it cannot ask for a non-seamless change. Over
+  HDMI, 60 Hz to 24 Hz is never seamless, so this call changes nothing on the user's TVs.
+- **One player for the whole app.** `StreamingPlaybackService.initializePlayer`
+  (core/player/.../service/StreamingPlaybackService.kt) builds the only `ExoPlayer`, with
+  `NightAudioRenderersFactory`. The service has no window, so it cannot set a display mode.
+- **One surface composable.** `EmbeddedPlayerSurface` (core/ui/.../components/EmbeddedPlayerSurface.kt)
+  binds a `PlayerView` to the service's player:
+  - Full screen (`PlayerScreen`, tv/.../ui/player/PlayerScreen.kt) uses a SurfaceView.
+  - The Live TV preview (`LiveTvSplitLayout`, tv/.../feature/category/components/LiveTvSplitLayout.kt)
+    uses a TextureView (`useTextureView = true`). `Surface.setFrameRate` has no effect on a
+    TextureView, so the preview never asks for a mode today.
+- **Every full-screen path goes through `PlayerScreen`:**
+  - VOD and channels opened from a list: `TvPlayerScreen` (tv/.../feature/player/TvPlayerScreen.kt).
+  - Live TV full screen: `LiveTvSplitLayout` shows `PlayerScreen` while `fullScreen` is true. Up
+    and Down zap inside the same `PlayerScreen`, so it stays in composition across zaps.
+  - `PlayerScreen` knows live from VOD through `currentMetadata.isLive`.
+- **Frame rate data:**
+  - `PlaybackViewModel` copies `Format.frameRate` into the quality list (`PlaybackState.kt`, `frameRate`).
+  - `StreamingPlaybackService.measuredFps` counts rendered frames per wall-clock second
+    (`PerformanceAnalyticsListener.onVideoFrameProcessingOffset`). It is too coarse to tell 23.976
+    from 24.
+  - `Format.frameRate` is set before the first frame for MP4, MKV and HLS with a `FRAME-RATE`
+    attribute. For live MPEG-TS it is often `Format.NO_VALUE`.
+- **Stats for Nerds.** `TvStatsOverlay` (tv/.../ui/player/components/overlays/TvStatsOverlay.kt) shows
+  the content fps (`player_stats_fps`), from `Format.frameRate` or else `measuredFps`. No line shows
+  the display mode.
+- **Per-device settings.** `AppSettings.nightAudio` (core/network/.../AppSettings.kt) is the model: a
+  plain key in `app_settings`, not in `SYNCED_SETTING_KEYS`, off until turned on. Its TV row is a
+  `TvSwitchRow` in `SettingsGroup.THIS_DEVICE` (tv/.../feature/settings/SettingsScreen.kt), an Admin
+  section.
+- **Leaving the app.** `MainActivity.onStop` (tv) calls `stopAndRelease()`: TV has no background
+  playback and no PiP.
+- **SDK.** `minSdk = 30` and `targetSdk = 35` in tv and mobile. `Display.getSupportedModes` and
+  `WindowManager.LayoutParams.preferredDisplayModeId` exist from API 23. The three-argument
+  `Surface.setFrameRate(rate, compatibility, CHANGE_FRAME_RATE_ALWAYS)` and
+  `DisplayManager.getMatchContentFrameRateUserPreference` exist from API 31 (Android 12).
+- **Out of scope:** the phone app (phone panels change rate seamlessly, and Media3's default already
+  asks), and YouTube trailers (`TrailerPlayer`, its own player).
+
+## The Options
+
+| | (A) `preferredDisplayModeId` | (B) `Surface.setFrameRate(..., CHANGE_FRAME_RATE_ALWAYS)` |
+|---|---|---|
+| API | 23 and later: works on the Shields (Android 11) | 31 and later: not on the Shields |
+| Who asks | The activity window: the app picks the exact mode from `Display.getSupportedModes` | The video surface: the system picks the mode |
+| Seamless | No: the HDMI link blanks for about 2 to 5 seconds (TV and AVR dependent) | No, the same blank |
+| System setting | The app must read it itself (API 31: `getMatchContentFrameRateUserPreference`) | The system applies it |
+| Preview | Only when the full-screen composable sets it | A TextureView preview has no effect |
+| Tests | The mode choice is a pure function | Little app logic to test |
+
+Other players that match frame rate on the Shield use (A). (B) does not help the Shields.
+
+**Shield's system setting.** Shield Experience has a Match Content Frame Rate setting
+(Display & Sound, Advanced). Its options and whether it gates an app's mode request must be checked
+on a Shield by the user (Phase 1 check). The Stats for Nerds lines of Phase 1 show the result.
+
+**When the frame rate is known:**
+- VOD (MP4, MKV, HLS with `FRAME-RATE`): from `Format.frameRate` at `onTracksChanged`, before or
+  near the first frame. MKV can round 23.976 to 24.
+- Live MPEG-TS and HLS without `FRAME-RATE`: only from the frames. The plan measures the median
+  step between frame presentation times (`ExoPlayer.setVideoFrameMetadataListener`) over about 60
+  frames, about 2 seconds.
+- Interlaced 25i/50i and 29.97i/59.94i: the decoder gives 25 or 50 (30 or 60) frames per second.
+  Both fit a 50 Hz (59.94 Hz) mode, so the family rule below covers them.
+- An HLS stream can have variants at 25 and 50 fps. They are in the same family: no switch.
+
+## Open questions
+
+| # | Question | Options |
+|---|----------|---------|
+| MF-Q1 | Which mechanism? | (a) **`preferredDisplayModeId` on every API level.** One path, works on the Shields, the mode choice is unit-tested. Keep Media3's default ONLY_IF_SEAMLESS strategy (harmless). Recommended. (b) (A) on Android 11, (B) on Android 12 and later. Two paths to test, and the Bravia's Android version decides which one runs. (c) (B) only. The Shields get nothing. |
+| MF-Q2 | Default of the switch? | (a) **Off until turned on**, like Night Audio. The blank screen at the start of a film surprises a user who did not ask for it. Recommended. (b) On. |
+| MF-Q3 | Live TV in full screen? | (a) **Switch only when the family changes** (24, 50 or 60 Hz; 59.94 and 60 count as one, 23.976 and 24 as one). Zapping from one 50 Hz channel to another does not blank. The mode stays across zaps. Recommended. (b) VOD only; live stays at the system mode. (c) Switch on every channel whose exact rate differs. Many blanks. |
+| MF-Q4 | Back from Live TV full screen to the preview? | (a) **Back to the system mode when `PlayerScreen` closes.** Simple, and the lists never run at 24 Hz. Each preview to full screen round trip on a 50 Hz channel blanks twice. Recommended. (b) Keep the mode until the Live TV screen closes. Fewer blanks; the preview and lists run at the content's rate. |
+| MF-Q5 | Hold a film during the switch? | (a) **Yes, VOD only.** The film waits (paused in the app) until the display reports the new mode plus a short settle, at most 6 seconds, then plays. The user misses nothing. Recommended. (b) No. The first 2 to 5 seconds play on a blank screen. Live never waits in either case. |
+| MF-Q6 | Android 12 and later: the system's Match Content Frame Rate (Never, Seamless only, Always)? | (a) **Never: no switch. Seamless only or Always: switch.** The app switch is an explicit opt-in, so it goes past the "Seamless only" default, but the user's "Never" wins. Recommended. (b) Switch only with "Always". On most devices the feature then needs a second setting. (c) Ignore it. Only the Bravia can be on Android 12 or later. |
+
+## Design
+
+### The setting (This Device)
+
+- `AppSettings.matchFrameRate`: a plain Boolean key `match_frame_rate` in `app_settings`, per device,
+  not synced, not exported, off by default (MF-Q2). Not in `SYNCED_SETTING_KEYS`.
+- TV only: a `TvSwitchRow` **Match Frame Rate** in `SettingsGroup.THIS_DEVICE`, under Night Audio.
+  Description: the screen goes black for a few seconds when the rate changes. en, fr and mg strings,
+  British spelling, Title Case in English.
+- Not in the player menu: it is set once per TV.
+
+### The content frame rate (core:player)
+
+- `StreamingPlaybackService.contentFrameRate: StateFlow<Float?>`, null while unknown.
+  - VOD: `Format.frameRate` of the selected video format, when it is set.
+  - Live, or VOD without a rate: `FrameRateEstimator` (new, pure Kotlin) takes frame presentation
+    times from `setVideoFrameMetadataListener` (playback thread). It gives the median step over 60
+    frames, snapped to a known rate (23.976, 24, 25, 29.97, 30, 50, 59.94, 60) within 0.3 %, or null.
+  - Reset on every new stream and on a seek (the `newStreamStarting` and `playStream` paths).
+
+### The mode choice (pure, unit-tested)
+
+- `pickDisplayMode(modes, current, fps): ModeSpec?` in core/player/.../display/. `ModeSpec` is a
+  small data class (id, width, height, refresh), so the tests do not need `Display.Mode`.
+- Rules:
+  1. Only modes with the current mode's width and height. The plan does not change resolution or HDR.
+  2. A mode whose refresh is a whole multiple of the rate (1× to 5×) within 0.05 %, so 23.976 and
+     24 stay apart.
+  3. Order: 25 fps prefers 50 Hz, 29.97 and 30 prefer 59.94 and 60 Hz (25 Hz and 30 Hz modes flicker
+     on some TVs and slow the UI). Other rates prefer 1×, then 2×, then higher multiples.
+  4. No match at 0.05 %: accept 0.2 % (23.976 content on a 24 Hz mode: one repeated frame every
+     42 seconds).
+  5. No match: null, no switch.
+- Live (MF-Q3 a): `sameFamily(currentRefresh, targetRefresh)` is true when both are in the same
+  family: 24 (23.976, 24, 48), 50 (25, 50) or 60 (29.97, 30, 59.94, 60). Then there is no switch.
+
+### The switch (tv)
+
+- `DisplayModeMatcher` (tv/.../ui/player/), started by a `DisposableEffect` in `PlayerScreen`. The
+  Live TV preview never runs it, because it does not compose `PlayerScreen`.
+- It runs only when `AppSettings.matchFrameRate` is on and (MF-Q6 a) the API 31 user preference is
+  not Never.
+- On a known `contentFrameRate`: `pickDisplayMode` with `display.supportedModes` and `display.mode`.
+  If the result differs from the mode in place, set `window.attributes.preferredDisplayModeId`.
+- VOD (MF-Q5 a): pause in the app before the switch (so the live and paused-film rules do not fire),
+  wait for `DisplayManager.DisplayListener.onDisplayChanged` with the new mode plus a settle time
+  (start at 1.5 s, tune on device), at most 6 s, then play.
+- Live: switch when the family changes (MF-Q3 a), without a pause.
+- Leaving (MF-Q4 a): `onDispose` sets `preferredDisplayModeId = 0` (no preference), so the system
+  mode comes back. In the background the window is not visible, and the system drops its request;
+  `MainActivity.onStop` stops playback anyway.
+
+### Stats for Nerds
+
+- Two new rows in `TvStatsOverlay`, in the video section:
+  - **Display**: the current mode, such as `3840×2160 · 23.976 Hz`, with "(matched)" when the app
+    asked for it.
+  - **Modes**: the refresh rates at the current resolution, such as `23.976, 24, 50, 59.94, 60 Hz`.
+- The fps row shows the measured rate with two decimals when `Format.frameRate` is not set.
+- Read from `LocalView.current.display`, refreshed on `onDisplayChanged`.
+
+## Phases
+
+| Phase | What | Visible change |
+|---|---|---|
+| 1 | `FrameRateEstimator`, `contentFrameRate`, the Display and Modes rows in Stats for Nerds | Two Nerd rows; no switch |
+| 2 | `matchFrameRate` setting and row, `pickDisplayMode`, `DisplayModeMatcher` for VOD (hold, reset on leave, MF-Q6) | Films play at a matching mode with the switch on |
+| 3 | Live TV full screen: family rule, no switch on a same-family zap, back to the system mode on leave (MF-Q3, MF-Q4) | Live channels in full screen at a matching mode |
+
+Each phase is one commit. Docs ride with each commit: FEATURES.md (This Device, Stats for Nerds),
+NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
+
+**Checks:**
+- Phase 1: unit tests for `FrameRateEstimator`: steps for 23.976, 24, 25, 29.97, 50 and 59.94;
+  jitter; a gap; 25i given as 50 steps; reset. ktlint, core:player and tv tests, compile. User on
+  the Shields and the Bravia: the Modes row lists the modes; a film, a 50 Hz and a 60 Hz channel
+  show the right rate; the Shield's Match Content Frame Rate options are noted in this plan.
+- Phase 2: unit tests for `pickDisplayMode`: each rule above, a TV with only 60 Hz (null), a 4K
+  mode list, 23.976 with and without a 23.976 mode. A Robolectric test for the This Device row
+  (on, off, saved). The TV emulator: the switch, and no crash when only one mode exists (it may not
+  expose several modes). User on the Shields and the Bravia: a 24 fps film starts at 24 Hz after the
+  hold, the Display row says so, and Back returns to the system mode.
+- Phase 3: unit tests for the live decision (same family, other family, unknown rate, switch off).
+  User: zap between two 50 Hz channels (no blank), from a 50 Hz to a 60 Hz channel (one blank), full
+  screen to preview (MF-Q4).
+
+## Progress
+
+| Phase | Status |
+|---|---|
+| 1 | Not started |
+| 2 | Not started |
+| 3 | Not started |
+
+## Difficulty
+
+Medium. The mode choice and the estimator are small, pure and testable. The risk is in device
+behaviour that the emulator cannot show: the blank time, the hold, and how each TV and AVR reacts.
+
+## Risks
+
+- **HDMI audio.** The link re-syncs, so audio can drop for the same seconds. With passthrough (AC3,
+  E-AC3) some AVRs can make the audio track fail. Check on a Shield with the AVR; the service's recovery
+  must not read it as a stream error.
+- **The Bravia may list one mode only.** Then the feature does nothing there; the Modes row shows it.
+- **Wrong container rates.** An MKV can say 24 for 23.976 content. The 0.2 % rule keeps the
+  judder small; the measured rate can replace a container rate later if the user sees it.
+- **Live channels that change rate mid-stream** (an advert at another rate): the family rule
+  switches only on a real family change.
