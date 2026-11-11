@@ -126,10 +126,6 @@ class SyncSettingsViewModel(
         ) { current, entries, now -> currentNowPlaying(current.devices.orEmpty(), entries, now) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    init {
-        refreshDevicesOnNewRecords()
-    }
-
     /**
      * The list's "Last seen" ages while the screen is open, and [NowPlayingStore.Entry.isCurrent]
      * leans on it: so when a newer record arrives, reload the list, at most once per
@@ -185,6 +181,10 @@ class SyncSettingsViewModel(
             if (open.size != requests.size) stopRequests.update { current -> current.filter { (id, request) -> open[id] == request } }
             pendingStops(open, playing, now)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    init {
+        refreshDevicesOnNewRecords()
+    }
 
     /**
      * Asks [deviceId] to stop the playback it is sharing right now: queues a

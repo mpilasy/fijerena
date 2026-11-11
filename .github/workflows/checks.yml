@@ -34,6 +34,10 @@ jobs:
       - name: ViewModel coroutines have an exception boundary
         run: scripts/check-viewmodel-launch.sh
 
+      # CONTRIBUTING.md, constraint 14: an init block can start work that reads a property below it.
+      - name: Init blocks come after the properties they can read
+        run: scripts/check-init-order.py
+
       # the next level rock solid resilience plan → R-05.
       - name: TV focus requests retry on the result, not an exception
         run: scripts/check-focus-retry.sh

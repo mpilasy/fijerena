@@ -43,6 +43,25 @@ class AppContainer(
     // Runs the evictions MediaProviderFactory.providerChanged asks for, which can't wait on [mutex].
     private val scope = AppScopes.create("AppContainer", Dispatchers.IO)
 
+    private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * The profile in use was deleted on another device, and live sync moved this device to
+     * another (or kept a child profile with no other child in use, [askWhoIsWatching]): the nav
+     * hosts drop every screen, playback included, and ask who is watching — TV's profile picker,
+     * the phone's profile menu.
+     */
+    val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
+
+    private val _sourceDeletions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Another device deleted a source the profile in use had: the nav hosts rebuild the back stack
+     * from home as for [externalSwitches], but only once nothing plays — a stream doesn't need its
+     * source's settings, so what is on screen keeps playing.
+     */
+    val sourceDeletions: SharedFlow<Unit> = _sourceDeletions.asSharedFlow()
+
     init {
         MediaProviderFactory.providerChangedListener = { providerId -> scope.launch { onProvidersChanged(setOf(providerId)) } }
     }
@@ -179,25 +198,6 @@ class AppContainer(
         scope.launch { WantedTitles.getInstance(context).refresh() }
         scope.launch { NewEpisodesStore.getInstance(context).refresh() }
     }
-
-    private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-
-    /**
-     * The profile in use was deleted on another device, and live sync moved this device to
-     * another (or kept a child profile with no other child in use, [askWhoIsWatching]): the nav
-     * hosts drop every screen, playback included, and ask who is watching — TV's profile picker,
-     * the phone's profile menu.
-     */
-    val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
-
-    private val _sourceDeletions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-
-    /**
-     * Another device deleted a source the profile in use had: the nav hosts rebuild the back stack
-     * from home as for [externalSwitches], but only once nothing plays — a stream doesn't need its
-     * source's settings, so what is on screen keeps playing.
-     */
-    val sourceDeletions: SharedFlow<Unit> = _sourceDeletions.asSharedFlow()
 
     /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalSwitches]. */
     suspend fun switchProfileExternally(profileId: String) {

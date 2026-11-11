@@ -272,6 +272,9 @@ class EpgManagementViewModel(
     private val _staleProgrammeCount = MutableStateFlow(0)
     val staleProgrammeCount: StateFlow<Int> = _staleProgrammeCount.asStateFlow()
 
+    /** The guide sources being cleared, with how far each is (`EpgFileManager.clearing`). */
+    val clearing = epgFileManager.clearing
+
     init {
         refreshDbStats()
         refreshMaintenanceState()
@@ -507,9 +510,6 @@ class EpgManagementViewModel(
             }
         if (!started) _userMessage.tryEmit(UiText.StringResource(R.string.epg_clear_already_running))
     }
-
-    /** The guide sources being cleared, with how far each is (`EpgFileManager.clearing`). */
-    val clearing = epgFileManager.clearing
 
     /** Refreshes the stale guide sources of every group (GS-D3). */
     fun refreshStale() {

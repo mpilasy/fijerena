@@ -80,15 +80,16 @@ Run style checks and tests before committing code:
 # Run unit tests (what CI runs)
 ./gradlew testDebugUnitTest
 
-# Source gates (see CONTRIBUTING.md, constraints 7 and 13, and the TV focus rules)
+# Source gates (see CONTRIBUTING.md, constraints 7, 13 and 14, and the TV focus rules)
 scripts/check-cancellation.sh       # catch (Exception) in suspend code rethrows CancellationException
 scripts/check-viewmodel-launch.sh   # no new bare viewModelScope.launch (use launchGuarded)
+scripts/check-init-order.py         # no property with a value below an init block
 scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateException)
 scripts/check-design-system.sh      # no raw colours, sizes or Material controls outside the theme (per-file allow-list)
 ```
 
 CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these workflows under `.github/workflows/`:
-- `checks.yml`: a grep for blanket destructive Room fallbacks and the four gates above.
+- `checks.yml`: a grep for blanket destructive Room fallbacks and the five gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
   `assembleDebugAndroidTest` so the instrumented tests keep compiling.

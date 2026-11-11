@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **New CI check (developers):** `scripts/check-init-order.py` fails the build when a class declares a property with a value below an `init` block. That `init` can start work that reads the property before it is set, and the crash then depends on timing (the Sources screen's view model failed a test on CI that passed on a local run). The property groups in the sync settings, guide management and app container classes now come before their `init` blocks.
+
 ## Version: 0.9.20261110234723
 
 - **Episode list no longer shakes, also on episode 2 or 3:** on TV, the episode list still shook without end when the second or third episode had focus (seen on a Chromecast with Google TV and the emulator). The app drew the screen all the time, which on a Chromecast also kept the processor busy. Two causes: since the last Compose update, the list scrolled to a different point when the season tabs were pinned, and the line with the show, the season and Play next made the season tabs taller when it showed. Now the focused episode goes to the same point either way, and that line hangs over the episodes under the season tabs, so it moves nothing.
