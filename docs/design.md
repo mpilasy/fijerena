@@ -98,15 +98,15 @@ IDs are `String` throughout (Jellyfin UUIDs, SMB paths, file URIs).
 
 | Store | Contents | Classes |
 |-------|----------|---------|
-| `providers.db` (`SettingsDatabase`, Room v17) | Sources (config, sync stats and last-sync delta), guide sources (with change-detection validators), pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity`, `ProfileEntity`, settings-sync entities |
-| `xtream_v2.db` (`XtreamDatabase`, Room v24) | Xtream catalogue (categories, streams, series, episodes, per-stream EPG payloads, FTS4), and the provider-agnostic `watch_state` and `favorite_state` tables | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
-| `epg_index.db` (`EpgIndexDatabase`, Room v17) | Guide programme index with FTS4 | `epgindex/` |
-| EncryptedSharedPreferences | Passwords and sessions per source (one login per source, Jellyfin included) | `provider_creds_<id>`, `xtream_secure_credentials` |
+| `providers.db` (`SettingsDatabase`, Room) | Sources (config, sync stats and last-sync delta), guide sources (with change-detection validators) and their links to sources, pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgSourceProviderEntity`, `EpgSourceAliasEntity`, `EpgPipelineStatsEntity`, `ProfileEntity`, settings-sync entities |
+| `xtream_v2.db` (`XtreamDatabase`, Room) | Xtream catalogue (categories, streams, series, episodes, per-stream EPG payloads, FTS4, new episodes), the provider-agnostic `watch_state` and `favorite_state` tables, the Wishlist (`wanted_title`), followed teams and leagues (`followed_sport`), game reminders (`game_reminder`) and live-sync bookkeeping | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity`, and the entities of those tables |
+| `epg_index.db` (`EpgIndexDatabase`, Room) | Guide programme index with FTS4 | `epgindex/` |
+| EncryptedSharedPreferences | Passwords and sessions per source (one login per source, Jellyfin included) | `provider_creds_<id>`, `xtream_secure_credentials_<id>`, `tmdb_secure_key` (the TMDB key) |
 | `xtream_cache_<id>` SharedPreferences | Per-source Xtream response cache | JSON blobs |
 | `media_cache_<id>` SharedPreferences | Recent categories (up to 20 per content type), last-browsed position | JSON blobs + scalars |
 | `app_settings` SharedPreferences | Device, per-profile and synced settings | `AppSettings` |
 
-Watch position, completion and favourites are durable Room rows that are never truncated; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §3; the SharedPreferences stores are §4–§6.
+The database versions, every table and the migrations are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md). Watch position, completion and favourites are durable Room rows that are never truncated; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §3; the SharedPreferences stores are §4–§6.
 
 ---
 
@@ -147,7 +147,7 @@ diagnostics/                   CrashLog, ProcessExits, LaunchCounter, SafeMode, 
 | Profile | Min | Max | To start | After rebuffer |
 |---------|-----|-----|----------|----------------|
 | Wi-Fi Live TV | 15 s | 30 s | 0.5 s | 1 s |
-| Wi-Fi VOD | 30 s | 60 s | 2.5 s | 10 s |
+| Wi-Fi VOD | 30 s | 60 s | 2.5 s | 3 s |
 | Cellular Live TV | 50 s | 50 s | 2.5 s | 5 s |
 | Cellular VOD | 40 s | 100 s | 2.5 s | 5 s |
 
@@ -258,9 +258,15 @@ mobile/.../ui/theme/Color.kt        re-exports (computed get() properties)
 | Forest | `forest` | `#2EBD85` green | `#0E1311` | `#141B18` |
 | Slate | `slate` | `#A8C7FA` light blue, `#062E6F` text on it | `#131314` (plain, no glow) | `#1E1F20` |
 | Indigo | `indigo` | `#FFFFFF` white, `#1C1E3A` navy text on it; badges and TV focus `#FFD23F` yellow (`badgeFill`, `focusFill`) | `#1C1E3A`, glow `#2A2E5C`, to `#14152B` | `#24274A` |
+| Crimson | `crimson` | `#E8141C` red | `#141414` | `#1C1C1C` |
+| Royal | `royal` | `#1F6FEB` royal blue | `#0F1322` navy, glow `#1E2A4F`, to `#040714` | `#1A1D29` |
+| Clay | `clay` | `#D97757` terracotta, `#1F1E1D` text on it | `#262624` warm charcoal, glow `#332D29`, to `#1C1B1A` | `#30302E` |
+| Console | `console` | `#FF9966` orange, black text on it | `#000000` (flat) | `#0A0A0E` |
+| Meadow dusk | `meadow_dusk` | `#F2B45A` amber | `#161A33` painted night sky | `#24202E` |
 | Daylight (light, admin only) | `daylight` | `#1565C0` deep blue | `#F4F6F9` | `#FFFFFF` |
+| Meadow (light, admin only) | `meadow` | `#4E6E3A` moss green | `#E8F1E4` painted day sky | `#F7F1E1` cream |
 
-Midnight, Ember, Aurora, Graphite, Amethyst and Indigo have a ground with depth (Teal, `teal`, went on 2026-10-19 and reads as Aurora, `paletteById`) (`groundGlow`, `groundEnd`): `Modifier.cinemaGround` draws the glow from the top right over the background fading to the far colour corner to corner, behind every screen that has the ambient backdrop. The secondary colour is `#FF6D00` in the older dark themes (`#D84315` in Daylight); Midnight, Ember and Aurora have their own. Each profile has its own theme (`theme_id_<profileId>`); `palettesFor(admin, current)` leaves Daylight out of the picker for anyone but an admin.
+Midnight, Ember, Aurora, Graphite, Amethyst, Indigo, Royal and Clay have a ground with depth (Teal, `teal`, went on 2026-10-19 and reads as Aurora, `paletteById`) (`groundGlow`, `groundEnd`): `Modifier.cinemaGround` draws the glow from the top right over the background fading to the far colour corner to corner, behind every screen that has the ambient backdrop. The secondary colour is `#FF6D00` in the older dark themes (`#D84315` in Daylight); Midnight, Ember and Aurora have their own. Each profile has its own theme (`theme_id_<profileId>`); `palettesFor(admin, current)` leaves Daylight and Meadow out of the picker for anyone but an admin.
 
 ### Look and Feel (`UiStyle`)
 
@@ -268,7 +274,7 @@ Midnight, Ember, Aurora, Graphite, Amethyst and Indigo have a ground with depth 
 
 ### UI Scale (TV)
 
-Settings → Admin → This Device → Text & grid size (0.4–1.0, default 0.8). TV `MainActivity` replaces `LocalDensity` with `Density(density = original * uiScale, fontScale = original)`, so every `dp` and `sp` scales; the `.scaled()` extensions in `tv/.../ui/theme/UiScale.kt` are no-ops to avoid double scaling. `LocalUiScale` (core:ui) still carries the factor. Mobile has no UI scale.
+Settings → This Device → Text & Grid Size: Auto (the default, worked out from the screen), or 0.4, 0.6, 0.8 or 1.0 (`AppSettings.uiScaleChoice`). TV `MainActivity` replaces `LocalDensity` with `Density(density = original * uiScale, fontScale = original)`, so every `dp` and `sp` scales; the `.scaled()` extensions in `tv/.../ui/theme/UiScale.kt` are no-ops to avoid double scaling. `LocalUiScale` (core:ui) still carries the factor. Mobile has no UI scale.
 
 ### Design Token Files
 
@@ -362,6 +368,12 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Device info | `feature/settings/DeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts |
 | Safe mode | `feature/safemode/SafeModeScreen.kt` | Continue, Clear caches, Show logs |
 | Newer data | `feature/safemode/NewerDataScreen.kt` | Close, Reset sources |
+| Person | `feature/person/PersonScreen.kt` (+ `ShowAppearancesOverlay.kt`) | A cast or crew member's page from TMDB |
+| Sports | `feature/sports/SportsSection.kt`, `SportsPages.kt`, `SportsRows.kt`, `GameSheetOverlay.kt` | The Sports section, team and league pages, a game's sheet |
+| Reminders | `feature/sports/TvRemindersScreen.kt` | Game reminders, Reminder Time, Clear all |
+| TMDB title | `feature/wanted/TmdbTitleScreen.kt` | A film or show from TMDB that no source has (the Wishlist) |
+| Send to TV | `feature/sendtotv/TvSendToTvHost.kt` | The Play / Dismiss question when a phone sends something to this TV |
+| About | `feature/settings/AboutScreen.kt`, `TermsScreen.kt`, `LicensesScreen.kt` | About Fijerena, Terms of Use, open-source licences |
 
 Live TV and category parts (`feature/category/components/`): `TwoColumnLayout`, `CategoryList`, `StreamList`, `LiveTvSplitLayout` (preview and full screen), `LiveTvChannelPanel`, `ChannelContext`, `FavoriteMenuDialog` (row actions), `CategoryStates`, `CategoryGridUtils`.
 
@@ -391,6 +403,13 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 | Device info | `feature/settings/MobileDeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts, Share |
 | Safe mode | `feature/safemode/MobileSafeModeScreen.kt` | Continue, Clear caches, Show logs |
 | Newer data | `feature/safemode/MobileNewerDataScreen.kt` | Close, Reset sources |
+| Home | `feature/home/MobileHomeScreen.kt` | The Home tab's rows |
+| Person | `feature/person/MobilePersonScreen.kt` (+ `ShowAppearancesSheet.kt`) | A cast or crew member's page from TMDB |
+| Sports | `feature/sports/MobileSportsSection.kt`, `MobileSportsPages.kt`, `MobileSportsRows.kt`, `MobileGameSheet.kt` | The Sports tab, team and league pages, a game's sheet |
+| Reminders | `feature/sports/MobileRemindersScreen.kt` | Game reminders, Reminder Time, Clear all |
+| TMDB title | `feature/wanted/MobileTmdbTitleScreen.kt` | A film or show from TMDB that no source has (the Wishlist) |
+| Parental Controls | `feature/settings/ParentalControlsScreen.kt` | The Parental Controls lists and Check a source |
+| About | `feature/settings/MobileAboutScreen.kt`, `MobileLicensesScreen.kt` | About Fijerena, open-source licences |
 
 Player parts (`feature/player/components/`): `MobileControlsOverlay`, `MobileChannelListSheet`, `MobileChannelToast`, `MobileStatsOverlay`, `MobileUpNextOverlay`, `MobilePlayerDialogs`, `MobilePlayerStates`.
 

@@ -8,20 +8,20 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-11+-green.svg)](#requirements)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-blue.svg)](https://kotlinlang.org)
 
 </div>
 
 ---
 
-## What it is
+## What It Is
 
 Fijerena is a free and open-source media player. One codebase builds two apps: a 10-foot app for
 Android TV driven by the remote's D-pad, and a touch app for phones. Both play Live TV, films and TV
 shows from the sources **you** add, with a TV guide, profiles, and optional live sync between your
 own devices.
 
-## What it isn't
+## What It Isn't
 
 **Fijerena does not provide or host any content.** It ships with no channels, playlists, films or
 subscriptions, and it doesn't recommend any. You need your own source: a Jellyfin server, an IPTV
@@ -71,6 +71,10 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
   filters; profiles, favourites, progress and settings kept in step across your devices, end-to-end
   encrypted, through a sync server you host yourself ([server/](server/README.md)); TVs join by QR
   code from a phone.
+- **Sports:** follow teams and leagues; see their games with the channels of your sources that
+  show them, and set reminders (data from ESPN, the NHL and MLB; an admin can turn Sports off).
+- **More:** a Wishlist, New Episodes, catch-up (Xtream), Send to TV from a phone, and parental
+  controls.
 - **Settings:** colour themes and looks per profile, an optional profile PIN, English, French and
   Malagasy, UI scale on TV, backup and restore to a file.
 
@@ -78,12 +82,13 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
 
 No analytics, no ads, no crash upload. Logins stay on the device, encrypted. The app talks only to
 the sources and guide links you add (and the stream and image addresses they list), to TMDB if you
-configure a key, and to a sync server if you set one up; sync data is end-to-end encrypted before it
-leaves the device. The camera is used only to
-scan a pairing QR code on the phone. Android backup and device transfer are off; move to a new device
-with Export / Import or live sync. The details are in [PRIVACY.md](PRIVACY.md).
+configure a key, to the ESPN, NHL and MLB sports services while Sports is on, to YouTube when you
+play a trailer, and to a sync server if you set one up. Sync data is end-to-end encrypted before it
+leaves the device. The camera is used only to scan a pairing QR code on the phone. Android backup
+and device transfer are off. To move to a new device, use Back Up to a File and Restore from a File
+(Settings → Sync & Backup), or live sync. The details are in [PRIVACY.md](PRIVACY.md).
 
-## Terms of use
+## Terms of Use
 
 Fijerena provides no content and comes with no sources. You alone are responsible for the sources
 you add and for making sure that your use of them is legal where you are. The full terms are in
@@ -91,11 +96,11 @@ you add and for making sure that your use of them is legal where you are. The fu
 
 ---
 
-## For developers
+## For Developers
 
 ### Building
 
-Prerequisites: **JDK 21**, the **Android SDK** (API level 36), and optionally Android Studio (a
+Prerequisites: **JDK 21**, the **Android SDK** (API level 37), and optionally Android Studio (a
 release that supports AGP 9.4).
 
 ```bash
@@ -110,15 +115,17 @@ Outputs: `tv/build/outputs/apk/debug/tv-debug.apk` and
 `mobile/build/outputs/apk/debug/mobile-debug.apk`. Debug builds also include x86 and x86_64 so
 emulators run natively.
 
-Nothing is required to build, and no build carries a TMDB key. For TMDB details, enter your own key
-(v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
-Settings → Admin → Sources & Guide → Film and series details (TMDB). Without one, nothing is sent to TMDB.
+Nothing is required to build. No release build carries a TMDB key. A debug build takes the key in
+`TMDB_API_KEY` in your `local.properties`, if you set one (see
+[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → Prerequisites). Otherwise, for TMDB details, enter your own
+key (v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
+Settings → Sources & Guide → Film and Show Details (TMDB). Without a key, nothing is sent to TMDB.
 
 `./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs, signed when the
 `FIJERENA_*` signing variables or a `keystore.properties` provide a key, unsigned otherwise (see
 [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → Releasing).
 
-### Installing a development build
+### Installing a Development Build
 
 The deploy scripts build the right APK and install it as an update:
 
@@ -126,12 +133,15 @@ The deploy scripts build the right APK and install it as an update:
 scripts/deploy-tv-emulator.sh [serial]       # TV emulator
 scripts/deploy-mobile-emulator.sh [serial]   # phone emulator
 scripts/deploy-tv-ip.sh <ip>[:port] ...      # network TVs
-scripts/deploy-mobile-usb.sh [serial]        # phone over USB
+scripts/deploy-mobile-usb.sh [--debug] [serial]   # phone over USB
 ```
 
 The TV app is `org.njarasoa.fijerena` and the phone app `org.njarasoa.fijerena.mobile`, so one
-APK never replaces the other. `adb install -r` can wipe the app's data without warning; the real-device
-scripts back up user data first (`scripts/backup-app-data.sh`, which needs `sqlite3` on the host).
+APK never replaces the other. `adb install -r` can wipe the app's data without warning, so the
+real-device scripts back up user data first (`scripts/backup-app-data.sh`, which needs `sqlite3` on
+the host). `deploy-mobile-usb.sh` installs the non-debuggable `localRelease` build by default, which
+cannot be backed up; it gives a warning and installs. With `--debug` it installs the debug build, and
+backs up first while the installed build is debuggable.
 Device discovery, backup/restore, logs and debugging are in
 **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
 
@@ -142,12 +152,15 @@ Device discovery, backup/restore, logs and debugging are in
 ./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
 ./gradlew testDebugUnitTest    # unit tests
 scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
+scripts/check-init-order.py
 scripts/check-design-system.sh
 ```
 
 GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml`
 (tests, lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests,
-when `server/` changes).
+when `server/` changes). `instrumented-tests.yml` runs nightly and by hand (the phone instrumented
+tests and the TV focus walk). `release.yml` builds and publishes the signed APKs when a
+`v<version>` tag is pushed.
 
 ```bash
 # Instrumentation tests (requires a connected device/emulator).
@@ -156,7 +169,7 @@ when `server/` changes).
 ./gradlew connectedAndroidTest
 ```
 
-### Tech stack
+### Tech Stack
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
@@ -187,22 +200,24 @@ Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider ty
 domain models, one `MediaRepository` per source, manual DI through `AppContainer`. See
 [docs/design.md](docs/design.md).
 
-### Project structure
+### Project Structure
 
 ```
 fijerena/
 ├── mobile/                    # Phone app (touch UI)
 ├── tv/                        # Android TV app (10-foot UI)
 ├── core/
-│   ├── player/               # Media3 player, playback service, domain models, diagnostics
-│   ├── network/              # Source implementations, Room databases, EPG pipeline, live sync client
-│   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings
-│   └── navigation/           # Type-safe navigation definitions
+│   ├── player/               # Media3 player, playback service, domain models, diagnostics (CrashLog, SafeMode, AppScopes)
+│   ├── network/              # Source implementations, API clients, Room databases, EPG pipeline, live sync client
+│   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings, AppContainer
+│   └── navigation/           # Type-safe Screen definitions
 ├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
 ├── scripts/                  # Build, deploy, backup/restore, CI checks, TV focus walks
-├── tools/jellyfin-xtream/    # Development only: serves a Jellyfin library as an Xtream panel for testing
+├── tools/                    # Development only: jellyfin-xtream and fake-xtream test panels
 ├── docs/                     # Technical documentation
-└── CONTRIBUTING.md                 # Coding rules and conventions
+├── gradle/                   # Version catalogue (libs.versions.toml)
+├── licenses/fonts/           # Licences of the bundled fonts
+└── CONTRIBUTING.md           # Coding rules and conventions
 ```
 
 ### Documentation
@@ -244,7 +259,7 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the licences
 for details.
 
-### Artwork and fonts
+### Artwork and Fonts
 
 - **App icon and logo** (`mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, the
   `ic_launcher*.webp` mipmaps of both apps, `core/ui/src/main/res/drawable-*/app_logo.png`): the
@@ -254,7 +269,11 @@ for details.
   GPL-3.0-or-later.
 - **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2019 The Manrope
   Project Authors, licensed under the SIL Open Font License 1.1
-  ([docs/licenses/Manrope-OFL.txt](docs/licenses/Manrope-OFL.txt)).
+  ([licenses/fonts/manrope-OFL.txt](licenses/fonts/manrope-OFL.txt)).
+- **Look and Feel fonts** (`core/ui/src/main/res/font/`): Antonio, Barlow, Barlow Condensed,
+  IBM Plex Sans, Inter, Klee One, Lexend, Manrope, Nunito, Source Serif 4, Space Grotesk and
+  Zen Maru Gothic, each licensed under the SIL Open Font License 1.1
+  ([licenses/fonts/](licenses/fonts/)).
 
 ## Acknowledgments
 

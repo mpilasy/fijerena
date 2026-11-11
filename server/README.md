@@ -1,14 +1,14 @@
-# Fijerena sync server
+# Fijerena Sync Server
 
 Live sync between Fijerena devices: one ordered log of end-to-end encrypted records per account,
-plus a WebSocket that tells connected devices when it grows. The server never sees anything
-readable — record keys are HMACs and payloads ciphertext, both made on the devices. Design:
-the live sync plan → Server.
+plus a WebSocket that tells connected devices when it grows. The server never sees your data:
+record keys are HMACs and payloads ciphertext, both made on the devices. It sees only device names
+and when records change. The API is below.
 
 One TypeScript codebase, two ways to run it: a Cloudflare Worker with one Durable Object per
 account, or the same worker in Docker under `workerd`, Cloudflare's open-source runtime.
 
-## Develop and test
+## Develop and Test
 
 ```sh
 npm ci
@@ -35,7 +35,7 @@ npx wrangler secret put SETUP_SECRET   # optional, see below
 npm run deploy
 ```
 
-## Self-host with Docker
+## Self-Host with Docker
 
 ```yaml
 services:
@@ -54,7 +54,7 @@ Behind Nginx Proxy Manager: proxy host → `http://<host>:8787` with **Websocket
 `workerd`'s local Durable Object storage is experimental: the version is pinned in
 `package-lock.json`; back up `/data` before upgrading.
 
-## Setup secret
+## Setup Secret
 
 When `SETUP_SECRET` is set, creating an account needs it in the `X-Setup-Secret` header, so a
 server reachable from the internet can't be used by strangers. Adding devices to an existing

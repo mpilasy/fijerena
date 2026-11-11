@@ -6,7 +6,7 @@ How ingestion, the staging swap and the FTS rebuild use it: `docs/epg_guide.md`.
 
 ---
 
-## 0. Current configuration
+## 0. Current Configuration
 
 All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
 
@@ -19,7 +19,7 @@ All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
 | `synchronous` | `onOpen`, and again around every bulk step | `NORMAL`, never `OFF` (a power cut mid-write could corrupt the file) |
 | `cache_size` | `onOpen` | 8 MB per pooled connection (`-8000`); 32 MB during bulk ingest, 16 MB for an FTS rebuild, 2 MB on that connection after a rebuild, 8 MB again after `endBulkIngestion` |
 | `journal_size_limit` | `onOpen`, through `execPragma` | 10 MB |
-| Reclaim | `EpgIndexer.incrementalVacuum()`, after every refresh that ingested rows, after a purge and after `EpgFtsRebuildWorker`'s rebuild | 2000-page batches, `wal_checkpoint(TRUNCATE)` and one retry when a batch frees nothing (§3) |
+| Reclaim | `EpgIndexer.incrementalVacuum()`, after every refresh that ingested rows, after a purge and after `EpgFtsRebuildWorker`'s rebuild | 2000-page batches, `wal_checkpoint(TRUNCATE)` and one retry when a batch frees nothing (§3); always ends with `wal_checkpoint(TRUNCATE)`, so the WAL file shrinks also when there are no free pages |
 | WAL checkpoint before an FTS rebuild | `rebuildFtsAndUpdateState`, `swapAndRebuildFts` | `PASSIVE`: `TRUNCATE` blocked every reader for the length of the rebuild |
 
 `mmap_size` is not set (§6). Clearing the guide (`EpgIndexer.clearAll()`) deletes the file and its
@@ -27,9 +27,9 @@ All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
 
 ---
 
-## 1. The symptom
+## 1. The Symptom
 
-`epg_index.db` had grown larger than the entire Xtream catalogue on both Shields, and phone-a was
+`epg_index.db` had grown larger than the entire Xtream catalogue on both devices (phone-a and phone-b), and phone-a was
 at 81% disk usage with 2.1 GB free.
 
 | Device | `epg_index.db` | pages | page size | free pages | dead space |
@@ -43,7 +43,7 @@ purge and every ingest, and none of it was reclaiming anything.
 
 ---
 
-## 2. Root cause: PRAGMAs issued through `query()` never execute
+## 2. Root Cause: PRAGMAs Issued Through `query()` Never Execute
 
 ```kotlin
 db.openHelper.writableDatabase
@@ -72,7 +72,7 @@ The same pattern silently disabled three more statements:
 
 ---
 
-## 3. Second cause: the reclaim stalls in WAL mode
+## 3. Second Cause: The Reclaim Stalls in WAL Mode
 
 With the cursor fixed, the first real run on phone-a reclaimed 41,998 of 1,431,134 free pages and
 stopped. A batch that frees nothing is not the end of the freelist: in WAL mode the moved pages
@@ -91,7 +91,7 @@ I EpgIndexer: Incremental vacuum reclaimed 121337 of 121337 free pages
 
 ---
 
-## 4. `auto_vacuum` was set too late
+## 4. `auto_vacuum` Was Set Too Late
 
 `auto_vacuum` can only be enabled on a database with no tables in it. Room's
 `RoomDatabase.Callback.onOpen` fires *after* Room creates the schema, so the old placement could
@@ -100,7 +100,7 @@ never have taken effect on a fresh file. It now runs from `CreationPragmaFactory
 
 ---
 
-## 5. Page size: Requery hardcodes 1024
+## 5. Page Size: Requery Hardcodes 1024
 
 `epg_index.db` runs on 1 KB pages while every Room-default database in the app is on 4 KB —
 deeper B-trees and four times the page lookups per scan, on the largest database the app owns.
@@ -136,7 +136,7 @@ Room migration, not a VACUUM, nothing.
 
 ---
 
-## 6. `mmap_size` deliberately not restored
+## 6. `mmap_size` Deliberately Not Restored
 
 The `mmap_size = 268435456` pragma had never once executed. Repairing it along with the others
 would have switched on a 256 MB mapping in a process that already sits at ~497 MB against a 512 MB
@@ -146,7 +146,7 @@ connection now (§0).
 
 ---
 
-## 7. How these reach a device
+## 7. How These Reach a Device
 
 None of this is a Room migration, and a migration would be the wrong tool: migrations only run on
 a schema version change and never on a fresh install, while Requery stamps 1024 on databases it
@@ -177,12 +177,12 @@ accumulated freelist once. Every later sync is short.
 The index settles at a few tens of MB of slack rather than zero, because the vacuum runs
 mid-pipeline and later sources free more pages afterwards. That is steady state, not a leak.
 
-As of 2026-08-21 both Shields were still on 1 KB pages; converting one needs a delete-and-rebuild
+As of 2026-08-21 both devices were still on 1 KB pages; converting one needs a delete-and-rebuild
 ("Clear All Data" in the guide settings does it).
 
 ---
 
-## 9. Reading the state without pulling the database
+## 9. Reading the State Without Pulling the Database
 
 The first 100 bytes of any SQLite file answer most questions, which matters when the file is
 gigabytes and the device is on the far end of adb:
@@ -208,7 +208,7 @@ an `Explicit` GC in the target and dumps DB stats, which shows up as app activit
 
 ---
 
-## 10. Related memory findings (2026-08-20, phone-b, live playback)
+## 10. Related Memory Findings (2026-08-20, phone-b, Live Playback)
 
 Measured while chasing GC-related playback stutter. Recorded here because they bound what the app
 can afford, and they are not derivable from the code.

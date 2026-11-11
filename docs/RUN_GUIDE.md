@@ -9,9 +9,9 @@ Unified guide for building, installing, and deploying Fijerena across both **And
 - **JDK:** OpenJDK 21
 - **Android SDK:** Command-line tools or Android Studio
 - **API Targets:** `minSdk = 30` (Android 11+), `targetSdk = 35`, `compileSdk = 37`
-- **Gradle:** 9.6.0 via the `./gradlew` wrapper (AGP 9.4.1); sources compile to Java 21
+- **Gradle:** 9.8.2 via the `./gradlew` wrapper (AGP 9.4.1); sources compile to Java 21
 - **Host tools:** `adb`; `sqlite3` for the backup/restore scripts and `deploy-tv-ip.sh`; `python3` for the focus walks
-- **TMDB key (optional, entered in the app):** release builds carry no key. Debug builds seed it once from `TMDB_API_KEY` in `local.properties` on a device that has never had a key set or removed (not synced; a key entered or removed in Settings wins). Otherwise enter your own in the running app: Settings → Source & guide → Film and series details (TMDB) → paste the key (v3 API key or v4 read access token) → Test → Save. On an emulator, typing it is easiest over adb while the field is open for editing: `adb shell input text <key>`. With a sync group it reaches the group's other devices on its own. Without a key TMDB lookups are skipped. A git worktree has no `local.properties` of its own — copy or symlink the main checkout's (the SDK path).
+- **TMDB key (optional, entered in the app):** release builds carry no key. Debug builds seed it once from `TMDB_API_KEY` in `local.properties` on a device that has never had a key set or removed (not synced; a key entered or removed in Settings wins). Otherwise enter your own in the running app: Settings → Sources & Guide → Film and Show Details (TMDB) → paste the key (v3 API key or v4 read access token) → Test → Save. On an emulator, typing it is easiest over adb while the field is open for editing: `adb shell input text <key>`. With a sync group it reaches the group's other devices on its own. Without a key TMDB lookups are skipped. A git worktree has no `local.properties` of its own — copy or symlink the main checkout's (the SDK path).
 
 Verify environment:
 ```bash
@@ -42,7 +42,8 @@ AGP builds APKs under each module's standard build directory:
 
 Debug APKs carry native libraries for `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`, so x86 emulators
 (the TV AVD is a 32-bit x86 image) run the app natively instead of translating its ARM libraries —
-timings taken on an emulator are only meaningful on such a build. Release builds stay ARM-only.
+timings taken on an emulator are only meaningful on such a build. Release builds stay ARM-only;
+`localRelease` also carries `x86` and `x86_64` for emulators.
 
 > [!IMPORTANT]
 > **Incremental deploys, clean on demand:** the deploy scripts build incrementally (no `clean`, since 2026-10-02), so a repeat deploy takes seconds. A stale intermediate DEX shard after changes across modules (`core:*` consumed by `:tv`/`:mobile`) shows up as a `NoClassDefFoundError` at runtime; if that happens, clean and deploy again:
@@ -90,7 +91,8 @@ scripts/check-design-system.sh      # no raw colours, sizes or Material controls
 
 `scripts/check-sports-apis.sh` calls each sports endpoint (ESPN, NHL, MLB) once and prints OK or FAIL. These APIs have no public contract: run it by hand when sports data looks wrong. CI does not run it, because it calls outside services.
 
-CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these workflows under `.github/workflows/`:
+CI runs on pushes to `main` (each workflow has its own path filter) and by hand (`workflow_dispatch`);
+the instrumented tests also run nightly. The workflows are under `.github/workflows/`:
 - `checks.yml`: a grep for blanket destructive Room fallbacks and the five gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
@@ -100,13 +102,14 @@ CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these work
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
 - `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
   `core:network` and `mobile` on a phone emulator, with the test reports uploaded as artifacts; and
-  the TV walk (job `tv-walk`, see "Focus walks" → "Nightly TV walk in CI").
+  the TV walk (job `tv-walk`, see "Focus Walks" → "Nightly TV Walk in CI").
   Compose UI tests run on the JVM with Robolectric, among the unit tests: `robolectric.properties`
   in `tv/src/test/resources` (a plain `Application`, a 960 × 540 dp TV screen) and
   `mobile/src/test/resources` (a plain `Application`; a test sets its screen with `@Config(qualifiers)`).
 
-`./gradlew connectedAndroidTest` uninstalls the app and wipes its data on every connected device —
-only with real devices disconnected, or one emulator targeted with `ANDROID_SERIAL`.
+`./gradlew connectedAndroidTest` uninstalls the app and wipes its data on every connected device, so
+the build refuses it without `-PallowConnectedTest=true`. Pass the flag only with real devices
+disconnected, or with one emulator targeted with `ANDROID_SERIAL`.
 
 ---
 
@@ -125,7 +128,7 @@ incrementally and installs it as an update (`install -r`):
 | `scripts/deploy-tv-emulator.sh [--release] [serial]` | TV emulator | Picks the first emulator with the leanback feature; asks before interrupting playback |
 | `scripts/deploy-mobile-emulator.sh [--release] [serial]` | Phone emulator | Picks the first emulator *without* leanback, so a TV emulator is never overwritten |
 | `scripts/deploy-all.sh [targets file]` | Every device at once | Reads `scripts/deploy-targets.local` (not in git; copy `scripts/deploy-targets.example`): one `<tv\|phone> <debug\|localRelease> <target>` per line, a target being a network TV's `<ip>[:port]`, a USB serial, `emulator:tv` or `emulator:phone`. Connects and checks every device first (Wake-on-LAN for a sleeping TV, the right kind of device, a question before interrupting playback), builds every variant needed in one Gradle run, then backs up each debuggable install and installs on all devices in parallel; prints one line per device |
-| `scripts/deploy-tv-ip.sh [--release] <ip>[:port] …` | Network TVs | Port 5555 by default; wakes a TV whose network sleeps in standby (a Bravia with Remote start on) with Wake-on-LAN first, screen off, using its MAC from the ARP cache or `scripts/wake-macs.local` (`<ip> <mac>` per line, not in git); skips devices still unreachable and any that don't report `tv` in `ro.build.characteristics`; asks before interrupting playback; builds once, then backs up each device's user data with `backup-app-data.sh` into `backups/*.tar.gz` (kept 7 days) and installs in parallel |
+| `scripts/deploy-tv-ip.sh [--release] <ip>[:port] …` | Network TVs | Port 5555 by default; wakes a TV whose network sleeps in standby (a Bravia with Remote start on) with Wake-on-LAN first, screen off, using its MAC from `scripts/wake-macs.local` (`<ip> <mac>` per line, not in git), else from the ARP cache; skips devices still unreachable and any that don't report `tv` in `ro.build.characteristics`; asks before interrupting playback; builds once, then backs up each device's user data with `backup-app-data.sh` into `backups/*.tar.gz` (kept 7 days) and installs in parallel |
 | `scripts/deploy-mobile-usb.sh [--debug] [serial]` | USB phone | Installs `localRelease` by default (`--debug` for the debug build). Uses the only USB device when no serial is given; backs up the phone's user data first while the installed build is debuggable, like `deploy-tv-ip.sh` (no playback check). A `localRelease` install cannot be backed up: the script warns and installs (accepted, 2026-10-21) |
 
 **`--release`** builds and installs `localRelease` instead of `debug`: the release code (no R8, as
@@ -135,7 +138,7 @@ memory and frames on our own devices; it is never published. A non-debuggable in
 with `run-as`, so: the deploy scripts back up a debug install before replacing it, but they can't
 back up a `localRelease` install (they say so and install anyway, with the same key); database
 pulls, the debug broadcast receivers and the `run-as` checks in this guide don't work on it. Use
-Settings › Admin › Sync & Backup › Back up to a file first if the data matters, or deploy the debug build
+Settings → Sync & Backup → Back Up to a File first if the data matters, or deploy the debug build
 again (it installs over `localRelease` and keeps the data) before using those tools.
 
 A real-device script doesn't install on a device that has the app but whose backup failed. Other
@@ -144,11 +147,11 @@ scripts: `scripts/uninstall-app.sh [serial]` is the only sanctioned uninstall (i
 
 > [!CAUTION]
 > **Strict Deployment Rules:**
-> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 real TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — run `scripts/backup-app-data.sh <serial> <out.tar.gz>` (user data only); `scripts/restore-app-data.sh <serial> <backup.tar.gz>` puts it back — see Backup & restore below. The real-device deploy scripts (`deploy-tv-ip.sh`, `deploy-mobile-usb.sh`, `deploy-all.sh`) run the backup themselves. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
+> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 real TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — run `scripts/backup-app-data.sh <serial> <out.tar.gz>` (user data only); `scripts/restore-app-data.sh <serial> <backup.tar.gz>` puts it back — see Backup & Restore below. The real-device deploy scripts (`deploy-tv-ip.sh`, `deploy-mobile-usb.sh`, `deploy-all.sh`) run the backup themselves. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
 > 2. **Device Detection:** Always detect device type via `getprop ro.build.characteristics` (or inspect `product:`/`model:` in `adb devices -l`) before deploying. Never assume target identity from port numbers or IPs.
 > 3. **No Auto-Launch:** Never automatically launch the app (`am start` or monkey intents) after install. Let the user launch the app manually when ready.
 
-### Backup & restore
+### Backup & Restore
 
 ```bash
 scripts/backup-app-data.sh  <serial> backups/<name>.tar.gz   # ~50 KB, needs sqlite3 on the host
@@ -192,7 +195,7 @@ scripts/deploy-mobile-emulator.sh [<mobile-emulator-id>]
 
 HEVC testing on an emulator is limited, and Jellyfin content will be transcoded. On the TV emulator, full screen from the Live TV preview can freeze with a full buffer and no picture: the emulator's decoder causes this, and real TVs do not show it.
 
-#### Test source: Jellyfin as Xtream
+#### Test Source: Jellyfin as Xtream
 
 A development tool, not part of the apps: `tools/jellyfin-xtream/xtream_bridge.py` (Python 3, stdlib only) serves a Jellyfin server as an Xtream panel, so the Xtream code paths can be tested against a known library. It holds no credentials: the Xtream username/password the app sends are checked against Jellyfin. Pointing it at another Jellyfin server only means changing `JELLYFIN_URL`.
 
@@ -205,7 +208,7 @@ In the app, add an Xtream source with Server URL `http://10.0.2.2:8080` (emulato
 
 Like a real panel, a series' `last_modified` moves when episodes are added (Jellyfin's `DateLastMediaAdded`, else `DateCreated`), so adding an episode in Jellyfin makes the app fetch that show's episodes again after its next sync. An item that sits in two Jellyfin libraries is listed once, under the first library by name. After editing the bridge, rerun `restart.sh`.
 
-#### Test source: fake Xtream
+#### Test Source: Fake Xtream
 
 `tools/fake-xtream/server.py` (Python 3, stdlib only) is a fake Xtream panel with fixed data, for
 the nightly TV walk and other scripted checks: 3 live categories (News, Kids, Adult) with 6
@@ -221,7 +224,7 @@ python3 tools/fake-xtream/server.py --self-test    # call every endpoint, check 
 ```
 
 In the app, add an Xtream source with Server URL `http://10.0.2.2:8090` (emulator → host) and
-`test` / `test`, or seed a fresh install with `scripts/seed-test-household.sh` (see "Focus walks").
+`test` / `test`, or seed a fresh install with `scripts/seed-test-household.sh` (see "Focus Walks").
 
 ### 2. Physical Android TV (NVIDIA Shield, Chromecast, Sony Bravia)
 
@@ -247,7 +250,8 @@ TV devices connect via ADB over TCP/IP (port 5555). Because TV IP addresses drif
 
 ### 3. Physical Android Mobile (Phones / Tablets)
 
-Connect phone via USB cable or Wireless Debugging (Settings → Developer Options):
+Connect the phone with a USB cable or with Wireless Debugging (Settings → Developer Options). A phone
+on Wireless Debugging needs its serial on the command line: the script picks only USB devices.
 
 ```bash
 # Verify connection
@@ -300,7 +304,7 @@ still builds, unsigned (`*-release-unsigned.apk`).
 1. Raise `fijerena.versionCode` by one (every release, or the APK won't install over the last one)
    and set `fijerena.versionName` in `gradle.properties` to `0.<minor>.<UTC time>`: the minor
    version, then the release's time in UTC as `YYYYMMDDHHMMSS`
-   (`echo 0.8.$(date -u +%Y%m%d%H%M%S)`), for example `0.8.20261026194500`. The time only grows,
+   (`echo 0.9.$(date -u +%Y%m%d%H%M%S)`), for example `0.9.20261111170052`. The time only grows,
    so each release sorts after the last; raise the minor version for a larger change.
 2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
 3. Commit, push `main`, then tag and push the tag:
@@ -325,7 +329,7 @@ adb -s <device-id> logcat -c
 adb -s <device-id> logcat -s EventLogger
 ```
 
-### Crash log and Logs
+### Crash Log and Logs
 
 Every build records what went wrong on the device itself, so a crash on a TV is still there after
 the fact without logcat having been attached:
@@ -360,7 +364,7 @@ adb -s <device-id> shell run-as <pkg> cat files/crashlog/crashes.log
 The log is capped at 256 KB (oldest half dropped). "Clear log" clears only the app's own entries;
 Android's exit history stays.
 
-### Crash-loop safe mode
+### Crash-Loop Safe Mode
 
 Each process start appends a timestamp to `files/safemode/launches` (a plain file, not
 SharedPreferences or Room); 30 s later, if the process is still alive and not in safe mode, the file
@@ -380,7 +384,7 @@ adb -s <device-id> shell am force-stop org.njarasoa.fijerena
 adb -s <device-id> shell run-as <pkg> rm files/safemode/launches
 ```
 
-### Debug broadcasts
+### Debug Broadcasts
 
 Three receivers exist in debug builds only (`src/debug` source sets) and require
 `android.permission.DUMP`, which the adb shell holds and other apps don't — so `adb shell am
@@ -404,7 +408,7 @@ adb -s <device-id> shell am broadcast --include-stopped-packages -a org.njarasoa
 `handoff --es url <server>`, `now` (a sync pass), `status`, `unlink`. The full list is in the
 receiver's KDoc.
 
-### Game reminders
+### Game Reminders
 
 A game reminder is an `AlarmManager` alarm at the device's Reminder Time before the game (10 minutes
 by default; `AppSettings.reminderLeadMinutes`, `GameReminders`,
@@ -436,7 +440,7 @@ adb -s <device-id> shell dumpsys package <pkg> | grep -i exact_alarm
 adb -s <device-id> shell pm dump <pkg> | grep -A 2 GameReminderRescheduleReceiver
 ```
 
-### Focus walks
+### Focus Walks
 
 Settings' and the two-pane browse's focus order is checked by Robolectric focus tests
 (`tv/src/test`, the `FocusWalk` helper, one `*FocusTest` class per group or screen). They need no
@@ -514,25 +518,24 @@ there. Each file's header comments name the start screen, the source it expects 
 | `favorites-remove.txt` | Live TV browse, Favourites (iptv, one favourite): Remove from Favourites with no confirmation, the empty list's Refresh focused, Menu undoes |
 | `live-panel-remove.txt` | Live TV preview's channel panel, Recent tab (iptv): removal → next row (not the tabs), Menu undoes |
 | `home-card-actions.txt` | Home (iptv): a Channels card's menu, removal → next card, Menu undoes; a Favourite channels card opens on Remove from Favourites, Back keeps focus |
+| `home-new-episodes.txt` | Home (main): the New Episodes row at the start of the TV Shows group, its cards, OK opens the show page on the season of the first new episode, Back to the card. Needs a show with a new episode; written by hand, not recorded yet |
+| `kids-home.txt` | Kids' Home (Kid, a child profile): Home opens on the first card; Left to the rail, which has only the avatar, Home and Search |
+| `parental-controls.txt` | Settings → Parental Controls: one row per list, a list's pane (Add a word, the words, Reset to the app's list, never pressed), OK removes a word and Menu puts it back, Check a source |
+| `reminders.txt` | Sports section → the Reminders page: the bell, the rows' Open and Remove reminder, Reminder Time, Clear all (never pressed), Back to the bell. Written from the focus tests; record it before you rely on it |
+| `sports-section.txt` | The Sports section: Find teams, the followed logos, a game, its bell, its sheet. Written from the focus tests; record it before you rely on it |
+| `sports.txt` | Search → Teams, the team page (Follow, its games), the game sheet, Back to the team row. Written from the plan; record it before you rely on it |
+| `wanted-home.txt` | Home (atr): the Wishlist row in the Films group; Menu opens Remove from Wishlist on Cancel, Back closes it on the card, Left to the rail |
 | `ci-settings.txt` | CI only (test household, fake source): the profile picker, the rail to Settings, Settings' rail and every group for Admin, Admin's and Kid's pages |
 
-The first fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
-after the fixes). After the navigation rail and the Home change (2026-10-08 / 09): `home.txt`,
-`home-rows.txt`, `sources.txt` and `live-tv-preview.txt` re-run with 0 mismatches; `search.txt`
-and `settings.txt` match on their rail steps but depend on the device's recent searches and on a
-profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `guide.txt` and
-`epg-management.txt` were edited by hand for the rail and not yet re-run (`guide.txt` and
-`epg-management.txt` need a source with a guide). The Recent and Favourites rework (2026-10-09:
-immediate removal with Undo, edit mode, Home card actions, the Favourite channels row) was walked by
-hand on the emulator, then the four walks above were recorded (2026-10-09, 0 mismatches each) and
-`home.txt` re-run (0 mismatches); `home-rows.txt` not re-run after it. Some file headers still say "not yet recorded" from before those rounds.
+Each walk file's header says when it was last recorded or run. Run a walk again after a change to
+its screen's focus order, and record it with `-r` in the same commit.
 
-#### Nightly TV walk in CI
+#### Nightly TV Walk in CI
 
 `instrumented-tests.yml`'s job `tv-walk` (nightly and by hand) runs walks on a TV emulator
 (Android TV image, API 34, `tv_1080p`) with fixed data, so it needs no prepared device. It builds
 `:tv:assembleDebug`, checks and starts the fake Xtream server on the runner (port 8090, see "Test
-source: fake Xtream"), then on the emulator runs `scripts/ci-tv-walk.sh`: install the APK, seed the
+Source: Fake Xtream"), then on the emulator runs `scripts/ci-tv-walk.sh`: install the APK, seed the
 test household, open the app, run the walks listed in `scripts/focus-walks/ci-walks.txt`. On a
 failure it uploads `walk-output/` (the walk log, a screenshot, the UI dump and logcat) and the
 server's log as the artifact `tv-walk-output`.
@@ -552,13 +555,10 @@ uninstall first, so ask before doing it on an emulator that has data. To run the
 locally on a throwaway TV emulator with the server running: `./gradlew :tv:assembleDebug`, then
 `scripts/ci-tv-walk.sh <serial>`.
 
-`ci-settings.txt` was written from the code and `settings.txt` on 2026-10-24 and has not run yet:
-the first CI run checks it.
-
 ---
 
 ## Device-Specific Tips
 
-- **NVIDIA Shield:** Supports 4K/HDR and AV1/HEVC hardware decoding. Ideal for stress-testing heavy streams.
+- **NVIDIA Shield:** Supports 4K/HDR with HEVC and VP9 hardware decoding (no AV1). Ideal for stress-testing heavy streams.
 - **Sony Bravia:** Features mid-range TV chipsets. Test for overscan compliance (56dp horizontal, 32dp vertical margins) and smooth 60fps D-pad focus animations.
-- **Mobile Devices:** Locked to portrait outside the player; the player switches to landscape (either way round, by sensor).
+- **Mobile Devices:** Locked to portrait, except the Live TV dock while a channel plays (it follows the sensor) and the player (landscape, either way round, by sensor).

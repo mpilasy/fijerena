@@ -193,7 +193,7 @@ incoming record against — with `pending` = 1 for local changes not yet sent. `
 logical clock plus the `applying` flag. Deleting a provider removes its logins' and filters'
 entries; deleting a profile removes its entries (their tombstones cover them).
 
-### Sync triggers (v14, installed on every open)
+### Sync Triggers (v14, Installed on Every Open)
 `SettingsSyncTriggers.install`, in `onOpen`. Each ticks `sync_clock` and writes the key into `sync_version` as pending
 in the writing transaction, unless `applying` is set. Updates count only when a synced column
 changes, so sync statistics, activation and EPG ingestion bookkeeping are never queued.
@@ -213,7 +213,7 @@ written (no shared transaction): provider passwords (`provider`; a Jellyfin sour
 category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
 profile `shared`, is ignored), `admin` (per profile; a `dev_mode` record from an older build is applied to it, but `dev_mode` is no longer sent), `child_profile` (per profile), `nerd_mode` (per profile), `autoplay_next_episode` (per
-profile), `pin_hash` (per profile; a removed PIN is sent as blank), the five Parental Controls lists (`parental_*`, one shared record per list), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, each live sync device's build as one shared record per device, `device_build:<deviceId>` = a JSON `DeviceBuild` (version, build type, Android release), stored the same way, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
+profile), `pin_hash` (per profile; a removed PIN is sent as blank), `ui_theme_id`, `poster_backdrop` and `charts_show_missing` (per profile), `tmdb_api_key` (shared; the key lives in `tmdb_secure_key`, §6), the five Parental Controls lists (`parental_*`, one shared record per list), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, each live sync device's build as one shared record per device, `device_build:<deviceId>` = a JSON `DeviceBuild` (version, build type, Android release), stored the same way, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
 
@@ -298,7 +298,7 @@ pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later versi
 (`watch_state`, `favorite_state`, sync versions and tombstones), so every version jump needs a real
 `Migration`. A file *newer* than the build (an older APK installed over a newer one) is renamed to
 `xtream_v2.db.v<N>.bak` (plus `-wal`/`-shm`; only the latest set is kept) before Room opens, and the
-app starts with an empty database; the event is recorded in Settings → Diagnostics.
+app starts with an empty database; the event is recorded in the crash log (Settings → About → Logs).
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -675,7 +675,7 @@ One row (`id` = 1): `hlc`, this database's hybrid logical clock in milliseconds 
 moves it to `max(now, hlc + 1)` — and `applying`, set while changes received from another device are
 written so they aren't queued straight back.
 
-### Sync triggers (v22, installed on every open)
+### Sync Triggers (v22, Installed on Every Open)
 Room doesn't manage these; `XtreamSyncTriggers.install` drops and recreates them in the database's
 `onOpen`, so fresh installs, migrations and destructive rebuilds all get them, and an app update
 that changes one replaces it. They queue with delete-then-insert, never `INSERT OR REPLACE`: inside
@@ -695,14 +695,14 @@ a trigger SQLite applies the firing statement's conflict rule, and Room's `@Inse
 Row deletions fire nothing: a removal is queued through its tombstone, and rows deleted with their
 provider or profile are covered by that one's tombstone.
 
-### Catalog Lifecycle, Orphan Pruning & Compaction
+### Catalogue Lifecycle, Orphan Pruning and Compaction
 Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.
 
 1. **Cascaded Provider Deletion:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db` (and the provider's `sync_tombstone` / `sync_version` rows), clears its SharedPreferences (`provider_creds_{id}`, `media_cache_{id}`, `xtream_cache_{id}`) and deletes every profile's `provider_creds_{id}_profile_*` / `media_cache_{id}_profile_*`, and removes its EPG sources with their `epg_index.db` rows. Catalogue rows go 1,000 per commit (`deleteInBatches`), and no `VACUUM` follows: see 6.
 2. **Orphan Pruning (`pruneOrphanedCatalogData`):** Sweeps only the downloaded catalogue (`xtream_streams`, `xtream_series`, `xtream_episodes`, `new_episode`, `xtream_categories`, `xtream_epg_cache`) for `providerId NOT IN (valid ids)`, in the same 1,000-row commits, plus orphaned cache SharedPreferences (`media_cache_*`, `xtream_cache_*`). **Never `favorite_state` or `watch_state`**: "orphaned" is inferred from `providers.db`, and whenever the two files disagree (a reset or restored `providers.db`, a provider synced in between the read and the delete) the inference is wrong — it used to delete every favourite and history row. Those go only with `deleteProvider`. Orphaned credential files (`provider_creds_*`) and EPG sources (without sync tombstones) are removed only by the user's "Shrink Database". The provider list is read again before each step. See the next level rock solid resilience plan → R-02.
 3. **Safety Circuit Breaker:** If `validProviderIds.isEmpty()`, `pruneOrphanedCatalogData()` immediately aborts and returns `(0, 0)`, preventing accidental deletion if provider loading ever returned empty.
 4. **Automatic Background Maintenance:** `sweepOrphanedCatalogData` (never throws; a full disk or locked database is recorded in the crash log and skipped) runs during scheduled `EpgSyncWorker` runs, and at app start only when `orphan_sweep_pending` is set — a provider deletion was interrupted. It used to run unguarded from the nav hosts' composition on every start, a full scan of the catalogue tables competing with Home's first queries, and an exception there crashed every launch (R-03, R-17).
-5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Admin → Advanced → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `userRequested = true` to force compaction and report rows removed and bytes reclaimed.
+5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Sources & Guide → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `userRequested = true` to force compaction and report rows removed and bytes reclaimed.
 6. **Space and the WAL:** `xtream_v2.db` runs `auto_vacuum = FULL`, so freed pages go back to the filesystem as rows are deleted — a `VACUUM` only defragments. In WAL mode a `VACUUM` first rewrites the whole database into `xtream_v2.db-wal`: measured 258 MB on a 263 MB database, room a low-storage TV may not have. It therefore runs only for the manual "Shrink Database" (`userRequested = true`, followed by `PRAGMA wal_checkpoint(TRUNCATE)`), never automatically. Deleting in 1,000-row commits keeps the WAL peak at ~13 MB for a 285k-row provider (one unbounded `DELETE`: 70 MB).
 
 ---
@@ -739,7 +739,7 @@ per-provider, never global.
 yields an empty list). It is left as-is deliberately: it is a convenience list the user never
 curates, so eviction there is the intended behaviour rather than data loss.
 
-### Scalar Keys (last-browsed position restore)
+### Scalar Keys (Last-Browsed Position Restore)
 
 | Key | Type | Description |
 |-----|------|-------------|
@@ -769,22 +769,32 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `last_tab_<profileId>` | TEXT | The tab (`HOME` or a section's `ContentType`) that profile last had open in the phone's bottom bar, opened at the next start. Per device, never synced; removed with the profile |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
 | `last_provider_<profileId>` | TEXT | Retired (multi-source Phase 6): `providerKey` of the provider that profile last picked. No longer written nor synced (a value an older build sends is ignored); read only by the one-time upgrade to per-profile sources (`profile_sources_seeded_v1`) |
-| `profile_sources_<profileId>` | TEXT | The sources that profile has: a JSON array of `providerKey`s (sorted). Absent = none stored (a profile from before the upgrade, or one synced from an older build); a key with no provider on this device is kept and skipped (`ProviderRepository.profileSources`), A new provider is added to the profile in use's; a new profile copies the profile in use's; removed with the profile. Synced per profile and per source (`profile_source:<providerKey>` setting records, on or off; linking seeds one for every source on or known here) — see `docs/plans/20261012_multi-source-search-history-plan.md` → Phase 2 |
+| `profile_sources_<profileId>` | TEXT | The sources that profile has: a JSON array of `providerKey`s (sorted). Absent = none stored (a profile from before the upgrade, or one synced from an older build); a key with no provider on this device is kept and skipped (`ProviderRepository.profileSources`). A new provider is added to the profile in use's; a new profile copies the profile in use's; removed with the profile. Synced per profile and per source (`profile_source:<providerKey>` setting records, on or off; linking seeds one for every source on or known here) — see `docs/plans/20261012_multi-source-search-history-plan.md` → Phase 2 |
 | `profile_sources_seeded_v1` | BOOLEAN | One-time flag, per install (never synced): `AppSettings.seedProfileSourcesOnce` has given each profile without `profile_sources_<profileId>` its last-picked provider (if it still exists here), else the one an older build marked `isActive`. Run at startup and before a provider is added; never overwrites a value received by sync; what it writes isn't sent |
 | `profile_source_records_queued_v1` | BOOLEAN | One-time flag, per install (never synced): `ProfileRepository.seedProfileSourceRecordsOnce` has seeded the per-source `profile_source:<providerKey>` records for every profile with stored sources — for a device linked before they existed, which linking would never seed again — at the clock of the whole-list `profile_sources` record it replaces, so a newer change made on another device first still wins. Run at startup, after `profile_sources_seeded_v1` |
-| `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown in dev mode. Per device |
+| `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown to a Nerd. Per device |
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see the live sync now playing plan |
 | `theme_id_<profileId>` | TEXT | That profile's colour theme (absent = `deep_night`). Synced per profile; a new profile copies the profile in use's; removed with the profile. Replaced the device-wide `theme_id`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
-| `ui_style_id_<profileId>` | TEXT | That profile's Look and Feel, independent of colour (absent = `material`). Synced, copied, removed and upgraded from the device-wide `ui_style_id` like `theme_id_<profileId>` |
+| `ui_style_id_<profileId>` | TEXT | That profile's Look and Feel, independent of colour (absent = `modern`). Synced, copied, removed and upgraded from the device-wide `ui_style_id` like `theme_id_<profileId>` |
 | `ui_theme_id_<profileId>`, `poster_backdrop_<profileId>` | TEXT, BOOLEAN | That profile's UI theme (absent = `custom`; an unknown id reads as Custom) and its Poster in the Background switch (absent = on). Synced per profile; removed with the profile |
-| `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
+| `charts_show_missing_<profileId>` | BOOLEAN | That profile's "Titles not in your sources" switch on the Trending rows and a person's page (absent = off). Synced per profile; removed with the profile |
+| `ui_scale` | FLOAT | TV Text & Grid Size as picked: 0.4, 0.6, 0.8 or 1.0; absent = Auto (the TV app works it out from the screen) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
 | `epg_refresh_interval_copied_v1` | BOOLEAN | One-time flag, per install (never synced): `EpgRefreshSchedule.copyLegacyIntervalOnce` has written the retired device-wide interval (`epg_auto_refresh` off or `epg_refresh_interval` -1 → -1, else the interval) into every `epg_source` row whose `refresh_interval_hours` is null. Set only after it succeeds |
 | `app_language` | TEXT | ISO 639-1 code (`en`, `fr`, `mg`; default `en`) |
 | `provider_name` | TEXT | Legacy single-provider name. Never written any more; a few screens still read it as a fallback (default `My Provider`) until the active provider's name loads |
 | `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for a fast cold start (TV) |
 | `orphan_sweep_pending` | BOOLEAN | Set while `deleteProvider` runs, cleared when it finishes; still set at the next start means a deletion was interrupted, and that start sweeps for orphaned catalogue rows. Per device, never synced |
-| `watch_history_size`, `favorites_max_size`, `cache_expiry_hours` | INT | Unused: nothing reads or writes them. The live values are per provider, in `providers.providerSettings` (`watchHistorySize`, `favoritesMaxSize`, `cacheExpiryHours`) |
+| `favorites_max_size`, `cache_expiry_hours` | INT | Unused: nothing reads or writes them. The live values are per provider, in `providers.providerSettings` (`favoritesMaxSize`, `cacheExpiryHours`) |
+| `recent_row_size` | INT | How many cards each Recent row shows on this device (1–100). The rows merge every source, so it is one value for the device. Not synced |
+| `per_source_playback_moved_v1` | BOOLEAN | One-time flag, per install (never synced): `AppSettings.movePerSourcePlaybackOnce` has written the largest `providerSettings.watchHistorySize` of the sources into `recent_row_size` (only when that key was absent). `watchHistorySize` is read only by this move |
+| `show_clock` | BOOLEAN | The screens' clock at the top right (absent = off). Per device: not per profile, not synced, not exported |
+| `key_input_until` | LONG | When Show Key Input ends (TV, Settings → This Device), epoch ms; 0 or a past time = off. Per device |
+| `reminder_lead_minutes` | INT | How many minutes before the start a game reminder rings on this device: 0, 5, 10, 15, 30 or 60 (absent = 10, `ReminderSchedule.DEFAULT_LEAD_MINUTES`). Set through `GameReminders.setLeadMinutes`, which moves the alarms already set. Per device, not synced |
+| `show_tmdb_charts` | BOOLEAN | The TMDB chart rows on Home and the Charts lists (absent = on; they show only with a TMDB key). Off, no chart page is read. Per device, set by an Admin; not synced, not exported |
+| `show_sports` | BOOLEAN | The sports teams, leagues and games (absent = on). Off, no sports API is called. Per device, set by an Admin; not synced, not exported |
+| `new_episodes_told_at_<profileId>` | LONG | The newest find of new episodes that the Home banner told that profile about on this device (ms). Not synced: each device finds new episodes itself |
+| `night_audio` | BOOLEAN | Night Audio (absent = off; `NightAudioProcessor.KEY`): quiet speech louder, loud sounds quieter. Per device, not synced; the player service reads the key directly |
 | `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
 | `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
 | `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |
