@@ -1030,7 +1030,7 @@
     <string name="profile_child_last_admin">The only admin profile can\'t be a child\'s: make another profile an admin first.</string>
     <string name="profile_source_no_filters">Content filters don\'t reach this source</string>
     <string name="settings_pin_nudge_title">Set a PIN for Settings</string>
-    <string name="settings_pin_nudge_desc">There is a child profile but no admin has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles.</string>
+    <string name="settings_pin_nudge_desc">There is a child profile but no admin has a PIN: anyone can change sources, content filters and profiles.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d of %2$d</string>
     <string name="profile_sources_desc">The sources this profile can use. A new source is on only for the profile that added it. A profile keeps at least one source.</string>

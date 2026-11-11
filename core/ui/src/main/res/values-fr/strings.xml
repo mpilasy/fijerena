@@ -993,7 +993,7 @@
     <string name="profile_child_last_admin">Le seul profil admin ne peut pas être un profil enfant : rendez d’abord un autre profil admin.</string>
     <string name="profile_source_no_filters">Les filtres de contenu n’agissent pas sur cette source</string>
     <string name="settings_pin_nudge_title">Définir un code PIN pour les paramètres</string>
-    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil admin n’a de code PIN : un enfant peut passer à n’importe quel profil, et n’importe qui peut changer les sources, les filtres de contenu et les profils.</string>
+    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil admin n’a de code PIN : n’importe qui peut changer les sources, les filtres de contenu et les profils.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d sur %2$d</string>
     <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n’est activée que pour le profil qui l’a ajoutée. Un profil garde au moins une source.</string>

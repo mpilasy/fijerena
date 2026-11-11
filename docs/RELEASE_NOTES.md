@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Clearer PIN reminder:** the Set a PIN for Settings reminder no longer says that a child can switch to any profile, since a PIN does not change that. It now says only that without an admin PIN anyone can change sources, content filters and profiles. English, French and Malagasy.
 - **Jellyfin hears every stop:** when the app could not save your place at the end of playback, it also did not tell the Jellyfin server that playback stopped, so the server kept the old position and showed the title as still playing. Now the server is always told. TV and phone.
 
 ## Version: 0.9.20261111170052

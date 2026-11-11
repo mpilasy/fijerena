@@ -1177,7 +1177,7 @@
     <string name="profile_child_last_admin">Tsy afaka ho mombamomba ankizy ny hany mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="profile_source_no_filters">Tsy mahatratra ity loharano ity ny sivana votoaty</string>
     <string name="settings_pin_nudge_title">Mametraha PIN ho an\'ny Fandrindrana</string>
-    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy mpitantana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
+    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy mpitantana manana PIN: na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
     <string name="profile_sources_title">Loharano</string>
     <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
     <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray.</string>
