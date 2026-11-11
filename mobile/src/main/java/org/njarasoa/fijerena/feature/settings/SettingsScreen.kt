@@ -88,8 +88,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings as one grouped preference list: Your Profile (the personal rows of the profile in use,
- * in place) and About, which everyone opens. For an Admin, an Admin row between them opens, after
- * the PIN, the list of the Admin groups (the admin settings plan); each group opens its own page.
+ * in place) and About, which everyone opens. For an Admin, the five Admin sections between them,
+ * each opening its own page after the PIN (docs/plans/20261111_admin-sections-direct-plan.md).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -326,38 +326,30 @@ fun MobileSettingsScreen(
         )
     }
 
-    // Admin open as its own page, in place of the list; Back returns to the list. A language change
-    // (Activity recreate) and the round trip through a screen it opens come back to it. It opens
-    // after the PIN of the profile in use, once per session (PinSession); the rows inside ask nothing
-    // more.
-    var adminOpen by rememberSaveable { mutableStateOf(false) }
-    // The Admin section open as its own page, in place of Admin's list of sections (null: the list).
-    // Back returns to the list. It is saveable, as adminOpen, for the same round trips.
+    // The Admin section open as its own page, in place of Settings' list (null: the list); Back
+    // returns to the list. Its row on Settings opens it after the PIN of the profile in use, once per
+    // session (PinSession), for all five sections; the rows inside ask nothing more. Saveable, so a
+    // language change (Activity recreate) and the round trip through a screen it opens come back to it.
     var adminSection by rememberSaveable { mutableStateOf<AdminGroup?>(null) }
     // Admin turned off, or the session locked again (a long time in the background): back to
     // the list, so the Admin rows are not open without the PIN.
-    val adminLocked = adminOpen && (!uiState.isAdmin || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
+    val adminLocked = adminSection != null && (!uiState.isAdmin || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
     LaunchedEffect(adminLocked) {
-        if (adminLocked) {
-            adminSection = null
-            adminOpen = false
-        }
+        if (adminLocked) adminSection = null
     }
-    val adminBack: () -> Unit = { if (adminSection != null) adminSection = null else adminOpen = false }
-    BackHandler(enabled = adminOpen) { adminBack() }
-    // One list state for each page: a section opens at its top, and Back finds the page it left at
-    // the same scroll position.
-    val page = if (adminOpen) adminSection?.name ?: ADMIN_LIST_PAGE else SETTINGS_PAGE
-    val listState = key(page) { rememberLazyListState() }
+    val adminBack: () -> Unit = { adminSection = null }
+    BackHandler(enabled = adminSection != null) { adminBack() }
+    // Settings' list keeps its scroll while a section is open, so Back lands on the section's row;
+    // a section opens at its top.
+    val settingsListState = rememberLazyListState()
+    val sectionListState = key(adminSection) { rememberLazyListState() }
+    val listState = if (adminSection == null) settingsListState else sectionListState
 
     Scaffold(
         topBar = {
             MobileScreenHeader(
-                title =
-                    stringResource(
-                        if (adminOpen) adminSection?.titleRes ?: R.string.settings_group_admin else R.string.settings_title,
-                    ),
-                onBack = if (adminOpen) adminBack else onBack,
+                title = stringResource(adminSection?.titleRes ?: R.string.settings_title),
+                onBack = if (adminSection != null) adminBack else onBack,
             )
         },
     ) { paddingValues ->
@@ -369,7 +361,7 @@ fun MobileSettingsScreen(
                     .padding(paddingValues),
             contentPadding = PaddingValues(bottom = Spacing.lg + LocalDockInset.current),
         ) {
-            if (!adminOpen) {
+            if (adminSection == null) {
                 // === Your Profile === first, since it decides whose favourites and history the rest
                 // is about: the personal rows of the profile in use, in place, no PIN; Add Profile
                 // for a grown-up that is not an admin.
@@ -381,17 +373,21 @@ fun MobileSettingsScreen(
                     }
                 }
 
-                // For an Admin: the Admin row, the list of the Admin groups.
+                // For an Admin: the Admin sections, in TV's rail order, under a heading of their own
+                // (without one they read as rows of the Playback group above). Each opens its own
+                // page after the PIN; Parental Controls opens its own screen.
                 if (uiState.isAdmin) {
                     item {
-                        // Under a heading of its own, as every group: without one it read as a row
-                        // of the Playback group above it.
                         SettingsGroupHeader(stringResource(R.string.settings_group_admin))
-                        SettingsListRow(
-                            title = stringResource(R.string.settings_open_admin),
-                            summary = stringResource(R.string.settings_group_admin_desc),
-                            onClick = { guarded { adminOpen = true } },
-                        )
+                        AdminGroup.visibleFor(admin = true).forEach { group ->
+                            SettingsListRow(
+                                title = stringResource(group.titleRes),
+                                summary = group.summary(profiles),
+                                onClick = {
+                                    guarded { if (group == AdminGroup.PARENTAL_CONTROLS) onParentalControls() else adminSection = group }
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -414,18 +410,6 @@ fun MobileSettingsScreen(
                         summary = stringResource(R.string.settings_diagnostics_desc),
                         onClick = onDiagnostics,
                     )
-                }
-            } else if (adminSection == null) {
-                // Admin: the list of its sections, in TV's order. Each row opens the page of its
-                // section; Parental Controls opens its own screen.
-                item {
-                    AdminGroup.visibleFor(admin = true).forEach { group ->
-                        SettingsListRow(
-                            title = stringResource(group.titleRes),
-                            summary = group.summary(profiles),
-                            onClick = { if (group == AdminGroup.PARENTAL_CONTROLS) onParentalControls() else adminSection = group },
-                        )
-                    }
                 }
             } else {
                 // One Admin section on its page, its rows in their order; the top bar has its name.
@@ -674,9 +658,9 @@ private fun ShrinkDatabaseRows(
 }
 
 /**
- * The phone's Admin groups, in TV's order: the sections that the Admin page lists, which opens
- * after the PIN (the admin settings plan). Each one opens its own page; Parental Controls opens its
- * own screen. Only Admin lists them.
+ * The phone's Admin sections, in TV's rail order: rows of Settings under an Admin heading, for an
+ * Admin only (docs/plans/20261111_admin-sections-direct-plan.md). Each one opens its own page after
+ * the PIN; Parental Controls opens its own screen.
  */
 enum class AdminGroup(
     @StringRes val titleRes: Int,
@@ -695,7 +679,7 @@ enum class AdminGroup(
     }
 }
 
-/** What a section's row on the Admin page says is inside it: the profiles' names, else what it holds. */
+/** What a section's row on Settings says is inside it: the profiles' names, else what it holds. */
 @Composable
 private fun AdminGroup.summary(profiles: List<ProfileUi>): String =
     when (this) {
@@ -705,10 +689,6 @@ private fun AdminGroup.summary(profiles: List<ProfileUi>): String =
         AdminGroup.SOURCE_GUIDE -> stringResource(R.string.settings_group_source_guide_desc)
         AdminGroup.SYNC_BACKUP -> stringResource(R.string.settings_group_sync_backup_desc)
     }
-
-// The pages of Settings that are not an Admin section, for their list states.
-private const val SETTINGS_PAGE = "settings"
-private const val ADMIN_LIST_PAGE = "admin"
 
 /**
  * Profiles' rows: on the Admin page ([admin]) every profile, else none (Settings shows the viewer's

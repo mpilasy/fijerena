@@ -1,6 +1,6 @@
 # Admin Sections Without the Admin List
 
-**Status:** In progress since 2026-11-11: Phase 1 (TV) done; Phase 2 (phone) next.
+**Status:** In progress since 2026-11-11: Phases 1 (TV) and 2 (phone) done; Phase 3 (emulator check) next.
 
 ## Goal
 
@@ -73,5 +73,5 @@ One commit per phase; each phase builds and passes its tests, and updates its do
 | Phase | What | State |
 |---|---|---|
 | 1 | TV rail and pane | Done 2026-11-11 |
-| 2 | Phone Settings list | Not started |
+| 2 | Phone Settings list | Done 2026-11-11 |
 | 3 | Emulator check | Not started |

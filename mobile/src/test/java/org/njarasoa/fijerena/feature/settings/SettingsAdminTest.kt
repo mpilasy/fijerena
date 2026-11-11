@@ -46,10 +46,11 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The phone's Settings by role (the admin settings plan): a grown-up sees its own rows under Your
- * Profile on Settings itself, never the Admin rows; then an Admin sees Admin, any other grown-up Add
- * Profile, and About. A child has no Settings: its profile menu does not offer it. Admin asks the PIN once on the way in (Cancel stays on
- * the list), then lists the Admin groups; each opens its own page (Parental Controls its own
- * screen), Back returns to the list, and a recreate keeps the page. Admin → Profiles → a profile has
+ * Profile on Settings itself, never the Admin rows; then an Admin sees the five Admin sections
+ * (docs/plans/20261111_admin-sections-direct-plan.md), any other grown-up Add Profile, and About.
+ * A child has no Settings: its profile menu does not offer it. A section asks the PIN once per
+ * session on the way in (Cancel stays on Settings) and opens its own page (Parental Controls its
+ * own screen); Back returns to Settings, and a recreate keeps the page. Profiles → a profile has
  * the Admin rows too.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -80,14 +81,15 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `an Admin sees its own rows on Settings, then Admin and About`() {
+    fun `an Admin sees its own rows on Settings, then the Admin sections and About`() {
         showSettings(active = ADMIN)
 
         assertOwnRows()
-        scrollTo(text(R.string.settings_open_admin))
+        scrollTo(text(R.string.settings_group_admin))
+        SECTIONS.forEach { scrollTo(text(it)) }
         scrollTo(text(R.string.settings_about_section_title))
         rule.onNodeWithText(text(R.string.settings_group_display)).assertDoesNotExist()
-        // The other profiles are in Admin.
+        // The other profiles are in the Profiles section.
         rule.onNodeWithText("Guest").assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_profiles_add)).assertDoesNotExist()
     }
@@ -119,18 +121,20 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `Admin asks the PIN, and Cancel stays on the list`() {
+    fun `an Admin section asks the PIN, and Cancel stays on the list`() {
         showSettings(active = ADMIN, pins = setOf(ADMIN), locked = true)
 
-        scrollTo(text(R.string.settings_open_admin))
-        rule.onNodeWithText(text(R.string.settings_open_admin)).performClick()
-        rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertExists()
-        rule.onNodeWithText(text(R.string.common_cancel)).performClick()
-        rule.waitForIdle()
+        SECTIONS.filter { it != R.string.parental_controls_title }.forEach { section ->
+            scrollTo(text(section)).performClick()
+            rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertExists()
+            rule.onNodeWithText(text(R.string.common_cancel)).performClick()
+            rule.waitForIdle()
 
-        rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertDoesNotExist()
-        rule.onNodeWithText(text(R.string.settings_group_admin)).assertExists()
-        rule.onNodeWithText(text(R.string.settings_group_this_device)).assertDoesNotExist()
+            // Still Settings' list: its top bar, the other sections, not the section's page.
+            rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertDoesNotExist()
+            rule.onAllNodesWithText(text(R.string.settings_title)).onFirst().assertExists()
+            rule.onNodeWithText("Guest").assertDoesNotExist()
+        }
     }
 
     @Test
@@ -165,30 +169,28 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `the Admin page lists the sections, and a profile opens with its Admin rows`() {
+    fun `Settings lists the sections, and a profile opens with its Admin rows`() {
         var opened: String? = null
         showSettings(active = ADMIN) {
             MobileSettingsScreen(onBack = null, onAdminProfile = { opened = it }, onProviderChanged = {})
         }
 
-        openAdmin()
         SECTIONS.forEach { scrollTo(text(it)) }
-        // Only the list: the rows of the sections are on their own pages.
+        // Only the rows: the rows of the sections are on their own pages.
         rule.onNodeWithText("Guest").assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_shrink_database_button)).assertDoesNotExist()
         // Each row says what is inside it: Profiles names the profiles.
         rule.onNodeWithText("Ada, Guest, Kid").assertExists()
 
-        rule.onNodeWithText(text(R.string.settings_profiles_title)).performClick()
+        scrollTo(text(R.string.settings_profiles_title)).performClick()
         rule.waitForIdle()
         scrollTo("Guest").performClick()
         assertEquals(GUEST, opened)
     }
 
     @Test
-    fun `each section opens its own page, and Back returns to the Admin list`() {
+    fun `each section opens its own page, and Back returns to Settings`() {
         showSettings(active = ADMIN)
-        openAdmin()
 
         // Each section with a row of its own, which only its page shows.
         listOf(
@@ -200,7 +202,7 @@ class SettingsAdminTest {
         ).forEach { (section, row) ->
             scrollTo(text(section)).performClick()
             rule.waitForIdle()
-            // The top bar has the section's name; the list of sections is gone.
+            // The top bar has the section's name; Settings' list is gone.
             rule.onAllNodesWithText(text(section)).onFirst().assertExists()
             val otherSection =
                 if (section ==
@@ -214,24 +216,19 @@ class SettingsAdminTest {
             scrollTo(row)
 
             back()
-            // The Admin list again, its top bar and its rows.
-            rule.onAllNodesWithText(text(R.string.settings_group_admin)).onFirst().assertExists()
+            // Settings again, its top bar and the section rows.
+            rule.onAllNodesWithText(text(R.string.settings_title)).onFirst().assertExists()
             SECTIONS.forEach { scrollTo(text(it)) }
             rule.onNodeWithText(row).assertDoesNotExist()
         }
-
-        // Back on the list returns to Settings.
-        back()
-        scrollTo(text(R.string.settings_open_admin))
     }
 
     @Test
-    fun `Parental Controls opens its own screen from the Admin list`() {
+    fun `Parental Controls opens its own screen from Settings`() {
         var opened = 0
         showSettings(active = ADMIN) {
             MobileSettingsScreen(onBack = null, onParentalControls = { opened++ }, onProviderChanged = {})
         }
-        openAdmin()
 
         scrollTo(text(R.string.parental_controls_title)).performClick()
         rule.waitForIdle()
@@ -242,7 +239,6 @@ class SettingsAdminTest {
     fun `an open section comes back after the Activity is recreated`() {
         val restoration = StateRestorationTester(rule)
         showSettings(active = ADMIN, setContent = restoration::setContent)
-        openAdmin()
         scrollTo(text(R.string.settings_group_this_device)).performClick()
         rule.waitForIdle()
 
@@ -252,15 +248,8 @@ class SettingsAdminTest {
         scrollTo(text(R.string.settings_language))
         rule.onNodeWithText(text(R.string.settings_group_this_device)).assertExists()
         back()
-        rule.onAllNodesWithText(text(R.string.settings_group_admin)).onFirst().assertExists()
+        rule.onAllNodesWithText(text(R.string.settings_title)).onFirst().assertExists()
         scrollTo(text(R.string.settings_group_sync_backup))
-    }
-
-    /** Opens Admin (no PIN in these cases) from Settings' list. */
-    private fun openAdmin() {
-        scrollTo(text(R.string.settings_open_admin))
-        rule.onNodeWithText(text(R.string.settings_open_admin)).performClick()
-        rule.waitForIdle()
     }
 
     /** The top bar's Back. */
@@ -422,7 +411,7 @@ class SettingsAdminTest {
         const val PIN = "1234"
         const val TIMEOUT_MS = 5_000L
 
-        /** The Admin page's sections, in order. */
+        /** The Admin sections on Settings, in order. */
         val SECTIONS =
             listOf(
                 R.string.settings_profiles_title,

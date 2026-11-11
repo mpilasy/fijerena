@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Admin sections on the TV Settings rail:** on TV, an admin's Settings rail now lists the five Admin sections (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup) under an Admin heading, so a section opens in one step. Admin's list of sections is gone. The first section you open asks the admin PIN, once per session; until then a section shows only "PIN needed".
+- **Admin sections straight from Settings:** an admin's Settings now lists the five Admin sections (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup) directly, so a section opens in one step. On TV they are rows of the Settings rail under an Admin heading; on the phone they are rows under the Admin header. Admin's list of sections and the Open Admin row are gone. The first section you open asks the admin PIN, once per session; on TV a section shows only "PIN needed" until then.
 
 ## Version: 0.9.20261111154728
 

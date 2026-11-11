@@ -5,8 +5,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The phone's Admin groups: the sections of the Admin page for an Admin, in TV's rail order (the
- * admin settings plan); none for a profile that is not an Admin (a grown-up or a child).
+ * The phone's Admin sections: rows of Settings for an Admin, in TV's rail order
+ * (docs/plans/20261111_admin-sections-direct-plan.md); none for a profile that is not an Admin (a
+ * grown-up or a child).
  */
 class SettingsAdminGroupTest {
     @Test
