@@ -24,12 +24,11 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN)
         walk.assertFocused("Your Profile")
         walk.run(
-            down("Admin"),
-            // Admin's list of sections, on Profiles: the names of the profiles under it.
-            right("Profiles / Admin, Guest, Kid"),
-            // OK opens the section in place of the list. A child profile and no Admin PIN: the
-            // reminder comes first, then the profiles.
-            center("Set a PIN for Settings"),
+            // The Admin section Profiles, first under the rail's "Admin" heading.
+            down("Profiles"),
+            // Right enters it. A child profile and no Admin PIN: the reminder comes first, then
+            // the profiles.
+            right("Set a PIN for Settings"),
             // Up at the top of the section stays put.
             up("Set a PIN for Settings"),
             down("admi / Admin / Using on this device"),
@@ -76,15 +75,11 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             down("Add Profile"),
             // The end of the section: Parental Controls is a section of its own.
             down("Add Profile"),
-            // Back closes the section, focus back on its row in Admin's list.
+            // Back returns to the section's rail row, not out of Settings.
             back("Profiles"),
-            // Back in the list returns to the rail row, not out of Settings.
-            back("Admin"),
-            // Left closes the section too.
-            right("Profiles"),
-            center("Set a PIN for Settings"),
+            // Left too.
+            right("Set a PIN for Settings"),
             left("Profiles"),
-            left("Admin"),
         )
     }
 }

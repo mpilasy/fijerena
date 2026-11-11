@@ -15,15 +15,24 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class SettingsRailFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Admin sees Your Profile, Admin and About`() {
+    fun `an Admin sees Your Profile, the Admin sections and About`() {
         open(SettingsFixture.ADMIN)
         walk.assertFocused("Your Profile")
         walk.run(
-            down("Admin"),
+            // The "Admin" heading over the sections is not a focus stop.
+            down("Profiles"),
+            down("Parental Controls"),
+            down("This Device"),
+            down("Sources & Guide"),
+            down("Sync & Backup"),
             down("About"),
             // Down at the end of the rail stays put.
             down("About"),
-            up("Admin"),
+            up("Sync & Backup"),
+            up("Sources & Guide"),
+            up("This Device"),
+            up("Parental Controls"),
+            up("Profiles"),
             up("Your Profile"),
             // Up at the top of the rail stays put.
             up("Your Profile"),

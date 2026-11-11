@@ -13,8 +13,8 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Admin → This Device (`scripts/focus-walks/settings.txt`): the device's rows, a
- * picker and the way back to its row in the section, then to the section's row in Admin's list.
+ * TV Settings → This Device, an Admin section (`scripts/focus-walks/settings.txt`): the device's
+ * rows, a picker and the way back to its row in the section, then to the section's rail row.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsThisDeviceFocusTest : SettingsFocusTest() {
@@ -23,7 +23,7 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toAdminSection("This Device"),
-            // OK opens the section in place of Admin's list, focus on its first row.
+            // OK on the rail row enters the section, focus on its first row.
             center("Language / Language for menus and messages"),
             down("Text & Grid Size / Size of text and everything on screen, on every screen"),
             down("Items in Recent / How many films, episodes or channels Recent shows / 25"),
@@ -56,10 +56,9 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             back("Items in Recent"),
             up("Text & Grid Size"),
             up("Language"),
-            // Up at the top of the section stays put; Back closes it, focus on its row.
+            // Up at the top of the section stays put; Back goes to the section's rail row.
             up("Language"),
-            back("This Device / Language, Recent, reminders and the clock, on this device only"),
-            back("Admin"),
+            back("This Device"),
         )
     }
 }

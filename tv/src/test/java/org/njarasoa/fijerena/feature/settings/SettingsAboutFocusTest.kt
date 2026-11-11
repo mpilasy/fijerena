@@ -13,29 +13,19 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Admin's list of sections, and About (`scripts/focus-walks/settings.txt`): the five
- * section rows, for an Admin; About for everyone: About Fijerena, Device Info, then Logs. The About
- * rows open other screens, so nothing here presses OK.
+ * TV Settings → About (`scripts/focus-walks/settings.txt`), last on the rail, under the Admin
+ * sections for an Admin: About Fijerena, Device Info, then Logs, for everyone. The About rows open
+ * other screens, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAboutFocusTest : SettingsFocusTest() {
     private val logs get() = context.getString(R.string.settings_diagnostics_title)
 
     @Test
-    fun `an Admin walks Admin's list and About`() {
+    fun `an Admin walks About`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            down("Admin"),
-            // Each section's row says what is inside it.
-            right("Profiles / Admin, Guest, Kid"),
-            down("Parental Controls / The household's word lists, for every child profile"),
-            down("This Device / Language, Recent, reminders and the clock, on this device only"),
-            down("Sources & Guide / Sources, the guide, film details, charts and sports"),
-            down("Sync & Backup / Live sync with your other devices, and backups to a file"),
-            // The end of Admin's list: Down stays put.
-            down("Sync & Backup"),
-            up("Sources & Guide"),
-            back("Admin"),
+            *toAdminSection("Sync & Backup"),
             down("About"),
             right("About Fijerena / Version, source code, licences and credits"),
             down("Device Info / This app and device"),

@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
@@ -76,6 +77,7 @@ import org.njarasoa.fijerena.feature.settings.components.ReminderTimePickerPane
 import org.njarasoa.fijerena.feature.settings.components.ReminderTimeSettingsRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.TvContentText
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -249,21 +251,16 @@ fun SettingsScreen(
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
     // Back round trip from a child screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
-    // The Admin section open in the pane in place of Admin's list of sections (null: the list).
-    // Saveable as the rail row, for the same round trips.
-    var adminSection by rememberSaveable { mutableStateOf<AdminPart?>(null) }
-    // For a profile that is not an Admin, the Admin group is not listed (a child profile has no
-    // Settings); the Admin group left selected when the Admin flag was turned off falls back to Your Profile.
+    // For a profile that is not an Admin, the Admin sections are not listed (a child profile has no
+    // Settings); an Admin section left selected when the Admin flag was turned off falls back to Your Profile.
     val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isAdmin)
     if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
-    // Another rail row: Admin opens again on its list of sections.
-    LaunchedEffect(selectedGroup) { if (selectedGroup != SettingsGroup.ADMIN) adminSection = null }
     val railPane = rememberPaneFocus()
     val contentPane = rememberPaneFocus()
     val focusManager = LocalFocusManager.current
-    // One list state per group and Admin section: a group or a section starts at the top, and the
-    // Back round trip restores the scroll of the one it left.
-    val listState = rememberSaveable(selectedGroup, adminSection, saver = LazyListState.Saver) { LazyListState() }
+    // One list state per group: a group starts at the top, and the Back round trip restores the
+    // scroll of the one it left.
+    val listState = rememberSaveable(selectedGroup, saver = LazyListState.Saver) { LazyListState() }
     railPane.bind(
         selectedKey = selectedGroup.name,
         firstKey = SettingsGroup.entries.first().name,
@@ -336,26 +333,17 @@ fun SettingsScreen(
             returnFocus.clear()
         }
     }
-    // Admin's sections drill in like the pickers: OK on a section's row opens the section in place
-    // of the list, focus on its first row; Back and Left close it, focus back on its row. The first
-    // row of each section carries its own requester in [sectionEntries]: it attaches only when that
-    // section shows, so the retry waits for it. A row that leads to another section (Parental
-    // controls and a child's page lead to each other's section) opens that section the same way.
-    val sectionEntries = remember { AdminPart.entries.associateWith { FocusRequester() } }
-    val openAdminPart: (AdminPart) -> Unit = { part ->
+    // A row that leads to another Admin section (Parental controls and a child's page lead to each
+    // other's section) selects that section on the rail and focuses its first row. That row carries
+    // its own requester in [sectionEntries]: it attaches only when the section shows, so the retry
+    // waits for it. The PIN was typed on the way into the first section, so none is asked.
+    val sectionEntries = remember { SettingsGroup.entries.filter { it.adminOnly }.associateWith { FocusRequester() } }
+    val openSection: (SettingsGroup) -> Unit = { group ->
         picker = null
         editingProfileId = null
         returnFocus.clear()
-        adminSection = part
-        coroutineScope.launch { sectionEntries.getValue(part).requestFocusWithRetry() }
-    }
-    val closeAdminSection: () -> Unit = {
-        adminSection?.let { part ->
-            adminSection = null
-            coroutineScope.launch {
-                returnFocus.requesterOf(adminSectionReturnKey(part)).requestFocusWithRetry()
-            }
-        }
+        selectedGroup = group
+        coroutineScope.launch { sectionEntries.getValue(group).requestFocusWithRetry() }
     }
 
     // Back while in the pane returns to the rail row (Left does the same, via tvPane); Back on
@@ -374,13 +362,12 @@ fun SettingsScreen(
         ownProfilePageKey++
         backToRail()
     }
-    // Back in an open Admin section closes it, focus back on its row in Admin's list.
-    val paneBack: () -> Unit = { if (adminSection != null) closeAdminSection() else backToRail() }
+    val paneBack: () -> Unit = { backToRail() }
     BackHandler(enabled = paneHasFocus && picker == null && !ownProfilePage) { paneBack() }
 
-    // Admin's pane is entered (Right or OK on its rail row) after the PIN of the profile in use,
-    // once per session (PinSession); Cancel leaves focus on the rail row. The rows inside ask
-    // nothing more.
+    // An Admin section's pane is entered (Right or OK on its rail row) after the PIN of the profile
+    // in use, once per session (PinSession), for all five; Cancel leaves focus on the rail row. The
+    // rows inside ask nothing more. Until then the pane says only that the PIN is needed.
     val groupLocked: (SettingsGroup) -> Boolean = { group ->
         group.adminOnly && inUse?.let { profilesViewModel.needsPin(it.id) } == true
     }
@@ -388,13 +375,12 @@ fun SettingsScreen(
         val enter = { coroutineScope.launch { contentPane.focusEntry() } }
         if (groupLocked(group)) guarded { enter() } else enter()
     }
-    // The session locked again (a long time in the background) while in Admin: back to the rail,
-    // so its rows are not open without the PIN. An open Admin section closes too.
+    // The session locked again (a long time in the background) while in an Admin section: back to
+    // the rail, so its rows are not open without the PIN.
     val selectedGroupLocked = groupLocked(selectedGroup)
     LaunchedEffect(selectedGroupLocked) {
         if (selectedGroupLocked) {
             val inPane = paneHasFocus
-            adminSection = null
             if (inPane) {
                 picker = null
                 editingProfileId = null
@@ -446,6 +432,16 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     visibleGroups.forEach { group ->
+                        // The Admin sections under a heading of their own (text only, not a focus
+                        // stop), so Profiles does not read as part of Your Profile.
+                        if (group.adminOnly && group == visibleGroups.first { it.adminOnly }) {
+                            CinemaText(
+                                stringResource(R.string.settings_group_admin),
+                                modifier = Modifier.padding(start = Spacing.sm, top = Spacing.sm),
+                                role = TextRole.Label,
+                                tone = TextTone.Secondary,
+                            )
+                        }
                         TvInputListItem(
                             selected = group == selectedGroup,
                             onClick = {
@@ -592,7 +588,7 @@ fun SettingsScreen(
                                                 },
                                             onParentalControls = {
                                                 viewModel.refreshAdmin()
-                                                openAdminPart(AdminPart.PARENTAL_CONTROLS)
+                                                openSection(SettingsGroup.PARENTAL_CONTROLS)
                                             },
                                             entryModifier =
                                                 if (ownProfilePage) {
@@ -610,64 +606,43 @@ fun SettingsScreen(
 
                             null -> {
                                 val entryModifier = Modifier.paneItem(contentPane, contentEntryKey)
-                                // The first row of an open Admin section: the pane's entry row, and
-                                // where OK on the section's row lands.
-                                val section = adminSection.takeIf { selectedGroup == SettingsGroup.ADMIN }
+                                // The first row of an Admin section: the pane's entry row, and where a
+                                // row that leads to the section lands.
                                 val sectionEntryModifier =
-                                    section?.let { entryModifier.focusRequester(sectionEntries.getValue(it)) } ?: entryModifier
-                                Column(
-                                    modifier =
-                                        Modifier.fillMaxSize().onKeyEvent { event ->
-                                            // Left in an open section goes back one level, to its row in
-                                            // Admin's list (a row's own keys run first), not to the rail.
-                                            val closes =
-                                                section != null && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft
-                                            if (closes) closeAdminSection()
-                                            closes
-                                        },
-                                ) {
-                                    // An open section names itself, as a picker does: `‹ Sources & Guide`.
-                                    if (section != null) {
-                                        CinemaText(
-                                            "‹ ${stringResource(section.titleRes)}",
-                                            modifier = Modifier.padding(horizontal = Spacing.xs),
-                                            role = TextRole.Title,
-                                            tone = TextTone.Primary,
-                                        )
-                                        Spacer(modifier = Modifier.height(Spacing.sm))
-                                    }
+                                    sectionEntries[selectedGroup]?.let { entryModifier.focusRequester(it) } ?: entryModifier
+                                Column(modifier = Modifier.fillMaxSize()) {
                                     LazyColumn(
                                         state = listState,
                                         contentPadding = PaddingValues(vertical = Spacing.xs),
                                         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                         modifier = Modifier.fillMaxSize(),
                                     ) {
-                                        when (selectedGroup) {
-                                            // Shown as the page of the profile in use, above.
-                                            SettingsGroup.PROFILES -> {}
+                                        // A locked Admin section shows no rows, only that the PIN is needed (AD-D2).
+                                        if (selectedGroupLocked) {
+                                            item(key = "pinNeeded") {
+                                                TvEmptyState(
+                                                    message = stringResource(R.string.settings_section_pin_needed),
+                                                    modifier = Modifier.fillParentMaxSize(),
+                                                    icon = CinemaIcons.Lock,
+                                                    takeFocus = false,
+                                                )
+                                            }
+                                        } else {
+                                            when (selectedGroup) {
+                                                // Shown as the page of the profile in use, above.
+                                                SettingsGroup.PROFILES -> {}
 
-                                            // Admin's list of sections; OK on a row opens its section.
-                                            SettingsGroup.ADMIN -> {
-                                                if (section == null) {
-                                                    AdminPart.entries.forEachIndexed { index, part ->
-                                                        item(key = part.name) {
-                                                            SettingsRow(
-                                                                title = stringResource(part.titleRes),
-                                                                description = part.summary(profiles),
-                                                                onClick = { openAdminPart(part) },
-                                                                modifier =
-                                                                    Modifier
-                                                                        .navReturnFocusTarget(returnFocus, adminSectionReturnKey(part))
-                                                                        .then(if (index == 0) entryModifier else Modifier),
-                                                            )
-                                                        }
-                                                    }
-                                                } else {
-                                                    // The open section's rows, in their order.
-                                                    item(key = section.name) {
+                                                // An Admin section's rows, in their order.
+                                                SettingsGroup.ADMIN_PROFILES,
+                                                SettingsGroup.PARENTAL_CONTROLS,
+                                                SettingsGroup.THIS_DEVICE,
+                                                SettingsGroup.SOURCE_GUIDE,
+                                                SettingsGroup.SYNC_BACKUP,
+                                                -> {
+                                                    item(key = selectedGroup.name) {
                                                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-                                                            when (section) {
-                                                                AdminPart.PROFILES -> {
+                                                            when (selectedGroup) {
+                                                                SettingsGroup.ADMIN_PROFILES -> {
                                                                     ProfilesSettingsCard(
                                                                         profiles = profiles,
                                                                         message = profilesMessage,
@@ -700,7 +675,7 @@ fun SettingsScreen(
                                                                     )
                                                                 }
 
-                                                                AdminPart.PARENTAL_CONTROLS -> {
+                                                                SettingsGroup.PARENTAL_CONTROLS -> {
                                                                     ParentalControlsCard(
                                                                         onOpenList = { list ->
                                                                             returnFocus.leaveFrom(parentalListReturnKey(list), listState)
@@ -711,13 +686,13 @@ fun SettingsScreen(
                                                                             returnFocus.leaveFrom(PARENTAL_CHECK_RETURN_KEY, listState)
                                                                             picker = SettingPicker.PARENTAL_CHECK
                                                                         },
-                                                                        onOpenProfiles = { openAdminPart(AdminPart.PROFILES) },
+                                                                        onOpenProfiles = { openSection(SettingsGroup.ADMIN_PROFILES) },
                                                                         focusRequesterFor = returnFocus::requesterFor,
                                                                         firstRowModifier = sectionEntryModifier,
                                                                     )
                                                                 }
 
-                                                                AdminPart.THIS_DEVICE -> {
+                                                                SettingsGroup.THIS_DEVICE -> {
                                                                     SettingsSection {
                                                                         LanguageSettingsRow(
                                                                             selectedLanguage = uiState.language,
@@ -784,7 +759,7 @@ fun SettingsScreen(
                                                                     }
                                                                 }
 
-                                                                AdminPart.SOURCE_GUIDE -> {
+                                                                SettingsGroup.SOURCE_GUIDE -> {
                                                                     ProviderSettingsCard(
                                                                         sourceNames = uiState.profileSources.map { it.second },
                                                                         onManageProviders = {
@@ -888,7 +863,7 @@ fun SettingsScreen(
                                                                     )
                                                                 }
 
-                                                                AdminPart.SYNC_BACKUP -> {
+                                                                SettingsGroup.SYNC_BACKUP -> {
                                                                     LiveSyncSettingsCard(
                                                                         onOpen = {
                                                                             returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
@@ -928,32 +903,34 @@ fun SettingsScreen(
                                                                             },
                                                                     )
                                                                 }
+
+                                                                SettingsGroup.PROFILES, SettingsGroup.ABOUT -> {}
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
 
-                                            SettingsGroup.ABOUT -> {
-                                                item {
-                                                    AboutSettingsCard(
-                                                        onAbout = {
-                                                            returnFocus.leaveFrom(RETURN_ABOUT, listState)
-                                                            onAbout()
-                                                        },
-                                                        onDeviceInfo = {
-                                                            returnFocus.leaveFrom(RETURN_DEVICE_INFO, listState)
-                                                            onDeviceInfo()
-                                                        },
-                                                        onDiagnostics = {
-                                                            returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
-                                                            onDiagnostics()
-                                                        },
-                                                        rowModifier = entryModifier,
-                                                        aboutFocusRequester = returnFocus.requesterFor(RETURN_ABOUT),
-                                                        deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
-                                                        diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
-                                                    )
+                                                SettingsGroup.ABOUT -> {
+                                                    item {
+                                                        AboutSettingsCard(
+                                                            onAbout = {
+                                                                returnFocus.leaveFrom(RETURN_ABOUT, listState)
+                                                                onAbout()
+                                                            },
+                                                            onDeviceInfo = {
+                                                                returnFocus.leaveFrom(RETURN_DEVICE_INFO, listState)
+                                                                onDeviceInfo()
+                                                            },
+                                                            onDiagnostics = {
+                                                                returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                                                                onDiagnostics()
+                                                            },
+                                                            rowModifier = entryModifier,
+                                                            aboutFocusRequester = returnFocus.requesterFor(RETURN_ABOUT),
+                                                            deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
+                                                            diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -1030,20 +1007,25 @@ private const val RAIL_WEIGHT = 0.3f
 private const val PANE_WEIGHT = 0.7f
 
 /**
- * The groups of Settings, in rail order (the settings reorg plan): since the admin settings plan,
- * Your Profile (PROFILES), Admin and About.
+ * The groups of Settings, in rail order (the settings reorg plan): Your Profile (PROFILES), the
+ * five Admin sections under an "Admin" heading (docs/plans/20261111_admin-sections-direct-plan.md),
+ * and About.
  */
 enum class SettingsGroup(
     @StringRes val titleRes: Int,
     /**
-     * Admin, which only an Admin sees, and whose pane is entered after the PIN
-     * of the profile in use (when it has one): every profile, the household's shared setup and this
-     * device's settings, the [AdminPart]s.
+     * An Admin section, which only an Admin sees, and whose pane is entered after the PIN of the
+     * profile in use (when it has one), once per session for all five: every profile, the
+     * household's shared setup and this device's settings. Shrink Database ends Sources & Guide.
      */
     val adminOnly: Boolean = false,
 ) {
     PROFILES(R.string.profile_own_page_title),
-    ADMIN(R.string.settings_group_admin, adminOnly = true),
+    ADMIN_PROFILES(R.string.settings_profiles_title, adminOnly = true),
+    PARENTAL_CONTROLS(R.string.parental_controls_title, adminOnly = true),
+    THIS_DEVICE(R.string.settings_group_this_device, adminOnly = true),
+    SOURCE_GUIDE(R.string.settings_group_source_guide, adminOnly = true),
+    SYNC_BACKUP(R.string.settings_group_sync_backup, adminOnly = true),
     ABOUT(R.string.settings_about_section_title),
     ;
 
@@ -1051,39 +1033,10 @@ enum class SettingsGroup(
     val entryKey: String get() = "$name:first"
 
     companion object {
-        /** The groups the rail lists: for a profile that is not an Admin ([admin] false), not Admin. */
+        /** The groups the rail lists: for a profile that is not an Admin ([admin] false), no Admin section. */
         fun visibleFor(admin: Boolean): List<SettingsGroup> = entries.filter { admin || !it.adminOnly }
     }
 }
-
-/**
- * Admin's sections, in the order its list shows them: the rows of the groups that each asked the
- * PIN before the admin settings plan, the same sections as the phone's. Each section opens in the
- * pane in place of the list; Shrink Database ends Sources & Guide.
- */
-enum class AdminPart(
-    @StringRes val titleRes: Int,
-) {
-    PROFILES(R.string.settings_profiles_title),
-    PARENTAL_CONTROLS(R.string.parental_controls_title),
-    THIS_DEVICE(R.string.settings_group_this_device),
-    SOURCE_GUIDE(R.string.settings_group_source_guide),
-    SYNC_BACKUP(R.string.settings_group_sync_backup),
-}
-
-/** What a section's row in Admin's list says is inside it: the profiles' names, else what it holds. */
-@Composable
-private fun AdminPart.summary(profiles: List<ProfileUi>): String =
-    when (this) {
-        AdminPart.PROFILES -> profiles.joinToString { it.name }
-        AdminPart.PARENTAL_CONTROLS -> stringResource(R.string.profile_parental_controls_desc)
-        AdminPart.THIS_DEVICE -> stringResource(R.string.settings_group_this_device_desc)
-        AdminPart.SOURCE_GUIDE -> stringResource(R.string.settings_group_source_guide_desc)
-        AdminPart.SYNC_BACKUP -> stringResource(R.string.settings_group_sync_backup_desc)
-    }
-
-/** The key of a section's row in Admin's list, where Back from the section lands. */
-private fun adminSectionReturnKey(part: AdminPart) = "adminSection:${part.name}"
 
 /**
  * The rows that drill into a pane in place of the group's rows — a [SettingsPickerPane] for the

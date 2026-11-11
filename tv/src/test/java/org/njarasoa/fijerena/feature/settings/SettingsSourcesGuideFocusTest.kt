@@ -15,14 +15,14 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Admin → Sources & Guide (`scripts/focus-walks/settings.txt` and
+ * TV Settings → Sources & Guide (an Admin section) (`scripts/focus-walks/settings.txt` and
  * `settings-guide.txt`): its rows (Shrink Database last), the guide's maintenance sub-pane (never pressed) and
  * the TMDB key's, each closing on its row in the section. Manage Sources and Guide Sources open other screens (Guide
  * Sources with no source chooser), tested on their own (`SourcesFocusTest`, `GuideSourcesFocusTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
-    /** From the rail to Admin's row Sources & Guide; OK opens the section on Manage Sources. */
+    /** From the rail to the Sources & Guide row; OK opens the section on Manage Sources. */
     private fun toSourcesGuide(): Array<FocusStep> = toAdminSection("Sources & Guide")
 
     @Test
@@ -58,11 +58,10 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             up("Database:"),
             right("Database:"),
             down("Delete leftover downloads"),
-            // Back leaves the sub-pane onto its row in the section, Back again closes the section on
-            // its row in Admin's list, and once more returns to the rail.
+            // Back leaves the sub-pane onto its row in the section, Back again goes to the
+            // section's rail row.
             back("Guide Data Maintenance"),
-            back("Sources & Guide / Sources, the guide, film details, charts and sports"),
-            back("Admin"),
+            back("Sources & Guide"),
         )
     }
 
@@ -91,9 +90,8 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             // Focus opens on the key's Edit button.
             center("Edit TMDB key / TMDB key"),
             left("Film and Show Details (TMDB)"),
-            // Left closes the section on its row, then goes to the rail.
+            // Left goes to the section's rail row.
             left("Sources & Guide"),
-            left("Admin"),
         )
     }
 }

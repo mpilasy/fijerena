@@ -71,15 +71,11 @@ abstract class SettingsFocusTest {
     protected val context: Context get() = ApplicationProvider.getApplicationContext()
 
     /**
-     * From the rail into Admin's list of sections, down to the row of [section] (one of
-     * [ADMIN_SECTIONS]), one step per row. The list opens on its first row, Profiles.
+     * From Your Profile on the rail down to the rail row of the Admin section [section] (one of
+     * [ADMIN_SECTIONS]), one step per row; the "Admin" heading above them is not a focus stop.
      */
     protected fun toAdminSection(section: String): Array<FocusStep> =
-        arrayOf(
-            down("Admin"),
-            right(ADMIN_SECTIONS.first()),
-            *ADMIN_SECTIONS.subList(1, ADMIN_SECTIONS.indexOf(section) + 1).map(::down).toTypedArray(),
-        )
+        ADMIN_SECTIONS.subList(0, ADMIN_SECTIONS.indexOf(section) + 1).map(::down).toTypedArray()
 
     /** Down from row [from] to row [to] of an open Admin section's [rows], one step per row. */
     protected fun sectionDown(
@@ -91,7 +87,7 @@ abstract class SettingsFocusTest {
     protected companion object {
         private const val PROFILES_TIMEOUT_MS = 5_000L
 
-        /** Admin's list of sections, in order; each row opens its section in place of the list. */
+        /** The Admin sections on the rail, in order, under the "Admin" heading. */
         val ADMIN_SECTIONS = listOf("Profiles", "Parental Controls", "This Device", "Sources & Guide", "Sync & Backup")
 
         /** Admin → Parental Controls, as an Admin sees it on the fixture's data. */

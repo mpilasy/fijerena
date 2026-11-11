@@ -3,7 +3,7 @@
 # (scripts/seed-test-household.sh): the fake Xtream source "Fake Xtream" (tools/fake-xtream) and
 # the profiles Admin (an Admin, in use, no PIN), Guest (a grown-up) and Kid (a child profile, no PIN).
 # Start: the app just opened on the profile picker, focus on Admin (the profile in use). Ends on
-# Settings' rail row Admin.
+# Settings' rail row Sync & Backup.
 # Written from the code and settings.txt on 2026-10-24, NOT YET RUN: unverified until the first
 # CI run. Expectations are labels only (no values that depend on the build or the device, such as
 # the theme names or the TMDB key), so most lines are prefixes of what settings.txt records.
@@ -18,6 +18,8 @@
 # Admin sections (2026-11-03): Admin lists its five sections; OK opens a section in place of the
 # list, Back closes it on its row; Shrink Database ends Sources & Guide. Edited by hand from the
 # focus tests, not yet run.
+# Admin sections on the rail (2026-11-11): the five Admin sections are rail rows under an "Admin"
+# heading; the Admin list is gone (docs/plans/20261111_admin-sections-direct-plan.md). Edited by hand.
 # About page (2026-11-11): About is About Fijerena, Device Info and Logs; the version, Terms,
 # Licences and the credits moved to the About Fijerena page, walked here. Edited by hand.
 @start Admin
@@ -55,7 +57,12 @@ DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
 DOWN	Play Next Episode Automatically
 LEFT	Your Profile
-DOWN	Admin
+# The Admin sections, under the rail's "Admin" heading (not a focus stop), then About.
+DOWN	Profiles
+DOWN	Parental Controls
+DOWN	This Device
+DOWN	Sources & Guide
+DOWN	Sync & Backup
 DOWN	About
 # Down at the end of the rail stays put.
 DOWN	About
@@ -78,14 +85,16 @@ BACK	About Fijerena
 DOWN	Device Info
 DOWN	Logs
 LEFT	About
-UP	Admin
-# Admin: the list of its sections, Profiles, Parental Controls, This Device, Sources & Guide and
-# Sync & Backup. OK opens a section in place of the list; Back and Left close it, focus back on its
-# row.
-RIGHT	Profiles
+UP	Sync & Backup
+UP	Sources & Guide
+UP	This Device
+UP	Parental Controls
+UP	Profiles
+# Each Admin section: Right or OK on its rail row enters it (no admin PIN here, so no pad); Back and
+# Left go back to its rail row.
 # Profiles: a child profile and no admin PIN, so "Set a PIN for Settings" first (never pressed),
 # then Admin, Guest, Kid and Add Profile.
-CENTER	Set a PIN for Settings
+RIGHT	Set a PIN for Settings
 DOWN	Admin / Using on this device
 # Admin's page (the only admin, in use, one source so no Sources row): focus on the name's Edit
 # button; Down to the end, Content Filters. Admin can't be deleted or switched to.
@@ -124,7 +133,7 @@ DOWN	Switch to this profile
 DOWN	Delete profile
 LEFT	Kid
 DOWN	Add Profile
-# The end of the section; Back closes it on its row.
+# The end of the section; Back goes to its rail row.
 DOWN	Add Profile
 BACK	Profiles
 # Parental Controls: one row per list, Check a Source, the link to Profiles.
@@ -171,5 +180,3 @@ CENTER	Live Sync
 DOWN	Back Up to a File
 DOWN	Restore from a File
 BACK	Sync & Backup
-# Back in Admin's list returns to the rail row, not out of Settings.
-BACK	Admin

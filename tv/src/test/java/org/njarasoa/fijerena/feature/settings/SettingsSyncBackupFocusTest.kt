@@ -12,7 +12,7 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Admin → Sync & Backup (`scripts/focus-walks/settings.txt`): its rows. They open
+ * TV Settings → Sync & Backup (an Admin section) (`scripts/focus-walks/settings.txt`): its rows. They open
  * Live sync's screen or the system's file picker, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -22,8 +22,6 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
         open(SettingsFixture.ADMIN)
         walk.run(
             *toAdminSection("Sync & Backup"),
-            // The last row of Admin's list: Down stays put.
-            down("Sync & Backup / Live sync with your other devices, and backups to a file"),
             // No backup waits in Downloads, so no Restore from Downloads row.
             center("Live Sync"),
             down("Back Up to a File"),
@@ -32,9 +30,8 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
             down("Restore from a File"),
             up("Back Up to a File"),
             up("Live Sync"),
-            // Left closes the section on its row, then goes to the rail.
+            // Left goes to the section's rail row.
             left("Sync & Backup"),
-            left("Admin"),
         )
     }
 }

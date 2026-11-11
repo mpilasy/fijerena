@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Admin sections on the TV Settings rail:** on TV, an admin's Settings rail now lists the five Admin sections (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup) under an Admin heading, so a section opens in one step. Admin's list of sections is gone. The first section you open asks the admin PIN, once per session; until then a section shows only "PIN needed".
+
 ## Version: 0.9.20261111154728
 
 - **About page:** Settings → About → About Fijerena is a new page on TV and phone. It has the version, the line that Fijerena provides and hosts no content, the copyright and licence notice, Terms of Use, the open-source licences and the TMDB and sports data credits. New links open the source code, the latest release (where the TV and phone apps are), the privacy policy and the bug reports. Each link shows a QR code to scan with a phone; on the phone, Open in Browser opens it too. Settings → About keeps Device Info and Logs. On TV, the focused last row of Terms of Use and the licences no longer has its border cut at the bottom of the screen.

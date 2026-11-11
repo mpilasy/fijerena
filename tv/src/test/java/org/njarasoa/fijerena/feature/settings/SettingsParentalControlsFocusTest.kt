@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsParentalControlsFocusTest : SettingsFocusTest() {
-    /** From the rail into Admin → Parental Controls, on its first row. */
+    /** From the rail into the Parental Controls section, on its first row. */
     private fun toParental(): Array<FocusStep> =
         arrayOf(
             *toAdminSection("Parental Controls"),
@@ -54,9 +54,8 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             center("Add a word"),
             // Back leaves it too, onto the section, not Admin's list.
             back("Exceptions"),
-            // Back again closes the section, focus on its row; once more, the rail.
+            // Back again goes to the section's rail row.
             back("Parental Controls"),
-            back("Admin"),
         )
     }
 
@@ -109,10 +108,10 @@ class SettingsParentalControlsFocusTest : SettingsFocusTest() {
             center("Source One"),
             left("Check a Source"),
             down("Content Filters of Each Profile"),
-            // OK opens Admin's Profiles section, focus on its first row; Back closes it on its row.
+            // OK selects the Profiles section on the rail, focus on its first row; Back goes to its
+            // rail row.
             center("Set a PIN for Settings"),
             back("Profiles"),
-            back("Admin"),
         )
     }
 }

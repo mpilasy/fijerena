@@ -853,6 +853,7 @@
     <string name="settings_group_display">Fisehoana</string>
     <string name="settings_group_this_device">Ity fitaovana ity</string>
     <string name="settings_group_admin">Fitantanana</string>
+    <string name="settings_section_pin_needed">Ilaina ny PIN. Tsindrio ny OK hampidirana azy.</string>
     <string name="settings_group_admin_desc">Mombamomba, fanaraha-maso ny ray aman-dreny, ity fitaovana ity, loharano, fampifanarahana sy tahiry</string>
     <string name="settings_group_this_device_desc">Fiteny, Vao haingana, fampahatsiahivana ary famataranandro, amin\'ity fitaovana ity ihany</string>
     <string name="settings_group_source_guide_desc">Loharano, fitarihana, antsipirian\'ny sarimihetsika, laharana ary fanatanjahantena</string>
