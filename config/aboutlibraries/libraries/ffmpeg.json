@@ -1,0 +1,16 @@
+{
+  "uniqueId": "native:ffmpeg",
+  "name": "FFmpeg",
+  "artifactVersion": "6.0",
+  "description": "Audio decoders, inside Jellyfin's Media3 FFmpeg decoder.",
+  "website": "https://ffmpeg.org",
+  "developers": [
+    {
+      "name": "The FFmpeg developers"
+    }
+  ],
+  "licenses": [
+    "LGPL-2.1-or-later-ffmpeg"
+  ],
+  "tag": "native"
+}

@@ -71,18 +71,30 @@ object OpenSourceLicenses {
             .mapNotNull { element ->
                 val library = element as? JsonObject ?: return@mapNotNull null
                 val id = library.string("uniqueId") ?: return@mapNotNull null
+                val version = library.string("artifactVersion")?.takeIf { it.isNotBlank() }
+                val override = library.string("tag") == LICENCE_OVERRIDE_TAG
+                val licenseIds = library["licenses"]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
+                // A correction for a library this app does not ship comes without a version: leave it out.
+                if (override && version == null) return@mapNotNull null
                 OpenSourceEntry(
                     id = id,
                     name = library.string("name") ?: id,
-                    version = library.string("artifactVersion")?.takeIf { it.isNotBlank() },
-                    licenses =
-                        library["licenses"]
-                            ?.jsonArray
-                            .orEmpty()
-                            .mapNotNull { licenses[it.jsonPrimitive.contentOrNull] },
+                    version = version,
+                    licenses = (if (override) withoutGeneric(licenseIds) else licenseIds).mapNotNull { licenses[it] },
                 )
             }.sortedWith(compareBy<OpenSourceEntry> { !it.id.startsWith(APP_ID_PREFIX) }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
     }
+
+    /**
+     * The tag of a config/aboutlibraries entry that corrects a dependency's licences: the plugin
+     * merges it into the dependency and adds its licences to those of the POM. Its own licences
+     * (`MIT-slf4j`, with the library's copyright line) replace the generic ones (`MIT`, a template).
+     * In an app that does not ship the dependency, the plugin adds it alone, with no version.
+     */
+    const val LICENCE_OVERRIDE_TAG = "licence-override"
+
+    /** [ids] without each generic licence that has a specific one (`MIT` when `MIT-slf4j` is there). */
+    private fun withoutGeneric(ids: List<String>): List<String> = ids.filterNot { id -> ids.any { it.startsWith("$id-") } }
 
     private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 }

@@ -256,6 +256,12 @@ them under the terms of the **GNU General Public License, version 3 or (at your 
 version** ([GPL-3.0-or-later](LICENSE)). The sync server in `server/` is licensed under the **GNU
 Affero General Public License, version 3 or later** ([AGPL-3.0-or-later](server/LICENSE)).
 
+The APKs also contain Jellyfin's FFmpeg decoder, which is licensed under the GPL version 3 only.
+An APK as a whole can therefore be passed on only under the GPL version 3; the project's own code
+stays GPL-3.0-or-later. Settings → About → About Fijerena → Open-Source Licences lists every
+library in the APK with its licence, among them FFmpeg (LGPL-2.1-or-later, inside the decoder) and
+the Public Suffix List (MPL-2.0, bundled by OkHttp).
+
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the licences
 for details.
@@ -268,7 +274,7 @@ for details.
   AS17-148-22727), which is in the public domain as a work of NASA. The red/cyan 3D glasses over
   it were drawn for this project (2026-10-26) and are licensed with the app under
   GPL-3.0-or-later.
-- **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2019 The Manrope
+- **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2018 The Manrope
   Project Authors, licensed under the SIL Open Font License 1.1
   ([licenses/fonts/manrope-OFL.txt](licenses/fonts/manrope-OFL.txt)).
 - **Look and Feel fonts** (`core/ui/src/main/res/font/`): Antonio, Barlow, Barlow Condensed,

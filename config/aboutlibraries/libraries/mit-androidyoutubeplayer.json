@@ -1,0 +1,8 @@
+{
+  "uniqueId": "com.pierfrancescosoffritti.androidyoutubeplayer:core",
+  "name": "android-youtube-player",
+  "licenses": [
+    "MIT-androidyoutubeplayer"
+  ],
+  "tag": "licence-override"
+}

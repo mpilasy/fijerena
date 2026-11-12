@@ -1,0 +1,16 @@
+{
+  "uniqueId": "data:publicsuffixlist",
+  "name": "Public Suffix List",
+  "artifactVersion": "",
+  "description": "The list of public domain suffixes, bundled by OkHttp.",
+  "website": "https://publicsuffix.org",
+  "developers": [
+    {
+      "name": "Mozilla Foundation"
+    }
+  ],
+  "licenses": [
+    "MPL-2.0-publicsuffix"
+  ],
+  "tag": "data"
+}

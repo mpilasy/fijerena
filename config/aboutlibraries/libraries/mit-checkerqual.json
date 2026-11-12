@@ -1,0 +1,7 @@
+{
+  "uniqueId": "org.checkerframework:checker-qual",
+  "licenses": [
+    "MIT-checkerqual"
+  ],
+  "tag": "licence-override"
+}

@@ -1,0 +1,7 @@
+{
+  "uniqueId": "org.slf4j:slf4j-api",
+  "licenses": [
+    "MIT-slf4j"
+  ],
+  "tag": "licence-override"
+}

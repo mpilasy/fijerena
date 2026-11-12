@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Complete open-source licences:** Settings → About → About Fijerena → Open-Source Licences now lists FFmpeg (the audio decoders inside the player's FFmpeg decoder) and the Public Suffix List, and each library under the MIT or BSD licence shows its own copyright line, not a blank template. TV and phone.
+
 ## Version: 0.9.20261112140702
 
 - **Clear Image Cache on TV:** the action is now inside the Storage card, at the end of the image cache row. Down to the Storage section goes straight to it. Its label no longer crosses the card's edge. TV.
