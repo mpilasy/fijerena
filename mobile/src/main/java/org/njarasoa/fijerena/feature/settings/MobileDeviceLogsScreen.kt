@@ -65,14 +65,14 @@ internal fun MobileDeviceLogsContent(
     val scope = rememberCoroutineScope()
     val nerd = LocalNerd.current
     val copiedText = stringResource(R.string.settings_diagnostics_copied)
+    val title = stringResource(R.string.device_logs_title)
     val report = state.report?.takeIf { it.isReported }
     Scaffold(
         topBar = {
-            MobileScreenHeader(title = stringResource(R.string.device_logs_title), subtitle = state.name, onBack = onBack) {
+            MobileScreenHeader(title = title, subtitle = state.name, onBack = onBack) {
                 if (report != null) {
                     IconAction(
                         onClick = {
-                            val title = context.getString(R.string.device_logs_title)
                             copyToClipboard(context, title, deviceReportText(context, state.name, state.build, report), copiedText)
                         },
                         icon = CinemaIcons.ContentCopy,
