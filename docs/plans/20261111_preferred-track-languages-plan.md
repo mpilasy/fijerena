@@ -1,6 +1,6 @@
 # Preferred track languages
 
-**Status:** Planned 2026-11-11, not started. Open questions PL-Q1 to PL-Q7 wait for the user.
+**Status:** Planned 2026-11-11, not started; the per-stream track reset was fixed on its own 2026-11-11. Open questions PL-Q1 to PL-Q7 wait for the user.
 
 ## Goal
 
@@ -26,9 +26,8 @@ setting to every device of the profile.
 - **Media3 preferences:**
   - `PlayerConfigFactory.createTrackSelector` sets `setPreferredAudioLanguage("en")` for every profile and every stream. Thus a stream with an English track starts in English, also when its default track is French.
   - Nothing sets a text language or role flags.
-- **Track parameters are not reset between streams.** `StreamingPlaybackService.playStream` keeps the selector's parameters.
-  - Subtitles Off (`setTrackTypeDisabled(TRACK_TYPE_TEXT, true)`) stays on for every later stream of the same service instance, until a subtitle is picked. A later item's default or forced subtitle does not show.
-  - Old overrides stay too. They are keyed by `TrackGroup`, so they rarely match a new stream.
+- **Track parameters were not reset between streams (fixed 2026-11-11, before the phases).** Subtitles Off (`setTrackTypeDisabled(TRACK_TYPE_TEXT, true)`) stayed on for every later stream of the same service instance, until a subtitle was picked, and old overrides stayed too.
+  - Now `StreamingPlaybackService.playStream` calls `resetTrackChoices` when the stream URL changes: text back on, overrides cleared. The same item played again (Retry, a reconnect, a return from the screensaver) keeps the viewer's picks, because those paths restore no saved choice.
 - **Pickers:**
   - TV: `AudioTrackSelectorDialog` and `SubtitleSelectorDialog` (tv/.../ui/player/components/dialogs).
   - Phone: `AudioTrackSelectorDialog` and `SubtitleSelectorDialog` in `MobilePlayerDialogs.kt`.
@@ -177,7 +176,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 - **Phase 3 tests:**
   - `startTracks`: item, series, profile, stream default, and one type saved with the other not;
   - a profile pick does not call `savePosition` with an index;
-  - `playStream` resets text and overrides.
+  - `playStream` resets text and overrides: done 2026-11-11 (`StreamingPlaybackServiceTrackResetTest`).
 - **Emulator checks, Phases 3 and 4** (TV and phone AVDs, jellyxtream for films and episodes, iptv for live):
   - A test file goes into the host Jellyfin library first: French and English audio, an English commentary, French forced, French full and English subtitles. A second file has `und` tracks labelled "VF" and "VO".
   - Check each row of "Which choice wins".
@@ -210,6 +209,6 @@ series memory depends on. Phase 4 is two rows and a picker like Theme.
 
 - **Wrong language data:** a track that is tagged with the wrong language gets picked. The pickers still correct it, and that pick is saved for the item.
 - **A switch at the start:** a stream that Media3 cannot match before the first frame switches its track once the helper runs, as a saved choice does today.
-- **The per-stream reset changes behaviour:** today, Subtitles Off carries over to the next item. After the reset, an item's default subtitle shows unless the item, the series or the profile says Off.
+- **The per-stream reset changed behaviour (done 2026-11-11):** Subtitles Off no longer carries over to the next item. An item's default subtitle shows unless the item or the series says Off (and, after Phase 3, the profile).
 - **Index memory (PL-Q7 a):** a series pick can still give the wrong language in an episode whose track order changed.
 - **Out of scope:** Jellyfin external subtitle files do not show at all (no `SubtitleConfiguration`). It needs its own fix.

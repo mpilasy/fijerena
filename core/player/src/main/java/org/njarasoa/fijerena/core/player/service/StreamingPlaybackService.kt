@@ -865,6 +865,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         // A new playback: a remote Stop sent for the previous one must never stop this one.
         playSessionId.value = UUID.randomUUID().toString()
+        if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player)
         _currentMetadata.value = metadata
 
         // Fast-startup mode, and the buffer profile for the stream type.
@@ -1605,6 +1606,24 @@ class StreamingPlaybackService : MediaSessionService() {
             !player.isPlaying,
             subtitleIndex = consolidatedIndex.takeIf { it >= 0 },
         )
+    }
+
+    /**
+     * A new item starts on its own default tracks: the previous item's Subtitles Off and track
+     * picks do not carry over. Its saved choice, if any, is restored after this. The same item
+     * played again (Retry, a reconnect, a return from the screensaver) keeps the viewer's picks,
+     * because those paths restore no saved choice.
+     */
+    private fun resetTrackChoices(player: androidx.media3.exoplayer.ExoPlayer) {
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+        if (trackSelector != null) {
+            trackSelector.parameters =
+                trackSelector.parameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+                    .clearOverrides()
+                    .build()
+        }
     }
 
     fun disableSubtitles() {
