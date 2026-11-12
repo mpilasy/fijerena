@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
@@ -52,6 +53,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
+import org.njarasoa.fijerena.core.network.triesUntilDiskFull
 import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
@@ -606,7 +608,8 @@ class EpgFileManager private constructor(
                                     throw e
                                 } catch (e: Exception) {
                                     lastException = e
-                                    currentAttempt++
+                                    // A full disk is not tried again: the run ends now with its error.
+                                    currentAttempt = if (e.isDiskFull()) maxAttempts + 1 else currentAttempt + 1
 
                                     if (currentAttempt <= maxAttempts) {
                                         val delayMs = retryDelaysMs[currentAttempt - 1]
@@ -1434,7 +1437,8 @@ class EpgFileManager private constructor(
             if (!indexHasRows && (source.etag != null || source.lastModifiedHeader != null || source.lastContentSha256 != null)) {
                 Log.i(TAG, "EPG source $label has validators but no rows in the index — treating as changed")
             }
-            for (attempt in 1..5) {
+            // A full disk stops the tries at once: each try writes the whole file again.
+            for (attempt in triesUntilDiskFull(5) { lastException }) {
                 try {
                     val request = buildDownloadRequest(source, indexHasRows, fetchUrl)
                     withContext(Dispatchers.IO) {
@@ -1535,7 +1539,7 @@ class EpgFileManager private constructor(
                     lastError = e.message ?: "unknown error"
                     lastException = e
                     Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
-                    if (attempt < 5) {
+                    if (attempt < 5 && !e.isDiskFull()) {
                         val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
                         delay(backoff)
                         continue

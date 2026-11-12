@@ -9,10 +9,13 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.InvalidPlaylistException
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.local.M3uParser
+import org.njarasoa.fijerena.core.network.triesUntilDiskFull
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import java.io.File
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -20,6 +23,8 @@ class RemoteM3uMediaProvider(
     override val providerId: Long,
     private val m3uUrl: String,
     private val context: Context,
+    // Opens the file that a download writes to. Tests give a stream that fails as a full disk.
+    private val openOutput: (File) -> OutputStream = { it.outputStream() },
 ) : BaseM3uMediaProvider() {
     companion object {
         private const val TAG = "RemoteM3uProvider"
@@ -94,7 +99,8 @@ class RemoteM3uMediaProvider(
     private suspend fun downloadWithRetries() {
         var lastError: Exception? = null
 
-        for (attempt in 1..MAX_RETRIES) {
+        // A full disk stops the tries at once: each try writes the whole playlist again.
+        for (attempt in triesUntilDiskFull(MAX_RETRIES) { lastError }) {
             var connection: HttpURLConnection? = null
             try {
                 connection =
@@ -121,7 +127,7 @@ class RemoteM3uMediaProvider(
                 val tmpFile = File.createTempFile("remote_m3u_${providerId}_", ".tmp", context.cacheDir)
                 try {
                     connection.inputStream.buffered(BUFFER_SIZE).use { input ->
-                        tmpFile.outputStream().buffered(BUFFER_SIZE).use { output ->
+                        openOutput(tmpFile).buffered(BUFFER_SIZE).use { output ->
                             input.copyTo(output, BUFFER_SIZE)
                             output.flush()
                         }
@@ -154,7 +160,7 @@ class RemoteM3uMediaProvider(
             } catch (e: Exception) {
                 lastError = e
                 Log.w(TAG, "M3U download error (attempt $attempt): ${e.message}")
-                if (attempt < MAX_RETRIES) {
+                if (attempt < MAX_RETRIES && !e.isDiskFull()) {
                     delay(RETRY_BASE_DELAY_MS * attempt)
                 }
             } finally {

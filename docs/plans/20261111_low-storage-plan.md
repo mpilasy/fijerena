@@ -1,6 +1,6 @@
 # Low storage
 
-**Status:** Planned 2026-11-11, not started. Open questions LS-Q1 to LS-Q6 wait for the user.
+**Status:** In progress. Phase 1 done 2026-11-11 (LS-Q5: (a)). Open questions LS-Q1 to LS-Q4 and LS-Q6 wait for the user.
 
 ## Goal
 
@@ -77,7 +77,7 @@ not know how much space a job needs.
 | LS-Q2 | Image cache size? | (a) **2% of the storage, from 64 MB to 512 MB** (Coil `maxSizePercent` with a minimum and a maximum). Recommended: about 160 MB on an 8 GB TV. (b) Keep 512 MB. |
 | LS-Q3 | A way to clear the image cache outside safe mode? It is a look-and-feel change. | (a) **A Clear Image Cache icon action on the image cache row of Device Info**, TV and phone. Recommended. (b) None. |
 | LS-Q4 | The message? | (a) **One message for every writer**: `error_storage_low` gets a new text that says what to clear. Recommended. (b) A message for each writer. |
-| LS-Q5 | A worker that hits a full disk? | (a) **Finish with the stored `STORAGE_LOW` error and no retry.** The storage-not-low rule and the next period start it again. Recommended. (b) `Result.retry()` with back-off. |
+| LS-Q5 | A worker that hits a full disk? **Decided: (a).** | (a) **Finish with the stored `STORAGE_LOW` error and no retry.** The storage-not-low rule and the next period start it again. Recommended. (b) `Result.retry()` with back-off. |
 | LS-Q6 | How to test on an emulator? The user decides before any emulator data change. | (a) **A debug-only free-space value set over adb** for the checks and messages, and one real run with a filler file in the app's own cache folder, deleted after. Recommended. (b) A new emulator with a small data partition. |
 
 ## Design
@@ -179,10 +179,31 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
+| 1 | Done 2026-11-11 |
 | 2 | Not started |
 | 3 | Not started |
 | 4 | Not started |
+
+**Phase 1 done (2026-11-11):**
+- `Throwable.isDiskFull()` is in FriendlyError.kt, next to `networkCause()`, not in `StorageSpace`:
+  the two share the cause chain walk. `errorKind` checks it first and gives `STORAGE_LOW`.
+  `networkCause()` skips a disk-full `IOException`.
+- `ProviderSyncRunner.isTransient` is false for a full disk, also when a `CatalogSyncException`
+  has a network failure next to it. `failureError` then describes the disk-full failure. The
+  outcome is `Permanent`, so `XtreamSyncWorker` does not retry either.
+- `triesUntilDiskFull` stops the tries of the XMLTV download (`downloadSource`) and of the Remote
+  M3U download after a disk-full try, with no back-off before the stop. The temp files are deleted
+  as before. Remote M3U still falls back to its stale cached playlist when it has one.
+- Also the in-app guide task retry (`launchGenericTask`, 1 to 16 minutes): a full disk ends the
+  task at once with its error.
+- `EpgSyncWorker` and `EpgFtsRebuildWorker` return `Result.failure()` on a full disk
+  (`failedRunResult`). `EpgSyncWorker` reads it from the sources' stored `STORAGE_LOW` errors when
+  every source failed, or from the exception.
+- The low-storage check before a catalogue sync still returns `Transient`, so `XtreamSyncWorker`
+  can retry it; the storage-not-low rule holds that retry until there is space.
+- Tests: `DiskFullTest` (Robolectric: each form, `errorKind`, `networkCause`, the tries),
+  `ProviderSyncRunnerRetryTest`, `CatalogSyncFailureTest` (one sync try), `GuideWorkerRetryTest`,
+  `RemoteM3uMediaProviderTest` (an output stream that fails with ENOSPC: one request, no temp file).
 
 ## Risks
 

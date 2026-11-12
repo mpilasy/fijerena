@@ -10,12 +10,17 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.StoredError
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.trySetForeground
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
@@ -112,8 +117,10 @@ class EpgSyncWorker(
                 val errorCount = completed?.errors ?: 0
 
                 if (errorCount == staleSources.size) {
-                    Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed, will retry")
-                    if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+                    val sourceDao = SettingsDatabase.getInstance(applicationContext).epgSourceDao()
+                    val diskFull = anyStorageLow(staleSources.map { sourceDao.getSourceById(it.id)?.lastError })
+                    Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed (disk full: $diskFull)")
+                    failedRunResult(diskFull, runAttemptCount, MAX_RETRIES)
                 } else {
                     Log.i(TAG, "doWork: refresh complete")
                     Result.success()
@@ -126,7 +133,7 @@ class EpgSyncWorker(
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
             CrashLog.record("guide refresh (background) failed", e)
-            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+            failedRunResult(e.isDiskFull(), runAttemptCount, MAX_RETRIES)
         }
     }
 
@@ -144,5 +151,21 @@ class EpgSyncWorker(
             providerIds: List<Long>,
             sourcesOf: suspend (providerId: Long) -> List<EpgSourceEntity>,
         ): List<EpgSourceEntity> = providerIds.flatMap { sourcesOf(it) }.distinctBy { it.id }
+
+        /** True when one of the stored source errors ([StoredError.encode] values) is [ErrorKind.STORAGE_LOW]. */
+        internal fun anyStorageLow(storedErrors: List<String?>): Boolean =
+            storedErrors.any { it != null && StoredError.decode(it).kind == ErrorKind.STORAGE_LOW }
     }
 }
+
+/**
+ * The result of a guide worker run that failed. A full disk ([diskFull]) is not tried again: the
+ * sources keep their storage-low error, and the storage-not-low rule and the next period start the
+ * work again. Other failures are tried again up to [maxRetries] times.
+ */
+internal fun failedRunResult(
+    diskFull: Boolean,
+    runAttemptCount: Int,
+    maxRetries: Int,
+): ListenableWorker.Result =
+    if (!diskFull && runAttemptCount < maxRetries) ListenableWorker.Result.retry() else ListenableWorker.Result.failure()

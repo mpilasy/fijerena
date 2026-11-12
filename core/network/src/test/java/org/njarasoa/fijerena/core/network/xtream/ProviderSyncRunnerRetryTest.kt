@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.serverAnswer
+import java.io.IOException
 import java.net.SocketTimeoutException
 
 /**
@@ -29,6 +30,17 @@ class ProviderSyncRunnerRetryTest {
         assertFalse(ProviderSyncRunner.isTransient(HttpStatusException(401)))
         assertFalse(ProviderSyncRunner.isTransient(HttpStatusException(404)))
         assertFalse(ProviderSyncRunner.isTransient(Exception("Stored credentials are invalid")))
+    }
+
+    // The low storage plan, Phase 1: a full disk is an IOException, but a new try fails again.
+    @Test
+    fun aFullDiskIsNeverTransient() {
+        val diskFull = IOException("write failed: ENOSPC (No space left on device)")
+
+        assertFalse(ProviderSyncRunner.isTransient(diskFull))
+        assertFalse(ProviderSyncRunner.isTransient(Exception("Deserialization failed", diskFull)))
+        assertFalse(ProviderSyncRunner.isTransient(CatalogSyncException(listOf(IOException("timeout"), diskFull))))
+        assertTrue(ProviderSyncRunner.isTransient(IOException("connection reset")))
     }
 
     @Test

@@ -11,11 +11,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.io.IOException
+import java.io.OutputStream
 import java.net.InetSocketAddress
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A source's playlist URL changed (here, or synced from another device) kept serving the old
@@ -27,6 +31,7 @@ class RemoteM3uMediaProviderTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private lateinit var server: HttpServer
     private val playlists = mutableMapOf<String, String>()
+    private val requests = AtomicInteger()
 
     private fun url(path: String) = "http://127.0.0.1:${server.address.port}/$path"
 
@@ -43,6 +48,7 @@ class RemoteM3uMediaProviderTest {
     fun setup() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
+            requests.incrementAndGet()
             val body = playlists[exchange.requestURI.path.removePrefix("/")]?.toByteArray()
             if (body == null) {
                 exchange.sendResponseHeaders(404, -1)
@@ -94,5 +100,22 @@ class RemoteM3uMediaProviderTest {
 
         assertEquals(listOf("Current"), titles(RemoteM3uMediaProvider(9L, url("list.m3u"), context)))
         assertFalse(legacy.exists())
+    }
+
+    // The low storage plan, Phase 1: each try wrote the whole playlist again into a full disk.
+    @Test
+    fun `a full disk stops the download after one try and leaves no temp file`() {
+        playlists["list.m3u"] = playlist("First")
+        val fullDisk: (File) -> OutputStream = {
+            object : OutputStream() {
+                override fun write(b: Int): Unit = throw IOException("write failed: ENOSPC (No space left on device)")
+            }
+        }
+
+        val result = runBlocking { RemoteM3uMediaProvider(10L, url("list.m3u"), context, fullDisk).refreshCatalog() }
+
+        assertTrue(result.exceptionOrNull()?.isDiskFull() == true)
+        assertEquals(1, requests.get())
+        assertEquals(emptyList<String>(), context.cacheDir.list { _, name -> name.startsWith("remote_m3u_10_") }!!.toList())
     }
 }

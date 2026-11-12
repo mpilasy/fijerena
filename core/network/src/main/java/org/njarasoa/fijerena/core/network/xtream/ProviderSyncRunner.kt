@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.networkCause
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
@@ -184,7 +185,7 @@ object ProviderSyncRunner {
     ): StoredError =
         if (e is CatalogSyncException) {
             // Describe the failure that decided the classification, so the text and the retry agree.
-            val cause = e.failures.firstOrNull { isTransient(it) } ?: e.failures.first()
+            val cause = e.failures.firstOrNull { it.isDiskFull() } ?: e.failures.firstOrNull { isTransient(it) } ?: e.failures.first()
             StoredError.of(cause, context).copy(catalogue = true)
         } else {
             StoredError.of(e, context)
@@ -193,12 +194,17 @@ object ProviderSyncRunner {
     /**
      * A catalogue run with any transient task failure is transient: a retry can fix that task. A
      * failure is transient when a network failure (a timeout included) is among its causes, or the
-     * server answered 408, 429 or 5xx.
+     * server answered 408, 429 or 5xx. A full disk ([isDiskFull]) is never transient, also next to
+     * a network failure: each new try writes the same rows again and fails again.
      */
     internal fun isTransient(e: Throwable): Boolean =
-        when (e) {
-            is CatalogSyncException -> {
-                e.failures.any { isTransient(it) }
+        when {
+            e is CatalogSyncException -> {
+                e.failures.none { it.isDiskFull() } && e.failures.any { isTransient(it) }
+            }
+
+            e.isDiskFull() -> {
+                false
             }
 
             else -> {

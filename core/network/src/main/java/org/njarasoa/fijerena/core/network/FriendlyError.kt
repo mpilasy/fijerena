@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.core.network
 
 import android.content.Context
+import android.database.sqlite.SQLiteFullException
+import android.system.ErrnoException
+import android.system.OsConstants
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ResponseException
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinLoginRejectedException
@@ -27,11 +30,19 @@ fun errorKind(
     e: Throwable,
     context: Context,
 ): ErrorKind {
-    // A network failure inside another exception says what it is: a list read cut short by a
-    // timeout comes up as a JSON error, with the timeout among its causes.
     val cause = e.networkCause()
-    if (cause != null && cause !== e) return errorKind(cause, context)
     return when {
+        // First: a full disk (ENOSPC) comes as an IOException, which reads as a network error.
+        e.isDiskFull() -> {
+            ErrorKind.STORAGE_LOW
+        }
+
+        // A network failure inside another exception says what it is: a list read cut short by a
+        // timeout comes up as a JSON error, with the timeout among its causes.
+        cause != null && cause !== e -> {
+            errorKind(cause, context)
+        }
+
         // OkHttp's message when a call goes to a client whose Dispatcher was shut down (closed while
         // in use). An InterruptedIOException, but not a connection problem: "check your
         // connection" would send the user the wrong way.
@@ -91,12 +102,35 @@ fun errorKind(
 
 /**
  * The first of this exception and its causes that is a network failure (a timeout included) or a
- * server's non-success answer, or null when there is none.
+ * server's non-success answer, or null when there is none. A full disk ([isDiskFull]) is not a
+ * network failure, although it comes as an IOException.
  */
 fun Throwable.networkCause(): Throwable? =
-    generateSequence(this) { it.cause }
-        .take(MAX_CAUSE_DEPTH)
-        .firstOrNull { it is IOException || it is ResponseException || it is HttpStatusException }
+    causeChain().firstOrNull { (it is IOException && !it.isDiskFull()) || it is ResponseException || it is HttpStatusException }
+
+/**
+ * True when this exception or one of its causes says that the device storage is full: SQLite's
+ * SQLITE_FULL ([SQLiteFullException]), an [ErrnoException] with ENOSPC, or an IOException with the
+ * ENOSPC text ("write failed: ENOSPC (No space left on device)"). A full disk is never transient:
+ * a new try writes the same data again and fails again.
+ */
+fun Throwable.isDiskFull(): Boolean = causeChain().any { it.isDiskFullItself() }
+
+/**
+ * The try numbers 1 to [maxTries] of a download that writes a file. They stop after a try whose
+ * failure ([lastFailure]) is a full disk ([isDiskFull]), as a new try writes the same file again.
+ */
+fun triesUntilDiskFull(
+    maxTries: Int,
+    lastFailure: () -> Throwable?,
+): Sequence<Int> = (1..maxTries).asSequence().takeWhile { lastFailure()?.isDiskFull() != true }
+
+private fun Throwable.isDiskFullItself(): Boolean =
+    this is SQLiteFullException ||
+        (this is ErrnoException && errno == OsConstants.ENOSPC) ||
+        (this is IOException && message.orEmpty().let { "ENOSPC" in it || it.contains("No space left on device", ignoreCase = true) })
+
+private fun Throwable.causeChain(): Sequence<Throwable> = generateSequence(this) { it.cause }.take(MAX_CAUSE_DEPTH)
 
 private const val MAX_CAUSE_DEPTH = 16
 

@@ -21,7 +21,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.ErrorKind
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
@@ -168,6 +170,22 @@ class CatalogSyncFailureTest {
 
             assertTrue("got $outcome", outcome is ProviderSyncRunner.Outcome.Transient)
             coVerify(exactly = 3) { mediaProvider.syncAll() }
+        }
+
+    // The low storage plan, Phase 1: one try, and the source keeps a storage-low catalogue error.
+    @Test
+    fun aFullDiskMidSyncIsPermanentAndNotRetried() =
+        runTest {
+            val diskFull = IOException("write failed: ENOSPC (No space left on device)")
+            val mediaProvider = connectedProvider { throw CatalogSyncException(listOf(IOException("timeout"), diskFull)) }
+
+            val outcome = ProviderSyncRunner.syncProvider(context, provider, "pw")
+
+            assertEquals(
+                ProviderSyncRunner.Outcome.Permanent(StoredError(ErrorKind.STORAGE_LOW, catalogue = true, raw = diskFull.message)),
+                outcome,
+            )
+            coVerify(exactly = 1) { mediaProvider.syncAll() }
         }
 
     @Test

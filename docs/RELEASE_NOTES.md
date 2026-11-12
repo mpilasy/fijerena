@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A full storage is no longer a "network error":** when the device's storage filled up during a catalogue update, a guide download or a playlist download, the app said "network error" and tried again and again, writing the same data each time. Now it says that the storage is almost full and stops, until you free up space. TV and phone.
 - **Display mode in Stats for Nerds (TV):** two new rows show the TV's display mode now (resolution and refresh rate) and the refresh rates it offers. The frame rate row now tells a 23.976 fps film from a 24 fps one, and shows the rate of a live channel from its frames. This is the first step to playing a film at its own frame rate.
 - **Leaving a film no longer turns its subtitles off:** leaving the player saved the tracks on screen as if you had picked them, so a film left with no subtitle on (or left before its tracks loaded) played without its default subtitles next time. Now only a subtitle or audio track that you pick is remembered.
 - **Subtitles Off stays with its title:** turning subtitles off on one film or channel kept them off on everything played after it, until a subtitle was picked again. Now each title starts on its own default subtitles, unless you turned them off for that title (or for its series).

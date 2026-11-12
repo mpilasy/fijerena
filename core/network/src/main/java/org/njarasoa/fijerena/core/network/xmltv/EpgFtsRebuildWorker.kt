@@ -12,6 +12,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.trySetForeground
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
@@ -77,7 +78,7 @@ class EpgFtsRebuildWorker(
         } catch (e: Exception) {
             Log.e(TAG, "doWork: FTS rebuild failed — ${e.message}", e)
             CrashLog.record("guide search index rebuild (after restart) failed", e)
-            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+            failedRunResult(e.isDiskFull(), runAttemptCount, MAX_RETRIES)
         }
     }
 
