@@ -1,0 +1,25 @@
+{
+  "adult": false,
+  "also_known_as": ["William Bradley Pitt"],
+  "biography": "William Bradley Pitt is an American actor and film producer.",
+  "birthday": "1963-12-18",
+  "deathday": null,
+  "gender": 2,
+  "homepage": null,
+  "id": 287,
+  "imdb_id": "nm0000093",
+  "known_for_department": "Acting",
+  "name": "Brad Pitt",
+  "place_of_birth": "Shawnee, Oklahoma, USA",
+  "popularity": 50.87,
+  "profile_path": "/cckcYc2v0yh1tc9QjRelptcOBko.jpg",
+  "combined_credits": {
+    "cast": [
+      { "adult": false, "backdrop_path": "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg", "genre_ids": [18, 53], "id": 550, "original_language": "en", "original_title": "Fight Club", "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.", "popularity": 61.416, "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg", "release_date": "1999-10-15", "title": "Fight Club", "video": false, "vote_average": 8.433, "vote_count": 26280, "character": "Tyler Durden", "credit_id": "52fe4250c3a36847f80149f7", "order": 1, "media_type": "movie" },
+      { "adult": false, "backdrop_path": null, "genre_ids": [35], "id": 1668, "origin_country": ["US"], "original_language": "en", "original_name": "Friends", "overview": "Six friends in New York City.", "popularity": 120.4, "poster_path": "/2koX1xLkpTQM4IZebYvKysFW1Nh.jpg", "first_air_date": "1994-09-22", "name": "Friends", "vote_average": 8.4, "vote_count": 7400, "character": "Will Colbert", "credit_id": "525710bc760ee3776a344d8a", "episode_count": 1, "media_type": "tv" }
+    ],
+    "crew": [
+      { "adult": false, "backdrop_path": null, "genre_ids": [18], "id": 76203, "original_language": "en", "original_title": "12 Years a Slave", "overview": "A free man is taken and sold into slavery.", "popularity": 30.2, "poster_path": "/xdANQijuNrJaw1HA61rDccME4Tm.jpg", "release_date": "2013-10-18", "title": "12 Years a Slave", "video": false, "vote_average": 7.9, "vote_count": 10900, "credit_id": "52fe4927c3a368484e11e5e5", "department": "Production", "job": "Producer", "media_type": "movie" }
+    ]
+  }
+}

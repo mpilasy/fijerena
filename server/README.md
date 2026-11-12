@@ -16,6 +16,10 @@ npm test         # builds, then runs the integration tests against a real worker
 npm run typecheck
 ```
 
+`test/samples.test.ts` checks the server against the sample messages under
+`core/network/src/test/resources/fixtures/sync/`, which the app's tests read too
+(`SyncWireSamplesTest`), so the two sides cannot drift.
+
 The tests start `workerd` with `workerd/config.capnp` — the self-hosted configuration — on a
 temporary data directory, so they exercise exactly what the Docker image runs. The image itself
 has its own opt-in tests (each container on a throwaway named volume, removed afterwards):

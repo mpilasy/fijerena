@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'server/**'
+      # The sample messages that the server's tests share with the app's (samples.test.ts).
+      - 'core/network/src/test/resources/fixtures/sync/**'
       - '.github/workflows/server.yml'
   workflow_dispatch:
 

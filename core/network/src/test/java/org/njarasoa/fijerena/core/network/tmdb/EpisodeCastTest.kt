@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -15,12 +14,7 @@ import java.nio.file.Files
  * list and where each one opens the show.
  */
 class EpisodeCastTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     @Test
     fun `a season's episodes keep their guest stars, in billing order`() {

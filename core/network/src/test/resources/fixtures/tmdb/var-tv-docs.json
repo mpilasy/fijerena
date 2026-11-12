@@ -1,0 +1,64 @@
+{
+  "adult": false,
+  "backdrop_path": "/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+  "created_by": [
+    { "id": 9813, "credit_id": "5256c8c219c2956ff604858a", "name": "David Benioff", "gender": 2, "profile_path": "/xvNN5huL0X8yJ7h3IZfGG4O2zBD.jpg" },
+    { "id": 228068, "credit_id": "552e611e9251413fea000901", "name": "D. B. Weiss", "gender": 2, "profile_path": "/2RMejaT793U9KRk2IEbFfteQntE.jpg" }
+  ],
+  "episode_run_time": [],
+  "first_air_date": "2011-04-17",
+  "genres": [
+    { "id": 10765, "name": "Sci-Fi & Fantasy" },
+    { "id": 18, "name": "Drama" }
+  ],
+  "homepage": "http://www.example.com/game-of-thrones",
+  "id": 1399,
+  "in_production": false,
+  "languages": ["en"],
+  "last_air_date": "2019-05-19",
+  "name": "Game of Thrones",
+  "networks": [
+    { "id": 49, "logo_path": "/tuomPhY2UtuPTqqFnKMVHvSb724.png", "name": "HBO", "origin_country": "US" }
+  ],
+  "number_of_episodes": 73,
+  "number_of_seasons": 8,
+  "origin_country": ["US"],
+  "original_language": "en",
+  "original_name": "Game of Thrones",
+  "overview": "Seven noble families fight for control of the mythical land of Westeros.",
+  "popularity": 346.098,
+  "poster_path": "/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+  "production_companies": [
+    { "id": 76043, "logo_path": "/9RO2vbQ67otPrBLXCaC8UMp3Qat.png", "name": "Revolution Sun Studios", "origin_country": "US" }
+  ],
+  "production_countries": [
+    { "iso_3166_1": "GB", "name": "United Kingdom" },
+    { "iso_3166_1": "US", "name": "United States of America" }
+  ],
+  "spoken_languages": [
+    { "english_name": "English", "iso_639_1": "en", "name": "English" }
+  ],
+  "status": "Ended",
+  "tagline": "Winter Is Coming",
+  "type": "Scripted",
+  "vote_average": 8.438,
+  "vote_count": 21390,
+  "aggregate_credits": {
+    "cast": [
+      { "adult": false, "gender": 2, "id": 22970, "known_for_department": "Acting", "name": "Peter Dinklage", "original_name": "Peter Dinklage", "popularity": 23.0, "profile_path": "/9CAd7wr8QZyIN0E7nm8v1B6WkGn.jpg", "roles": [{ "credit_id": "5256c8b219c2956ff6047cd8", "character": "Tyrion Lannister", "episode_count": 67 }], "total_episode_count": 67, "order": 0 },
+      { "adult": false, "gender": 1, "id": 1223786, "known_for_department": "Acting", "name": "Emilia Clarke", "original_name": "Emilia Clarke", "popularity": 21.0, "profile_path": "/86jeYFV40KctQMDQIWhJ5oviNGj.jpg", "roles": [{ "credit_id": "5256c8af19c2956ff60479f6", "character": "Daenerys Targaryen", "episode_count": 62 }], "total_episode_count": 62, "order": 1 }
+    ],
+    "crew": [
+      { "adult": false, "gender": 2, "id": 9813, "known_for_department": "Writing", "name": "David Benioff", "original_name": "David Benioff", "popularity": 6.0, "profile_path": "/xvNN5huL0X8yJ7h3IZfGG4O2zBD.jpg", "jobs": [{ "credit_id": "5256c8c219c2956ff604858a", "job": "Executive Producer", "episode_count": 73 }], "department": "Production", "total_episode_count": 73 }
+    ]
+  },
+  "credits": {
+    "cast": [
+      { "adult": false, "gender": 2, "id": 22970, "known_for_department": "Acting", "name": "Peter Dinklage", "original_name": "Peter Dinklage", "popularity": 23.0, "profile_path": "/9CAd7wr8QZyIN0E7nm8v1B6WkGn.jpg", "character": "Tyrion Lannister", "credit_id": "5256c8b219c2956ff6047cd8", "order": 0 }
+    ],
+    "crew": []
+  },
+  "videos": {
+    "results": []
+  }
+}

@@ -133,6 +133,12 @@ when `scripts/check-fixture-privacy.sh` passes on them. The repository is public
 before a commit all the same, and check that the iptv-org playlist is still under the Unlicense.
 Then update the tests that read the files, and their recording date in the test KDoc.
 
+The XMLTV, TMDB, Jellyfin and sync fixtures are not recorded: they are `var-` files written by
+hand (from the XMLTV DTD, the TMDB and Jellyfin API references and the sync server's code). The
+sync samples under `core/network/src/test/resources/fixtures/sync/` are read by the server's
+vitest suite too (`server/test/samples.test.ts`): a protocol change updates the samples, and both
+the Kotlin and the server tests must pass.
+
 ---
 
 ## Deployment & Device Targeting

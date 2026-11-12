@@ -1,0 +1,39 @@
+{
+  "Items": [
+    {
+      "Name": "Season 1",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000007001",
+      "IndexNumber": 1,
+      "IsFolder": true,
+      "Type": "Season",
+      "ParentId": "00000000000000000000000000002003",
+      "SeriesName": "Show 1",
+      "SeriesId": "00000000000000000000000000002003",
+      "UserData": { "PlaybackPositionTicks": 0, "PlayCount": 0, "IsFavorite": false, "Played": false, "UnplayedItemCount": 3, "Key": "1000003001" },
+      "ChildCount": 3,
+      "ImageTags": { "Primary": "00000000000000000000000000006005" },
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem",
+      "MediaType": "Unknown"
+    },
+    {
+      "Name": "Specials",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000007000",
+      "IndexNumber": 0,
+      "IsFolder": true,
+      "Type": "Season",
+      "ParentId": "00000000000000000000000000002003",
+      "SeriesName": "Show 1",
+      "SeriesId": "00000000000000000000000000002003",
+      "ChildCount": 0,
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "LocationType": "Virtual",
+      "MediaType": "Unknown"
+    }
+  ],
+  "TotalRecordCount": 2,
+  "StartIndex": 0
+}

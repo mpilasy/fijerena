@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -11,12 +10,7 @@ import org.junit.Test
  * the client would throw on, so parsing has to survive it and come out as "nothing to show".
  */
 class TmdbRecommendationsParsingTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     @Test
     fun `parses a movie recommendation`() {

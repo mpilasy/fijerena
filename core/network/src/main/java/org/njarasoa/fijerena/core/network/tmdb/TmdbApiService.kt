@@ -18,7 +18,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -53,12 +52,7 @@ class TmdbApiService(
     private val appLanguage: () -> String = { Locale.getDefault().language },
     private val limiter: TmdbRateLimiter = TmdbRateLimiter(),
 ) {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {

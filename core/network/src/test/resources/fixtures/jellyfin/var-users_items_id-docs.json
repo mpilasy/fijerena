@@ -1,0 +1,31 @@
+{
+  "Name": "Film 1",
+  "OriginalTitle": "Film 1 Original",
+  "ServerId": "00000000000000000000000000000a01",
+  "Id": "00000000000000000000000000002001",
+  "Container": "mkv",
+  "OfficialRating": "PG-13",
+  "CommunityRating": 7.4,
+  "RunTimeTicks": 72000000000,
+  "ProductionYear": 2004,
+  "IsFolder": false,
+  "Type": "Movie",
+  "Overview": "Neutral plot text of a similar length to a real one, for the shape only.",
+  "Taglines": ["A neutral tagline."],
+  "ProductionLocations": ["United States of America", "Germany"],
+  "Genres": ["Drama", "Comedy"],
+  "Studios": [{ "Name": "Studio 1", "Id": "00000000000000000000000000003001" }],
+  "People": [
+    { "Name": "Person 1", "Id": "00000000000000000000000000004001", "Role": "Role 1", "Type": "Actor" }
+  ],
+  "RemoteTrailers": [
+    { "Url": "https://www.example.com/watch?v=trailer01", "Name": "Trailer" }
+  ],
+  "ProviderIds": { "Tmdb": "1000001", "Imdb": "tt0000001" },
+  "MediaSources": [],
+  "UserData": { "PlaybackPositionTicks": 0, "PlayCount": 0, "IsFavorite": false, "Played": false, "Key": "1000001" },
+  "ImageTags": { "Primary": "00000000000000000000000000006001" },
+  "BackdropImageTags": [],
+  "LocationType": "FileSystem",
+  "MediaType": "Video"
+}

@@ -1,0 +1,94 @@
+{
+  "Items": [
+    {
+      "Name": "Film 1",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000002001",
+      "Container": "mkv",
+      "PremiereDate": "2004-05-01T00:00:00.0000000Z",
+      "OfficialRating": "PG-13",
+      "CommunityRating": 7.4,
+      "RunTimeTicks": 72000000000,
+      "ProductionYear": 2004,
+      "IsFolder": false,
+      "Type": "Movie",
+      "Overview": "Neutral plot text of a similar length to a real one, for the shape only.",
+      "ParentId": "00000000000000000000000000000d01",
+      "Genres": ["Drama", "Comedy"],
+      "Studios": [{ "Name": "Studio 1", "Id": "00000000000000000000000000003001" }],
+      "People": [
+        { "Name": "Person 1", "Id": "00000000000000000000000000004001", "Role": "Role 1", "Type": "Actor", "PrimaryImageTag": "00000000000000000000000000005001" },
+        { "Name": "Person 2", "Id": "00000000000000000000000000004002", "Role": "", "Type": "Director" }
+      ],
+      "MediaSources": [
+        {
+          "Protocol": "File",
+          "Id": "00000000000000000000000000002001",
+          "Path": "/media/films/Film 1 (2004).mkv",
+          "Type": "Default",
+          "Container": "mkv",
+          "Size": 2147483648,
+          "Name": "Film 1 (2004)",
+          "IsRemote": false,
+          "SupportsTranscoding": true,
+          "SupportsDirectStream": true,
+          "SupportsDirectPlay": true,
+          "Bitrate": 4000000,
+          "MediaStreams": [
+            { "Codec": "hevc", "Language": "eng", "VideoRange": "HDR", "VideoRangeType": "HDR10", "DisplayTitle": "4K HEVC HDR10", "IsDefault": true, "Width": 3840, "Height": 2160, "BitRate": 3600000, "Type": "Video", "Index": 0 },
+            { "Codec": "eac3", "Language": "eng", "DisplayTitle": "English - Dolby Digital+ - 5.1 - Default", "IsDefault": true, "Channels": 6, "SampleRate": 48000, "BitRate": 384000, "Type": "Audio", "Index": 1 },
+            { "Codec": "subrip", "Language": "fre", "Title": "Forced", "DisplayTitle": "French - Forced - SUBRIP", "IsDefault": false, "Type": "Subtitle", "Index": 2 }
+          ]
+        }
+      ],
+      "UserData": { "PlaybackPositionTicks": 18000000000, "PlayCount": 1, "IsFavorite": true, "Played": false, "PlayedPercentage": 25.0, "LastPlayedDate": "2026-11-10T20:00:00.0000000Z", "Key": "1000001" },
+      "ImageTags": { "Primary": "00000000000000000000000000006001", "Logo": "00000000000000000000000000006002" },
+      "BackdropImageTags": ["00000000000000000000000000006003"],
+      "LocationType": "FileSystem",
+      "MediaType": "Video"
+    },
+    {
+      "Name": "Film 2",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000002002",
+      "Container": "mp4",
+      "RunTimeTicks": 54000000000,
+      "IsFolder": false,
+      "Type": "Movie",
+      "ParentId": "00000000000000000000000000000d01",
+      "Genres": [],
+      "Studios": [],
+      "People": [],
+      "MediaSources": [],
+      "UserData": { "PlaybackPositionTicks": 0, "PlayCount": 0, "IsFavorite": false, "Played": true, "Key": "1000002" },
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem",
+      "MediaType": "Video"
+    },
+    {
+      "Name": "Show 1",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000002003",
+      "PremiereDate": "2011-04-17T00:00:00.0000000Z",
+      "OfficialRating": "TV-MA",
+      "CommunityRating": 8.4,
+      "ProductionYear": 2011,
+      "IsFolder": true,
+      "Type": "Series",
+      "Status": "Ended",
+      "ParentId": "00000000000000000000000000000d02",
+      "Genres": ["Drama"],
+      "Studios": [{ "Name": "Network 1", "Id": "00000000000000000000000000003002" }],
+      "People": [],
+      "UserData": { "PlaybackPositionTicks": 0, "PlayCount": 0, "IsFavorite": false, "Played": false, "UnplayedItemCount": 3, "Key": "1000003" },
+      "ChildCount": 1,
+      "ImageTags": { "Primary": "00000000000000000000000000006004" },
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem",
+      "MediaType": "Unknown"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

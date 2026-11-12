@@ -231,8 +231,7 @@ class TmdbChartTest {
 
     @Test
     fun `a list result reads its genre ids`() {
-        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-        val title = json.decodeFromString<TmdbRecommendation>("""{"id":7,"title":"Coco","genre_ids":[16,10751]}""")
+        val title = TmdbJson.decodeFromString<TmdbRecommendation>("""{"id":7,"title":"Coco","genre_ids":[16,10751]}""")
         assertEquals(listOf(16, 10751), title.genreIds)
     }
 

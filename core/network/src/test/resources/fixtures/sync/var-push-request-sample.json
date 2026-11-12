@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "key": "key-favourite",
+      "providerTag": "provider-tag-1",
+      "profileTag": "profile-tag-1",
+      "updatedAt": 10,
+      "deleted": false,
+      "payload": "sealed-favourite"
+    },
+    {
+      "key": "key-setting",
+      "updatedAt": 11,
+      "deleted": false,
+      "payload": "sealed-setting"
+    },
+    {
+      "key": "key-history",
+      "providerTag": "provider-tag-1",
+      "profileTag": "profile-tag-1",
+      "updatedAt": 12,
+      "deleted": true,
+      "payload": "sealed-history"
+    }
+  ]
+}

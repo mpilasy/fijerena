@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -11,12 +10,7 @@ import org.junit.Test
  * built on top of it. See the tv detail hero ui plan Phase 1.
  */
 class TmdbImagesParsingTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     @Test
     fun `parses logos and backdrops from one response`() {

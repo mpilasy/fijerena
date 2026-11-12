@@ -1,17 +1,12 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /** The Cast tab's people from TMDB's credits (the cast tab plan, Phase 1). */
 class TitleCreditsTest {
-    private val json =
-        Json {
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     @Test
     fun `a film gives its full cast in billing order with their roles and photos, its directors and its writers`() {

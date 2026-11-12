@@ -1,0 +1,76 @@
+{
+  "Items": [
+    {
+      "Name": "Episode 1",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000008001",
+      "Container": "mkv",
+      "RunTimeTicks": 37200000000,
+      "IndexNumber": 1,
+      "ParentIndexNumber": 1,
+      "IsFolder": false,
+      "Type": "Episode",
+      "Overview": "Neutral plot text for the first episode.",
+      "ParentId": "00000000000000000000000000007001",
+      "SeriesName": "Show 1",
+      "SeriesId": "00000000000000000000000000002003",
+      "SeasonId": "00000000000000000000000000007001",
+      "SeasonName": "Season 1",
+      "MediaSources": [
+        {
+          "Protocol": "File",
+          "Id": "00000000000000000000000000008001",
+          "Container": "mkv",
+          "Size": 1073741824,
+          "SupportsTranscoding": true,
+          "SupportsDirectStream": true,
+          "SupportsDirectPlay": true,
+          "MediaStreams": [
+            { "Codec": "h264", "Width": 1920, "Height": 1080, "IsDefault": true, "Type": "Video", "Index": 0 }
+          ]
+        }
+      ],
+      "UserData": { "PlaybackPositionTicks": 0, "PlayCount": 1, "IsFavorite": false, "Played": true, "LastPlayedDate": "2026-11-09T21:00:00.0000000Z", "Key": "1000003001001" },
+      "ImageTags": { "Primary": "00000000000000000000000000006006" },
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem",
+      "MediaType": "Video"
+    },
+    {
+      "Name": "Episode 2",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000008002",
+      "RunTimeTicks": 33600000000,
+      "IndexNumber": 2,
+      "ParentIndexNumber": 1,
+      "IsFolder": false,
+      "Type": "Episode",
+      "SeriesName": "Show 1",
+      "SeriesId": "00000000000000000000000000002003",
+      "SeasonId": "00000000000000000000000000007001",
+      "UserData": { "PlaybackPositionTicks": 6000000000, "PlayCount": 0, "IsFavorite": false, "Played": false, "PlayedPercentage": 17.9, "Key": "1000003001002" },
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "LocationType": "FileSystem",
+      "MediaType": "Video"
+    },
+    {
+      "Name": "Episode 3",
+      "ServerId": "00000000000000000000000000000a01",
+      "Id": "00000000000000000000000000008003",
+      "IndexNumber": 3,
+      "ParentIndexNumber": 1,
+      "IsFolder": false,
+      "Type": "Episode",
+      "SeriesName": "Show 1",
+      "SeriesId": "00000000000000000000000000002003",
+      "SeasonId": "00000000000000000000000000007001",
+      "ImageTags": {},
+      "BackdropImageTags": [],
+      "LocationType": "Virtual",
+      "MediaType": "Video"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

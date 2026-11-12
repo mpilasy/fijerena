@@ -1,0 +1,57 @@
+{
+  "adult": false,
+  "backdrop_path": "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
+  "belongs_to_collection": null,
+  "budget": 63000000,
+  "genres": [
+    { "id": 18, "name": "Drama" },
+    { "id": 53, "name": "Thriller" }
+  ],
+  "homepage": "",
+  "id": 550,
+  "imdb_id": "tt0137523",
+  "origin_country": ["US"],
+  "original_language": "en",
+  "original_title": "Fight Club",
+  "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.",
+  "popularity": 61.416,
+  "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+  "production_companies": [
+    { "id": 508, "logo_path": "/7cxRWzi4LsVm4Utfpr1hfARNurT.png", "name": "Regency Enterprises", "origin_country": "US" },
+    { "id": 711, "logo_path": "/tEiIH5QesdheJmDAqQwvtN60727.png", "name": "Fox 2000 Pictures", "origin_country": "US" }
+  ],
+  "production_countries": [
+    { "iso_3166_1": "DE", "name": "Germany" },
+    { "iso_3166_1": "US", "name": "United States of America" }
+  ],
+  "release_date": "1999-10-15",
+  "revenue": 100853753,
+  "runtime": 139,
+  "spoken_languages": [
+    { "english_name": "English", "iso_639_1": "en", "name": "English" }
+  ],
+  "status": "Released",
+  "tagline": "Mischief. Mayhem. Soap.",
+  "title": "Fight Club",
+  "video": false,
+  "vote_average": 8.433,
+  "vote_count": 26280,
+  "credits": {
+    "cast": [
+      { "adult": false, "gender": 2, "id": 819, "known_for_department": "Acting", "name": "Edward Norton", "original_name": "Edward Norton", "popularity": 26.99, "profile_path": "/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg", "cast_id": 4, "character": "The Narrator", "credit_id": "52fe4250c3a36847f80149f3", "order": 0 },
+      { "adult": false, "gender": 2, "id": 287, "known_for_department": "Acting", "name": "Brad Pitt", "original_name": "Brad Pitt", "popularity": 50.87, "profile_path": "/cckcYc2v0yh1tc9QjRelptcOBko.jpg", "cast_id": 5, "character": "Tyler Durden", "credit_id": "52fe4250c3a36847f80149f7", "order": 1 },
+      { "adult": false, "gender": 1, "id": 1283, "known_for_department": "Acting", "name": "Helena Bonham Carter", "original_name": "Helena Bonham Carter", "popularity": 21.6, "profile_path": null, "cast_id": 7, "character": "Marla Singer", "credit_id": "52fe4250c3a36847f80149ff", "order": 2 }
+    ],
+    "crew": [
+      { "adult": false, "gender": 2, "id": 7467, "known_for_department": "Directing", "name": "David Fincher", "original_name": "David Fincher", "popularity": 21.8, "profile_path": "/tpEczFclQZeKAiCeKZZ0adRvtfz.jpg", "credit_id": "631f0289568463007bbe28a0", "department": "Directing", "job": "Director" },
+      { "adult": false, "gender": 2, "id": 7469, "known_for_department": "Writing", "name": "Jim Uhls", "original_name": "Jim Uhls", "popularity": 4.1, "profile_path": null, "credit_id": "52fe4250c3a36847f8014a05", "department": "Writing", "job": "Screenplay" }
+    ]
+  },
+  "videos": {
+    "results": [
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Behind the Scenes", "key": "clipKey01", "site": "YouTube", "size": 1080, "type": "Featurette", "official": true, "published_at": "2019-10-15T17:00:00.000Z", "id": "5dc5d8b1c3a36800174d1ae6" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Teaser", "key": "teaserKey01", "site": "YouTube", "size": 1080, "type": "Teaser", "official": true, "published_at": "2019-10-14T17:00:00.000Z", "id": "5dc5d8b1c3a36800174d1ae7" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Official Trailer", "key": "trailerKey01", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2014-10-02T19:20:22.000Z", "id": "64fc0d1d2dffd8013bcab9f3" }
+    ]
+  }
+}

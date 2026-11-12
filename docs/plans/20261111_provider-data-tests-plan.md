@@ -1,6 +1,6 @@
 # Provider data tests
 
-**Status:** In progress. Phases 1 to 4 done 2026-11-11; Phase 5 not started. The maintainer took the recommended answer (a) to
+**Status:** Done 2026-11-11 (Phases 1 to 5). The maintainer took the recommended answer (a) to
 PD-Q1 to PD-Q6 on 2026-11-11.
 
 ## Goal
@@ -180,7 +180,7 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
 | 2 | Done 2026-11-11 (Xtream by hand, see Done) |
 | 3 | Done 2026-11-11 |
 | 4 | Done 2026-11-11 |
-| 5 | Not started |
+| 5 | Done 2026-11-11 |
 
 ## Done
 
@@ -250,6 +250,29 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
     first comma outside quotes. An empty `group-title` made a group with no name; it is now
     Uncategorized. CRLF, `x-tvg-url` in the header and `#EXTVLCOPT` lines already read; the app
     does not use `x-tvg-url` (not a parser fix: a feature, not planned).
+- **Phase 5 (2026-11-11):** all files hand-written (PD-Q3 (a)), no key, login or recording.
+  - **TMDB:** `TmdbJson` (core:network tmdb) is the one Json config for TMDB answers;
+    `TmdbApiService` and the TMDB model tests use it (seven tests had a copy). 10 files under
+    fixtures/tmdb/ in the shape of the API reference, with its own examples (movie 550, show
+    1399, person 287, collection 10): a film's and a show's details with credits and videos, a
+    season, a multi search, release dates, content ratings, images, a person, a collection, and
+    a film not out yet (no poster, `""` release date). `TmdbDocsAnswersTest` (9 tests) checks
+    the derived values the app uses (title, year, facts, cast, best trailer, logo and backdrop).
+    The client's base URL is fixed, so these tests decode with `TmdbJson`, not over a socket.
+  - **Jellyfin:** 6 files under fixtures/jellyfin/ in the shape of the API reference (sign-in,
+    libraries, items, seasons, episodes, one item), with placeholder ids, names and plots and an
+    empty access token (the privacy gate allows no token value). `JellyfinDocsAnswersTest` (5)
+    serves them from a local socket to `JellyfinApiService`.
+  - **Sync (PD-Q6 (a)):** 6 sample messages under fixtures/sync/ (info, push request and answer,
+    pull answer, the socket's head message, a collected handoff). `SyncWireSamplesTest` (5) serves
+    them to `SyncApi` and checks that a push sends the sample request; server/test/samples.test.ts
+    (3) runs the real server (workerd) and checks that it answers exactly the samples. The server
+    CI workflow now also runs on a change to fixtures/sync/. No sample with a device token: the
+    privacy gate allows no token value.
+  - All new tests passed at once: no parser fix.
+  - **Not done:** today's inline JSON in the TMDB tests stays inline (PD-Q3 said to move it).
+    The new files cover each endpoint the app reads; moving some 25 short bodies would only move
+    text.
 
 ## Risks
 

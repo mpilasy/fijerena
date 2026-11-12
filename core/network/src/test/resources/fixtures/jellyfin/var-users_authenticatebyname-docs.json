@@ -1,0 +1,23 @@
+{
+  "User": {
+    "Name": "user",
+    "ServerId": "00000000000000000000000000000a01",
+    "Id": "00000000000000000000000000000b01",
+    "HasPassword": true,
+    "HasConfiguredPassword": true,
+    "EnableAutoLogin": false,
+    "LastLoginDate": "2026-11-11T18:00:00.0000000Z",
+    "LastActivityDate": "2026-11-11T18:00:00.0000000Z",
+    "Policy": { "IsAdministrator": false, "IsDisabled": false, "EnableMediaPlayback": true }
+  },
+  "SessionInfo": {
+    "Id": "00000000000000000000000000000c01",
+    "UserId": "00000000000000000000000000000b01",
+    "UserName": "user",
+    "Client": "Fijerena",
+    "DeviceName": "Android",
+    "ApplicationVersion": "1.0.0"
+  },
+  "AccessToken": "",
+  "ServerId": "00000000000000000000000000000a01"
+}

@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.network.tmdb
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -14,12 +13,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 
 /** Search's People type: `search/multi` read and put in its three groups (the people search plan). */
 class TmdbPeopleSearchTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = TmdbJson
 
     // A `search/multi` answer as TMDB sends it (2026-10-31, shortened): an actor, a director, an
     // actress without a photo, a show and two films.

@@ -1,0 +1,5 @@
+{
+  "service": "fijerena-sync",
+  "protocol": 1,
+  "setupSecretRequired": false
+}

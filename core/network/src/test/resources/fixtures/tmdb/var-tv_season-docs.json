@@ -1,0 +1,66 @@
+{
+  "_id": "5256c89f19c2956ff6046d47",
+  "air_date": "2011-04-17",
+  "episodes": [
+    {
+      "air_date": "2011-04-17",
+      "episode_number": 1,
+      "episode_type": "standard",
+      "id": 63056,
+      "name": "Winter Is Coming",
+      "overview": "Lord Eddard Stark is torn between his family and an old friend.",
+      "production_code": "101",
+      "runtime": 62,
+      "season_number": 1,
+      "show_id": 1399,
+      "still_path": "/9hGF3WUkBf7cSjMg0cdMDHJkByd.jpg",
+      "vote_average": 7.9,
+      "vote_count": 380,
+      "crew": [],
+      "guest_stars": [
+        { "character": "Will", "credit_id": "5256c8a219c2956ff6046e77", "order": 500, "adult": false, "gender": 2, "id": 39661, "known_for_department": "Acting", "name": "Bryan Larkin", "original_name": "Bryan Larkin", "popularity": 2.2, "profile_path": null },
+        { "character": "Ser Waymar Royce", "credit_id": "5256c8a219c2956ff6046f40", "order": 501, "adult": false, "gender": 2, "id": 119783, "known_for_department": "Acting", "name": "Rob Ostlere", "original_name": "Rob Ostlere", "popularity": 1.9, "profile_path": "/7fGmKmHpaEUbzWmVNpGHjoKbFVb.jpg" }
+      ]
+    },
+    {
+      "air_date": "2011-04-24",
+      "episode_number": 2,
+      "episode_type": "standard",
+      "id": 63057,
+      "name": "The Kingsroad",
+      "overview": "While Bran recovers from his fall, Ned takes only his daughters to King's Landing.",
+      "production_code": "102",
+      "runtime": 56,
+      "season_number": 1,
+      "show_id": 1399,
+      "still_path": "/icjOgl5F9DhysOEo6Six2Qfwcu2.jpg",
+      "vote_average": 7.7,
+      "vote_count": 290,
+      "crew": [],
+      "guest_stars": []
+    },
+    {
+      "air_date": "2011-05-01",
+      "episode_number": 3,
+      "episode_type": "standard",
+      "id": 63058,
+      "name": "Lord Snow",
+      "overview": "Jon Snow attempts to find his place amongst the Night's Watch.",
+      "production_code": "103",
+      "runtime": null,
+      "season_number": 1,
+      "show_id": 1399,
+      "still_path": null,
+      "vote_average": 7.6,
+      "vote_count": 270,
+      "crew": [],
+      "guest_stars": []
+    }
+  ],
+  "name": "Season 1",
+  "overview": "Trouble is brewing in the Seven Kingdoms of Westeros.",
+  "id": 3624,
+  "poster_path": "/wgfKiqzuMrFIkU1M68DDDY8kGC1.jpg",
+  "season_number": 1,
+  "vote_average": 8.3
+}

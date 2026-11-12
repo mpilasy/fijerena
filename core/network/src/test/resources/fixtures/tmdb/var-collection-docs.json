@@ -1,0 +1,12 @@
+{
+  "id": 10,
+  "name": "Star Wars Collection",
+  "overview": "An epic space opera theatrical film series.",
+  "poster_path": "/22dj38IckjzEEUZwN1tPU5VJ1qq.jpg",
+  "backdrop_path": "/zZDkgOmFMVYpGAkR9Tkxw0CRnxX.jpg",
+  "parts": [
+    { "adult": false, "backdrop_path": "/2w4xG178RpB4MDAIfTkqAuSJzec.jpg", "id": 11, "title": "Star Wars", "original_language": "en", "original_title": "Star Wars", "overview": "Princess Leia is captured and held hostage by the evil Imperial forces.", "poster_path": "/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg", "media_type": "movie", "genre_ids": [12, 28, 878], "popularity": 85.2, "release_date": "1977-05-25", "video": false, "vote_average": 8.2, "vote_count": 20100 },
+    { "adult": false, "backdrop_path": "/aJCtkxLLzkk1pECehVjKHA2lBgw.jpg", "id": 1891, "title": "The Empire Strikes Back", "original_language": "en", "original_title": "The Empire Strikes Back", "overview": "The epic saga continues as Luke Skywalker begins Jedi training.", "poster_path": "/nNAeTmF4CtdSgMDplXTDPOpYzsX.jpg", "media_type": "movie", "genre_ids": [12, 28, 878], "popularity": 40.1, "release_date": "1980-05-20", "video": false, "vote_average": 8.4, "vote_count": 16800 },
+    { "adult": false, "backdrop_path": null, "id": 140607, "title": "Star Wars: The Force Awakens", "original_language": "en", "original_title": "Star Wars: The Force Awakens", "overview": "Thirty years after defeating the Galactic Empire, a new threat arises.", "poster_path": "/wqnLdwVXoBjKibFRR5U3y0aDUhs.jpg", "media_type": "movie", "genre_ids": [12, 28, 878], "popularity": 50.0, "release_date": "2015-12-15", "video": false, "vote_average": 7.3, "vote_count": 19300 }
+  ]
+}

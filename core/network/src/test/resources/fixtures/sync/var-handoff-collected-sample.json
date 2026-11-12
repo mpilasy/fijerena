@@ -1,0 +1,5 @@
+{
+  "ready": true,
+  "sealed": "sealed-pairing-code-and-account-key",
+  "senderKey": "sender-public-key"
+}
