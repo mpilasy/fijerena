@@ -112,6 +112,27 @@ the instrumented tests also run nightly. The workflows are under `.github/workfl
 the build refuses it without `-PallowConnectedTest=true`. Pass the flag only with real devices
 disconnected, or with one emulator targeted with `ANDROID_SERIAL`.
 
+### Recording Provider Fixtures
+
+The parser tests read saved provider answers under `src/test/resources/fixtures/` (Xtream in
+`core/player`, the others in `core/network`; CONTRIBUTING.md → Coding Style).
+`scripts/record-provider-fixtures.py` records new `rec-` files from two sources only: the local
+jellyxtream bridge (`tools/jellyfin-xtream/`, on 127.0.0.1 or localhost) and the public iptv-org
+playlist.
+
+```bash
+# The bridge login comes from the environment, never from an argument or a file.
+FIXTURE_XTREAM_USER=… FIXTURE_XTREAM_PASS=… scripts/record-provider-fixtures.py --source xtream
+scripts/record-provider-fixtures.py --source m3u     # the iptv-org playlist, no login
+scripts/record-provider-fixtures.py --out /tmp/rec   # a dry run: writes <out>/<kind>/ instead
+```
+
+The script trims each list to a few items (one of each shape first), cleans the answers (login,
+hosts, ids, titles, plots and names become placeholders) and writes into the fixture folders only
+when `scripts/check-fixture-privacy.sh` passes on them. The repository is public: read the diff
+before a commit all the same, and check that the iptv-org playlist is still under the Unlicense.
+Then update the tests that read the files, and their recording date in the test KDoc.
+
 ---
 
 ## Deployment & Device Targeting

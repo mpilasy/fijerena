@@ -1,0 +1,15 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="00sReplay.us@SD" tvg-logo="https://img.invalid/channels/62ba60f059624e000781c436/colorLogoPNG.png" group-title="Movies",00s Replay
+https://stream.invalid/plu-62ba60f059624e000781c436.m3u8
+#EXTINF:-1 tvg-id="1Plus1International.ua@SD" tvg-logo="https://img.invalid/LOY0rtp.png" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36" group-title="General",1+1 International
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+http://stream.invalid/georgia_play.php?id=1plus1international
+#EXTINF:-1 tvg-id="1Plus1Ukraina.ua@SD" tvg-logo="https://img.invalid/FlG7npq.png" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" group-title="General",1+1 Ukraina (1080p)
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+http://stream.invalid/219/index.m3u8
+#EXTINF:-1 tvg-id="2MMonde.ma@SD" tvg-logo="https://img.invalid/MvpntzA.png" http-referrer="http://stream.invalid/" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0" group-title="General",2M Monde (360p)
+#EXTVLCOPT:http-referrer=http://stream.invalid/
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0
+https://stream.invalid/live/eds/2m_monde/hls_video_ts_tuhawxpiemz257adfc/2m_monde.m3u8
+#EXTINF:-1 tvg-id="2TV.lt@SD" tvg-logo="https://img.invalid/sZUIhGc.png" group-title="Music",2TV (1080p)
+https://stream.invalid/live/687e3ff1679c8d4d68fab6c5/hd/manifest.mpd

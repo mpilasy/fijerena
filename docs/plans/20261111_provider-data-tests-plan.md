@@ -1,6 +1,6 @@
 # Provider data tests
 
-**Status:** In progress. Phase 1 done 2026-11-11. The maintainer took the recommended answer (a) to
+**Status:** In progress. Phases 1 and 2 done 2026-11-11. The maintainer took the recommended answer (a) to
 PD-Q1 to PD-Q6 on 2026-11-11.
 
 ## Goal
@@ -177,7 +177,7 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
 | Phase | Status |
 |---|---|
 | 1 | Done 2026-11-11 |
-| 2 | Not started |
+| 2 | Done 2026-11-11 (Xtream by hand, see Done) |
 | 3 | Not started |
 | 4 | Not started |
 | 5 | Not started |
@@ -191,6 +191,22 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
   checks.yml. It allows the public sports hosts only under fixtures/sports/, and also checks
   `"username"` / `"password"` JSON fields and URLs with a login in them. CONTRIBUTING has the rule
   "a parser change adds or updates a fixture" (Coding Style).
+- **Phase 2 (2026-11-11):** `scripts/record-provider-fixtures.py` records, trims, cleans, runs the
+  privacy gate on its scratch folder and only then writes; it takes an Xtream URL on 127.0.0.1 or
+  localhost only, and `--out` for a dry run. A dry run against tools/fake-xtream on a local port
+  wrote and cleaned every action (its output is not committed). RUN_GUIDE has "Recording Provider
+  Fixtures".
+  - **Xtream not recorded:** no bridge login was set in the environment, so the first Xtream files
+    are hand-written in the bridge's shape from xtream_bridge.py, with the script's placeholders:
+    `var-<action>-bridge.json` for login, both category lists, the three lists, both details and
+    `get_short_epg`. `XtreamBridgeAnswersTest` serves them from a local socket to `XtreamApiService`
+    (the streamed film list too). A recording with `FIXTURE_XTREAM_USER` / `FIXTURE_XTREAM_PASS`
+    set writes `rec-<action>.json`; the test then reads those and the `-bridge` files go.
+  - **M3U recorded:** `m3u/rec-index.m3u`, 5 entries of the iptv-org playlist (Unlicense, checked
+    2026-11-11), read by `M3uRecordedPlaylistTest`.
+  - **Finding (Remote M3U, not fixed):** an entry whose URL is a PHP page
+    (`…/georgia_play.php?id=…`) reads as not live, because `M3uParser.isLiveUrl` looks only at the
+    URL's end, `/live/` and two ports. Every iptv-org entry is a live channel.
 
 ## Risks
 

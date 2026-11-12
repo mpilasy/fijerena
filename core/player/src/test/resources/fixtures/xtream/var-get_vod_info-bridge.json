@@ -1,0 +1,38 @@
+{
+ "info": {
+  "name": "Film 1",
+  "movie_image": "https://img.invalid/Items/00000000000000000000000000000003/Images/Primary",
+  "cover_big": "https://img.invalid/Items/00000000000000000000000000000003/Images/Primary",
+  "backdrop_path": [
+   "https://img.invalid/Items/00000000000000000000000000000003/Images/Backdrop"
+  ],
+  "plot": "This is placeholder text for a plot. This is placeholder text for a plot.",
+  "cast": "Person 1, Person 2",
+  "director": "Person 3",
+  "genre": "Drama, Comedy",
+  "release_date": "2004-05-14",
+  "rating": 7.3,
+  "duration_secs": 6120,
+  "duration": "01:42:00",
+  "tmdb_id": "10001",
+  "youtube_trailer": "",
+  "video": {
+   "width": 1920,
+   "height": 1080,
+   "codec_name": "h264"
+  },
+  "audio": {
+   "codec_name": "aac",
+   "language": "eng"
+  },
+  "bitrate": 4500
+ },
+ "movie_data": {
+  "stream_id": 3,
+  "name": "Film 1",
+  "added": "1735689600",
+  "container_extension": "mkv",
+  "custom_sid": "",
+  "direct_source": ""
+ }
+}

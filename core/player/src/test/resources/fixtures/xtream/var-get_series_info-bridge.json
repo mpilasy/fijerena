@@ -1,0 +1,106 @@
+{
+ "seasons": [
+  {
+   "season_number": 1,
+   "name": "Season 1",
+   "episode_count": 2,
+   "cover": "https://img.invalid/Items/0000000000000000000000000000000d/Images/Primary",
+   "air_date": "2008-01-20",
+   "overview": "",
+   "id": 13
+  },
+  {
+   "season_number": 2,
+   "name": "Season 2",
+   "episode_count": 1,
+   "cover": "https://img.invalid/Items/0000000000000000000000000000000e/Images/Primary",
+   "air_date": "2009-03-08",
+   "overview": "This is placeholder text for a plot.",
+   "id": 14
+  }
+ ],
+ "info": {
+  "name": "Show 1",
+  "cover": "https://img.invalid/Items/0000000000000000000000000000000a/Images/Primary",
+  "plot": "This is placeholder text for a plot. This is placeholder text for a plot.",
+  "cast": "Person 4, Person 5",
+  "director": "",
+  "genre": "Animation",
+  "release_date": "2008-01-20",
+  "rating": 8.4,
+  "rating_5based": 4.2,
+  "backdrop_path": [
+   "https://img.invalid/Items/0000000000000000000000000000000a/Images/Backdrop"
+  ],
+  "youtube_trailer": "",
+  "episode_run_time": "",
+  "category_id": "",
+  "tmdb": "10004"
+ },
+ "episodes": {
+  "1": [
+   {
+    "id": "20",
+    "episode_num": 1,
+    "title": "Episode 1",
+    "container_extension": "mkv",
+    "season": 1,
+    "added": "1750000000",
+    "custom_sid": "",
+    "direct_source": "",
+    "info": {
+     "name": "Episode 1",
+     "plot": "This is placeholder text for a plot. This is place",
+     "air_date": "2008-01-11",
+     "movie_image": "https://img.invalid/Items/00000000000000000000000000000014/Images/Primary",
+     "duration_secs": 2820,
+     "duration": "00:47:00",
+     "rating": 8.2,
+     "tmdb_id": ""
+    }
+   },
+   {
+    "id": "21",
+    "episode_num": 2,
+    "title": "Episode 2",
+    "container_extension": "mkv",
+    "season": 1,
+    "added": "1750000000",
+    "custom_sid": "",
+    "direct_source": "",
+    "info": {
+     "name": "Episode 2",
+     "plot": "This is placeholder text for a plot. This is place",
+     "air_date": "2008-01-12",
+     "movie_image": "https://img.invalid/Items/00000000000000000000000000000015/Images/Primary",
+     "duration_secs": 2820,
+     "duration": "00:47:00",
+     "rating": 0,
+     "tmdb_id": ""
+    }
+   }
+  ],
+  "2": [
+   {
+    "id": "22",
+    "episode_num": 1,
+    "title": "Episode 3",
+    "container_extension": "mp4",
+    "season": 2,
+    "added": "1750000000",
+    "custom_sid": "",
+    "direct_source": "",
+    "info": {
+     "name": "Episode 3",
+     "plot": "This is placeholder text for a plot. This is place",
+     "air_date": "2008-02-11",
+     "movie_image": "https://img.invalid/Items/00000000000000000000000000000016/Images/Primary",
+     "duration_secs": 2820,
+     "duration": "00:47:00",
+     "rating": 7.9,
+     "tmdb_id": ""
+    }
+   }
+  ]
+ }
+}

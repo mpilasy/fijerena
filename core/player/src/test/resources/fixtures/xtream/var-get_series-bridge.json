@@ -1,0 +1,63 @@
+[
+ {
+  "num": 1,
+  "name": "Show 1",
+  "series_id": 10,
+  "cover": "https://img.invalid/Items/0000000000000000000000000000000a/Images/Primary",
+  "plot": "This is placeholder text for a plot. This is pl",
+  "cast": "",
+  "director": "",
+  "genre": "Animation",
+  "releaseDate": "2008-01-20",
+  "last_modified": "1750000000",
+  "rating": 8.4,
+  "rating_5based": 4.2,
+  "backdrop_path": [
+   "https://img.invalid/Items/0000000000000000000000000000000a/Images/Backdrop"
+  ],
+  "youtube_trailer": "",
+  "episode_run_time": "",
+  "category_id": "7",
+  "tmdb": "10004"
+ },
+ {
+  "num": 2,
+  "name": "Show 2",
+  "series_id": 11,
+  "cover": "https://img.invalid/Items/0000000000000000000000000000000b/Images/Primary",
+  "plot": "This is placeholder text for a plot. This is placehold",
+  "cast": "",
+  "director": "",
+  "genre": "",
+  "releaseDate": "",
+  "last_modified": "1750000000",
+  "rating": 0,
+  "rating_5based": 0.0,
+  "backdrop_path": [],
+  "youtube_trailer": "",
+  "episode_run_time": "",
+  "category_id": "7",
+  "tmdb": ""
+ },
+ {
+  "num": 3,
+  "name": "Show 3",
+  "series_id": 12,
+  "cover": "https://img.invalid/Items/0000000000000000000000000000000c/Images/Primary",
+  "plot": "This is placeholder text for a plot. This is placeholder text",
+  "cast": "",
+  "director": "",
+  "genre": "",
+  "releaseDate": "2015-09-02",
+  "last_modified": "1750000000",
+  "rating": 7.0,
+  "rating_5based": 3.5,
+  "backdrop_path": [
+   "https://img.invalid/Items/0000000000000000000000000000000c/Images/Backdrop"
+  ],
+  "youtube_trailer": "",
+  "episode_run_time": "",
+  "category_id": "7",
+  "tmdb": "10005"
+ }
+]
