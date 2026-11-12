@@ -22,9 +22,21 @@ object CrashLog {
     /** Separates entries in the file; never part of a stack trace. */
     const val ENTRY_SEPARATOR = "\n=====\n"
 
+    /**
+     * Marks the screen in the first line of an entry: `"<epochMs> <source> · screen: <route>"`.
+     * Logs shows the line as it is; [parse] splits it again.
+     */
+    const val SCREEN_MARK = " · screen: "
+
     private val lock = Any()
 
     @Volatile private var file: File? = null
+
+    /**
+     * The route name of the top screen (`Settings`, `MovieDetails`). The nav hosts set it on each
+     * change, and each new entry records it. Null before the first screen shows.
+     */
+    @Volatile var screen: String? = null
 
     /**
      * Formats a throwable for an entry. A seam for unit tests, where `Log.getStackTraceString`
@@ -53,7 +65,7 @@ object CrashLog {
         val target = file
         if (target != null) {
             try {
-                val entry = Redact.text("${System.currentTimeMillis()} $source\n${stackTraceOf(throwable)}")
+                val entry = Redact.text("${header(source)}\n${stackTraceOf(throwable)}")
                 synchronized(lock) {
                     target.parentFile?.mkdirs()
                     trimIfNeeded(target)
@@ -74,17 +86,44 @@ object CrashLog {
         source: String,
         message: String,
     ) {
-        val target = file ?: return
-        try {
-            val entry = Redact.text("${System.currentTimeMillis()} $source\n$message")
-            synchronized(lock) {
-                target.parentFile?.mkdirs()
-                trimIfNeeded(target)
-                target.appendText("$entry$ENTRY_SEPARATOR")
+        val target = file
+        if (target != null) {
+            try {
+                val entry = Redact.text("${header(source)}\n$message")
+                synchronized(lock) {
+                    target.parentFile?.mkdirs()
+                    trimIfNeeded(target)
+                    target.appendText("$entry$ENTRY_SEPARATOR")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Couldn't write crash log", e)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Couldn't write crash log", e)
         }
+    }
+
+    /** The first line of a new entry: the time, [source], and the screen when one is known. */
+    private fun header(source: String): String = "${System.currentTimeMillis()} $source" + screen?.let { "$SCREEN_MARK$it" }.orEmpty()
+
+    /** One entry of [read], in its parts. */
+    data class Entry(
+        val timeMs: Long,
+        val source: String,
+        /** The route name of the screen at that time; null for an entry from before screens were recorded. */
+        val screen: String?,
+        /** The stack trace or the message. */
+        val body: String,
+    )
+
+    /** Splits an entry of [read] into its parts. */
+    fun parse(raw: String): Entry {
+        val header = raw.substringBefore('\n')
+        val rest = header.substringAfter(' ', "")
+        return Entry(
+            timeMs = header.substringBefore(' ').toLongOrNull() ?: 0L,
+            source = rest.substringBefore(SCREEN_MARK),
+            screen = rest.substringAfter(SCREEN_MARK, "").ifEmpty { null },
+            body = raw.substringAfter('\n', ""),
+        )
     }
 
     /** Entries newest first, each as `"<epochMs> <source>\n<stack trace or message>"`. */

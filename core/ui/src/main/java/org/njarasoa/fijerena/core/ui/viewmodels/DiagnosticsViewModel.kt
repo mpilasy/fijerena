@@ -10,8 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.ProcessExits
@@ -64,12 +64,17 @@ class DiagnosticsViewModel(
         }
     }
 
-    /** Clears this app's own log; the system's exit history can't be cleared and stays. */
+    /**
+     * Clears this app's own log; the system's exit history can't be cleared and stays here. The
+     * time of the clear goes to the device report, which then leaves out everything older, the
+     * exits too (the device diagnostics sync plan).
+     */
     fun clear() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("DiagnosticsViewModel.clear") {
             withContext(Dispatchers.IO) {
                 CrashLog.clear()
                 ConnectionLog.clear()
+                AppSettings(context).diagnosticsClearedAt = System.currentTimeMillis()
             }
             reload()
         }

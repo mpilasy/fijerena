@@ -1,6 +1,6 @@
 # Device diagnostics over live sync
 
-**Status:** Planned 2026-11-11, not started. Open questions DD-Q1 to DD-Q7 wait for the user.
+**Status:** In progress since 2026-11-11. Phase 1 done. The user decided DD-Q1 to DD-Q7, all (a).
 
 ## Goal
 
@@ -68,6 +68,9 @@ end-to-end encrypted, and a device sends it only while it is open (sync is foreg
 - **Debug hooks:** `core/ui/src/debug/.../sync/SyncDebugReceiver.kt` (re-pair over adb).
 
 ## Open questions
+
+**Decided 2026-11-11:** the user took the recommended answer of each question: DD-Q1 (a), DD-Q2 (a),
+DD-Q3 (a), DD-Q4 (a), DD-Q5 (a), DD-Q6 (a), DD-Q7 (a).
 
 | # | Question | Options |
 |---|----------|---------|
@@ -200,10 +203,21 @@ RELEASE_NOTES. No Room migration.
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
+| 1 | Done 2026-11-11 |
 | 2 | Not started |
 | 3 | Not started |
 | 4 | Not started |
+
+**Phase 1 done (2026-11-11):**
+
+- `DeviceReport` and `DeviceReportBuilder` (core/network sync). `DeviceReportBuilder.build(Input)` is pure;
+  `build(context, now, clearedAt)` reads `CrashLog`, `ProcessExits`, `ConnectionLog` and `SafeMode.lastStartedAt`.
+- `Redact.report` = `Redact.text`, then the URL hosts (with the userinfo and the port) and `Bearer <token>`.
+- `CrashLog` writes the screen into the first line of each new entry (`" · screen: <route>"`), from
+  `CrashLog.screen`, which both nav hosts set. `CrashLog.parse` splits an entry. Logs shows the screen in the title.
+- `SafeMode` writes `files/safemode/started_at` when safe mode starts (`safeModeAt`).
+- Logs → Clear writes `diagnostics_cleared_at` (`AppSettings.diagnosticsClearedAt`), and now runs in `launchGuarded`.
+- Tests: `RedactReportTest`, `CrashLogScreenTest`, `DeviceReportBuilderTest`.
 
 ## Difficulty
 

@@ -26,4 +26,20 @@ object Redact {
             .replace(userInfo, "$1$MASK@")
             .replace(xtreamPath, "$1$MASK/$MASK/")
             .replace(secretQuery, "$1$MASK")
+
+    // The host part of a URL (with its userinfo and port), up to the path, query or fragment.
+    private val urlHost = Regex("""(\b[a-zA-Z][a-zA-Z0-9+.-]*://)[^/?#\s"'<>]+""")
+
+    private val bearer = Regex("""(\bBearer\s+)[^\s"',;]+""", RegexOption.IGNORE_CASE)
+
+    /**
+     * For a device report that goes to the other devices of a sync group (the device diagnostics
+     * sync plan): [text], then the host of every URL becomes [MASK] (only the scheme stays before
+     * the path) and the token after `Bearer` too. A report gets copied and shared from the phone, so it does
+     * not name the servers. Logs on the device keep the hosts. Idempotent, as [text].
+     */
+    fun report(input: String): String =
+        text(input)
+            .replace(urlHost, "$1$MASK")
+            .replace(bearer, "$1$MASK")
 }

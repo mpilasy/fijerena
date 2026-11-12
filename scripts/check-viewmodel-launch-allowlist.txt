@@ -6,7 +6,6 @@
 #
 # Left after the first pass (2026-10-02, 98 → 60): mostly loads that already catch their own
 # failures or return a Result, and user actions with no init-path impact.
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/DiagnosticsViewModel.kt 1 # clear(): local file delete
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt 3 # refresh/search actions
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt 1 # refreshDbStats catches its own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt 1 # forceRefresh

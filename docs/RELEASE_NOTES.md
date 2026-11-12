@@ -6,6 +6,7 @@
 - **Updates check for space first:** a guide refresh, a catalogue update and a playlist download now check that the device has enough free storage before they start. When it does not, the update stops at once and says that the storage is almost full, and your guide and catalogue stay as they are. TV and phone.
 - **More Xtream sources read in full:** some sources send a number as an empty text (a channel's catch-up days, a film's or show's id, a rating), an empty list for a film's or show's details, or a single picture where a list of pictures belongs. One such field made the app lose a whole list of channels, films or shows, a film's details, a show's episodes, the login or a channel's guide. Now the app reads what is there and skips only what is missing. TV and phone.
 - **New CI check (developers):** `scripts/check-fixture-privacy.sh` fails the build when a test fixture (a saved provider answer under `src/test/resources/fixtures/`) holds a login, a token, an IP address or a URL host that is not on its allow list. The repository is public. The sports answers moved to `fixtures/sports/`, and the Xtream tests now read answers with the client's own Json settings (`XtreamJson`), not a copy of them.
+- **Logs name the screen:** each new crash or error in Settings → About → Logs now says which screen was open when it happened. TV and phone.
 
 ## Version: 0.9.20261112015711
 

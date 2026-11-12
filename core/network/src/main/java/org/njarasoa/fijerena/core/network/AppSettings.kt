@@ -100,6 +100,7 @@ class AppSettings(
         private const val KEY_LAST_TAB = "last_tab"
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_SHARE_NOW_PLAYING = "share_now_playing"
+        private const val KEY_DIAGNOSTICS_CLEARED_AT = "diagnostics_cleared_at"
         private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
         private const val KEY_ORPHAN_SWEEP_PENDING = "orphan_sweep_pending"
         private const val KEY_LAST_SHRINK_DURATION_MS = "last_shrink_duration_ms"
@@ -215,6 +216,15 @@ class AppSettings(
     var shareNowPlaying: Boolean
         get() = prefs.getBoolean(KEY_SHARE_NOW_PLAYING, false)
         set(value) = prefs.edit { putBoolean(KEY_SHARE_NOW_PLAYING, value) }
+
+    /**
+     * When Logs was last cleared on this device (epoch ms), or 0. Local only. The device report
+     * leaves out older entries, so Clear clears it too, also the exits that the system keeps (the
+     * device diagnostics sync plan).
+     */
+    var diagnosticsClearedAt: Long
+        get() = prefs.getLong(KEY_DIAGNOSTICS_CLEARED_AT, 0L)
+        set(value) = prefs.edit { putLong(KEY_DIAGNOSTICS_CLEARED_AT, value) }
 
     /**
      * Night Audio (quieter loud sounds, clearer speech). Per device — not per profile and never

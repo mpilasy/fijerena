@@ -148,6 +148,16 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val showClock by remember { appSettings.observeShowClock() }.collectAsStateWithLifecycle(initialValue = appSettings.showClock)
     LaunchedEffect(showClock) { clock.off = !showClock }
     val coroutineScope = rememberCoroutineScope()
+    // The screen of each new crash log entry (the device diagnostics sync plan).
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            org.njarasoa.fijerena.core.player.diagnostics.CrashLog.screen =
+                entry.destination.route
+                    ?.substringAfterLast('.')
+                    ?.substringBefore('/')
+                    ?.substringBefore('?')
+        }
+    }
 
     // The bottom bar's tabs (the phone Home tab plan): Home, then the profile's merged sections
     // (multi-source plan, Phase 6). Read at startup, on each visit to a tab's root and after every

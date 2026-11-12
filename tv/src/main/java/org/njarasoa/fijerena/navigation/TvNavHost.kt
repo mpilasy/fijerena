@@ -130,14 +130,17 @@ fun TvNavHost(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
-    // Which screen a dead D-pad happened on, for Diagnostics (DeadKeyDetector).
+    // Which screen a dead D-pad happened on, for Diagnostics (DeadKeyDetector), and the screen of
+    // each new crash log entry (the device diagnostics sync plan).
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { entry ->
-            org.njarasoa.fijerena.ui.DeadKeyDetector.screen =
+            val screen =
                 entry.destination.route
                     ?.substringAfterLast('.')
                     ?.substringBefore('/')
                     ?.substringBefore('?') ?: "?"
+            org.njarasoa.fijerena.ui.DeadKeyDetector.screen = screen
+            org.njarasoa.fijerena.core.player.diagnostics.CrashLog.screen = screen
         }
     }
 

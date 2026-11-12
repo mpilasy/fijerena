@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.player.diagnostics
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -16,6 +17,8 @@ import java.io.File
  * `files/safemode/launches`; see the next level rock solid resilience plan → R-10.
  */
 object SafeMode {
+    private const val TAG = "SafeMode"
+
     /**
      * Process lifetime after which a launch counts as healthy. Measured from process start, not
      * from a screen being shown: processes started only for background work (WorkManager, the
@@ -41,8 +44,43 @@ object SafeMode {
                 delay(HEALTHY_AFTER_MS)
                 launchCounter.markHealthy()
             }
+        } else {
+            writeStartedAt(context, System.currentTimeMillis())
         }
     }
+
+    /**
+     * When safe mode last started on this device (epoch ms), or 0 when it never did. The device
+     * report tells the sync group (the device diagnostics sync plan).
+     */
+    fun lastStartedAt(context: Context): Long {
+        val file = startedAtFile(context)
+        val text =
+            try {
+                if (file.isFile) file.readText() else ""
+            } catch (e: Exception) {
+                // cancellation-ok: non-suspend
+                Log.w(TAG, "Couldn't read when safe mode started", e)
+                ""
+            }
+        return text.trim().toLongOrNull() ?: 0L
+    }
+
+    private fun writeStartedAt(
+        context: Context,
+        now: Long,
+    ) {
+        try {
+            val file = startedAtFile(context)
+            file.parentFile?.mkdirs()
+            file.writeText(now.toString())
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
+            Log.w(TAG, "Couldn't record when safe mode started", e)
+        }
+    }
+
+    private fun startedAtFile(context: Context) = File(context.filesDir, "safemode/started_at")
 
     /**
      * "Continue": forget the unfinished launches and start the app again, in a fresh process so
