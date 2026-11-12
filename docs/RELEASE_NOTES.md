@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261112015711
 
 - **A full storage is no longer a "network error":** when the device's storage filled up during a catalogue update, a guide download or a playlist download, the app said "network error" and tried again and again, writing the same data each time. Now it says that the storage is almost full and stops, until you free up space. TV and phone.
 - **Display mode in Stats for Nerds (TV):** two new rows show the TV's display mode now (resolution and refresh rate) and the refresh rates it offers. The frame rate row now tells a 23.976 fps film from a 24 fps one, and shows the rate of a live channel from its frames. This is the first step to playing a film at its own frame rate.
