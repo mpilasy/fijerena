@@ -1,6 +1,6 @@
 # Preferred track languages
 
-**Status:** Phases 1 to 4 done 2026-11-11; the emulator checks of Phases 3 and 4 wait. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
+**Status:** Phases 1 to 4 done 2026-11-11; the emulator checks of Phases 3 and 4 done 2026-11-12 (see Progress), except the live channel check. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
 
 ## Goal
 
@@ -201,8 +201,23 @@ Off reuses `player_subtitles_off`. The mg value for `settings_track_language_str
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 |
-| 4 | Done 2026-11-11; emulator checks wait |
+| 4 | Done 2026-11-11; emulator checks done 2026-11-12 |
 | 5 | Dropped (PL-Q5 a) |
+
+**Emulator checks (2026-11-12, debug 0.9.20261112184527):** test files on the fake panel: one with
+Français, English (default) and Commentary audio and Forcés, Français and English subtitles; one with
+no-language audio labelled "VF" and "VO". Every row of "Which choice wins" passes on TV (Admin) and on the
+phone (Teen):
+- no setting: English audio, subtitles off;
+- audio French: Français, never Commentary; with no subtitle setting the forced French track shows;
+- audio English, subtitles French, switch on: English audio with the full French subtitles;
+- audio French, subtitles French, switch on: Français with only the forced track;
+- audio French, subtitles English, switch off: Français with English subtitles;
+- "VF"/"VO" file: French gives VF; Malagasy (no such track) gives the original, VO;
+- a saved choice for the title wins; an episode after a series pick takes the series choice;
+- leaving the player saves no choice.
+The rows and pickers fit in Malagasy, and the TV focus walk in English passes. Not checked: a live
+channel with two audio tracks (no allowed source has one).
 
 ## Done notes
 

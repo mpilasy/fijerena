@@ -1,6 +1,6 @@
 # Low storage
 
-**Status:** Phases 1 to 4 done 2026-11-11. The emulator check of Phase 4 (LS-Q6) waits: the steps are in the Phase 4 Done note. Decided 2026-11-11: LS-Q1 to LS-Q6, each (a).
+**Status:** Phases 1 to 4 done 2026-11-11. Emulator check (LS-Q6) done 2026-11-12 on both emulators: see the Emulator check note under Progress. Decided 2026-11-11: LS-Q1 to LS-Q6, each (a).
 
 ## Goal
 
@@ -183,7 +183,16 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 |
-| 4 | Done 2026-11-11; emulator check waits |
+| 4 | Done 2026-11-11; emulator check done 2026-11-12 |
+
+**Emulator check (2026-11-12, debug 0.9.20261112184527, TV and phone emulators):** steps 1 to 4 of the Phase 4
+Done note pass on both. The storage note, the source message (with the Nerd line) and the safe-mode
+note show in Malagasy and in English, and the text fits. Clear Image Cache asks first, clears
+(`du -sk cache/image_cache` 146,840 → 400 on the phone, 9,068 → 160 on TV) and keeps focus on the TV icon.
+The image cache limit itself was not reached: the test posters are small placeholders. Found and
+fixed: on the phone, the image cache row's value did not line up with the other values (the icon took
+width from the two columns); the icon is now over the row's end (`DeviceInfoRowLine`,
+`MobileDeviceInfoRowTest`).
 
 **Phase 1 done (2026-11-11):**
 - `Throwable.isDiskFull()` is in FriendlyError.kt, next to `networkCause()`, not in `StorageSpace`:

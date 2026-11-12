@@ -1,6 +1,6 @@
 # Device diagnostics over live sync
 
-**Status:** Phases 1 to 4 done 2026-11-11; the emulator check of phases 3 and 4 waits. The user decided DD-Q1 to DD-Q7, all (a).
+**Status:** Phases 1 to 4 done 2026-11-11; the emulator check of phases 3 and 4 done 2026-11-12 (see Progress). The user decided DD-Q1 to DD-Q7, all (a).
 
 ## Goal
 
@@ -206,8 +206,15 @@ RELEASE_NOTES. No Room migration.
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
-| 3 | Done 2026-11-11 (emulator check waits) |
-| 4 | Done 2026-11-11 (emulator check waits) |
+| 3 | Done 2026-11-11; emulator check done 2026-11-12 |
+| 4 | Done 2026-11-11; emulator check done 2026-11-12 |
+
+**Emulator check (2026-11-12, debug 0.9.20261112184527, both emulators on the local sync server):** all
+steps pass. The TV's `test-error` entry reached the phone after the TV went to the background and back.
+On the phone, the TV's row line ("92 errors in 7 days") and the Device Logs page (header, entries with
+screen and build, hosts masked as `***`, Copy and Share) show in Malagasy and in English. The TV's
+switch off: the row says "Logs not reported yet". Safe mode on the TV: Send logs to my sync group says
+"Logs sent to your sync group.", and the phone shows the new report with "Started in safe mode".
 
 **Phase 1 done (2026-11-11):**
 

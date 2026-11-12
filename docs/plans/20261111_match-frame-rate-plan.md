@@ -2,7 +2,7 @@
 
 **Status:** Done 2026-11-11 (Phases 1 to 3): films and Live TV in full screen play at a matching
 mode with the This Device switch on. The device checks (Checks, Phases 2 and 3) wait for the user on
-the Shields and the Bravia. The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with option (a).
+the Shields and the Bravia. TV emulator check 2026-11-12: see Progress (finding: FPS shows N/A). The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with option (a).
 
 ## Goal
 
@@ -191,6 +191,12 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 |
+
+**TV emulator check (2026-11-12, debug 0.9.20261112184527):** the This Device switch shows, is saved on and
+off, and a 25 fps film plays with no crash with the switch on (the emulator has one 60 Hz mode, so
+no switch happens). Finding: Stats for Nerds shows FPS "N/A" for the 25 fps test films, where the
+Phase 1 check showed "25.00 fps (measured)"; with no content rate, the switch has nothing to match.
+Under investigation.
 
 **Phase 1 done 2026-11-11.** `FrameRateEstimator` and `ContentFrameRate` (core/player/.../display/),
 `StreamingPlaybackService.contentFrameRate`, and the **Display** and **Modes** rows in `TvStatsOverlay`

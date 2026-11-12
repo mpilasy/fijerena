@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.settings
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.deviceinfo.DeviceInfoAction
+import org.njarasoa.fijerena.core.ui.deviceinfo.DeviceInfoRow
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.AppNotices
@@ -116,28 +119,7 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(horizontal = CinemaSpacing.md),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
-                    section.rows.forEach { row ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CinemaText(
-                                row.label.asString(),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                                modifier = Modifier.weight(LABEL_WEIGHT),
-                            )
-                            CinemaText(row.value.asString(), role = TextRole.BodySmall, modifier = Modifier.weight(VALUE_WEIGHT))
-                            // The row's action at its end (the image cache's Clear Image Cache); it asks first.
-                            row.action?.let { action ->
-                                IconAction(
-                                    onClick = { confirming = action },
-                                    icon = CinemaIcons.ClearData,
-                                    label = stringResource(actionLabel(action)),
-                                )
-                            }
-                        }
-                    }
+                    section.rows.forEach { row -> DeviceInfoRowLine(row, onAction = { confirming = it }) }
                 }
             }
         }
@@ -155,6 +137,49 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                 },
             cancel = DialogAction(stringResource(R.string.common_cancel)) { confirming = null },
         )
+    }
+}
+
+/**
+ * One Device Info row: the label, then the value. A row's action (the image cache's Clear Image
+ * Cache) sits over the row's end, so its label and value columns line up with the other rows'.
+ */
+@Composable
+internal fun DeviceInfoRowLine(
+    row: DeviceInfoRow,
+    onAction: (DeviceInfoAction) -> Unit,
+) {
+    Box(contentAlignment = Alignment.CenterStart) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CinemaText(
+                row.label.asString(),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+                modifier = Modifier.weight(LABEL_WEIGHT),
+            )
+            CinemaText(
+                row.value.asString(),
+                role = TextRole.BodySmall,
+                modifier =
+                    Modifier
+                        .weight(VALUE_WEIGHT)
+                        // A long value wraps before the icon instead of running under it.
+                        .then(if (row.action != null) Modifier.padding(end = LocalMinimumInteractiveComponentSize.current) else Modifier),
+            )
+        }
+        row.action?.let { action ->
+            // Its own box: the tooltip's anchor does not pass the alignment on.
+            Box(Modifier.align(Alignment.CenterEnd)) {
+                IconAction(
+                    onClick = { onAction(action) },
+                    icon = CinemaIcons.ClearData,
+                    label = stringResource(actionLabel(action)),
+                )
+            }
+        }
     }
 }
 

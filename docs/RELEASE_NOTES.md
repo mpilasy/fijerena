@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Device Info on the phone:** on the image cache row, the size now lines up with the other rows' values, and the label no longer wraps early. Its Clear Image Cache icon stays at the row's end. Phone.
+
 ## Version: 0.9.20261112184527
 
 - **About shows the commit date:** About Fijerena now shows, under the version, the commit and the date of that commit (in UTC) on one line, the same on TV and phone, in place of the time the app was built. On the phone they are now under the version, as on TV. TV and phone.
