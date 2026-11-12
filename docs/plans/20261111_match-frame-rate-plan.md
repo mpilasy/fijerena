@@ -1,8 +1,8 @@
 # Match Frame Rate (TV)
 
-**Status:** Phase 2 done 2026-11-11: films play at a matching mode with the This Device switch on.
-Phase 3 (Live TV full screen) is next. The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with
-option (a).
+**Status:** Done 2026-11-11 (Phases 1 to 3): films and Live TV in full screen play at a matching
+mode with the This Device switch on. The device checks (Checks, Phases 2 and 3) wait for the user on
+the Shields and the Bravia. The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with option (a).
 
 ## Goal
 
@@ -190,7 +190,7 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
-| 3 | Not started |
+| 3 | Done 2026-11-11 |
 
 **Phase 1 done 2026-11-11.** `FrameRateEstimator` and `ContentFrameRate` (core/player/.../display/),
 `StreamingPlaybackService.contentFrameRate`, and the **Display** and **Modes** rows in `TvStatsOverlay`
@@ -231,6 +231,19 @@ only, as Show Clock); `pickDisplayMode` and `displayModeToRequest` (core/player/
   mode is in place asks nothing.
 - The CI focus walk (`ci-settings.txt`) stops at Night Audio, so it did not change; the Robolectric
   This Device test walks the new row.
+
+**Phase 3 done 2026-11-11.** `displayModeToRequest` now takes live: it asks for a mode only when
+`sameRateFamily(current, target)` is false (`RateFamily`: 60 Hz with base 30, 50 Hz with base 25,
+24 Hz with base 24). The matcher did not change: live never waited, Live TV's full screen keeps one
+`PlayerScreen` across zaps (so the request stays), and its dispose already gives the system mode back
+(MF-Q4). Decisions taken in the code:
+- A rate is in a family when it is a whole multiple of the family's base within 0.5 %. 60 Hz is
+  checked first, so 120 Hz counts as 60 Hz. A rate in no family (56 Hz) is never the same family,
+  so a mode for the content is asked.
+- A zap resets the rate, so the mode in place stays until the new channel's rate is known (about
+  2 s from its frames), then changes only for another family.
+- A film still changes the mode inside a family (60 to 59.94): the family rule is for live only, as
+  MF-Q3 says.
 
 ## Difficulty
 

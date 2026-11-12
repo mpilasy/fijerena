@@ -32,8 +32,9 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
  *
  * A film (MF-Q5) pauses before the change and plays again when the display shows the new mode,
  * plus [SETTLE_MS], at most [MAX_HOLD_MS] in all: over HDMI the picture goes black for some
- * seconds, and the film must not play on in the black. [reset] gives the display back to the
- * system mode (MF-Q4).
+ * seconds, and the film must not play on in the black. Live (MF-Q3) never waits, and changes the
+ * mode only when the rate family changes; the mode stays across zaps, because Live TV's full
+ * screen keeps one [PlayerScreen]. [reset] gives the display back to the system mode (MF-Q4).
  */
 class DisplayModeMatcher(
     private val window: Window,

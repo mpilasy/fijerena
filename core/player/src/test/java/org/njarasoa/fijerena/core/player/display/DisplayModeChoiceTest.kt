@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.core.player.display
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisplayModeChoiceTest {
@@ -108,8 +110,60 @@ class DisplayModeChoiceTest {
         assertNull(displayModeToRequest(enabled = true, isLive = false, fps = 24f, modes = listOf(uhd60), current = uhd60))
     }
 
+    private fun live(
+        fps: Float?,
+        current: ModeSpec,
+        enabled: Boolean = true,
+    ): ModeSpec? = displayModeToRequest(enabled = enabled, isLive = true, fps = fps, modes = shield, current = current)
+
+    private fun uhdAt(rate: Float) = uhd.single { it.refreshRate == rate }
+
     @Test
-    fun `live does not switch`() {
-        assertNull(displayModeToRequest(enabled = true, isLive = true, fps = 50f, modes = shield, current = uhd60))
+    fun `live in the same family keeps the mode in place`() {
+        // A zap between two 50 Hz channels, 25i (50 frames) included.
+        assertNull(live(50f, uhdAt(50f)))
+        assertNull(live(25f, uhdAt(50f)))
+        // 59.94 and 60 are one family; so are 23.976 and 24.
+        assertNull(live(rate5994, uhd60))
+        assertNull(live(60f, uhdAt(rate5994)))
+        assertNull(live(rate2997, uhd60))
+        assertNull(live(24f, uhdAt(rate23976)))
+    }
+
+    @Test
+    fun `live in another family changes the mode`() {
+        assertEquals(uhdAt(50f), live(50f, uhd60))
+        assertEquals(uhdAt(50f), live(25f, uhd60))
+        assertEquals(uhdAt(rate5994), live(rate5994, uhdAt(50f)))
+        assertEquals(uhdAt(24f), live(24f, uhdAt(50f)))
+    }
+
+    @Test
+    fun `live with an unknown rate or the switch off keeps the mode`() {
+        assertNull(live(null, uhd60))
+        assertNull(live(50f, uhd60, enabled = false))
+    }
+
+    @Test
+    fun `a film changes the mode in the same family too`() {
+        assertEquals(
+            uhdAt(rate5994),
+            displayModeToRequest(enabled = true, isLive = false, fps = rate5994, modes = shield, current = uhd60),
+        )
+    }
+
+    @Test
+    fun `rate families`() {
+        assertEquals(RateFamily.HZ_24, rateFamily(rate23976))
+        assertEquals(RateFamily.HZ_24, rateFamily(48f))
+        assertEquals(RateFamily.HZ_50, rateFamily(25f))
+        assertEquals(RateFamily.HZ_50, rateFamily(100f))
+        assertEquals(RateFamily.HZ_60, rateFamily(rate2997))
+        assertEquals(RateFamily.HZ_60, rateFamily(120f))
+        assertNull(rateFamily(56f))
+        assertNull(rateFamily(12f))
+        assertFalse(sameRateFamily(56f, 56f))
+        assertTrue(sameRateFamily(23.976f, 24f))
+        assertFalse(sameRateFamily(24f, 25f))
     }
 }
