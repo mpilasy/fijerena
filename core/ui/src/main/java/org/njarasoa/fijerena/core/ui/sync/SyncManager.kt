@@ -25,6 +25,8 @@ import okhttp3.WebSocketListener
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.DeviceReport
+import org.njarasoa.fijerena.core.network.sync.DeviceReportBuilder
 import org.njarasoa.fijerena.core.network.sync.ServerClock
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncApi
@@ -255,6 +257,39 @@ class SyncManager internal constructor(
     }
 
     /**
+     * This device's report for its group, when linked (the device diagnostics sync plan): the
+     * summary of its logs, or an empty report while Share Logs with My Sync Group is off, so that
+     * its old entries do not stay on the other devices. Recorded only when it changed or after
+     * 24 h ([AppSettings.reportDeviceReport]); the push goes with the next pass. Synchronized: the
+     * first start and the first return to the foreground come at the same time.
+     */
+    @Synchronized
+    private fun reportLogs() {
+        val deviceId = store.link?.deviceId?.takeIf { it.isNotEmpty() }
+        if (deviceId != null) {
+            try {
+                val settings = AppSettings(app)
+                val now = System.currentTimeMillis()
+                val report =
+                    if (settings.shareLogsWithGroup) {
+                        DeviceReportBuilder.build(app, now, settings.diagnosticsClearedAt)
+                    } else {
+                        DeviceReport(sentAt = now)
+                    }
+                settings.reportDeviceReport(deviceId, report)
+            } catch (e: Exception) {
+                // cancellation-ok: plain code with no suspension point
+                Log.w(TAG, "Couldn't report this device's logs", e)
+            }
+        }
+    }
+
+    /** Share Logs with My Sync Group changed: the report (or the empty one) goes now. */
+    fun reportLogsNow() {
+        scope.launch { reportLogs() }
+    }
+
+    /**
      * Playback paused, stopped or ended: progress held back while it played goes now. The last
      * position save can land before or after this; either way it is pushed within the debounce.
      */
@@ -273,6 +308,7 @@ class SyncManager internal constructor(
         scope.launch {
             refreshStatus()
             reportBuild()
+            reportLogs()
         }
         closeSocket()
         if (foreground && engine.isLinked) {
@@ -406,9 +442,13 @@ class SyncManager internal constructor(
     internal fun onForeground() {
         foreground = true
         ServerClock.forget()
-        if (!engine.isLinked) return
-        openSocket()
-        requestSync(0)
+        if (engine.isLinked) {
+            // Each return to the foreground: a crash killed the process, so it goes out now. No
+            // background send (the device diagnostics sync plan).
+            scope.launch { reportLogs() }
+            openSocket()
+            requestSync(0)
+        }
     }
 
     internal fun onBackground() {

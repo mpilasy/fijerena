@@ -1060,6 +1060,8 @@
     <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu’il a déjà reste dessus.</string>
     <string name="live_sync_share_playing">Partager ce qui est en lecture avec mon groupe de synchronisation</string>
     <string name="live_sync_share_playing_desc">Les appareils du groupe voient ce que cet appareil lit et quel profil regarde. Seul cet appareil le partage.</string>
+    <string name="live_sync_share_logs">Partager les journaux avec mon groupe de synchronisation</string>
+    <string name="live_sync_share_logs_desc">Les appareils du groupe peuvent lire un court résumé des plantages et des erreurs de cet appareil, sans les adresses des serveurs. Seul cet appareil le partage.</string>
     <string name="live_sync_now_playing">Lecture · %1$s</string>
     <string name="live_sync_now_live">En direct · %1$s</string>
     <string name="live_sync_now_paused">En pause · %1$s</string>

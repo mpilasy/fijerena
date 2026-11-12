@@ -1,6 +1,6 @@
 # Device diagnostics over live sync
 
-**Status:** In progress since 2026-11-11. Phase 1 done. The user decided DD-Q1 to DD-Q7, all (a).
+**Status:** In progress since 2026-11-11. Phases 1 and 2 done. The user decided DD-Q1 to DD-Q7, all (a).
 
 ## Goal
 
@@ -204,7 +204,7 @@ RELEASE_NOTES. No Room migration.
 | Phase | Status |
 |---|---|
 | 1 | Done 2026-11-11 |
-| 2 | Not started |
+| 2 | Done 2026-11-11 |
 | 3 | Not started |
 | 4 | Not started |
 
@@ -218,6 +218,21 @@ RELEASE_NOTES. No Room migration.
 - `SafeMode` writes `files/safemode/started_at` when safe mode starts (`safeModeAt`).
 - Logs → Clear writes `diagnostics_cleared_at` (`AppSettings.diagnosticsClearedAt`), and now runs in `launchGuarded`.
 - Tests: `RedactReportTest`, `CrashLogScreenTest`, `DeviceReportBuilderTest`.
+
+**Phase 2 done (2026-11-11):**
+
+- `AppSettings`: `DEVICE_REPORT_SETTING_PREFIX`, `reportDeviceReport` (changed, its send time aside, or 24 h
+  old), `deviceReports`, `observeDeviceReports`, the apply branch with `MAX_DEVICE_REPORT_LENGTH`, the
+  `syncedSetting` branch, and `shareLogsWithGroup` (`share_logs_with_group`, on by default, not synced).
+  `applyRemoteSetting` and `syncedSetting` are now one `when` each, with a single return.
+- `LocalRecords.seedEverything` seeds every known report key.
+- `SyncManager.reportLogs` runs at each return to the foreground (`onForeground`, which is also where
+  sync starts when the app opens), on a link change and on a change of the switch. It is not called from
+  `start()`: a process started for background work sends nothing, and the push goes with the next pass.
+- The switch "Share Logs with My Sync Group" under Share What's Playing, on TV and phone
+  (`scripts/focus-walks/live-sync.txt` edited by hand).
+- Tests: `AppSettingsDeviceReportsTest`, `SyncApplierDeviceReportTest`, and `SyncCodecTest`: a report at
+  the cap whose texts are all quotes and backslashes (escaped twice more on the way) stays under 64 Ki sealed.
 
 ## Difficulty
 

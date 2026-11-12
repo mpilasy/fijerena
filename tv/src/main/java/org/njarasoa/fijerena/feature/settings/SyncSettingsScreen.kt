@@ -90,6 +90,7 @@ fun SyncSettingsScreen() {
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
+    val shareLogs by viewModel.shareLogs.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
     var renaming by remember { mutableStateOf<SyncWire.Device?>(null) }
@@ -158,6 +159,13 @@ fun SyncSettingsScreen() {
                 onCheckedChange = viewModel::setShareNowPlaying,
                 label = stringResource(R.string.live_sync_share_playing),
                 description = stringResource(R.string.live_sync_share_playing_desc),
+                modifier = Modifier.leftToRail(),
+            )
+            TvSwitchRow(
+                checked = shareLogs,
+                onCheckedChange = viewModel::setShareLogs,
+                label = stringResource(R.string.live_sync_share_logs),
+                description = stringResource(R.string.live_sync_share_logs_desc),
                 modifier = Modifier.leftToRail(),
             )
             // Up from Leave goes to the last Remove: it is at the far right of its row, outside the left-aligned

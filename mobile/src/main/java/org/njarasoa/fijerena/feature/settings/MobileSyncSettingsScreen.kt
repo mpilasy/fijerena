@@ -89,6 +89,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
+    val shareLogs by viewModel.shareLogs.collectAsStateWithLifecycle()
     val stopStates by viewModel.stopStates.collectAsStateWithLifecycle()
     var scanning by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
@@ -168,6 +169,12 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         onScan = { scanning = true },
                     )
                     ShareNowPlayingRow(shareNowPlaying, viewModel::setShareNowPlaying)
+                    CinemaSwitchRow(
+                        checked = shareLogs,
+                        onCheckedChange = viewModel::setShareLogs,
+                        label = stringResource(R.string.live_sync_share_logs),
+                        supportingText = stringResource(R.string.live_sync_share_logs_desc),
+                    )
                     DevicesPanel(ui.devices, nowPlaying, deviceBuilds, stopStates, onStop = {
                         confirmStop = it
                     }, onRename = { renaming = it }, onRemove = {

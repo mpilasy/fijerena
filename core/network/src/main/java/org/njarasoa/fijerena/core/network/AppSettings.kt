@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
 import org.njarasoa.fijerena.core.network.sports.ReminderSchedule
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.DeviceReport
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
@@ -101,6 +102,7 @@ class AppSettings(
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_SHARE_NOW_PLAYING = "share_now_playing"
         private const val KEY_DIAGNOSTICS_CLEARED_AT = "diagnostics_cleared_at"
+        private const val KEY_SHARE_LOGS_WITH_GROUP = "share_logs_with_group"
         private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
         private const val KEY_ORPHAN_SWEEP_PENDING = "orphan_sweep_pending"
         private const val KEY_LAST_SHRINK_DURATION_MS = "last_shrink_duration_ms"
@@ -188,6 +190,21 @@ class AppSettings(
         /** The longest [DEVICE_BUILD_SETTING_PREFIX] value kept: far above a real one, so a bad record can't fill the prefs. */
         private const val MAX_DEVICE_BUILD_LENGTH = 1_000
 
+        /**
+         * A short summary of a live sync device's recent crashes and errors, one shared record per
+         * device — `device_report:<deviceId>`, a [DeviceReport] as JSON, written by that device only
+         * (the device diagnostics sync plan). An older build ignores the key.
+         */
+        const val DEVICE_REPORT_SETTING_PREFIX = "device_report:"
+
+        fun deviceReportSettingKey(deviceId: String) = DEVICE_REPORT_SETTING_PREFIX + deviceId
+
+        /** The longest [DEVICE_REPORT_SETTING_PREFIX] value kept; a report has at most 12,000 characters. */
+        const val MAX_DEVICE_REPORT_LENGTH = 16_000
+
+        /** A report that did not change goes again after this time, for a device that updated since and ignored it before. */
+        const val DEVICE_REPORT_RESEND_MS = 24 * 60 * 60 * 1000L
+
         /** The whole-list setting key a build before per-source records synced. */
         const val LEGACY_PROFILE_SOURCES_SETTING = KEY_PROFILE_SOURCES
 
@@ -225,6 +242,15 @@ class AppSettings(
     var diagnosticsClearedAt: Long
         get() = prefs.getLong(KEY_DIAGNOSTICS_CLEARED_AT, 0L)
         set(value) = prefs.edit { putLong(KEY_DIAGNOSTICS_CLEARED_AT, value) }
+
+    /**
+     * Whether live sync tells the group a summary of this device's crashes and errors (the device
+     * diagnostics sync plan). Per device and never synced, as [shareNowPlaying]. On until turned
+     * off: a TV that is hard to reach then reports with no visit.
+     */
+    var shareLogsWithGroup: Boolean
+        get() = prefs.getBoolean(KEY_SHARE_LOGS_WITH_GROUP, true)
+        set(value) = prefs.edit { putBoolean(KEY_SHARE_LOGS_WITH_GROUP, value) }
 
     /**
      * Night Audio (quieter loud sounds, clearer speech). Per device — not per profile and never
@@ -550,6 +576,58 @@ class AppSettings(
             }
         }
 
+    /** Every device's report, by device id; a value that doesn't read is left out (the device diagnostics sync plan). */
+    fun deviceReports(): Map<String, DeviceReport> =
+        prefs.all.entries
+            .filter { it.key.startsWith(DEVICE_REPORT_SETTING_PREFIX) }
+            .mapNotNull { (key, value) ->
+                decodeDeviceReport(value as? String)?.let { key.removePrefix(DEVICE_REPORT_SETTING_PREFIX) to it }
+            }.toMap()
+
+    /**
+     * Records this device's [report] for its group when it differs from the one recorded (its send
+     * time aside), or when the one recorded is [DEVICE_REPORT_RESEND_MS] old. True when it was
+     * recorded and queued to send.
+     */
+    fun reportDeviceReport(
+        deviceId: String,
+        report: DeviceReport,
+    ): Boolean {
+        val key = deviceReportSettingKey(deviceId)
+        val stored = decodeDeviceReport(prefs.getString(key, null))
+        val send =
+            stored == null ||
+                stored.copy(sentAt = 0) != report.copy(sentAt = 0) ||
+                report.sentAt - stored.sentAt >= DEVICE_REPORT_RESEND_MS
+        if (send) {
+            prefs.edit { putString(key, SyncPayloads.json.encodeToString(DeviceReport.serializer(), report)) }
+            SettingsSyncQueue.setting(context, key)
+        }
+        return send
+    }
+
+    /** [deviceReports], now and on every change (a device sending a new report). */
+    fun observeDeviceReports(): Flow<Map<String, DeviceReport>> =
+        callbackFlow {
+            val listener =
+                SharedPreferences.OnSharedPreferenceChangeListener { _, changed ->
+                    if (changed?.startsWith(DEVICE_REPORT_SETTING_PREFIX) == true) trySend(deviceReports())
+                }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(deviceReports())
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    private fun decodeDeviceReport(text: String?): DeviceReport? =
+        text?.let {
+            try {
+                SyncPayloads.json.decodeFromString(DeviceReport.serializer(), it)
+            } catch (e: IllegalArgumentException) {
+                // cancellation-ok: non-suspend
+                null
+            }
+        }
+
     /** [deviceNames] with blanks left out, now and on every change (a rename here or from another device). */
     fun observeDeviceNames(): Flow<Map<String, String>> =
         callbackFlow {
@@ -593,28 +671,64 @@ class AppSettings(
         profileId: String,
         value: kotlinx.serialization.json.JsonPrimitive,
     ) {
-        if (key == KEY_TMDB_API_KEY) {
-            if (value.isString) TmdbKeyStore(context).applyRemote(value.content)
-            return
+        when {
+            key == KEY_TMDB_API_KEY -> {
+                if (value.isString) TmdbKeyStore(context).applyRemote(value.content)
+            }
+
+            key.startsWith(DEVICE_NAME_SETTING_PREFIX) -> {
+                if (value.isString) prefs.edit { putString(key, value.content.trim().take(MAX_DEVICE_NAME_LENGTH)) }
+            }
+
+            key.startsWith(DEVICE_BUILD_SETTING_PREFIX) -> {
+                applyRemoteText(key, value, MAX_DEVICE_BUILD_LENGTH)
+            }
+
+            key.startsWith(DEVICE_REPORT_SETTING_PREFIX) -> {
+                applyRemoteText(key, value, MAX_DEVICE_REPORT_LENGTH)
+            }
+
+            key.startsWith(PROFILE_SOURCE_SETTING_PREFIX) -> {
+                applyRemoteProfileSource(key, profileId, value)
+            }
+
+            else -> {
+                applyRemotePlainSetting(key, profileId, value)
+            }
         }
-        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX)) {
-            if (value.isString) prefs.edit { putString(key, value.content.trim().take(MAX_DEVICE_NAME_LENGTH)) }
-            return
-        }
-        if (key.startsWith(DEVICE_BUILD_SETTING_PREFIX)) {
-            if (value.isString && value.content.length <= MAX_DEVICE_BUILD_LENGTH) prefs.edit { putString(key, value.content) }
-            return
-        }
-        if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
-            val on = value.booleanOrNull ?: return
-            val providerKey = key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX).takeIf { it.isNotEmpty() } ?: return
-            val current = profileSourceKeys(profileId)
-            // Off for a profile with nothing stored changes nothing: an empty list would mean "no sources".
-            if (current == null && !on) return
+    }
+
+    /** A text value kept as it came, under its own key, when it is not longer than [maxLength]. */
+    private fun applyRemoteText(
+        key: String,
+        value: kotlinx.serialization.json.JsonPrimitive,
+        maxLength: Int,
+    ) {
+        if (value.isString && value.content.length <= maxLength) prefs.edit { putString(key, value.content) }
+    }
+
+    /** One source of a profile turned on or off on another device (see [PROFILE_SOURCE_SETTING_PREFIX]). */
+    private fun applyRemoteProfileSource(
+        key: String,
+        profileId: String,
+        value: kotlinx.serialization.json.JsonPrimitive,
+    ) {
+        val on = value.booleanOrNull
+        val providerKey = key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX)
+        val current = profileSourceKeys(profileId)
+        // Off for a profile with nothing stored changes nothing: an empty list would mean "no sources".
+        if (on != null && providerKey.isNotEmpty() && (current != null || on)) {
             val updated = if (on) current.orEmpty() + providerKey else current.orEmpty() - providerKey
             prefs.edit { putString(profileKey(KEY_PROFILE_SOURCES, profileId), encodeSourceKeys(updated)) }
-            return
         }
+    }
+
+    /** A setting of [SYNCED_SETTING_KEYS] (or `dev_mode`) received from another device; any other key is ignored. */
+    private fun applyRemotePlainSetting(
+        key: String,
+        profileId: String,
+        value: kotlinx.serialization.json.JsonPrimitive,
+    ) {
         prefs.edit {
             when (key) {
                 // KEY_LEGACY_DEV_MODE: the same flag as an older build still sends it.
@@ -658,28 +772,52 @@ class AppSettings(
     fun syncedSetting(
         key: String,
         profileId: String,
-    ): kotlinx.serialization.json.JsonPrimitive? {
-        if (key == KEY_TMDB_API_KEY) {
-            val store = TmdbKeyStore(context)
-            return if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null
-        }
-        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX) || key.startsWith(DEVICE_BUILD_SETTING_PREFIX)) {
-            return prefs.getString(key, null)?.let { kotlinx.serialization.json.JsonPrimitive(it) }
-        }
-        if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
-            val keys = profileSourceKeys(profileId) ?: return null
-            return kotlinx.serialization.json.JsonPrimitive(key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX) in keys)
-        }
-        val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
-        if (!prefs.contains(stored)) return null
-        return when (key) {
-            KEY_ADMIN, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_NERD_MODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
-                kotlinx.serialization.json.JsonPrimitive(
-                    prefs.getBoolean(stored, false),
-                )
+    ): kotlinx.serialization.json.JsonPrimitive? =
+        when {
+            key == KEY_TMDB_API_KEY -> {
+                TmdbKeyStore(context).let { store -> if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null }
             }
 
-            KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_UI_THEME_ID, KEY_PIN_HASH, in PARENTAL_KEYS -> {
+            key.startsWith(DEVICE_NAME_SETTING_PREFIX) || key.startsWith(DEVICE_BUILD_SETTING_PREFIX) ||
+                key.startsWith(DEVICE_REPORT_SETTING_PREFIX) -> {
+                prefs.getString(key, null)?.let { kotlinx.serialization.json.JsonPrimitive(it) }
+            }
+
+            key.startsWith(PROFILE_SOURCE_SETTING_PREFIX) -> {
+                profileSourceKeys(profileId)?.let { keys ->
+                    kotlinx.serialization.json.JsonPrimitive(key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX) in keys)
+                }
+            }
+
+            else -> {
+                plainSyncedSetting(key, profileId)
+            }
+        }
+
+    /** [syncedSetting] for a key of [SYNCED_SETTING_KEYS]; null when nothing is stored. */
+    private fun plainSyncedSetting(
+        key: String,
+        profileId: String,
+    ): kotlinx.serialization.json.JsonPrimitive? {
+        val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
+        return when {
+            !prefs.contains(stored) -> {
+                null
+            }
+
+            key in
+                setOf(
+                    KEY_ADMIN,
+                    KEY_AUTOPLAY_NEXT_EPISODE,
+                    KEY_CHILD_PROFILE,
+                    KEY_NERD_MODE,
+                    KEY_POSTER_BACKDROP,
+                    KEY_CHARTS_SHOW_MISSING,
+                ) -> {
+                kotlinx.serialization.json.JsonPrimitive(prefs.getBoolean(stored, false))
+            }
+
+            key in setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_UI_THEME_ID, KEY_PIN_HASH) || key in PARENTAL_KEYS -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 

@@ -1244,6 +1244,8 @@
     <string name="live_sync_device_remove_message">Mijanona tsy mampifanaraka avy hatrany izy. Mijanona eo aminy izay efa ananany.</string>
     <string name="live_sync_share_playing">Zarao amin\'ny vondrona fampifanarahana izay mandeha</string>
     <string name="live_sync_share_playing_desc">Hitan\'ny fitaovan\'ny vondrona izay alefan\'ity fitaovana ity sy ny mombamomba mijery. Ity fitaovana ity ihany no mizara izany.</string>
+    <string name="live_sync_share_logs">Zarao amin\'ny vondrona fampifanarahana ny tatitra</string>
+    <string name="live_sync_share_logs_desc">Afaka mamaky famintinana fohy momba ny fianjerana sy fahadisoana tamin\'ity fitaovana ity ny fitaovan\'ny vondrona, tsy misy ny adiresin\'ny mpizara. Ity fitaovana ity ihany no mizara izany.</string>
     <string name="live_sync_now_playing">Mandeha · %1$s</string>
     <string name="live_sync_now_live">Mivantana · %1$s</string>
     <string name="live_sync_now_paused">Miato · %1$s</string>

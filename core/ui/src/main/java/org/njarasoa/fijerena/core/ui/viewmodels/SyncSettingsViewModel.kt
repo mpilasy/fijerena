@@ -113,6 +113,18 @@ class SyncSettingsViewModel(
 
     fun setShareNowPlaying(enabled: Boolean) = publisher.setSharing(enabled)
 
+    private val shareLogsState = MutableStateFlow(AppSettings(app).shareLogsWithGroup)
+
+    /** The device-local "Share Logs with My Sync Group" switch (the device diagnostics sync plan). */
+    val shareLogs: StateFlow<Boolean> = shareLogsState.asStateFlow()
+
+    /** Off sends an empty report at once, so this device's entries go from the other devices too. */
+    fun setShareLogs(enabled: Boolean) {
+        AppSettings(app).shareLogsWithGroup = enabled
+        shareLogsState.value = enabled
+        manager.reportLogsNow()
+    }
+
     /**
      * What each listed device is playing, by device id — only devices playing or paused right
      * now. Re-checked every [STALENESS_CHECK_MS] too, so a device that went quiet drops off while
