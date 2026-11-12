@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,10 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.EngineStream
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 /** The source hears of a stop even when the local history write at the stop fails. */
@@ -78,5 +82,49 @@ class StreamLoaderStopTest {
             loader.stopPlaybackAwaited(position = 600_000L, duration = 6_000_000L)
 
             coVerify { repository.onPlaybackStopped("a", 600_000L, 6_000_000L) }
+        }
+
+    @Test
+    fun `leaving the player saves no track choice the viewer did not make`() =
+        runBlocking {
+            // A title left with no subtitle on (or before its tracks loaded) saved Off, and the next
+            // play restored it. Picks are saved when they are made, so the exit saves no track.
+            val service = mockk<StreamingPlaybackService>(relaxed = true)
+            every { service.getPlayer() } returns null
+            every { service.getAudioTracks() } returns
+                listOf(AudioTrackInfo(0, 0, "en", "English", 2, 48_000, 128_000, isSelected = true))
+            every { service.getSubtitleTracks() } returns emptyList()
+            mockkObject(StreamingPlaybackService.Companion)
+            every { StreamingPlaybackService.getInstance() } returns service
+            val loader =
+                StreamLoaderViewModel(
+                    context,
+                    "a",
+                    "Malcolm X",
+                    "c1",
+                    ContentType.MOVIES,
+                    providerId = 1L,
+                    engine = MutableStateFlow(EngineStream()),
+                )
+            withTimeout(5_000) { loader.state.first { it is StreamLoaderViewModel.StreamState.Success } }
+
+            finalizeSessionAndAwait(PlaybackState.Paused(position = 600_000L, duration = 6_000_000L), loader)
+
+            verify {
+                repository.savePlaybackPosition(
+                    "a",
+                    any(),
+                    any(),
+                    any(),
+                    600_000L,
+                    6_000_000L,
+                    audioTrackIndex = null,
+                    subtitleTrackIndex = null,
+                    episodeId = any(),
+                    episodeExtension = any(),
+                    seriesId = any(),
+                    seriesName = any(),
+                )
+            }
         }
 }

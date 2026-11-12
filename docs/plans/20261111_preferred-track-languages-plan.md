@@ -13,7 +13,8 @@ setting to every device of the profile.
 
 - **Per-item memory:** `WatchStateEntity.audioTrackIndex` and `subtitleTrackIndex` (watch_state).
   - The value is the index in the flattened track list of `StreamingPlaybackService.getAudioTracks()` / `getSubtitleTracks()`, not a language. Subtitles Off is `-1`.
-  - Only a pick writes it: `selectAudioTrack(groupIndex, trackIndex)`, `selectSubtitleTrack(…)` and `disableSubtitles()` call `savePosition` with the index. Position saves send null, and the `WatchStateDao` upsert keeps the old value (`COALESCE`).
+  - A pick writes it: `selectAudioTrack(groupIndex, trackIndex)`, `selectSubtitleTrack(…)` and `disableSubtitles()` call `savePosition` with the index. Position saves send null, and the `WatchStateDao` upsert keeps the old value (`COALESCE`).
+  - Until 2026-11-11 the exit save (`finalizeSession`) also wrote the tracks on screen, `-1` when no subtitle was on, also for a title left before its tracks loaded. It now writes no track, so only picks (and the restores they cause) write it. Rows written before keep their values.
   - It syncs with watch progress (`SyncPayloads`) and goes into the backup file (`SettingsExportManager`).
 - **Per-series memory:** `WatchStateDao.getLatestSeriesTrackPrefs` → `MediaRepository.getSeriesTrackPrefs`.
   `StreamLoaderViewModel` uses it for an episode (`ContentType.TV_SHOWS`) when the episode has no audio and no subtitle choice.

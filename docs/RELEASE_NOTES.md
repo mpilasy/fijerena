@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Leaving a film no longer turns its subtitles off:** leaving the player saved the tracks on screen as if you had picked them, so a film left with no subtitle on (or left before its tracks loaded) played without its default subtitles next time. Now only a subtitle or audio track that you pick is remembered.
 - **Subtitles Off stays with its title:** turning subtitles off on one film or channel kept them off on everything played after it, until a subtitle was picked again. Now each title starts on its own default subtitles, unless you turned them off for that title (or for its series).
 - **Guides with short times:** a guide that writes its times without seconds ("202611111800", which XMLTV allows) showed no programmes at all, and a guide with no space before the time zone ("20261111180000+0300") showed every programme hours early or late. Both now read correctly.
 

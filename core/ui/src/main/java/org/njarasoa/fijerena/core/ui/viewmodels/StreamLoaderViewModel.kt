@@ -957,11 +957,13 @@ internal fun catchupLabel(
 }
 
 @OptIn(UnstableApi::class)
+// No track choice: a pick is saved when it is made (StreamingPlaybackService.selectAudioTrack,
+// selectSubtitleTrack, disableSubtitles). A snapshot of the tracks on screen at the exit saved what
+// the viewer never chose, such as Off for a title left before its tracks loaded, and the next play
+// restored it.
 private class FinalizeSessionSnapshot(
     val position: Long,
     val duration: Long,
-    val audioTrackIndex: Int?,
-    val subtitleTrackIndex: Int?,
 ) {
     companion object {
         /**
@@ -998,9 +1000,7 @@ private class FinalizeSessionSnapshot(
                         is PlaybackState.Ended -> playbackState.duration
                         else -> 0L
                     }
-            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-            return FinalizeSessionSnapshot(pos, dur, audioIdx, subIdx)
+            return FinalizeSessionSnapshot(pos, dur)
         }
     }
 }
@@ -1018,7 +1018,7 @@ fun finalizeSession(
     loaderViewModel: StreamLoaderViewModel,
 ) {
     val snapshot = FinalizeSessionSnapshot.capture(playbackState)
-    loaderViewModel.stopPlayback(snapshot.position, snapshot.duration, snapshot.audioTrackIndex, snapshot.subtitleTrackIndex)
+    loaderViewModel.stopPlayback(snapshot.position, snapshot.duration)
 }
 
 /**
@@ -1032,7 +1032,7 @@ suspend fun finalizeSessionAndAwait(
     loaderViewModel: StreamLoaderViewModel,
 ) {
     val snapshot = FinalizeSessionSnapshot.capture(playbackState)
-    loaderViewModel.stopPlaybackAwaited(snapshot.position, snapshot.duration, snapshot.audioTrackIndex, snapshot.subtitleTrackIndex)
+    loaderViewModel.stopPlaybackAwaited(snapshot.position, snapshot.duration)
 }
 
 class StreamLoaderViewModelFactory(
