@@ -154,6 +154,7 @@ Device discovery, backup/restore, logs and debugging are in
 scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
 scripts/check-init-order.py
 scripts/check-design-system.sh
+scripts/check-fixture-privacy.sh
 ```
 
 GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml`

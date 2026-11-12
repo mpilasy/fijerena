@@ -1,18 +1,13 @@
 package org.njarasoa.fijerena.core.player.model
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.api.XtreamJson
 
 /** Same Json settings as XtreamApiService. */
 class XtreamAuthResponseTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     @Test
     fun `a refused login parses, so the app can say the login is wrong`() {

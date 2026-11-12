@@ -4,6 +4,7 @@
 
 - **A full storage during a guide refresh:** a guide source that filled the storage while it was imported could show a general error, and the guide could say that it could not be prepared although it was all there. Now the source says that the storage is almost full, the guide stays as it was, and the space the refresh used is given back at once. TV and phone.
 - **Updates check for space first:** a guide refresh, a catalogue update and a playlist download now check that the device has enough free storage before they start. When it does not, the update stops at once and says that the storage is almost full, and your guide and catalogue stay as they are. TV and phone.
+- **New CI check (developers):** `scripts/check-fixture-privacy.sh` fails the build when a test fixture (a saved provider answer under `src/test/resources/fixtures/`) holds a login, a token, an IP address or a URL host that is not on its allow list. The repository is public. The sports answers moved to `fixtures/sports/`, and the Xtream tests now read answers with the client's own Json settings (`XtreamJson`), not a copy of them.
 
 ## Version: 0.9.20261112015711
 

@@ -1,6 +1,7 @@
 # Provider data tests
 
-**Status:** Planned 2026-11-11, not started. Open questions PD-Q1 to PD-Q6 wait for the user.
+**Status:** In progress. Phase 1 done 2026-11-11. The maintainer took the recommended answer (a) to
+PD-Q1 to PD-Q6 on 2026-11-11.
 
 ## Goal
 
@@ -66,16 +67,16 @@ The 12-digit XMLTV time fix is not part of this plan. It is AC-5 of
   The test library has films and shows, no live channels. tools/fake-xtream/server.py has fixed
   data that we wrote: it is not a recording.
 
-## Open questions
+## Questions (decided 2026-11-11)
 
 | # | Question | Options |
 |---|----------|---------|
-| PD-Q1 | Titles and plots in recorded VOD answers? They show what is in a private library. | (a) **Placeholders that keep the shape**: "Film 1 (2004)", a language prefix such as "EN - " kept, plot text replaced by neutral text of a similar length. Recommended. (b) Keep the real titles. |
-| PD-Q2 | Where do XMLTV fixtures come from? No allowed source has a real live guide. | (a) **Hand-written variants only**, plus the bridge's `/xmltv.php` if it has channels. Recommended. (b) Also a trimmed guide from a free public XMLTV source that the user names. |
-| PD-Q3 | TMDB and Jellyfin fixtures? | (a) **Hand-written from the public API documents.** Move today's inline JSON into fixture files. Recommended: no key, no private server. (b) Record TMDB with the user's key (key removed) and Jellyfin from the user's server, through the same clean-up. |
-| PD-Q4 | How do XMLTV tests get an XML pull parser? | (a) **kxml2 as `testImplementation`** (the parser Android ships), plain JVM, if Phase 4 proves it wins over the android.jar stub. Recommended. (b) Robolectric, as the ingest tests do today. |
-| PD-Q5 | A variant that fails today? | (a) **Fix the model in the same phase commit**, with a release note. Recommended. (b) Mark the test ignored and plan the fix apart. |
-| PD-Q6 | Sync protocol samples? | (a) **One folder of sample messages that both the server's vitest suite and the Kotlin tests read.** Recommended: the two sides cannot drift. (b) Kotlin samples only. |
+| PD-Q1 | Titles and plots in recorded VOD answers? They show what is in a private library. | (a) **Placeholders that keep the shape**: "Film 1 (2004)", a language prefix such as "EN - " kept, plot text replaced by neutral text of a similar length. Recommended. (b) Keep the real titles. **Decided: (a).** |
+| PD-Q2 | Where do XMLTV fixtures come from? No allowed source has a real live guide. | (a) **Hand-written variants only**, plus the bridge's `/xmltv.php` if it has channels. Recommended. (b) Also a trimmed guide from a free public XMLTV source that the user names. **Decided: (a).** |
+| PD-Q3 | TMDB and Jellyfin fixtures? | (a) **Hand-written from the public API documents.** Move today's inline JSON into fixture files. Recommended: no key, no private server. (b) Record TMDB with the user's key (key removed) and Jellyfin from the user's server, through the same clean-up. **Decided: (a).** |
+| PD-Q4 | How do XMLTV tests get an XML pull parser? | (a) **kxml2 as `testImplementation`** (the parser Android ships), plain JVM, if Phase 4 proves it wins over the android.jar stub. Recommended. (b) Robolectric, as the ingest tests do today. **Decided: (a).** |
+| PD-Q5 | A variant that fails today? | (a) **Fix the model in the same phase commit**, with a release note. Recommended. (b) Mark the test ignored and plan the fix apart. **Decided: (a).** |
+| PD-Q6 | Sync protocol samples? | (a) **One folder of sample messages that both the server's vitest suite and the Kotlin tests read.** Recommended: the two sides cannot drift. (b) Kotlin samples only. **Decided: (a).** |
 
 ## Design
 
@@ -175,11 +176,21 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
+| 1 | Done 2026-11-11 |
 | 2 | Not started |
 | 3 | Not started |
 | 4 | Not started |
 | 5 | Not started |
+
+## Done
+
+- **Phase 1 (2026-11-11):** `XtreamJson` (core/player api) is the one Json config for Xtream answers;
+  `XtreamApiService` and the five Xtream model tests use it, none copies it. The sports files moved
+  to core/network/src/test/resources/fixtures/sports/; `fixture(path)` loads a fixture in core:network
+  and core:player, and `sportsFixture` calls it. `scripts/check-fixture-privacy.sh` runs in
+  checks.yml. It allows the public sports hosts only under fixtures/sports/, and also checks
+  `"username"` / `"password"` JSON fields and URLs with a login in them. CONTRIBUTING has the rule
+  "a parser change adds or updates a fixture" (Coding Style).
 
 ## Risks
 

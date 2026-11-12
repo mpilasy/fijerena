@@ -87,13 +87,14 @@ scripts/check-viewmodel-launch.sh   # no new bare viewModelScope.launch (use lau
 scripts/check-init-order.py         # no property with a value below an init block
 scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateException)
 scripts/check-design-system.sh      # no raw colours, sizes or Material controls outside the theme (per-file allow-list)
+scripts/check-fixture-privacy.sh    # no login, provider host, address or token in a test fixture
 ```
 
 `scripts/check-sports-apis.sh` calls each sports endpoint (ESPN, NHL, MLB) once and prints OK or FAIL. These APIs have no public contract: run it by hand when sports data looks wrong. CI does not run it, because it calls outside services.
 
 CI runs on pushes to `main` (each workflow has its own path filter) and by hand (`workflow_dispatch`);
 the instrumented tests also run nightly. The workflows are under `.github/workflows/`:
-- `checks.yml`: a grep for blanket destructive Room fallbacks and the five gates above.
+- `checks.yml`: a grep for blanket destructive Room fallbacks and the six gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
   `assembleDebugAndroidTest` so the instrumented tests keep compiling.

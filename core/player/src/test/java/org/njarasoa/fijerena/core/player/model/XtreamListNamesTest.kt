@@ -1,20 +1,15 @@
 package org.njarasoa.fijerena.core.player.model
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.api.XtreamJson
 
 /**
  * A list entry with `"name": null` (panel-c's film list) must not fail the whole list. Same Json
  * settings as XtreamApiService.
  */
 class XtreamListNamesTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     @Test
     fun `a film with a null name no longer fails the list, and is dropped when it has no title`() {

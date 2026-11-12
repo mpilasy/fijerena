@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.player.api
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,13 +11,7 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
  * XtreamApiService.
  */
 class XtreamResponseTest {
-    private val json =
-        Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     private fun series(raw: String) = json.parseItemResponse(raw, 4080, "get_series_info", SeriesInfo::carriesNothing)
 

@@ -1,17 +1,12 @@
 package org.njarasoa.fijerena.core.player.model
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.api.XtreamJson
 
 class XtreamEpgListingTest {
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     // One panel-a `get_simple_data_table` listing (2026-10-10), as it comes.
     private val panelA =

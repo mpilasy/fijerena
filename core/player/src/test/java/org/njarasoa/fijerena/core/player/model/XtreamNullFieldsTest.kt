@@ -1,22 +1,16 @@
 package org.njarasoa.fijerena.core.player.model
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.api.XtreamJson
 
 /**
  * Any field of an Xtream answer may come as null. One null must never fail the answer: a field
  * takes its default, and only an entry with nothing to play (no id) is dropped.
  */
 class XtreamNullFieldsTest {
-    // As XtreamApiService reads the panel.
-    private val json =
-        Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     @Test
     fun `a list with a null entry or an entry without an id keeps the rest`() {

@@ -52,13 +52,7 @@ class XtreamApiService(
     private val streamOutputFormat: String = "m3u8",
     private val metadataTimeoutMs: Long = METADATA_REQUEST_TIMEOUT_MS,
 ) {
-    private val json =
-        Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        }
+    private val json = XtreamJson
 
     // Held so close() can shut them down: Ktor's HttpClient.close() on the OkHttp engine does not.
     // Not a true leak (both free idle resources on their own), but a provider switch keeps them

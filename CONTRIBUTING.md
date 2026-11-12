@@ -154,6 +154,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### 6. Coding Style
 
 - **Single return statement** per function only.
+- **A parser change adds or updates a fixture:** a change to code that reads provider data (Xtream, XMLTV, M3U, Jellyfin, TMDB, sports, sync) comes with a fixture and a test that reads it. Fixtures are under `src/test/resources/fixtures/<kind>/` (Xtream in `core/player`, the others in `core/network`) and load with `fixture("<kind>/<file>")`. A `rec-<action>` file is a recorded answer, cleaned and trimmed; a `var-<action>-<quirk>` file is written by hand for one quirk, and its test names where the quirk comes from (a field report or a format document). A new file is at most 16 KB, with 3 to 5 items in a list. Tests read Xtream answers with `XtreamJson`, the client's own Json settings, never a copy. This repository is public: no login, provider host, address, token or private title goes in a fixture, and `scripts/check-fixture-privacy.sh` (CI) fails on one.
 - **OS:** Ubuntu Linux development environment.
 - **Lint:** `./gradlew ktlintCheck` verifies style, `./gradlew ktlintFormat` fixes it. ktlint-gradle 14.2.0 with ktlint 1.8.0 (ktlint-gradle older than 14.1 lints nothing under AGP 9). Rules are in `.editorconfig`.
 
@@ -284,13 +285,14 @@ scripts/check-viewmodel-launch.sh
 scripts/check-init-order.py
 scripts/check-focus-retry.sh
 scripts/check-design-system.sh
+scripts/check-fixture-privacy.sh
 scripts/deploy-tv-emulator.sh           # Build + install on the TV emulator
 scripts/deploy-mobile-emulator.sh       # Build + install on the phone emulator
 scripts/deploy-tv-ip.sh <ip> [<ip>...]  # Build + install on network TVs (playback check, backup)
 scripts/deploy-mobile-usb.sh [--debug] [serial]   # Build + install localRelease on a USB phone (backup while debuggable)
 ```
 
-CI runs on every push to `main` (and by hand); other branches run nothing until merged. `checks.yml`: the destructive-fallback grep and the five `scripts/check-*` gates. `android-build.yml` (skipped for docs-only, server-only and focus-walk changes): ktlint, unit tests, Android Lint, the Room schema check, `assembleDebug`, then compiles the instrumented tests; APKs are uploaded only from `main` or a manual run. `server.yml` (only when `server/` changes): the sync server's tests. `release.yml` runs on a `v*` tag matching `fijerena.versionName` in `gradle.properties`: `assembleRelease` signed with the release key from secrets (no unit tests: tag only code that Android Build passed), and a GitHub Release with both APKs and `SHA256SUMS` (`docs/RUN_GUIDE.md` → Releasing). `instrumented-tests.yml` runs nightly, by hand, and on a push to `main` that changes its own workflow file: `connectedDebugAndroidTest` for `core:network` and `mobile` on a phone emulator, and the TV walk: the debug TV app on a TV emulator with the fake Xtream source and a seeded test household, then the walks in `scripts/focus-walks/ci-walks.txt`. Compose UI tests are Robolectric unit tests (`src/test`), never `androidTest`: they run in CI and touch no device. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
+CI runs on every push to `main` (and by hand); other branches run nothing until merged. `checks.yml`: the destructive-fallback grep and the six `scripts/check-*` gates. `android-build.yml` (skipped for docs-only, server-only and focus-walk changes): ktlint, unit tests, Android Lint, the Room schema check, `assembleDebug`, then compiles the instrumented tests; APKs are uploaded only from `main` or a manual run. `server.yml` (only when `server/` changes): the sync server's tests. `release.yml` runs on a `v*` tag matching `fijerena.versionName` in `gradle.properties`: `assembleRelease` signed with the release key from secrets (no unit tests: tag only code that Android Build passed), and a GitHub Release with both APKs and `SHA256SUMS` (`docs/RUN_GUIDE.md` → Releasing). `instrumented-tests.yml` runs nightly, by hand, and on a push to `main` that changes its own workflow file: `connectedDebugAndroidTest` for `core:network` and `mobile` on a phone emulator, and the TV walk: the debug TV app on a TV emulator with the fake Xtream source and a seeded test household, then the walks in `scripts/focus-walks/ci-walks.txt`. Compose UI tests are Robolectric unit tests (`src/test`), never `androidTest`: they run in CI and touch no device. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
 
 ### Deployment Rules
 

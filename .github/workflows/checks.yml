@@ -45,3 +45,7 @@ jobs:
       # docs/plans/20261016_design-system-plan.md.
       - name: Looks come from the theme and Look and Feel
         run: scripts/check-design-system.sh
+
+      # the provider data tests plan: this repository is public.
+      - name: Test fixtures hold no login, provider host or token
+        run: scripts/check-fixture-privacy.sh
