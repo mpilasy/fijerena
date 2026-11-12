@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
 import org.njarasoa.fijerena.core.player.audio.NightAudioSetting
+import org.njarasoa.fijerena.core.player.domain.TrackLanguagePreference
 
 class AppSettings(
     private val context: Context,
@@ -55,6 +56,12 @@ class AppSettings(
         private const val KEY_PROFILE_SOURCES_SEEDED = "profile_sources_seeded_v1"
         private const val KEY_PROFILE_SOURCE_RECORDS_QUEUED = "profile_source_records_queued_v1"
         private const val KEY_AUTOPLAY_NEXT_EPISODE = "autoplay_next_episode"
+
+        /** A profile's track languages ([trackLanguages]): per profile and synced. */
+        private const val KEY_AUDIO_LANGUAGE = "audio_language"
+        private const val KEY_SUBTITLE_LANGUAGE = "subtitle_language"
+        private const val KEY_SUBTITLES_OTHER_AUDIO_ONLY = "subtitles_other_audio_only"
+        private val TRACK_LANGUAGE_CODE = Regex("[a-z]{2,3}")
 
         /** A child profile ([isChildProfile]); public for the sync applier, which re-applies the filters. */
         const val KEY_CHILD_PROFILE = "child_profile"
@@ -139,6 +146,9 @@ class AppSettings(
                 KEY_POSTER_BACKDROP,
                 KEY_ADMIN,
                 KEY_AUTOPLAY_NEXT_EPISODE,
+                KEY_AUDIO_LANGUAGE,
+                KEY_SUBTITLE_LANGUAGE,
+                KEY_SUBTITLES_OTHER_AUDIO_ONLY,
                 KEY_TMDB_API_KEY,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
@@ -153,6 +163,9 @@ class AppSettings(
                 KEY_POSTER_BACKDROP,
                 KEY_ADMIN,
                 KEY_AUTOPLAY_NEXT_EPISODE,
+                KEY_AUDIO_LANGUAGE,
+                KEY_SUBTITLE_LANGUAGE,
+                KEY_SUBTITLES_OTHER_AUDIO_ONLY,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
                 KEY_NERD_MODE,
@@ -403,6 +416,47 @@ class AppSettings(
     ) {
         prefs.edit { putBoolean(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId), enabled) }
         SettingsSyncQueue.setting(context, KEY_AUTOPLAY_NEXT_EPISODE, profileId)
+    }
+
+    /**
+     * The active profile's track languages: the audio and subtitle languages that films and
+     * episodes start in when they have no saved track choice (the preferred track languages plan).
+     */
+    val trackLanguages: TrackLanguagePreference
+        get() = trackLanguages(activeProfileId)
+
+    /** [profileId]'s track languages; blank values and the switch on until set. */
+    fun trackLanguages(profileId: String): TrackLanguagePreference =
+        TrackLanguagePreference(
+            audio = prefs.getString(profileKey(KEY_AUDIO_LANGUAGE, profileId), null).orEmpty(),
+            subtitle = prefs.getString(profileKey(KEY_SUBTITLE_LANGUAGE, profileId), null).orEmpty(),
+            subtitlesOtherAudioOnly = prefs.getBoolean(profileKey(KEY_SUBTITLES_OTHER_AUDIO_ONLY, profileId), true),
+        )
+
+    /** [profileId]'s audio language: an ISO 639-1 code, or blank for no setting. */
+    fun setAudioLanguage(
+        profileId: String,
+        code: String,
+    ) {
+        prefs.edit { putString(profileKey(KEY_AUDIO_LANGUAGE, profileId), code) }
+        SettingsSyncQueue.setting(context, KEY_AUDIO_LANGUAGE, profileId)
+    }
+
+    /** [profileId]'s subtitle language: an ISO 639-1 code, [TrackLanguagePreference.SUBTITLES_OFF], or blank for the stream's default. */
+    fun setSubtitleLanguage(
+        profileId: String,
+        value: String,
+    ) {
+        prefs.edit { putString(profileKey(KEY_SUBTITLE_LANGUAGE, profileId), value) }
+        SettingsSyncQueue.setting(context, KEY_SUBTITLE_LANGUAGE, profileId)
+    }
+
+    fun setSubtitlesOtherAudioOnly(
+        profileId: String,
+        on: Boolean,
+    ) {
+        prefs.edit { putBoolean(profileKey(KEY_SUBTITLES_OTHER_AUDIO_ONLY, profileId), on) }
+        SettingsSyncQueue.setting(context, KEY_SUBTITLES_OTHER_AUDIO_ONLY, profileId)
     }
 
     /**
@@ -747,7 +801,7 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(adminKey(profileId), it) }
                 }
 
-                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING, KEY_NERD_MODE -> {
+                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING, KEY_NERD_MODE, KEY_SUBTITLES_OTHER_AUDIO_ONLY -> {
                     if (profileId != SyncKind.SHARED) value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
@@ -767,6 +821,13 @@ class AppSettings(
 
                 in PARENTAL_KEYS -> {
                     if (value.isString) putString(key, value.content)
+                }
+
+                // A blank value, a 2- or 3-letter code, or (subtitles) "off"; any other value is dropped.
+                KEY_AUDIO_LANGUAGE, KEY_SUBTITLE_LANGUAGE -> {
+                    if (profileId != SyncKind.SHARED && value.isString && isTrackLanguage(key, value.content)) {
+                        putString(profileKey(key, profileId), value.content)
+                    }
                 }
 
                 // A device-wide theme an older build sends (profile id SHARED) has no profile to go to: dropped.
@@ -824,11 +885,13 @@ class AppSettings(
                     KEY_NERD_MODE,
                     KEY_POSTER_BACKDROP,
                     KEY_CHARTS_SHOW_MISSING,
+                    KEY_SUBTITLES_OTHER_AUDIO_ONLY,
                 ) -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getBoolean(stored, false))
             }
 
-            key in setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_UI_THEME_ID, KEY_PIN_HASH) || key in PARENTAL_KEYS -> {
+            key in setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_UI_THEME_ID, KEY_PIN_HASH, KEY_AUDIO_LANGUAGE, KEY_SUBTITLE_LANGUAGE) ||
+                key in PARENTAL_KEYS -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 
@@ -903,6 +966,22 @@ class AppSettings(
 
     /** Drops a deleted profile's autoplay-next-episode choice. */
     fun removeAutoplayNextEpisode(profileId: String) = prefs.edit { remove(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId)) }
+
+    /** Drops a deleted profile's track languages. */
+    fun removeTrackLanguages(profileId: String) =
+        prefs.edit {
+            remove(profileKey(KEY_AUDIO_LANGUAGE, profileId))
+            remove(profileKey(KEY_SUBTITLE_LANGUAGE, profileId))
+            remove(profileKey(KEY_SUBTITLES_OTHER_AUDIO_ONLY, profileId))
+        }
+
+    /** A track language value this version can keep: blank, 2 or 3 lower-case letters, or "off" for subtitles. */
+    private fun isTrackLanguage(
+        key: String,
+        value: String,
+    ): Boolean =
+        value.isEmpty() ||
+            (TRACK_LANGUAGE_CODE.matches(value) && (key == KEY_SUBTITLE_LANGUAGE || value != TrackLanguagePreference.SUBTITLES_OFF))
 
     fun removeChartsShowMissing(profileId: String) = prefs.edit { remove(profileKey(KEY_CHARTS_SHOW_MISSING, profileId)) }
 
