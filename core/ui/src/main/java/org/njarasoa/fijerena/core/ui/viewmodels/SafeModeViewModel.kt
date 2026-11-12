@@ -4,16 +4,21 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import coil3.SingletonImageLoader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.DeviceReportBuilder
@@ -26,6 +31,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncRecord
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.ui.image.ImageCache
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
@@ -63,6 +69,19 @@ class SafeModeViewModel(
 
     /** Why the last send failed, masked: raw text that only a Nerd sees. */
     val sendError: StateFlow<String?> = sendErrorFlow.asStateFlow()
+
+    /**
+     * True while the device's storage is low ([StorageSpace]): a full disk is a likely cause of the
+     * crashes, so the screen says what to clear (the low storage plan, Phase 4). Checked every
+     * [STORAGE_CHECK_MS] while the screen shows.
+     */
+    val storageLow: StateFlow<Boolean> =
+        flow {
+            while (true) {
+                emit(StorageSpace.lowFreeBytes(context) != null)
+                delay(STORAGE_CHECK_MS)
+            }
+        }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
     init {
         // The link lives in encrypted prefs: read off the main thread.
@@ -129,11 +148,7 @@ class SafeModeViewModel(
                                 // and watch history live in their own tables.
                                 providerRepo.getAllProvidersList().forEach { providerRepo.clearAllCacheForProvider(it.id) }
                             },
-                            step("images") {
-                                val imageLoader = SingletonImageLoader.get(context)
-                                imageLoader.memoryCache?.clear()
-                                imageLoader.diskCache?.clear()
-                            },
+                            step("images") { ImageCache.clear(context) },
                         )
                     }
                 _clearState.value = if (results.all { it }) ClearState.DONE else ClearState.FAILED
@@ -156,4 +171,9 @@ class SafeModeViewModel(
             CrashLog.record("safe mode: clear $name", e)
             false
         }
+
+    private companion object {
+        const val STORAGE_CHECK_MS = 10_000L
+        const val STOP_TIMEOUT_MS = 5_000L
+    }
 }

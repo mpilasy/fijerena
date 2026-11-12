@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceLocale
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.image.ImageCache
 import org.njarasoa.fijerena.core.ui.image.MaxImageSizeInterceptor
 import org.njarasoa.fijerena.core.ui.newepisodes.NewEpisodesStore
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
@@ -296,11 +297,13 @@ class FijerenaApplication :
             // (largeHeap is on, so 25% of the heap on a Shield was 60-100 MB+ of bitmaps); onTrimMemory()
             // sweeps it under pressure.
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.15).build() }
+            // The disk cache's limit follows the storage's size (ImageCache.maxBytes): a fixed 512 MB
+            // took a large part of a small TV's free space. Coil builds it at its first use.
             .diskCache {
                 DiskCache
                     .Builder()
-                    .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(512L * 1024 * 1024)
+                    .directory(cacheDir.resolve(ImageCache.DIRECTORY))
+                    .maxSizeBytes(ImageCache.maxBytes(cacheDir))
                     .cleanupCoroutineContext(Dispatchers.IO)
                     .build()
             }.build()

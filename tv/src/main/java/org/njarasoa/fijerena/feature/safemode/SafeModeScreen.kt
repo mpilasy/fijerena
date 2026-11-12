@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.network.R as NetworkR
 
 /** Which action focus lands on when the screen (re)appears. */
 private const val FOCUS_CONTINUE = 0
@@ -69,6 +70,7 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
     val canSendLogs by viewModel.canSendLogs.collectAsStateWithLifecycle()
     val sendState by viewModel.sendState.collectAsStateWithLifecycle()
     val sendError by viewModel.sendError.collectAsStateWithLifecycle()
+    val storageLow by viewModel.storageLow.collectAsStateWithLifecycle()
     val sendFocus = remember { FocusRequester() }
     val scale = LocalUiScale.current
     var confirmingClear by remember { mutableStateOf(false) }
@@ -137,6 +139,10 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
             // Raw error text for a Nerd only, masked.
             if (LocalNerd.current && sendState == SafeModeViewModel.SendState.FAILED) {
                 sendError?.let { CinemaText("[dev] $it", role = TextRole.BodySmall, tone = TextTone.Secondary) }
+            }
+            // A full disk is a likely cause of the crashes: say what to clear, above Clear caches.
+            if (storageLow) {
+                CinemaText(stringResource(NetworkR.string.error_storage_low), role = TextRole.Body, tone = TextTone.Danger)
             }
             Row(
                 modifier = Modifier.padding(top = Spacing.md.scaled(scale)),

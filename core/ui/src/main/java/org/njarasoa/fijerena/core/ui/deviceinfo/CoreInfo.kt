@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.image.ImageCache
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
 import org.njarasoa.fijerena.core.ui.utils.nameRes
@@ -223,8 +224,8 @@ private fun storageSection(context: Context): DeviceInfoSection {
             listOf(
                 infoRow(
                     R.string.device_info_image_cache,
-                    readOrNull { NumberUtils.formatBytes(context.resources, directorySize(File(context.cacheDir, "image_cache"))) },
-                ),
+                    readOrNull { NumberUtils.formatBytes(context.resources, directorySize(File(context.cacheDir, ImageCache.DIRECTORY))) },
+                ).copy(action = DeviceInfoAction.CLEAR_IMAGE_CACHE),
                 infoRow(
                     R.string.device_info_cache_total,
                     readOrNull { NumberUtils.formatBytes(context.resources, directorySize(context.cacheDir)) },

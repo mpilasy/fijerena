@@ -1124,6 +1124,11 @@
     <string name="device_info_internal_storage">Fitehirizana anatiny</string>
     <string name="device_info_database_format">Tahiry %1$s</string>
     <string name="device_info_image_cache">Tahiry vonjimaika sary</string>
+    <string name="device_info_clear_image_cache">Fafao ny tahiry vonjimaika sary</string>
+    <string name="device_info_clear_image_cache_title">Hofafana ny tahiry vonjimaika sary?</string>
+    <string name="device_info_clear_image_cache_message">Hofafana ireo sary sy logo voatahiry amin\'ity fitaovana ity. Halain\'ny efijery tsirairay indray ny sariny rehefa asehony.</string>
+    <string name="device_info_image_cache_cleared">Voafafa ny tahiry vonjimaika sary</string>
+    <string name="device_info_image_cache_clear_failed">Tsy nety ny famafana ny tahiry vonjimaika sary</string>
     <string name="device_info_cache_total">Tahiry vonjimaika rehetra</string>
     <string name="device_info_files_total">Rakitry ny rindranasa</string>
     <string name="device_info_display_mode">Fomba ankehitriny</string>

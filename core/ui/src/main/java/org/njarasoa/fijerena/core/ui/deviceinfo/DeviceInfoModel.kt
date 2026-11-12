@@ -13,7 +13,14 @@ import org.njarasoa.fijerena.core.ui.utils.UiText
 data class DeviceInfoRow(
     val label: UiText,
     val value: UiText,
+    val action: DeviceInfoAction? = null,
 )
+
+/** An icon action at the end of a row; the screen shows it and asks before it runs. */
+enum class DeviceInfoAction {
+    /** The image cache row: clears the posters and logos kept on disk (the low storage plan, LS-Q3). */
+    CLEAR_IMAGE_CACHE,
+}
 
 /** A titled group of rows; one focus stop on TV. */
 data class DeviceInfoSection(

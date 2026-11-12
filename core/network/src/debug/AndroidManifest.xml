@@ -21,5 +21,15 @@
                 <action android:name="org.njarasoa.fijerena.DEBUG_TEST_HOUSEHOLD" />
             </intent-filter>
         </receiver>
+        <!-- Debug builds only: sets the free space that the storage checks read, over adb (see
+             FreeSpaceDebugReceiver). DUMP: adb shell can send it, other apps can't. -->
+        <receiver
+            android:name="org.njarasoa.fijerena.core.network.FreeSpaceDebugReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="org.njarasoa.fijerena.DEBUG_FREE_SPACE" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

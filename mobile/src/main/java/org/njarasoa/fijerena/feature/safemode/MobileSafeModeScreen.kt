@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.core.network.R as NetworkR
 
 /**
  * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Back has
@@ -55,6 +56,7 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
     val canSendLogs by viewModel.canSendLogs.collectAsStateWithLifecycle()
     val sendState by viewModel.sendState.collectAsStateWithLifecycle()
     val sendError by viewModel.sendError.collectAsStateWithLifecycle()
+    val storageLow by viewModel.storageLow.collectAsStateWithLifecycle()
     var confirmingClear by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -94,6 +96,10 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
             // Raw error text for a Nerd only, masked.
             if (LocalNerd.current && sendState == SafeModeViewModel.SendState.FAILED) {
                 sendError?.let { CinemaText("[dev] $it", role = TextRole.BodySmall, tone = TextTone.Secondary) }
+            }
+            // A full disk is a likely cause of the crashes: say what to clear, above Clear caches.
+            if (storageLow) {
+                CinemaText(stringResource(NetworkR.string.error_storage_low), tone = TextTone.Danger)
             }
             CinemaButton(
                 onClick = { activity?.let { SafeMode.leave(it) } },

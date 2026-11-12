@@ -417,7 +417,7 @@ adb -s <device-id> shell run-as <pkg> rm files/safemode/launches
 
 ### Debug Broadcasts
 
-Three receivers exist in debug builds only (`src/debug` source sets) and require
+Four receivers exist in debug builds only (`src/debug` source sets) and require
 `android.permission.DUMP`, which the adb shell holds and other apps don't — so `adb shell am
 broadcast …` works, and nothing else on the device can link the sync account or force refreshes.
 
@@ -432,6 +432,12 @@ adb -s <device-id> shell am broadcast -a org.njarasoa.fijerena.DEBUG_SYNC -p <pk
 # results go to logcat under TestHousehold. Use scripts/seed-test-household.sh, which waits for it.
 adb -s <device-id> shell am broadcast --include-stopped-packages -a org.njarasoa.fijerena.DEBUG_TEST_HOUSEHOLD \
     -p <pkg> --es url http://10.0.2.2:8090
+
+# FreeSpaceDebugReceiver (core:network): the storage checks read 100 MB free (the low-storage
+# messages without a full disk); without --el mb they read the real value again. Kept in memory
+# only: a new process reads the real value. Logcat tag FreeSpaceDebug.
+adb -s <device-id> shell am broadcast -a org.njarasoa.fijerena.DEBUG_FREE_SPACE -p <pkg> --el mb 100
+adb -s <device-id> shell am broadcast -a org.njarasoa.fijerena.DEBUG_FREE_SPACE -p <pkg>
 ```
 
 `DEBUG_SYNC` commands (`--es cmd …`): `setup --es url <server> [--es secret <setup secret>] [--es name

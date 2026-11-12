@@ -1,6 +1,6 @@
 # Low storage
 
-**Status:** In progress. Phases 1 to 3 done 2026-11-11. Decided 2026-11-11: LS-Q1, LS-Q2, LS-Q4, LS-Q5 and LS-Q6, each (a). LS-Q3 waits for the user.
+**Status:** Phases 1 to 4 done 2026-11-11. The emulator check of Phase 4 (LS-Q6) waits: the steps are in the Phase 4 Done note. Decided 2026-11-11: LS-Q1 to LS-Q6, each (a).
 
 ## Goal
 
@@ -75,7 +75,7 @@ not know how much space a job needs.
 |---|----------|---------|
 | LS-Q1 | Not enough space for a staged guide refresh? **Decided: (a).** | (a) **Direct ingest as today, but only when there is space for it**; else the source gets `STORAGE_LOW` and keeps its guide. Recommended: the guide stays current while space allows, and a failed direct ingest heals at the next refresh. (b) Skip the refresh. The old guide stays whole but gets older. |
 | LS-Q2 | Image cache size? **Decided: (a).** | (a) **2% of the storage, from 64 MB to 512 MB** (Coil `maxSizePercent` with a minimum and a maximum). Recommended: about 160 MB on an 8 GB TV. (b) Keep 512 MB. |
-| LS-Q3 | A way to clear the image cache outside safe mode? It is a look-and-feel change. | (a) **A Clear Image Cache icon action on the image cache row of Device Info**, TV and phone. Recommended. (b) None. |
+| LS-Q3 | A way to clear the image cache outside safe mode? It is a look-and-feel change. **Decided: (a)** (the user, 2026-11-11). | (a) **A Clear Image Cache icon action on the image cache row of Device Info**, TV and phone. Recommended. (b) None. |
 | LS-Q4 | The message? **Decided: (a).** | (a) **One message for every writer**: `error_storage_low` gets a new text that says what to clear. Recommended. (b) A message for each writer. |
 | LS-Q5 | A worker that hits a full disk? **Decided: (a).** | (a) **Finish with the stored `STORAGE_LOW` error and no retry.** The storage-not-low rule and the next period start it again. Recommended. (b) `Result.retry()` with back-off. |
 | LS-Q6 | How to test on an emulator? The user decides before any emulator data change. **Decided: (a).** | (a) **A debug-only free-space value set over adb** for the checks and messages, and one real run with a filler file in the app's own cache folder, deleted after. Recommended. (b) A new emulator with a small data partition. |
@@ -183,7 +183,7 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 |
-| 4 | Not started |
+| 4 | Done 2026-11-11; emulator check waits |
 
 **Phase 1 done (2026-11-11):**
 - `Throwable.isDiskFull()` is in FriendlyError.kt, next to `networkCause()`, not in `StorageSpace`:
@@ -271,6 +271,82 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
   (a catalogue batch rolls back whole, is a full disk and is not transient; a compact that fills
   the disk does not throw and leaves the segments as they were). `ingestDownloadedSource` and its
   two data classes are `internal` for the test.
+
+**Phase 4 done (2026-11-11):**
+- The message (LS-Q4 (a)): the new en text of `error_storage_low` is "This device's storage is
+  almost full. Free up space: remove apps that you do not use, or clear the image cache (Settings →
+  About → Device Info) or the guide data (Settings → Sources & Guide → Guide Data Maintenance).
+  Then try again. Automatic updates wait until then." fr and mg in the same commit. Departure from
+  the design text: it also names the image cache (LS-Q3 makes it a thing to clear), and gives the
+  two Settings paths. `StorageLowMessageTest` (tv, Robolectric) checks in en, fr and mg that the
+  paths are the screens' labels (`settings_title`, `settings_about_section_title`,
+  `device_info_open`, `settings_group_source_guide`, `settings_guide_maintenance_title`) and that
+  the image cache's label is in the text: this is the "match the screen labels at build time".
+- Safe mode: `SafeModeViewModel.storageLow` (the `StorageSpace.isLow` rule, read every 10 s) shows
+  the same message in the danger tone above the buttons on TV and above Clear caches on the phone.
+  Clear caches now calls `ImageCache.clear`, the same code as Device Info.
+- Image cache size (LS-Q2 (a)): `ImageCache.maxBytes` (core/ui `image/ImageCache.kt`) is 2% of the
+  storage's total size, from 64 MB to 512 MB; `FijerenaApplication` passes it to Coil as
+  `maxSizeBytes`. Departure: not Coil's `maxSizePercent`. Coil 3 counts that percent of the free
+  space at the time the cache is built, not of the storage, so the limit would change at each start
+  and be the minimum on a device that is almost full. A total size that the app cannot read gives
+  64 MB. `ImageCacheTest`.
+- Clear Image Cache (LS-Q3 (a)): `DeviceInfoRow.action` (`DeviceInfoAction.CLEAR_IMAGE_CACHE`) on
+  the image cache row; `DeviceInfoViewModel.clearImageCache` clears the memory and disk caches off
+  the main thread, then reads the sections again. Icon `CinemaIcons.ClearData` (the guide sources'
+  Clear guide data icon), label "Clear image cache". It asks first (title "Clear Image Cache?",
+  the danger action "Clear", focus on Cancel), as rule 7 of the focus contract asks for every
+  destructive action; the plan did not say. Then a notice: "Image cache cleared" or "Couldn't clear
+  the image cache".
+  - TV: each section has a slot of one icon's width at its right, so the cards keep one width; the
+    Storage section's slot holds the icon, on the image cache row's line (an alignment line from
+    the row, through the card, to the section's row). Right on Storage reaches it, Left goes back,
+    Up/Down go to the next section; the label shows on focus and grows to the left over the card's
+    empty end. After the dialog, focus goes back to the icon. `DeviceInfoFocusTest` walks it and
+    checks that the icon is on the image cache row. The page is now `DeviceInfoContent` without
+    its view model, for the test.
+  - Phone: the icon at the end of the image cache row (`IconAction`, tooltip on a long press).
+- Debug free space (LS-Q6 (a)): `StorageSpace.debugFreeBytes`, read first by
+  `StorageSpace.lowFreeBytes` and `FreeSpace.of`. Only `FreeSpaceDebugReceiver` (core/network
+  `src/debug`, `android.permission.DUMP`) sets it; it is kept in memory only. `DebugFreeSpaceTest`.
+  The Device Info Internal Storage row still shows the real value.
+- Not done here: the emulator check and the size measurements. The lead runs them after the merge.
+- **Emulator check (for the lead, after the merge; debug builds on both emulators; TV
+  `org.njarasoa.fijerena`, phone `org.njarasoa.fijerena.mobile` as `<pkg>`):**
+  1. Messages with a fake free space, each emulator, in Malagasy, then the TV in English. Open the
+     app, then:
+     `adb -s <serial> shell am broadcast -a org.njarasoa.fijerena.DEBUG_FREE_SPACE -p <pkg> --el mb 100`
+     and `adb -s <serial> logcat -d -s FreeSpaceDebug` (expect "free space set to 100 MB").
+     Settings → Sources & Guide → Guide Sources: the storage note shows within 30 s; refresh a
+     guide source: its card shows the new message (a Nerd also sees "Storage low: 100 MB free").
+     Settings → Sources: refresh a source: its line shows the message. Check that the text fits on
+     the cards and is not cut. Then go back to the real value:
+     `adb -s <serial> shell am broadcast -a org.njarasoa.fijerena.DEBUG_FREE_SPACE -p <pkg>`.
+  2. Safe mode note, each emulator (RUN_GUIDE → Crash-Loop Safe Mode):
+     `NOW=$(date +%s%3N)`, then
+     `adb -s <serial> shell "run-as <pkg> sh -c 'mkdir -p files/safemode && printf \"$NOW\n$NOW\n$NOW\n\" > files/safemode/launches'"`,
+     `adb -s <serial> shell am force-stop <pkg>`, launch the app by hand (the safe-mode screen
+     opens), then send the broadcast of step 1 with `--el mb 100`: the message shows above the
+     buttons within 10 s. On TV check that every button stays on screen. Continue leaves safe mode
+     (the new process reads the real free space).
+  3. Clear Image Cache, each emulator: open a few lists with posters, then
+     `adb -s <serial> shell run-as <pkg> du -sk cache/image_cache`. Settings → About → Device Info.
+     TV: Down to Storage, Right: "Clear image cache" shows on the icon, on the image cache row;
+     Left goes back to Storage; Right, OK: the dialog opens on Cancel; Clear: the notice "Image
+     cache cleared", the image cache row shows a small size, focus is on the icon again. Phone:
+     long press the icon (tooltip), tap it, Clear. Run `du -sk cache/image_cache` again: smaller.
+  4. Image cache limit: `adb -s <serial> shell run-as <pkg> df -k files` gives the storage size;
+     2% of it (64 MB to 512 MB) is the limit. After a long scroll through posters, the image cache
+     row of Device Info stays under it.
+  5. Only with the user's agreement (LS-Q6 (a)), one emulator: a real full disk. `df -k files` as
+     in step 4, then a filler file in the app's own cache folder that leaves about 300 MB free:
+     `adb -s <serial> shell run-as <pkg> dd if=/dev/zero of=cache/filler bs=1048576 count=<MB>`.
+     Start a guide refresh (`adb -s <serial> shell am broadcast -a
+     org.njarasoa.fijerena.DEBUG_EPG_SYNC -p <pkg>`) and a catalogue refresh by hand; the sources
+     show the message and nothing tries again (`adb -s <serial> logcat -d | grep -i "storage\|ENOSPC"`).
+     Then always `adb -s <serial> shell run-as <pkg> rm cache/filler`. Note the sizes for `SpaceNeed`:
+     `adb -s <serial> shell run-as <pkg> ls -l databases/` (epg_index.db and xtream_v2.db with their
+     `-wal`), and the size of the downloaded guide file and its database growth per refresh.
 
 ## Risks
 

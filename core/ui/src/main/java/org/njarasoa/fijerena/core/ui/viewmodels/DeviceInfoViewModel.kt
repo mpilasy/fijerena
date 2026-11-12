@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.ui.deviceinfo.DeviceInfoSection
 import org.njarasoa.fijerena.core.ui.deviceinfo.coreSections
 import org.njarasoa.fijerena.core.ui.deviceinfo.mediaSections
 import org.njarasoa.fijerena.core.ui.deviceinfo.networkPowerSections
+import org.njarasoa.fijerena.core.ui.image.ImageCache
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
@@ -53,6 +54,19 @@ class DeviceInfoViewModel(
                     }
                 _failed.value = false
             }
+    }
+
+    /**
+     * Clears the image cache (the image cache row's action, the low storage plan → LS-Q3), then
+     * reads the sections again, so that the row shows the new size. [onDone] gets true when the
+     * cache is clear, false when the clear failed; the screen tells the user.
+     */
+    fun clearImageCache(onDone: (Boolean) -> Unit) {
+        viewModelScope.launchGuarded("DeviceInfoViewModel.clearImageCache", onError = { onDone(false) }) {
+            withContext(Dispatchers.IO) { ImageCache.clear(context) }
+            onDone(true)
+            reload()
+        }
     }
 
     companion object {

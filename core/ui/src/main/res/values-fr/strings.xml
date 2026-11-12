@@ -802,6 +802,11 @@
     <string name="device_info_internal_storage">Stockage interne</string>
     <string name="device_info_database_format">Base de données %1$s</string>
     <string name="device_info_image_cache">Cache des images</string>
+    <string name="device_info_clear_image_cache">Vider le cache des images</string>
+    <string name="device_info_clear_image_cache_title">Vider le cache des images ?</string>
+    <string name="device_info_clear_image_cache_message">Cela supprime les affiches et les logos gardés sur cet appareil. Chaque écran télécharge de nouveau ses images quand il les affiche.</string>
+    <string name="device_info_image_cache_cleared">Cache des images vidé</string>
+    <string name="device_info_image_cache_clear_failed">Impossible de vider le cache des images</string>
     <string name="device_info_cache_total">Tous les caches</string>
     <string name="device_info_files_total">Fichiers de l’application</string>
     <string name="device_info_display_mode">Mode actuel</string>

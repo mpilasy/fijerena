@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased
+
+- **Storage almost full says what to clear:** when an update stops because the storage is almost full, the message now says how to free up space: remove apps that you do not use, or clear the image cache (Settings → About → Device Info) or the guide data (Settings → Sources & Guide → Guide Data Maintenance). TV and phone.
+- **Clear Image Cache:** Settings → About → Device Info has a new action on the image cache row that clears the posters and logos kept on the device. It asks first. On TV, press Right on the Storage section. TV and phone.
+- **A smaller image cache on small devices:** the posters and logos kept on the device now take at most 2% of its storage (from 64 MB to 512 MB), not always 512 MB. An 8 GB TV keeps about 160 MB. TV and phone.
+- **Safe mode and a full storage:** when the app starts in safe mode and the storage is almost full, the safe-mode screen now says so and what to clear, as a full storage can make the app close. TV and phone.
+
 ## Version: 0.9.20261112034854
 
 - **A full storage during a guide refresh:** a guide source that filled the storage while it was imported could show a general error, and the guide could say that it could not be prepared although it was all there. Now the source says that the storage is almost full, the guide stays as it was, and the space the refresh used is given back at once. TV and phone.

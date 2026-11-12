@@ -18,6 +18,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -26,20 +30,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.deviceinfo.DeviceInfoAction
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
- * Settings → About → Device info on mobile, shareable as plain text. See
- * the device info screen plan.
+ * Settings → About → Device info on mobile, shareable as plain text. A row with an action (the
+ * image cache's Clear Image Cache) has its icon at the row's end, with its name in a tooltip; it
+ * asks before it runs. See the device info screen plan and the low storage plan → LS-Q3.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +59,9 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
     val sections by viewModel.sections.collectAsStateWithLifecycle()
     val failed by viewModel.failed.collectAsStateWithLifecycle()
     val shareTitle = stringResource(R.string.settings_diagnostics_share)
+    val clearedText = stringResource(R.string.device_info_image_cache_cleared)
+    val clearFailedText = stringResource(R.string.device_info_image_cache_clear_failed)
+    var confirming by remember { mutableStateOf<DeviceInfoAction?>(null) }
 
     Scaffold(
         topBar = {
@@ -105,7 +117,10 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
                     section.rows.forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             CinemaText(
                                 row.label.asString(),
                                 role = TextRole.BodySmall,
@@ -113,13 +128,40 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                                 modifier = Modifier.weight(LABEL_WEIGHT),
                             )
                             CinemaText(row.value.asString(), role = TextRole.BodySmall, modifier = Modifier.weight(VALUE_WEIGHT))
+                            // The row's action at its end (the image cache's Clear Image Cache); it asks first.
+                            row.action?.let { action ->
+                                IconAction(
+                                    onClick = { confirming = action },
+                                    icon = CinemaIcons.ClearData,
+                                    label = stringResource(actionLabel(action)),
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    if (confirming != null) {
+        CinemaAlertDialog(
+            onDismissRequest = { confirming = null },
+            title = stringResource(R.string.device_info_clear_image_cache_title),
+            text = { CinemaText(stringResource(R.string.device_info_clear_image_cache_message), tone = TextTone.Secondary) },
+            danger =
+                DialogAction(stringResource(R.string.provider_clear_button)) {
+                    confirming = null
+                    viewModel.clearImageCache { cleared -> AppNotices.show(if (cleared) clearedText else clearFailedText) }
+                },
+            cancel = DialogAction(stringResource(R.string.common_cancel)) { confirming = null },
+        )
+    }
 }
+
+private fun actionLabel(action: DeviceInfoAction): Int =
+    when (action) {
+        DeviceInfoAction.CLEAR_IMAGE_CACHE -> R.string.device_info_clear_image_cache
+    }
 
 private const val LABEL_WEIGHT = 0.4f
 private const val VALUE_WEIGHT = 0.6f

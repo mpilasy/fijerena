@@ -824,6 +824,11 @@
     <string name="device_info_internal_storage">Internal storage</string>
     <string name="device_info_database_format">Database %1$s</string>
     <string name="device_info_image_cache">Image cache</string>
+    <string name="device_info_clear_image_cache">Clear image cache</string>
+    <string name="device_info_clear_image_cache_title">Clear Image Cache?</string>
+    <string name="device_info_clear_image_cache_message">This removes the posters and logos that are kept on this device. Each screen downloads its pictures again when it shows them.</string>
+    <string name="device_info_image_cache_cleared">Image cache cleared</string>
+    <string name="device_info_image_cache_clear_failed">Couldn\'t clear the image cache</string>
     <string name="device_info_cache_total">All caches</string>
     <string name="device_info_files_total">App files</string>
     <string name="device_info_display_mode">Current mode</string>

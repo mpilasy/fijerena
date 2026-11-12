@@ -22,6 +22,14 @@ object StorageSpace {
      */
     const val MARGIN_BYTES = 50L * MB
 
+    /**
+     * A free-space value that the checks read in place of the real one; null reads the real one.
+     * Only the debug-build `FreeSpaceDebugReceiver` sets it (over adb), so that the low-storage
+     * messages can be seen on an emulator (the low storage plan, LS-Q6). It is not kept: a new
+     * process reads the real value.
+     */
+    @Volatile var debugFreeBytes: Long? = null
+
     /** Below this many free bytes, storage of [totalBytes] is low. */
     fun lowThresholdBytes(totalBytes: Long): Long = minOf(totalBytes * LOW_PERCENT / 100, LOW_MAX_BYTES)
 
@@ -37,7 +45,7 @@ object StorageSpace {
     @SuppressLint("UsableSpace")
     fun lowFreeBytes(context: Context): Long? {
         val dir = context.filesDir
-        val free = dir.usableSpace
+        val free = debugFreeBytes ?: dir.usableSpace
         return free.takeIf { isLow(it, dir.totalSpace) }
     }
 
@@ -73,13 +81,13 @@ fun interface FreeSpace {
          * The free space of the storage that holds the app's files, as [StorageSpace.lowFreeBytes]
          * reads it. A storage whose size reads 0 has no size that the app can read (File gives 0
          * when it cannot read it): it counts as having space, so that the check never stops every
-         * job.
+         * job. [StorageSpace.debugFreeBytes], when set, comes first.
          */
         @SuppressLint("UsableSpace")
         fun of(context: Context): FreeSpace =
             FreeSpace {
                 val dir = context.filesDir
-                if (dir.totalSpace > 0) dir.usableSpace else Long.MAX_VALUE
+                StorageSpace.debugFreeBytes ?: if (dir.totalSpace > 0) dir.usableSpace else Long.MAX_VALUE
             }
     }
 }
