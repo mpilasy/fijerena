@@ -1168,6 +1168,11 @@
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Play Next Episode Automatically</string>
     <string name="settings_autoplay_next_episode_desc">Near the end of an episode, the next one is offered and starts when it ends.</string>
+    <string name="settings_audio_language_title">Audio Language</string>
+    <string name="settings_audio_language_desc">Used when you have not picked a track for the film or show; else the original.</string>
+    <string name="settings_subtitle_language_title">Subtitle Language</string>
+    <string name="settings_subtitles_other_audio_title">Only When the Audio Is in Another Language</string>
+    <string name="settings_track_language_stream_default">Stream default</string>
     <string name="player_up_next_compact_format">Up next · %1$s · %2$s</string>
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->

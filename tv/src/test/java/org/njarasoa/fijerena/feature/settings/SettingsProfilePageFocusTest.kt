@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.settings
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +42,8 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
+            down("Audio Language / Used when you have not picked a track for the film or show; else the original. / English"),
+            down("Subtitle Language / Stream default"),
             // A grown-up adds a profile from the end of its own page (the profile rules plan, PR-D1).
             down("Add Profile"),
             down("Add Profile"),
@@ -65,6 +69,39 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     }
 
     @Test
+    fun `a subtitle language shows the switch under its row`() {
+        open(SettingsFixture.GUEST)
+        walk.run(
+            right("Edit Name / Name / Guest"),
+            down("Colour"),
+            down("PIN"),
+            down("Nerd"),
+            down("UI Theme"),
+            down("Theme"),
+            down("Look and Feel"),
+            down("Poster in the Background"),
+            down("Play Next Episode Automatically"),
+            down("Audio Language"),
+            // The picker opens on the current value: English with no setting.
+            center("English"),
+            left("Audio Language"),
+            down("Subtitle Language / Stream default"),
+            // Stream default, Off, then English: OK picks it and goes back to the row.
+            center("Stream default"),
+            down("Off"),
+            down("English"),
+            center("Subtitle Language / English"),
+            down("Only When the Audio Is in Another Language"),
+            center("Only When the Audio Is in Another Language"),
+        )
+        rule.waitForIdle()
+
+        val languages = AppSettings(context).trackLanguages(SettingsFixture.GUEST)
+        assertEquals("en", languages.subtitle)
+        assertFalse(languages.subtitlesOtherAudioOnly)
+    }
+
+    @Test
     fun `a grown-up's own page ends on Add Profile, and Up goes back up the page`() {
         open(SettingsFixture.GUEST)
         walk.run(
@@ -77,8 +114,10 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
+            down("Audio Language"),
+            down("Subtitle Language / Stream default"),
             down("Add Profile"),
-            up("Play Next Episode Automatically"),
+            up("Subtitle Language"),
             down("Add Profile"),
             // Left leaves the page from Add Profile too.
             left("Your Profile"),
@@ -99,9 +138,11 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
+            down("Audio Language"),
+            down("Subtitle Language / Stream default"),
             // No Child profile, Admin switch, Sources or Content filters: those are in Admin →
             // Profiles. No Add Profile either: an Admin adds one there.
-            down("Play Next Episode Automatically"),
+            down("Subtitle Language"),
             left("Your Profile"),
         )
     }
@@ -123,6 +164,8 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
+            down("Audio Language"),
+            down("Subtitle Language / Stream default"),
             // Admin: Child profile and the Admin switch, both free to change on a grown-up's page.
             down("Child Profile / On TV, Home shows only the favourites"),
             down("Admin / Lets this profile change sources, profiles, parental controls and backups"),
@@ -155,6 +198,8 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
+            down("Audio Language"),
+            down("Subtitle Language / Stream default"),
             down("Child Profile / On TV, Home shows only the favourites"),
             down("Favourites / What this child sees on Home"),
             down("Sources / 1 of 2"),

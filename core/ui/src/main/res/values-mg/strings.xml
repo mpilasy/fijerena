@@ -834,6 +834,11 @@
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Alefaso ho azy ny fizarana manaraka</string>
     <string name="settings_autoplay_next_episode_desc">Rehefa ho tapitra ny fizarana iray, aroso ny manaraka ary manomboka ho azy rehefa vita izy.</string>
+    <string name="settings_audio_language_title">Fitenin\'ny feo</string>
+    <string name="settings_audio_language_desc">Ampiasaina raha tsy nifidy làlana ho an\'ilay sarimihetsika na andian-tantara ianao; raha tsy izany, ny tany am-boalohany.</string>
+    <string name="settings_subtitle_language_title">Fitenin\'ny dikan-teny</string>
+    <string name="settings_subtitles_other_audio_title">Raha amin\'ny fiteny hafa ihany ny feo</string>
+    <string name="settings_track_language_stream_default">Izay ao amin\'ny fandefasana</string>
     <string name="player_up_next_compact_format">Manaraka · %1$s · %2$s</string>
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->

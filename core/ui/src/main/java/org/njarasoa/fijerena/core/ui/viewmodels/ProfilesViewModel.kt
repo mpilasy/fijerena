@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.TrackLanguagePreference
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.PinSession
@@ -400,6 +401,31 @@ class ProfilesViewModel(
         on: Boolean,
     ) {
         if (ProfileRules.changesLook(actor(), id)) appSettings.setPosterBackdrop(id, on)
+    }
+
+    /** [id]'s track languages: the audio and subtitle languages its films and episodes start in. */
+    fun trackLanguagesOf(id: String): TrackLanguagePreference = appSettings.trackLanguages(id)
+
+    /** Saved at once, like the theme: [id]'s own, or an Admin's change. */
+    fun setAudioLanguage(
+        id: String,
+        code: String,
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setAudioLanguage(id, code)
+    }
+
+    fun setSubtitleLanguage(
+        id: String,
+        value: String,
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setSubtitleLanguage(id, value)
+    }
+
+    fun setSubtitlesOtherAudioOnly(
+        id: String,
+        on: Boolean,
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setSubtitlesOtherAudioOnly(id, on)
     }
 
     fun uiThemeOf(id: String): String = appSettings.uiThemeId(id).takeIf { UiThemes.packaged(it) != null } ?: UiThemes.CUSTOM

@@ -53,6 +53,11 @@ import org.njarasoa.fijerena.core.ui.theme.palettesFor
 import org.njarasoa.fijerena.core.ui.theme.sortedAsUiThemes
 import org.njarasoa.fijerena.core.ui.theme.styleById
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
+import org.njarasoa.fijerena.core.ui.utils.audioLanguageChoices
+import org.njarasoa.fijerena.core.ui.utils.isSubtitleLanguage
+import org.njarasoa.fijerena.core.ui.utils.shownAudioLanguage
+import org.njarasoa.fijerena.core.ui.utils.subtitleLanguageChoices
+import org.njarasoa.fijerena.core.ui.utils.trackLanguageLabel
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSettings
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
@@ -486,6 +491,36 @@ internal fun ProfileOwnRows(
             onDismiss = { choosingLook = false },
         )
     }
+    // The profile's track languages: saved as they are picked, like the theme.
+    var trackLanguages by remember(profileId) { mutableStateOf(viewModel.trackLanguagesOf(profileId)) }
+    var choosingAudioLanguage by rememberSaveable { mutableStateOf(false) }
+    var choosingSubtitleLanguage by rememberSaveable { mutableStateOf(false) }
+    if (choosingAudioLanguage) {
+        SettingsPickerDialog(
+            title = stringResource(R.string.settings_audio_language_title),
+            options = audioLanguageChoices(trackLanguages.audio),
+            selected = shownAudioLanguage(trackLanguages.audio),
+            onSelect = { code ->
+                trackLanguages = trackLanguages.copy(audio = code)
+                viewModel.setAudioLanguage(profileId, code)
+                choosingAudioLanguage = false
+            },
+            onDismiss = { choosingAudioLanguage = false },
+        )
+    }
+    if (choosingSubtitleLanguage) {
+        SettingsPickerDialog(
+            title = stringResource(R.string.settings_subtitle_language_title),
+            options = subtitleLanguageChoices(trackLanguages.subtitle),
+            selected = trackLanguages.subtitle,
+            onSelect = { value ->
+                trackLanguages = trackLanguages.copy(subtitle = value)
+                viewModel.setSubtitleLanguage(profileId, value)
+                choosingSubtitleLanguage = false
+            },
+            onDismiss = { choosingSubtitleLanguage = false },
+        )
+    }
     // The PIN row (the profile pin plan): saved as it is set, like the theme.
     val onlyAdmin = remember(profileId, profiles) { viewModel.isLastAdmin(profileId) }
     val pinFlow =
@@ -595,6 +630,29 @@ internal fun ProfileOwnRows(
         onCheckedChange = onAutoplayNextEpisodeChange,
         modifier = inset,
     )
+    SettingsListRow(
+        title = stringResource(R.string.settings_audio_language_title),
+        summary =
+            trackLanguageLabel(shownAudioLanguage(trackLanguages.audio)) + " · " + stringResource(R.string.settings_audio_language_desc),
+        onClick = { choosingAudioLanguage = true },
+    )
+    SettingsListRow(
+        title = stringResource(R.string.settings_subtitle_language_title),
+        summary = trackLanguageLabel(trackLanguages.subtitle),
+        onClick = { choosingSubtitleLanguage = true },
+    )
+    // Only for a subtitle language: with Stream Default or Off, the switch does nothing.
+    if (isSubtitleLanguage(trackLanguages.subtitle)) {
+        CinemaSwitchRow(
+            label = stringResource(R.string.settings_subtitles_other_audio_title),
+            checked = trackLanguages.subtitlesOtherAudioOnly,
+            onCheckedChange = {
+                trackLanguages = trackLanguages.copy(subtitlesOtherAudioOnly = it)
+                viewModel.setSubtitlesOtherAudioOnly(profileId, it)
+            },
+            modifier = inset,
+        )
+    }
 }
 
 /**

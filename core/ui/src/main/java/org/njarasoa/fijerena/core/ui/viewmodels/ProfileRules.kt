@@ -24,7 +24,7 @@ data class ProfileFields(
  * applies it below the screens, which also hide what is not allowed.
  *
  * - A kid changes only its own personal settings: colour, UI Theme, Theme, Look and Feel, poster
- *   background and play next episode. It adds and deletes nothing, and is never a Nerd.
+ *   background, play next episode and track languages. It adds and deletes nothing, and is never a Nerd.
  * - A grown-up who is not an Admin changes its own name, colour, personal settings and Nerd, and
  *   adds a profile (a kid or not, never an Admin or a Nerd). It does not make itself Admin or a
  *   kid, and does not change another profile's Nerd.
@@ -89,7 +89,7 @@ object ProfileRules {
     /** Only an Admin deletes a profile. */
     fun delete(actor: ProfileActor): Boolean = actor.isAdmin
 
-    /** The colour theme, UI Theme, Look and Feel and poster background of [targetId]: its own, or an Admin's. */
+    /** The colour theme, UI Theme, Look and Feel, poster background and track languages of [targetId]: its own, or an Admin's. */
     fun changesLook(
         actor: ProfileActor,
         targetId: String,

@@ -13,6 +13,7 @@
 - **Full channel names in M3U playlists:** a channel name with a comma in it ("News, Weather and Sport") showed only the part after the last comma. Now the whole name shows. A channel with an empty group now goes in Uncategorized, not in a group with no name. TV and phone.
 - **Guides without end times:** a guide that gives only the start of each programme (XMLTV allows this) showed no programmes. Now each programme ends when the next one on its channel starts. TV and phone.
 - **Compressed guides at any address:** a guide sent compressed from an address that does not end in ".gz" (some Xtream servers do this for their guide) failed to import. The app now looks at the file itself. TV and phone.
+- **Audio and subtitle languages for each profile:** a profile's page in Settings has new rows under Playback: Audio Language, Subtitle Language and, under a language, Only When the Audio Is in Another Language. A film or an episode that you have not picked a track for (nor its show) starts in your audio language, else in the original language, and with subtitles in your language when the audio is in another language. Live TV and catch-up keep their own tracks. What you pick in the player is still remembered for that title. The setting goes to every device of the profile. TV and phone.
 
 ## Version: 0.9.20261112034854
 

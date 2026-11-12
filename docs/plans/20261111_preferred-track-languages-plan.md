@@ -1,6 +1,6 @@
 # Preferred track languages
 
-**Status:** In progress since 2026-11-11. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). Phases 1 to 3 done; Phase 4 follows. The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
+**Status:** Phases 1 to 4 done 2026-11-11; the emulator checks of Phases 3 and 4 wait. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
 
 ## Goal
 
@@ -158,7 +158,7 @@ Each track type (audio, subtitles) is decided on its own, in this order:
 | `settings_subtitles_other_audio_title` | Only When the Audio Is in Another Language | Seulement si l'audio est dans une autre langue | Raha amin'ny fiteny hafa ihany ny feo |
 | `settings_track_language_stream_default` | Stream default | Par défaut du flux | Izay ao amin'ny lahatsary |
 
-Off reuses `player_subtitles_off`. If Android has no Malagasy names for a language in the list (ICU), Phase 4 adds mg strings for the list.
+Off reuses `player_subtitles_off`. The mg value for `settings_track_language_stream_default` is "Izay ao amin'ny fandefasana": "fandefasana" is the word the strings use for a stream. The language names come from ICU (`languageLabel`); CLDR has Malagasy names for all 20 ("Anglisy", "Frantsay", …), so no mg strings were added. The en description ends with a full stop, as the other descriptions.
 
 ## Phases
 
@@ -191,7 +191,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 - **Docs:**
   - docs/FEATURES.md → Player → Track selection (Phase 3).
   - Settings → Your Profile, and Profiles → A profile's page (Phase 4).
-  - docs/RELEASE_NOTES.md (Phases 3 and 4).
+  - docs/RELEASE_NOTES.md (Phase 4: before the rows, the player change of Phase 3 has nothing a user can set, so one note covers both).
   - No Phase 5, so no docs/design.md change.
 
 ## Progress
@@ -201,7 +201,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 |
-| 4 | Not started |
+| 4 | Done 2026-11-11; emulator checks wait |
 | 5 | Dropped (PL-Q5 a) |
 
 ## Done notes
@@ -209,6 +209,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 - **Phase 1 (2026-11-11):** `TrackLanguage.kt` (core/player domain): `normalisedLanguage`, `labelLanguage`, `audioLanguage`, `subtitleLanguage`, `playingAudioLanguage`, `isCommentary`, `isAudioDescription`, `isSdh`, `isForced`, `titleNamesSubtitles`, `pickAudioTrack`, `pickSubtitleTrack` (`SubtitlePick`: Keep, Off, Track), with `TrackLanguagePreference` and `ItemLanguages`. `languageOfCode` moved there from `SearchFacets.kt`, which now uses it. `AudioTrackInfo` and `SubtitleTrackInfo` carry `languageCode`, `roleFlags` and `selectionFlags`, filled by the service and `PlaybackViewModel`. A label code counts only in capitals or as the whole label, and codec words ("HE-AAC", "DTS-ES", "HI") never count. With no track in the subtitle language, or audio in an unknown language, the pick is Off; Off still shows a forced track in the audio's language. Tests: `TrackLanguageTest` (21).
 - **Phase 2 (2026-11-11):** `AppSettings` keys `audio_language`, `subtitle_language` and `subtitles_other_audio_only`, per profile (`profileKey`) and in `SYNCED_SETTING_KEYS` and `PER_PROFILE_SETTING_KEYS`. `trackLanguages(profileId)` gives a `TrackLanguagePreference` (the switch on until set); `setAudioLanguage`, `setSubtitleLanguage` and `setSubtitlesOtherAudioOnly` queue the record (`SettingsSyncQueue.setting`). `applyRemoteSetting` keeps a blank value, a 2- or 3-letter lower-case code, and `off` for subtitles only, and drops any other value and a record for no profile (R-09). `ProfileRepository` removes the keys with the profile (`removeTrackLanguages`). Not in the backup file. docs/DATABASE_SCHEMA.md §4 lists the keys. Tests: `AppSettingsTrackLanguageTest` (10).
 - **Phase 3 (2026-11-11):** `StartTracks.kt` (core/player domain): `startTracks` (item, then series, then profile, then stream default, each type on its own), `startTrackActions` (the changes to make once the tracks are known: a saved index applied and saved again; a profile pick not saved, and made only when it is not the track that plays), `preferredAudioLanguages`. `StreamState.Success` carries `startTracks`, `trackLanguages` (blank for Live TV and catch-up) and `itemLanguages` (the title's code and subtitle tags at load; TMDB's original language from the list item, else from the detail in the enrichment). The shared helper `applyStartTracks` (core/ui) replaces the restore blocks of `TvPlayerScreen` and `MobilePlayerScreen`; it reads the latest `itemLanguages`, so an original language that lands after the stream started still counts. `PlayerMetadata.preferredAudioLanguages` goes to `resetTrackChoices`, which sets `setPreferredAudioLanguages` (empty: `PlayerConfigFactory.DEFAULT_AUDIO_LANGUAGE`, "en"). The service's `selectAudioTrack`, `selectSubtitleTrack` and `disableSubtitles` take `persist` (true by default; the pickers do not change). Tests: `StartTracksTest` (13), two new cases in `StreamingPlaybackServiceTrackResetTest` (preferred languages, an Off that is not saved). docs/FEATURES.md → Player → Track selection.
+- **Phase 4 (2026-11-11):** the rows on the profile's page, Playback section, after Play Next Episode Automatically, TV (`ProfileEditPane`) and phone (`ProfileOwnRows`, so Your Profile and Settings → Profiles → a profile): Audio Language (value: the language's name, English with no setting; description `settings_audio_language_desc`), Subtitle Language (Stream default, Off or a name) and, only while a language is picked, the switch Only When the Audio Is in Another Language. Pickers: TV `SettingsPickerPane` (as Colour, focus back on the row), phone `SettingsPickerDialog`. Choices and labels: `TrackLanguageLabels.kt` (core/ui): `trackLanguageCodes` (en, fr, mg, then 17 others by name; a code that is not listed, set on a newer version, is offered too), `trackLanguageLabel`, `audioLanguageChoices`, `subtitleLanguageChoices`. `ProfilesViewModel` saves each change at once (`ProfileRules.changesLook`: its own profile, or an admin). The audio picker has no Stream Default (PL-Q1 b). Tests: `TrackLanguageLabelsTest` (5); TV focus tests (`SettingsProfilePageFocusTest`, `SettingsProfilesFocusTest`) walk the two rows, and a new case picks a subtitle language and turns the switch off; phone `SettingsAdminTest` checks the rows and a picked subtitle language. `scripts/focus-walks/ci-settings.txt` edited by hand. docs: FEATURES (Profiles, Settings → Your Profile), NAVIGATION_GUIDE (TV Settings pickers), RELEASE_NOTES.
 
 ## Difficulty
 

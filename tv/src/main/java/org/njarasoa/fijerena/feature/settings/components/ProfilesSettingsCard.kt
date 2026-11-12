@@ -79,6 +79,11 @@ import org.njarasoa.fijerena.core.ui.theme.packagedUiThemesFor
 import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.sortedAsUiThemes
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
+import org.njarasoa.fijerena.core.ui.utils.audioLanguageChoices
+import org.njarasoa.fijerena.core.ui.utils.isSubtitleLanguage
+import org.njarasoa.fijerena.core.ui.utils.shownAudioLanguage
+import org.njarasoa.fijerena.core.ui.utils.subtitleLanguageChoices
+import org.njarasoa.fijerena.core.ui.utils.trackLanguageLabel
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
@@ -293,6 +298,14 @@ fun ProfileEditPane(
     var themeId by remember(profile.id) { mutableStateOf(viewModel.themeOf(profile.id)) }
     var uiStyleId by remember(profile.id) { mutableStateOf(viewModel.uiStyleOf(profile.id)) }
     var posterBackdrop by remember(profile.id) { mutableStateOf(viewModel.posterBackdropOf(profile.id)) }
+    // The profile's track languages: saved as they are picked, like the theme.
+    var trackLanguages by remember(profile.id) { mutableStateOf(viewModel.trackLanguagesOf(profile.id)) }
+    var choosingAudioLanguage by rememberSaveable { mutableStateOf(false) }
+    var choosingSubtitleLanguage by rememberSaveable { mutableStateOf(false) }
+    var returnToAudioLanguage by remember { mutableStateOf(false) }
+    var returnToSubtitleLanguage by remember { mutableStateOf(false) }
+    val audioLanguageFocus = remember { FocusRequester() }
+    val subtitleLanguageFocus = remember { FocusRequester() }
     // A packaged UI theme sets the colour theme and the Look and Feel (the UI themes plan).
     var uiThemeId by remember(profile.id) { mutableStateOf(viewModel.uiThemeOf(profile.id)) }
     val lookLocked = uiThemeId != UiThemes.CUSTOM
@@ -369,6 +382,34 @@ fun ProfileEditPane(
             onBack = {
                 returnToColour = true
                 choosingColour = false
+            },
+        )
+    } else if (choosingAudioLanguage) {
+        SettingsPickerPane(
+            title = stringResource(R.string.settings_audio_language_title),
+            options = audioLanguageChoices(trackLanguages.audio).map { (label, code) -> PickerOption(label, code) },
+            selectedValue = shownAudioLanguage(trackLanguages.audio),
+            onPick = {
+                trackLanguages = trackLanguages.copy(audio = it)
+                viewModel.setAudioLanguage(profile.id, it)
+            },
+            onBack = {
+                returnToAudioLanguage = true
+                choosingAudioLanguage = false
+            },
+        )
+    } else if (choosingSubtitleLanguage) {
+        SettingsPickerPane(
+            title = stringResource(R.string.settings_subtitle_language_title),
+            options = subtitleLanguageChoices(trackLanguages.subtitle).map { (label, value) -> PickerOption(label, value) },
+            selectedValue = trackLanguages.subtitle,
+            onPick = {
+                trackLanguages = trackLanguages.copy(subtitle = it)
+                viewModel.setSubtitleLanguage(profile.id, it)
+            },
+            onBack = {
+                returnToSubtitleLanguage = true
+                choosingSubtitleLanguage = false
             },
         )
     } else if (choosingUiTheme) {
@@ -451,6 +492,8 @@ fun ProfileEditPane(
             val target =
                 when {
                     returnToColour -> colourFocus
+                    returnToAudioLanguage -> audioLanguageFocus
+                    returnToSubtitleLanguage -> subtitleLanguageFocus
                     returnToUiTheme -> uiThemeFocus
                     returnToTheme -> themeFocus
                     returnToLook -> lookFocus
@@ -461,6 +504,8 @@ fun ProfileEditPane(
                 }
             target?.requestFocusWithRetry()
             returnToColour = false
+            returnToAudioLanguage = false
+            returnToSubtitleLanguage = false
             returnToUiTheme = false
             returnToTheme = false
             returnToLook = false
@@ -602,6 +647,31 @@ fun ProfileEditPane(
                     label = stringResource(R.string.settings_autoplay_next_episode_title),
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
                 )
+                SettingsRow(
+                    title = stringResource(R.string.settings_audio_language_title),
+                    description = stringResource(R.string.settings_audio_language_desc),
+                    value = trackLanguageLabel(shownAudioLanguage(trackLanguages.audio)),
+                    onClick = { choosingAudioLanguage = true },
+                    focusRequester = audioLanguageFocus,
+                )
+                SettingsRow(
+                    title = stringResource(R.string.settings_subtitle_language_title),
+                    description = null,
+                    value = trackLanguageLabel(trackLanguages.subtitle),
+                    onClick = { choosingSubtitleLanguage = true },
+                    focusRequester = subtitleLanguageFocus,
+                )
+                // Only for a subtitle language: with Stream Default or Off, the switch does nothing.
+                if (isSubtitleLanguage(trackLanguages.subtitle)) {
+                    TvSwitchRow(
+                        checked = trackLanguages.subtitlesOtherAudioOnly,
+                        onCheckedChange = {
+                            trackLanguages = trackLanguages.copy(subtitlesOtherAudioOnly = it)
+                            viewModel.setSubtitlesOtherAudioOnly(profile.id, it)
+                        },
+                        label = stringResource(R.string.settings_subtitles_other_audio_title),
+                    )
+                }
                 // The admin's rows: Admin for this profile, its sources and its content filters (the parental
                 // control).
                 if (adminRows) {

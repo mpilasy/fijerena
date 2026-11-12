@@ -20,6 +20,8 @@
 # focus tests, not yet run.
 # Admin sections on the rail (2026-11-11): the five Admin sections are rail rows under an "Admin"
 # heading; the Admin list is gone (the Admin sections plan). Edited by hand.
+# Track languages (2026-11-11): Audio Language and Subtitle Language after Play Next Episode
+# Automatically on every profile page (the preferred track languages plan). Edited by hand.
 # About page (2026-11-11): About is About Fijerena, Device Info and Logs; the version, Terms,
 # Licences and the credits moved to the About Fijerena page, walked here. Edited by hand.
 @start Admin
@@ -55,7 +57,9 @@ DOWN	Theme
 DOWN	Look and Feel
 DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
-DOWN	Play Next Episode Automatically
+DOWN	Audio Language
+DOWN	Subtitle Language
+DOWN	Subtitle Language
 LEFT	Your Profile
 # The Admin sections, under the rail's "Admin" heading (not a focus stop), then About.
 DOWN	Profiles
@@ -107,6 +111,8 @@ DOWN	Theme
 DOWN	Look and Feel
 DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
+DOWN	Audio Language
+DOWN	Subtitle Language
 DOWN	Child Profile / The only admin profile can't be a child's
 DOWN	Admin / The only admin profile stays an admin
 DOWN	Content Filters / Hide categories by prefix
@@ -125,6 +131,8 @@ DOWN	Theme
 DOWN	Look and Feel
 DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
+DOWN	Audio Language
+DOWN	Subtitle Language
 DOWN	Child Profile / On TV, Home shows only the favourites
 DOWN	Favourites / What this child sees on Home
 DOWN	Content Filters / Hide categories by prefix

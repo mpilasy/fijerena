@@ -272,6 +272,8 @@ class SettingsAdminTest {
             R.string.profile_poster_backdrop_title,
             R.string.settings_playback_section_title,
             R.string.settings_autoplay_next_episode_title,
+            R.string.settings_audio_language_title,
+            R.string.settings_subtitle_language_title,
         ).forEach { scrollTo(text(it)) }
         rule.onNodeWithText(text(R.string.profile_section_admin)).assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_admin_title)).assertDoesNotExist()
@@ -287,6 +289,21 @@ class SettingsAdminTest {
         scrollTo(text(R.string.profile_child_title))
         scrollTo(text(R.string.settings_admin_title))
         scrollTo(text(R.string.profile_delete_button))
+    }
+
+    @Test
+    fun `a subtitle language picked on Settings saves at once and shows the switch`() {
+        showSettings(active = GUEST)
+        rule.onNodeWithText(text(R.string.settings_subtitles_other_audio_title)).assertDoesNotExist()
+
+        scrollTo(text(R.string.settings_subtitle_language_title))
+        rule.onNodeWithText(text(R.string.settings_subtitle_language_title)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("French").performClick()
+        rule.waitForIdle()
+
+        assertEquals("fr", AppSettings(context).trackLanguages(GUEST).subtitle)
+        scrollTo(text(R.string.settings_subtitles_other_audio_title))
     }
 
     @Test
