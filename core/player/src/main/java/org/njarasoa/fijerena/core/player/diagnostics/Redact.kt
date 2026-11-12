@@ -32,14 +32,24 @@ object Redact {
 
     private val bearer = Regex("""(\bBearer\s+)[^\s"',;]+""", RegexOption.IGNORE_CASE)
 
+    // A host named outside a URL by the network stack: "Unable to resolve host "panel.example"",
+    // "failed to connect to panel.example/…", "Hostname panel.example not verified".
+    private val namedHost = Regex("""(\b(?:resolve host|connect to|Hostname)\s+"?)[^\s"/:,;)]+""", RegexOption.IGNORE_CASE)
+
+    // An IPv4 address, with its port.
+    private val ipv4 = Regex("""\b(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}(?::\d{1,5})?\b""")
+
     /**
      * For a device report that goes to the other devices of a sync group (the device diagnostics
      * sync plan): [text], then the host of every URL becomes [MASK] (only the scheme stays before
-     * the path) and the token after `Bearer` too. A report gets copied and shared from the phone, so it does
-     * not name the servers. Logs on the device keep the hosts. Idempotent, as [text].
+     * the path), and so do the token after `Bearer`, a host the network stack names outside a URL
+     * and every IPv4 address. A report gets copied and shared from the phone, so it does not name
+     * the servers. Logs on the device keep the hosts. Idempotent, as [text].
      */
     fun report(input: String): String =
         text(input)
             .replace(urlHost, "$1$MASK")
             .replace(bearer, "$1$MASK")
+            .replace(namedHost, "$1$MASK")
+            .replace(ipv4, MASK)
 }

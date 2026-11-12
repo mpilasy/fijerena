@@ -41,4 +41,26 @@ class RedactReportTest {
 
         assertEquals(text, Redact.report(text))
     }
+
+    @Test
+    fun `a host the network stack names outside a URL is masked`() {
+        assertEquals(
+            "UnknownHostException: Unable to resolve host \"***\": No address associated with hostname",
+            Redact.report("UnknownHostException: Unable to resolve host \"panel.example\": No address associated with hostname"),
+        )
+        assertEquals(
+            "ConnectException: Failed to connect to ***/*** (port 8080)",
+            Redact.report("ConnectException: Failed to connect to panel.example/203.0.113.7:8080 (port 8080)"),
+        )
+        assertEquals(
+            "SSLPeerUnverifiedException: Hostname *** not verified",
+            Redact.report("SSLPeerUnverifiedException: Hostname panel.example not verified"),
+        )
+    }
+
+    @Test
+    fun `an IPv4 address is masked, a version number is not`() {
+        assertEquals("connect timed out to *** after 10 s", Redact.report("connect timed out to 192.168.68.21:5555 after 10 s"))
+        assertEquals("Fijerena 0.9.20261112015711 · Media3 1.9.0", Redact.report("Fijerena 0.9.20261112015711 · Media3 1.9.0"))
+    }
 }

@@ -116,7 +116,8 @@ DD-Q3 (a), DD-Q4 (a), DD-Q5 (a), DD-Q6 (a), DD-Q7 (a).
     first. This is far below the server's 64 Ki sealed characters.
   - The receiver refuses a value over 16,000 characters (`MAX_DEVICE_REPORT_LENGTH`), as for builds.
 - **Masking:** each text field goes through `Redact.text`. Then a new `Redact.report` masks URL hosts
-  (DD-Q5) and `Bearer <token>`. Neither changes Logs on the device.
+  (DD-Q5) and `Bearer <token>`, and (added 2026-11-11 at merge) a host the network stack names outside a URL
+  ("resolve host", "connect to", "Hostname") and every IPv4 address. Neither changes Logs on the device.
 - **Clear on the device:** Logs → Clear also writes `diagnostics_cleared_at` (local only). The report
   leaves out entries older than that, so it clears too, also the exits that the system keeps.
 - **The builder:** `DeviceReportBuilder.build(context, now)` reads `CrashLog.read()` and
@@ -212,7 +213,7 @@ RELEASE_NOTES. No Room migration.
 
 - `DeviceReport` and `DeviceReportBuilder` (core/network sync). `DeviceReportBuilder.build(Input)` is pure;
   `build(context, now, clearedAt)` reads `CrashLog`, `ProcessExits`, `ConnectionLog` and `SafeMode.lastStartedAt`.
-- `Redact.report` = `Redact.text`, then the URL hosts (with the userinfo and the port) and `Bearer <token>`.
+- `Redact.report` = `Redact.text`, then the URL hosts (with the userinfo and the port), `Bearer <token>`, a host named after "resolve host", "connect to" or "Hostname", and every IPv4 address (with its port).
 - `CrashLog` writes the screen into the first line of each new entry (`" · screen: <route>"`), from
   `CrashLog.screen`, which both nav hosts set. `CrashLog.parse` splits an entry. Logs shows the screen in the title.
 - `SafeMode` writes `files/safemode/started_at` when safe mode starts (`safeModeAt`).
