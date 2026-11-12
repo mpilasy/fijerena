@@ -849,6 +849,10 @@
     <string name="safe_mode_cleared">Voafafa ny cache. Safidio Tohizo mba hanombohana ara-dalàna.</string>
     <string name="safe_mode_clear_failed">Misy cache tsy voafafa. Ao amin\'ny tatitra ny antsipiriany.</string>
     <string name="safe_mode_diagnostics">Asehoy ny tatitra</string>
+    <string name="safe_mode_send_logs">Alefaso amin\'ny vondrona fampifanarahana ny tatitra</string>
+    <string name="safe_mode_logs_sending">Mandefa ny tatitra…</string>
+    <string name="safe_mode_logs_sent">Nety: nalefa tany amin\'ny vondrona fampifanarahana ny tatitra.</string>
+    <string name="safe_mode_logs_send_failed">Tsy nety ny nandefa ny tatitra.</string>
     <string name="newer_data_title">Angona avy amin\'ny dikan-teny vaovao kokoa</string>
     <string name="newer_data_message">Dikan-teny vaovao kokoa an\'i Fijerena no nitahiry ny loharanonao amin\'ity fitaovana ity (dikan\'ny angona %1$d; ity dikan-teny ity dia mamaky hatramin\'ny %2$d). Apetraho ny dikan-teny vaovao kokoa mba hampiasana azy ireo hatrany.</string>
     <string name="newer_data_hint">Na averina amin\'ny voalohany ny loharano mba hampiasana ity dikan-teny ity izao: atokana ho tahiry ny loharano sy ny fikirakirana azy ary manomboka tsy misy ianao. Mijanona eo amin\'ny fitaovana ny ankafizina sy ny tantaran\'ny fijerena.</string>

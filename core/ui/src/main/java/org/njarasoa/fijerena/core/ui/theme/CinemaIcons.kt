@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.sharp.List
 import androidx.compose.material.icons.automirrored.sharp.MenuBook
+import androidx.compose.material.icons.automirrored.sharp.Send
 import androidx.compose.material.icons.automirrored.sharp.TrendingUp
 import androidx.compose.material.icons.automirrored.sharp.VolumeUp
 import androidx.compose.material.icons.outlined.Add
@@ -594,6 +597,11 @@ object CinemaIcons {
     val Logs: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Description, Icons.Outlined.Description, Icons.Sharp.Description)
+
+    /** Safe mode's "Send logs to my sync group" (the device diagnostics sync plan). */
+    val Send: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.AutoMirrored.Rounded.Send, Icons.AutoMirrored.Outlined.Send, Icons.AutoMirrored.Sharp.Send)
 
     /** A favourite whose source no longer lists it: the "Gone from source" mark. */
     val LinkOff: ImageVector

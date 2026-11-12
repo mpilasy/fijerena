@@ -436,7 +436,8 @@ adb -s <device-id> shell am broadcast --include-stopped-packages -a org.njarasoa
 
 `DEBUG_SYNC` commands (`--es cmd …`): `setup --es url <server> [--es secret <setup secret>] [--es name
 <device name>]` (new account), `invite` (logs an invite QR code's text), `scan --es qr '<qr text>'`,
-`handoff --es url <server>`, `now` (a sync pass), `status`, `unlink`. The full list is in the
+`handoff --es url <server>`, `now` (a sync pass), `status`, `unlink`, `test-error [--es msg <text>]` (an error in
+Logs, then the device report again: the device diagnostics sync plan). The full list is in the
 receiver's KDoc.
 
 ### Game Reminders

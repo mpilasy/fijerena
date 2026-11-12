@@ -93,6 +93,20 @@ class SyncEngine(
             }
         }
 
+    /**
+     * Pushes [records] and does nothing else: no pull, no apply, no seed, no cursor, no socket. For
+     * safe mode, where the rest of sync does not start (the device diagnostics sync plan). It uses
+     * the stored link and account key, and the records' own clock values. Returns how many records
+     * the server took. Throws [SyncApiException] when the call fails, [IllegalStateException] when
+     * this device is not linked.
+     */
+    suspend fun pushOnly(records: List<SyncRecord>): Int =
+        mutex.withLock {
+            val link = checkNotNull(store.link) { "This device is not linked" }
+            val crypto = AccountKeyCrypto(link.accountKey)
+            api.push(link.serverUrl, link.deviceToken, records.map { SyncCodec.encode(it, crypto) }).accepted
+        }
+
     /** Full Resync: the next pass pulls everything from the server's first record again. */
     suspend fun startOver() =
         mutex.withLock {

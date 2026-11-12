@@ -1,6 +1,6 @@
 # Device diagnostics over live sync
 
-**Status:** In progress since 2026-11-11. Phases 1 to 3 done; the emulator check waits. The user decided DD-Q1 to DD-Q7, all (a).
+**Status:** Phases 1 to 4 done 2026-11-11; the emulator check of phases 3 and 4 waits. The user decided DD-Q1 to DD-Q7, all (a).
 
 ## Goal
 
@@ -206,7 +206,7 @@ RELEASE_NOTES. No Room migration.
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
 | 3 | Done 2026-11-11 (emulator check waits) |
-| 4 | Not started |
+| 4 | Done 2026-11-11 (emulator check waits) |
 
 **Phase 1 done (2026-11-11):**
 
@@ -252,6 +252,20 @@ RELEASE_NOTES. No Room migration.
 - Debug: `SyncDebugReceiver` `test-error [--es msg <text>]` records an error and sends the report again.
 - Tests: `DeviceLogsFocusTest` (TV: Logs between Rename and Remove, the page's first focus, Back to Logs),
   `MobileDeviceLogsScreenTest`, and `DeviceReportLineTest` (in the mobile module: core/ui runs no Robolectric).
+
+**Phase 4 done (2026-11-11):**
+
+- `SyncEngine.pushOnly(records)`: one push with the stored link and account key; no pull, no apply, no
+  seed, no cursor.
+- `SafeModeViewModel.sendLogs` builds the report and pushes the one `device_report:<deviceId>` record, with
+  the clock value "now". It writes nothing to the prefs or `providers.db` (the database can be what
+  crashes); the next normal start sees a change and sends again with the sync clock.
+- The icon action "Send logs to my sync group" (`CinemaIcons.Send`) shows only on a linked device whose
+  Share Logs with My Sync Group switch is on (a departure: the plan did not say; the switch is the user's
+  choice not to share). TV: after Show logs, focus stays on it. Phone: in the top bar. The screen says
+  "Logs sent to your sync group." or "Couldn't send the logs.", and the masked raw error for a Nerd.
+- Test: `SyncEnginePushOnlyTest` (one sealed record pushed, no pull, no cursor or seed written; nothing
+  sent when not linked).
 
 ## Difficulty
 

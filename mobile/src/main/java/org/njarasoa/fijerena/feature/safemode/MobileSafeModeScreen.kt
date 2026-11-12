@@ -26,7 +26,9 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SafeModeViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -36,6 +38,7 @@ import org.njarasoa.fijerena.ui.components.MobileScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
  * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Back has
@@ -49,11 +52,25 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
     val activity = LocalActivity.current
     val viewModel: SafeModeViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val clearState by viewModel.clearState.collectAsStateWithLifecycle()
+    val canSendLogs by viewModel.canSendLogs.collectAsStateWithLifecycle()
+    val sendState by viewModel.sendState.collectAsStateWithLifecycle()
+    val sendError by viewModel.sendError.collectAsStateWithLifecycle()
     var confirmingClear by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            MobileScreenHeader(title = stringResource(R.string.safe_mode_title))
+            // On a linked device that shares its logs: send the device report to the sync group
+            // (the device diagnostics sync plan).
+            MobileScreenHeader(title = stringResource(R.string.safe_mode_title)) {
+                if (canSendLogs) {
+                    IconAction(
+                        onClick = viewModel::sendLogs,
+                        icon = CinemaIcons.Send,
+                        label = stringResource(R.string.safe_mode_send_logs),
+                        enabled = sendState != SafeModeViewModel.SendState.SENDING,
+                    )
+                }
+            }
         },
     ) { paddingValues ->
         Column(
@@ -70,6 +87,13 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
             CinemaText(stringResource(R.string.safe_mode_hint), tone = TextTone.Secondary)
             clearStateText(clearState)?.let { status ->
                 CinemaText(status)
+            }
+            sendStateText(sendState)?.let { status ->
+                CinemaText(status, tone = if (sendState == SafeModeViewModel.SendState.FAILED) TextTone.Danger else TextTone.Primary)
+            }
+            // Raw error text for a Nerd only, masked.
+            if (LocalNerd.current && sendState == SafeModeViewModel.SendState.FAILED) {
+                sendError?.let { CinemaText("[dev] $it", role = TextRole.BodySmall, tone = TextTone.Secondary) }
             }
             CinemaButton(
                 onClick = { activity?.let { SafeMode.leave(it) } },
@@ -101,6 +125,15 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun sendStateText(state: SafeModeViewModel.SendState): String? =
+    when (state) {
+        SafeModeViewModel.SendState.IDLE -> null
+        SafeModeViewModel.SendState.SENDING -> stringResource(R.string.safe_mode_logs_sending)
+        SafeModeViewModel.SendState.SENT -> stringResource(R.string.safe_mode_logs_sent)
+        SafeModeViewModel.SendState.FAILED -> stringResource(R.string.safe_mode_logs_send_failed)
+    }
 
 @Composable
 private fun clearStateText(state: SafeModeViewModel.ClearState): String? =

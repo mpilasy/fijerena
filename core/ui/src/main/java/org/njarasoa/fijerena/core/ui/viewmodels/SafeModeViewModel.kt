@@ -12,17 +12,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonPrimitive
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.sync.DeviceReportBuilder
+import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
+import org.njarasoa.fijerena.core.network.sync.SyncEngine
+import org.njarasoa.fijerena.core.network.sync.SyncKey
+import org.njarasoa.fijerena.core.network.sync.SyncKind
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
+import org.njarasoa.fijerena.core.network.sync.SyncRecord
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
  * The safe-mode screen's "Clear caches" (see `SafeMode`): the EPG index, each source's catalogue
  * cache and the poster cache — everything the app downloads again on its own. Sources, profiles,
  * favourites and watch history are never touched. Each step runs even if an earlier one failed,
  * since the broken one may be exactly what safe mode is working around. See
- * the next level rock solid resilience plan → R-10.
+ * the next level rock solid resilience plan → R-10. Also "Send logs to my sync group": one push of
+ * this device's report, with no other sync (the device diagnostics sync plan, Phase 4).
  */
 class SafeModeViewModel(
     application: Application,
@@ -33,6 +45,69 @@ class SafeModeViewModel(
 
     private val _clearState = MutableStateFlow(ClearState.IDLE)
     val clearState: StateFlow<ClearState> = _clearState.asStateFlow()
+
+    enum class SendState { IDLE, SENDING, SENT, FAILED }
+
+    private val canSendLogsState = MutableStateFlow(false)
+
+    /**
+     * "Send logs to my sync group" shows: this device is linked and its Share Logs with My Sync
+     * Group switch is on (the device diagnostics sync plan).
+     */
+    val canSendLogs: StateFlow<Boolean> = canSendLogsState.asStateFlow()
+
+    private val sendStateFlow = MutableStateFlow(SendState.IDLE)
+    val sendState: StateFlow<SendState> = sendStateFlow.asStateFlow()
+
+    private val sendErrorFlow = MutableStateFlow<String?>(null)
+
+    /** Why the last send failed, masked: raw text that only a Nerd sees. */
+    val sendError: StateFlow<String?> = sendErrorFlow.asStateFlow()
+
+    init {
+        // The link lives in encrypted prefs: read off the main thread.
+        viewModelScope.launchGuarded("SafeModeViewModel.canSendLogs") {
+            canSendLogsState.value =
+                withContext(Dispatchers.IO) { SyncAccountStore(context).link != null && AppSettings(context).shareLogsWithGroup }
+        }
+    }
+
+    /**
+     * Sends this device's report to its sync group, and nothing else: safe mode starts no sync, and
+     * a crash loop is the case that needs the report most. One push of the one record
+     * ([SyncEngine.pushOnly]): no pull, no apply, no socket. The record's clock is now, so it beats
+     * the last report the device sent.
+     */
+    fun sendLogs() {
+        if (sendStateFlow.value != SendState.SENDING) {
+            sendStateFlow.value = SendState.SENDING
+            sendErrorFlow.value = null
+            viewModelScope.launchGuarded(
+                "SafeModeViewModel.sendLogs",
+                onError = { e ->
+                    sendErrorFlow.value = Redact.text("${e.javaClass.simpleName}: ${e.message}")
+                    sendStateFlow.value = SendState.FAILED
+                },
+            ) {
+                val accepted = withContext(Dispatchers.IO) { pushReport() }
+                sendStateFlow.value = if (accepted > 0) SendState.SENT else SendState.FAILED
+            }
+        }
+    }
+
+    private suspend fun pushReport(): Int {
+        val store = SyncAccountStore(context)
+        val deviceId = checkNotNull(store.link?.deviceId) { "This device is not linked" }
+        val now = System.currentTimeMillis()
+        val report = DeviceReportBuilder.build(context, now, AppSettings(context).diagnosticsClearedAt)
+        val record =
+            SyncRecord(
+                SyncKey(SyncKind.SHARED, "", SyncKind.SETTING, AppSettings.deviceReportSettingKey(deviceId)),
+                hlc = now,
+                payload = SyncPayloads.encode(SyncPayloads.Setting(JsonPrimitive(DeviceReportBuilder.encode(report)))),
+            )
+        return SyncEngine(context, store = store).pushOnly(listOf(record))
+    }
 
     fun clearCaches() {
         if (_clearState.value != ClearState.CLEARING) {

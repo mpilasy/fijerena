@@ -31,6 +31,8 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.history.LocalNerd
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.SafeModeViewModel
@@ -38,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -48,12 +51,14 @@ import org.njarasoa.fijerena.ui.theme.scaled
 private const val FOCUS_CONTINUE = 0
 private const val FOCUS_CLEAR = 1
 private const val FOCUS_DIAGNOSTICS = 2
+private const val FOCUS_SEND = 3
 
 /**
  * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Focus lands on
  * Continue, and comes back to the action the user left from (the confirmation, Diagnostics). Back
  * has nothing to pop here, so it leaves the app as from home. See the next level rock solid
- * resilience plan, R-10.
+ * resilience plan, R-10. On a linked device that shares its logs, an icon action after Show logs
+ * sends the device report to the sync group (the device diagnostics sync plan).
  */
 @Composable
 fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
@@ -61,6 +66,10 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
     val activity = LocalActivity.current
     val viewModel: SafeModeViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val clearState by viewModel.clearState.collectAsStateWithLifecycle()
+    val canSendLogs by viewModel.canSendLogs.collectAsStateWithLifecycle()
+    val sendState by viewModel.sendState.collectAsStateWithLifecycle()
+    val sendError by viewModel.sendError.collectAsStateWithLifecycle()
+    val sendFocus = remember { FocusRequester() }
     val scale = LocalUiScale.current
     var confirmingClear by remember { mutableStateOf(false) }
     var focusTarget by rememberSaveable { mutableIntStateOf(FOCUS_CONTINUE) }
@@ -75,9 +84,10 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
                 when (focusTarget) {
                     FOCUS_CLEAR -> clearFocus
                     FOCUS_DIAGNOSTICS -> diagnosticsFocus
+                    FOCUS_SEND -> sendFocus
                     else -> continueFocus
                 }
-            target.requestFocusWithRetry()
+            target.requestFocusWithRetry(fallback = continueFocus)
         }
     }
 
@@ -110,6 +120,24 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
             clearStateText(clearState)?.let { status ->
                 CinemaText(status, role = TextRole.Body, tone = TextTone.Primary)
             }
+            sendStateText(sendState)?.let { status ->
+                CinemaText(
+                    status,
+                    role = TextRole.Body,
+                    tone =
+                        if (sendState ==
+                            SafeModeViewModel.SendState.FAILED
+                        ) {
+                            TextTone.Danger
+                        } else {
+                            TextTone.Primary
+                        },
+                )
+            }
+            // Raw error text for a Nerd only, masked.
+            if (LocalNerd.current && sendState == SafeModeViewModel.SendState.FAILED) {
+                sendError?.let { CinemaText("[dev] $it", role = TextRole.BodySmall, tone = TextTone.Secondary) }
+            }
             Row(
                 modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
@@ -135,6 +163,17 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
                     text = stringResource(R.string.safe_mode_diagnostics),
                     modifier = Modifier.focusRequester(diagnosticsFocus),
                 )
+                if (canSendLogs) {
+                    TvIconAction(
+                        onClick = {
+                            focusTarget = FOCUS_SEND
+                            viewModel.sendLogs()
+                        },
+                        icon = CinemaIcons.Send,
+                        label = stringResource(R.string.safe_mode_send_logs),
+                        modifier = Modifier.focusRequester(sendFocus),
+                    )
+                }
             }
         }
     }
@@ -152,6 +191,15 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun sendStateText(state: SafeModeViewModel.SendState): String? =
+    when (state) {
+        SafeModeViewModel.SendState.IDLE -> null
+        SafeModeViewModel.SendState.SENDING -> stringResource(R.string.safe_mode_logs_sending)
+        SafeModeViewModel.SendState.SENT -> stringResource(R.string.safe_mode_logs_sent)
+        SafeModeViewModel.SendState.FAILED -> stringResource(R.string.safe_mode_logs_send_failed)
+    }
 
 @Composable
 private fun clearStateText(state: SafeModeViewModel.ClearState): String? =
