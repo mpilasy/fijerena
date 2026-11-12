@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -19,6 +21,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
  * `snapshotFlow {}`, which would emit once and wait for ever. [loaderState] gives TMDB's original
  * language when it landed after the stream started.
  */
+@OptIn(UnstableApi::class)
 suspend fun applyStartTracks(
     state: StreamLoaderViewModel.StreamState.Success,
     playbackState: StateFlow<PlaybackState>,
