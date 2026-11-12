@@ -65,21 +65,31 @@ data class PlayerMetadata(
 data class AudioTrackInfo(
     val groupIndex: Int,
     val trackIndex: Int,
+    // For display: the stream's code, or the translated word "Unknown".
     val language: String,
     val label: String,
     val channelCount: Int,
     val sampleRate: Int,
     val bitrate: Int,
     val isSelected: Boolean,
+    // The raw Format data that the profile's track languages read (TrackLanguage.kt).
+    val languageCode: String? = null,
+    val roleFlags: Int = 0,
+    val selectionFlags: Int = 0,
 )
 
 data class SubtitleTrackInfo(
     val groupIndex: Int,
     val trackIndex: Int,
+    // For display: the stream's code, or the translated word "Unknown".
     val language: String,
     val label: String,
     val mimeType: String, // e.g., "text/vtt", "application/x-subrip"
     val isSelected: Boolean,
+    // The raw Format data that the profile's track languages read (TrackLanguage.kt).
+    val languageCode: String? = null,
+    val roleFlags: Int = 0,
+    val selectionFlags: Int = 0,
 )
 
 data class VideoQualityInfo(

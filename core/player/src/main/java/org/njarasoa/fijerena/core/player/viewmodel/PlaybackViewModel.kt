@@ -417,6 +417,9 @@ class PlaybackViewModel(
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
                             isSelected = isSelected,
+                            languageCode = format.language,
+                            roleFlags = format.roleFlags,
+                            selectionFlags = format.selectionFlags,
                         ),
                     )
                 }
@@ -464,6 +467,9 @@ class PlaybackViewModel(
                                     }
                                 ) ?: "unknown",
                             isSelected = isSelected,
+                            languageCode = format.language,
+                            roleFlags = format.roleFlags,
+                            selectionFlags = format.selectionFlags,
                         ),
                     )
                 }

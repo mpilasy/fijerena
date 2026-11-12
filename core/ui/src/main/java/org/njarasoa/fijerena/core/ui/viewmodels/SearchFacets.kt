@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import org.njarasoa.fijerena.core.network.wanted.TmdbTitle
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.languageOfCode
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import java.util.Locale
@@ -95,15 +96,6 @@ fun providerCode(name: String): ProviderCode? {
         }
     val language = COUNTRY_LANGUAGES[code] ?: if (region != null) null else languageOfCode(code) ?: code
     return ProviderCode(language, region)
-}
-
-private fun languageOfCode(code: String): String? {
-    val lower = code.lowercase()
-    return when (lower.length) {
-        2 -> lower.takeIf { it in ISO_LANGUAGES }
-        3 -> BIBLIOGRAPHIC_LANGUAGES[lower] ?: ISO3_LANGUAGES[lower]
-        else -> null
-    }
 }
 
 /**
@@ -275,26 +267,6 @@ private const val DECADE = 10
 
 private val ISO_LANGUAGES = Locale.getISOLanguages().toSet()
 private val ISO_COUNTRIES = Locale.getISOCountries().toSet()
-private val ISO3_LANGUAGES = Locale.getISOLanguages().associateBy { Locale.forLanguageTag(it).isO3Language }
-
-/** ISO 639-2 bibliographic codes that differ from the terminology ones Java knows. */
-private val BIBLIOGRAPHIC_LANGUAGES =
-    mapOf(
-        "fre" to "fr",
-        "ger" to "de",
-        "dut" to "nl",
-        "gre" to "el",
-        "per" to "fa",
-        "alb" to "sq",
-        "chi" to "zh",
-        "cze" to "cs",
-        "rum" to "ro",
-        "slo" to "sk",
-        "arm" to "hy",
-        "geo" to "ka",
-        "mac" to "mk",
-        "ice" to "is",
-    )
 
 /** Provider codes that name a country with one main language: they give both. */
 private val COUNTRY_LANGUAGES =

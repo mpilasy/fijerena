@@ -1,6 +1,6 @@
 # Preferred track languages
 
-**Status:** Planned 2026-11-11, not started; the per-stream track reset was fixed on its own 2026-11-11. Open questions PL-Q1 to PL-Q7 wait for the user.
+**Status:** In progress since 2026-11-11. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). Phase 1 done; Phases 2 to 4 follow. The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
 
 ## Goal
 
@@ -63,25 +63,28 @@ setting to every device of the profile.
 
 ## Open questions
 
-| # | Question | Options |
-|---|----------|---------|
-| PL-Q1 | What does a profile with no setting get? | (a) **The stream's default track.** Remove the fixed `"en"` from `PlayerConfigFactory`. Recommended: today a multi-audio film starts in English for every profile, and nobody chose that. (b) Keep English as the default. (c) The app language. |
-| PL-Q2 | What can the audio setting say? | (a) **One language, then "the original".** The original is TMDB's original language when it is known, else a `qaa` track, else the stream's default track. Recommended: it is your example, and it is one row. (b) Two languages in order, then the stream's default track. (c) One language, then the stream's default track. |
-| PL-Q3 | What can the subtitle setting say? | (a) **A language, and a switch "Only When the Audio Is in Another Language" (on by default).** Values: Stream Default, Off, or a language. Recommended: the switch covers your example, and "Always" helps a viewer who learns a language or does not hear well. (b) A language only, always with the rule "only when the audio is in another language". |
-| PL-Q4 | Live TV and catch-up too? | (a) **Yes.** Live channels have no memory, so the profile setting is the only choice, for example the original-version (`qaa`) track of a French channel. Recommended. (b) Films and episodes only. |
-| PL-Q5 | Jellyfin items that the server transcodes? | (a) **The Jellyfin server's choice**, from its user's language settings. Direct play and direct stream follow the profile in the player. Recommended for this plan: most items play direct. (b) Send `AudioStreamIndex` and `SubtitleStreamIndex`, picked from the item's media streams with the profile's languages (Phase 5). |
-| PL-Q6 | Which languages does the picker offer? | (a) **A fixed list of about 20 common languages.** English, French and Malagasy come first, then the others by name in the app language: Arabic, Chinese, Dutch, German, Hindi, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Turkish and others. Recommended: it stays short with the D-pad. (b) Every ISO 639-1 language that Android knows, by name. (c) The list of (a), then "More Languages" with (b). |
-| PL-Q7 | Make the per-series memory follow a language? | (a) **No, keep the index (as today).** Recommended for this plan. (b) Also save the language of the picked track, and find the same language in the next episode. Today index 1 is English in one episode and French in the next when the order changes. (b) needs a migration 32→33, a new sync payload field and a backup field. Better as its own plan. |
+All decided by the user 2026-11-11. The **Decided** column gives the choice; PL-Q1 and PL-Q4 differ
+from the recommendations, and the design below follows the decisions.
+
+| # | Question | Options | Decided |
+|---|----------|---------|---------|
+| PL-Q1 | What does a profile with no setting get? | (a) **The stream's default track.** Remove the fixed `"en"` from `PlayerConfigFactory`. Recommended: today a multi-audio film starts in English for every profile, and nobody chose that. (b) Keep English as the default. (c) The app language. | **(b)** Keep English as the default for a profile with no setting. |
+| PL-Q2 | What can the audio setting say? | (a) **One language, then "the original".** The original is TMDB's original language when it is known, else a `qaa` track, else the stream's default track. Recommended: it is your example, and it is one row. (b) Two languages in order, then the stream's default track. (c) One language, then the stream's default track. | **(a)** One language, then the original. |
+| PL-Q3 | What can the subtitle setting say? | (a) **A language, and a switch "Only When the Audio Is in Another Language" (on by default).** Values: Stream Default, Off, or a language. Recommended: the switch covers your example, and "Always" helps a viewer who learns a language or does not hear well. (b) A language only, always with the rule "only when the audio is in another language". | **(a)** Stream Default, Off or a language, and the switch (on by default). |
+| PL-Q4 | Live TV and catch-up too? | (a) **Yes.** Live channels have no memory, so the profile setting is the only choice, for example the original-version (`qaa`) track of a French channel. Recommended. (b) Films and episodes only. | **(b)** Films and episodes only. |
+| PL-Q5 | Jellyfin items that the server transcodes? | (a) **The Jellyfin server's choice**, from its user's language settings. Direct play and direct stream follow the profile in the player. Recommended for this plan: most items play direct. (b) Send `AudioStreamIndex` and `SubtitleStreamIndex`, picked from the item's media streams with the profile's languages (Phase 5). | **(a)** The server's choice; direct play follows the profile. No Phase 5. |
+| PL-Q6 | Which languages does the picker offer? | (a) **A fixed list of about 20 common languages.** English, French and Malagasy come first, then the others by name in the app language: Arabic, Chinese, Dutch, German, Hindi, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Turkish and others. Recommended: it stays short with the D-pad. (b) Every ISO 639-1 language that Android knows, by name. (c) The list of (a), then "More Languages" with (b). | **(a)** A fixed list of 20 languages. |
+| PL-Q7 | Make the per-series memory follow a language? | (a) **No, keep the index (as today).** Recommended for this plan. (b) Also save the language of the picked track, and find the same language in the next episode. Today index 1 is English in one episode and French in the next when the order changes. (b) needs a migration 32→33, a new sync payload field and a backup field. Better as its own plan. | **(a)** Keep the index. No migration. |
 
 ## Design
 
 ### The setting
 
 - Three per-profile keys, all strings, synced as `SETTING` records. The newer change wins.
-  - `audio_language`: an ISO 639-1 code, or blank for the stream's default track (PL-Q1 a).
+  - `audio_language`: an ISO 639-1 code, or blank for no setting. No setting keeps today's behaviour (PL-Q1 b): Media3 prefers English (`setPreferredAudioLanguage("en")`), and the player changes no audio track. The row shows "English" for it.
   - `subtitle_language`: a code, `off`, or blank for the stream's default.
   - `subtitles_other_audio_only`: a boolean, true by default (PL-Q3 a).
-- `applyRemoteSetting` keeps a blank value, `off`, or 2 to 3 lower-case letters. It drops any other value and keeps the local one (the R-09 rule). It keeps a code that this version does not list, and the picker shows that code by `languageLabel`.
+- `applyRemoteSetting` keeps a blank value, `off` (subtitles only), or 2 to 3 lower-case letters. It drops any other value and keeps the local one (the R-09 rule). It keeps a code that this version does not list, and the picker shows that code by `languageLabel`.
 - **Deleting a profile** removes the keys in `ProfileRepository`.
 - **Backup file:** the keys are not in it, as Play Next Episode Automatically.
 - **Child profile:** no special rules.
@@ -92,8 +95,8 @@ Each track type (audio, subtitles) is decided on its own, in this order:
 
 1. The item's own choice.
 2. The series' choice (episodes only). The rule stays as today: the episode takes the series' choice only when it has no audio and no subtitle choice.
-3. The profile's setting.
-4. The stream's default track.
+3. The profile's setting (films and episodes only, PL-Q4 b).
+4. The stream's default track (for audio with no setting: English first, as today, PL-Q1 b).
 
 - `StreamLoaderViewModel.StreamState.Success` tells where each index came from (item, series or none). Thus the player applies the profile only to a type with no saved choice.
 - A pure function `startTracks(item, series, preference)` holds this order, with unit tests.
@@ -122,22 +125,23 @@ Each track type (audio, subtitles) is decided on its own, in this order:
 
 ### In the player
 
-- **At each `playStream`:**
+- **At each `playStream` of a new stream URL:**
   - turn text back on (`setTrackTypeDisabled(TRACK_TYPE_TEXT, false)`);
   - clear the audio and text overrides;
-  - set `setPreferredAudioLanguages(profile language, original language)`.
-  Thus a well-tagged stream starts on the right track, with no switch after the first frame. The fixed `"en"` goes (PL-Q1 a).
+  - set `setPreferredAudioLanguages(profile language, original language)` from `PlayerMetadata.preferredAudioLanguages`.
+  Thus a well-tagged stream starts on the right track, with no switch after the first frame. With no list (no audio setting, Live TV, catch-up, every other caller) the preference stays `"en"`, as before (PL-Q1 b, PL-Q4 b).
 - **Once the tracks are known:** one shared helper in core/ui replaces the two restore blocks of `TvPlayerScreen` and `MobilePlayerScreen`.
   - It applies a saved index as today. Saving it again keeps today's series chain.
   - For a type with no saved index, it runs the matching function. It changes a track only when its pick is not the one that plays.
 - **A profile pick is never saved.** The service gets select calls with `persist = false`. Thus a later change of the setting still applies to items the viewer never picked for, and the series memory holds only the viewer's own picks.
-- **Live TV and catch-up** use the same helper with no saved index (PL-Q4 a).
+- **Live TV and catch-up** do not use the profile's languages (PL-Q4 b): no preference goes into their `StreamState.Success`, and Media3 keeps English first.
+- **Jellyfin transcodes** (PL-Q5 a) need no code of their own: the HLS carries the one audio track that the server picked, so the audio pick finds that track and changes nothing. Direct play and direct stream carry every track, and the helper picks among them.
 - **The pickers do not change.** A pick there is the item's own choice, as today.
 
 ### Settings rows (TV and phone)
 
 - **Rows:** the Playback section of the profile page, after Play Next Episode Automatically:
-  - **Audio Language:** value "Stream Default" or the language's name.
+  - **Audio Language:** value: the language's name; "English" when the profile has no setting (PL-Q1 b). No "Stream Default" choice: the user chose English as the default.
   - **Subtitle Language:** value "Stream Default", "Off" or the language's name.
   - **Only When the Audio Is in Another Language:** a switch, shown when a language is picked.
 - **Pickers:** one column, starting on the current value.
@@ -164,7 +168,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 | 2 | The three keys, their sync, their removal with the profile; `AppSettingsTrackLanguageTest` | None |
 | 3 | The player uses them: per-stream reset, Media3 preferred languages, the shared start-tracks helper on TV and phone, picks that are not saved, live and catch-up (PL-Q4); `startTracks` tests | Items with no saved choice start in the profile's languages (set only by sync so far) |
 | 4 | The Settings rows and pickers on TV and phone; strings en, fr, mg; docs | Users set their languages |
-| 5 | Only with PL-Q5 (b): `Index` on `JellyfinMediaStream`; the indices sent with `PlaybackInfo` | Jellyfin transcodes follow the profile |
+| 5 | Dropped: PL-Q5 (a) | None |
 
 - One commit per phase on main. Each commit updates this plan and the docs it affects.
 - **Checks in every phase:** ktlint, the touched modules' unit tests, compile of tv and mobile. A full suite once at merge.
@@ -182,23 +186,27 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
   - A test file goes into the host Jellyfin library first: French and English audio, an English commentary, French forced, French full and English subtitles. A second file has `und` tracks labelled "VF" and "VO".
   - Check each row of "Which choice wins".
   - An episode after a series pick.
-  - A live channel with two audio tracks.
   - The rows and pickers in Malagasy, with focus on TV in English.
+  - A live channel with two audio tracks starts as before (English first): Live TV does not use the profile (PL-Q4 b).
 - **Docs:**
   - docs/FEATURES.md → Player → Track selection (Phase 3).
   - Settings → Your Profile, and Profiles → A profile's page (Phase 4).
   - docs/RELEASE_NOTES.md (Phases 3 and 4).
-  - docs/design.md → Jellyfin Playback (Phase 5).
+  - No Phase 5, so no docs/design.md change.
 
 ## Progress
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
+| 1 | Done 2026-11-11 |
 | 2 | Not started |
 | 3 | Not started |
 | 4 | Not started |
-| 5 | Only with PL-Q5 (b) |
+| 5 | Dropped (PL-Q5 a) |
+
+## Done notes
+
+- **Phase 1 (2026-11-11):** `TrackLanguage.kt` (core/player domain): `normalisedLanguage`, `labelLanguage`, `audioLanguage`, `subtitleLanguage`, `playingAudioLanguage`, `isCommentary`, `isAudioDescription`, `isSdh`, `isForced`, `titleNamesSubtitles`, `pickAudioTrack`, `pickSubtitleTrack` (`SubtitlePick`: Keep, Off, Track), with `TrackLanguagePreference` and `ItemLanguages`. `languageOfCode` moved there from `SearchFacets.kt`, which now uses it. `AudioTrackInfo` and `SubtitleTrackInfo` carry `languageCode`, `roleFlags` and `selectionFlags`, filled by the service and `PlaybackViewModel`. A label code counts only in capitals or as the whole label, and codec words ("HE-AAC", "DTS-ES", "HI") never count. With no track in the subtitle language, or audio in an unknown language, the pick is Off; Off still shows a forced track in the audio's language. Tests: `TrackLanguageTest` (21).
 
 ## Difficulty
 

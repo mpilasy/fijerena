@@ -1482,6 +1482,9 @@ class StreamingPlaybackService : MediaSessionService() {
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
                             isSelected = isSelected,
+                            languageCode = format.language,
+                            roleFlags = format.roleFlags,
+                            selectionFlags = format.selectionFlags,
                         ),
                     )
                 }
@@ -1520,6 +1523,9 @@ class StreamingPlaybackService : MediaSessionService() {
                                     ?: getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
                             mimeType = format.sampleMimeType ?: "unknown",
                             isSelected = isSelected,
+                            languageCode = format.language,
+                            roleFlags = format.roleFlags,
+                            selectionFlags = format.selectionFlags,
                         ),
                     )
                 }
