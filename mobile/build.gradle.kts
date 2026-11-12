@@ -40,8 +40,23 @@ android {
                 "unknown"
             }
 
+        // The commit's own date, in UTC, for About: the same on every machine that builds it.
+        val commitTime =
+            try {
+                providers
+                    .exec {
+                        environment("TZ", "UTC")
+                        commandLine("git", "log", "-1", "--format=%cd", "--date=format-local:%Y-%m-%d %H:%M UTC")
+                    }.standardOutput.asText
+                    .get()
+                    .trim()
+            } catch (e: Exception) {
+                "unknown"
+            }
+
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm z", Locale.US).format(Date())
         buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
+        buildConfigField("String", "COMMIT_TIME", "\"$commitTime\"")
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
     }
 

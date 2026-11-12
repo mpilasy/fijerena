@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.legal.ProjectLink
+import org.njarasoa.fijerena.core.ui.legal.aboutCommitLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
@@ -69,20 +70,20 @@ fun MobileAboutScreen(
                             .fillMaxWidth()
                             // look-ok: the About text: seven taps turn Admin on, not a list row
                             .clickable(onClick = onVersionClick)
-                            .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.md),
+                            .padding(start = CinemaSpacing.md, end = CinemaSpacing.md, top = CinemaSpacing.md, bottom = CinemaSpacing.xs),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
+                    // The version, then its commit and the commit's date, as on TV.
                     CinemaText(stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME), role = TextRole.Heading)
+                    CinemaText(
+                        aboutCommitLine(BuildConfig.GIT_HASH, BuildConfig.COMMIT_TIME),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
+                    )
                     CinemaText(stringResource(R.string.app_disclaimer_no_content))
                     // GPL-3.0 "Appropriate Legal Notices": copyright, licence, no warranty, source.
                     CinemaText(stringResource(R.string.app_copyright), role = TextRole.BodySmall, tone = TextTone.Secondary)
                     CinemaText(stringResource(R.string.app_license_notice), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                    CinemaText(
-                        stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH) + "\n" +
-                            stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
-                        role = TextRole.BodySmall,
-                        tone = TextTone.Secondary,
-                    )
                 }
             }
             item {

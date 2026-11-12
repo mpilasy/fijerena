@@ -885,8 +885,6 @@
 
     <!-- TV Settings: About Card -->
     <string name="settings_about_version_format">Fijerena v%1$s</string>
-    <string name="settings_about_build_format">Build : %1$s</string>
-    <string name="settings_about_built_format">Compilé le : %1$s</string>
 
     <!-- TV Settings: Export/Import Card -->
     <string name="settings_export_button">Sauvegarder dans un fichier</string>

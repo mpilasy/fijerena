@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.legal.ProjectLink
+import org.njarasoa.fijerena.core.ui.legal.aboutCommitLine
 import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -89,14 +90,14 @@ fun AboutScreen(
                     focusRequester = firstFocus,
                     supporting = {
                         Column {
-                            CinemaText(stringResource(R.string.app_disclaimer_no_content), role = TextRole.Body, tone = TextTone.Primary)
-                            // Build and time on one line: a fourth line made a pill Look's border cut the last one.
+                            // The commit and its date on one line under the version: a fourth line made a
+                            // pill Look's border cut the last one.
                             CinemaText(
-                                stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH) + " · " +
-                                    stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
+                                aboutCommitLine(BuildConfig.GIT_HASH, BuildConfig.COMMIT_TIME),
                                 role = TextRole.Body,
                                 tone = TextTone.Secondary,
                             )
+                            CinemaText(stringResource(R.string.app_disclaimer_no_content), role = TextRole.Body, tone = TextTone.Primary)
                         }
                     },
                 )

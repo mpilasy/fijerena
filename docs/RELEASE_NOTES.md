@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **About shows the commit date:** About Fijerena now shows, under the version, the commit and the date of that commit (in UTC) on one line, the same on TV and phone, in place of the time the app was built. On the phone they are now under the version, as on TV. TV and phone.
 - **Complete open-source licences:** Settings → About → About Fijerena → Open-Source Licences now lists FFmpeg (the audio decoders inside the player's FFmpeg decoder) and the Public Suffix List, and each library under the MIT or BSD licence shows its own copyright line, not a blank template. TV and phone.
 
 ## Version: 0.9.20261112140702
