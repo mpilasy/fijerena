@@ -638,7 +638,7 @@ fun SearchScreen(
 
 /** Catalogue | People | Guide under the header: OK selects, Left from the first opens the rail, Down goes to the field. */
 @Composable
-private fun SearchTabRow(
+internal fun SearchTabRow(
     tabs: List<SearchTab>,
     selected: SearchTab,
     onSelect: (SearchTab) -> Unit,
@@ -785,7 +785,7 @@ private fun GuideTab(
 }
 
 @Composable
-private fun SearchContent(
+internal fun SearchContent(
     query: String,
     // The field's text, shared with the Guide tab.
     fieldText: String,
@@ -902,7 +902,16 @@ private fun SearchContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // Right from the rail with no control to go back to (rule 7): the field, never the control a
+    // geometric search finds first (Clear all sits level with the rail's Search item).
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .focusProperties {
+                    onEnter = { if (requestedFocusDirection == FocusDirection.Right) searchFocusRequester.requestFocus() }
+                }.focusGroup(),
+    ) {
         TvSearchField(
             modifier =
                 when {

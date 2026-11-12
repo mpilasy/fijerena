@@ -8,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -399,7 +401,7 @@ internal fun TvGuideSearchPane(
 }
 
 @Composable
-private fun EpgBrowserContent(
+internal fun EpgBrowserContent(
     uiState: EpgBrowserViewModel.UiState,
     nowEpoch: Long,
     indexState: EpgIndexState,
@@ -461,7 +463,16 @@ private fun EpgBrowserContent(
     // while the history shows: a `down` aimed at an unattached requester stops Down working at all.
     val downToHistory = if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // Right from the rail with no control to go back to (rule 7): the field, never the control a
+    // geometric search finds first (Clear all sits level with the rail's Search item).
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .focusProperties {
+                    onEnter = { if (requestedFocusDirection == FocusDirection.Right) searchFocusRequester.requestFocus() }
+                }.focusGroup(),
+    ) {
         TvSearchField(
             modifier = (if (contextName == null) downToHistory else Modifier).then(fieldModifier),
             query = query,

@@ -6,6 +6,7 @@
 - **Text stays inside tall rows (TV):** in a Look with round buttons (Rounded, Console, Groove, Dial), a row with several lines of text was as round as a button, so its corners cut off the start of the first and last lines. Home's "Your Sources" dialog showed "c5test" for "ac5test" and "ears" for "bears". Now a row's corner is at most as round as a one-line row, so all of its text shows. One-line rows keep their round ends. TV.
 - **Guide source cards in Malagasy (TV):** on Guide Sources, the figures of each card (last update, times, programmes until, channels, programmes) no longer show one letter per line when their labels are long. The figures that do not fit go to a second line. TV.
 - **Safe mode buttons on one line (TV):** the icon action Send logs to my sync group was lower than Continue, Clear caches and Show logs. Now all four are centred on one line. TV.
+- **Search: Right from the rail goes to the search field:** on Search (the catalogue and the Guide tab) and on Search the Guide, Right from the navigation rail sometimes put focus on the red Clear all of the recent searches. Now Right goes back to the item you came from, or to the search field when that item is gone. TV.
 
 ## Version: 0.9.20261112184527
 

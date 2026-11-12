@@ -5,7 +5,8 @@
 # shows the term only, which differs per device, so its lines are left unchecked.
 @start Search films, shows and channels
 # Left from the field and from the first recent search → the navigation rail (on Search), Right
-# → back (rail Phase 3, not yet recorded).
+# → back (rail Phase 3, not yet recorded). When the item Left came from is gone, Right from the
+# rail lands on the field, never on Clear all: SearchScreenFocusTest checks it (2026-11-12).
 LEFT	Search
 RIGHT	Search films, shows and channels
 # Down from the field → the first recent search, not the "Clear all" icon (F-S-2).
