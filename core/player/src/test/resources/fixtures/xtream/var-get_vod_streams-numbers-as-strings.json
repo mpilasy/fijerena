@@ -1,0 +1,6 @@
+[
+ {"num": "1", "name": "Film 1", "stream_type": "movie", "stream_id": "12", "stream_icon": "https://img.invalid/12.jpg",
+  "rating": "7.1", "rating_5based": "3.6", "added": 1735689600, "category_id": 5, "container_extension": "mkv"},
+ {"num": 2, "name": "Film 2", "stream_type": "movie", "stream_id": 13, "category_id": "5", "container_extension": "mp4"},
+ {"num": "3", "name": "Film 3", "stream_type": "movie", "stream_id": "14", "tv_archive": "0", "category_id": "6"}
+]

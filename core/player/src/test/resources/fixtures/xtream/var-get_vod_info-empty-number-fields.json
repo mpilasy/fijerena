@@ -1,0 +1,5 @@
+{
+ "info": {"name": "Film 1", "rating": "", "duration": "", "tmdb_id": "", "video": {"width": "", "height": "1080", "codec_name": "h264"},
+  "audio": {"codec_name": "aac", "language": ""}},
+ "movie_data": {"stream_id": "149882", "name": "Film 1", "container_extension": "mkv"}
+}

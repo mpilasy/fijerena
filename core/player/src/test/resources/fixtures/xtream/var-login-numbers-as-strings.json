@@ -1,0 +1,6 @@
+{
+ "user_info": {"username": "user", "password": "pass", "message": "", "auth": "1", "status": "Active", "exp_date": null,
+  "is_trial": 0, "active_cons": 1, "created_at": 1735689600, "max_connections": 2, "allowed_output_formats": "m3u8"},
+ "server_info": {"url": "provider.invalid", "port": 80, "https_port": 443, "server_protocol": "http", "rtmp_port": 1935,
+  "timezone": "Europe/London", "timestamp_now": "1767225600", "time_now": "2026-01-01 00:00:00"}
+}

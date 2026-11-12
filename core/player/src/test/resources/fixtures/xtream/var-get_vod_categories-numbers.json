@@ -1,0 +1,5 @@
+[
+ {"category_id": 1, "category_name": "Category 1", "parent_id": ""},
+ {"category_id": "2", "category_name": "Category 2", "parent_id": "0"},
+ {"category_id": "3", "category_name": "Category 3", "parent_id": null}
+]

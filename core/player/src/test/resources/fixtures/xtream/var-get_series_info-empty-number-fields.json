@@ -1,0 +1,9 @@
+{
+ "seasons": [{"season_number": "1", "name": "Season 1", "episode_count": "", "cover": ""}],
+ "info": {"name": "Show 1", "rating_5based": "", "backdrop_path": "https://img.invalid/91-backdrop.jpg"},
+ "episodes": {"1": [
+  {"id": "91", "episode_num": "1", "title": "Episode 1", "container_extension": "mkv", "season": "1",
+   "info": {"duration_secs": "", "bitrate": "", "duration": "00:42:00"}},
+  {"id": "92", "episode_num": "", "title": "Episode 2", "container_extension": "mkv", "season": "",
+   "info": {"duration_secs": "2520", "bitrate": "4500"}}]}
+}

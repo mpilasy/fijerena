@@ -1,0 +1,6 @@
+{
+ "user_info": {"username": "user", "password": "pass", "auth": 1, "status": "Active", "exp_date": "", "is_trial": "",
+  "active_cons": "", "created_at": "", "max_connections": "", "allowed_output_formats": {}},
+ "server_info": {"url": "provider.invalid", "port": "", "https_port": "", "server_protocol": "http", "rtmp_port": "",
+  "timezone": "", "timestamp_now": "", "time_now": ""}
+}

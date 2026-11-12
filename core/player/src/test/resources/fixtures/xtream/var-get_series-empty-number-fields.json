@@ -1,0 +1,5 @@
+[
+ {"num": "", "name": "Show 1", "series_id": "61", "category_id": "7", "rating": "", "rating_5based": "", "episode_run_time": ""},
+ {"num": "2", "name": "Show 2", "series_id": 62, "category_id": "7", "rating": 8, "rating_5based": "4.5"},
+ {"num": 3, "name": "Show 3", "series_id": 63, "category_id": "7", "rating_5based": 3}
+]

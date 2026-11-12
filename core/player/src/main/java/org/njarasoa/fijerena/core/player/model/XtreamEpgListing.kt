@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.player.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.nullable
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
@@ -19,7 +20,9 @@ import java.util.Base64
  */
 @Serializable
 internal data class XtreamEpgAnswer(
-    @SerialName("epg_listings") val listings: List<XtreamEpgListing?> = emptyList(),
+    @SerialName("epg_listings")
+    @Serializable(with = EpgListingListSerializer::class)
+    val listings: List<XtreamEpgListing?> = emptyList(),
 )
 
 @Serializable
@@ -34,8 +37,13 @@ internal data class XtreamEpgListing(
     @SerialName("channel_id") val channelId: String? = null,
     @SerialName("start_timestamp") val startTimestamp: String? = null,
     @SerialName("stop_timestamp") val stopTimestamp: String? = null,
-    @SerialName("has_archive") val hasArchive: Int? = null,
+    @SerialName("has_archive")
+    @Serializable(with = LenientIntOrNullSerializer::class)
+    val hasArchive: Int? = null,
 )
+
+/** The listings of a guide answer: `[]`, `{}` or no key at all when there are none. */
+internal object EpgListingListSerializer : LenientListSerializer<XtreamEpgListing?>(XtreamEpgListing.serializer().nullable)
 
 internal fun XtreamEpgAnswer.toEpgResponse(): EpgResponse =
     EpgResponse(

@@ -26,12 +26,14 @@ data class XtreamCategory(
     @SerialName("category_name")
     val categoryName: String = "",
     @SerialName("parent_id")
+    @Serializable(with = LenientIntSerializer::class)
     val parentId: Int = 0,
 )
 
 @Serializable
 data class XtreamStream(
     @SerialName("num")
+    @Serializable(with = LenientIntSerializer::class)
     val num: Int = 0,
     // Defaults, so one entry with `"name": null` (a panel-c film) does not fail the whole list:
     // coerceInputValues turns a null into the default. [withName] then names the entry from its
@@ -46,6 +48,7 @@ data class XtreamStream(
     val streamType: String = "",
     // 0 when the panel sent none: [withName] drops the entry.
     @SerialName("stream_id")
+    @Serializable(with = LenientIntSerializer::class)
     val streamId: Int = 0,
     @SerialName("stream_icon")
     val streamIcon: String? = null,
@@ -58,10 +61,12 @@ data class XtreamStream(
     @SerialName("custom_sid")
     val customSid: String? = null,
     @SerialName("tv_archive")
+    @Serializable(with = LenientIntSerializer::class)
     val tvArchive: Int = 0,
     @SerialName("direct_source")
     val directSource: String? = null,
     @SerialName("tv_archive_duration")
+    @Serializable(with = LenientIntSerializer::class)
     val tvArchiveDuration: Int = 0,
     @JsonNames("description", "plot", "overview")
     @SerialName("description")
@@ -88,6 +93,7 @@ data class XtreamStream(
 @Serializable
 data class XtreamSeries(
     @SerialName("num")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val num: Int? = null,
     // See XtreamStream: a null name does not fail the list.
     @SerialName("name")
@@ -98,6 +104,7 @@ data class XtreamSeries(
     val title: kotlinx.serialization.json.JsonElement? = null,
     // See XtreamStream.streamId.
     @SerialName("series_id")
+    @Serializable(with = LenientIntSerializer::class)
     val seriesId: Int = 0,
     @JsonNames("cover", "movie_image")
     @SerialName("cover")
@@ -118,8 +125,10 @@ data class XtreamSeries(
     @SerialName("rating")
     val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("rating_5based")
+    @Serializable(with = LenientDoubleOrNullSerializer::class)
     val rating5based: Double? = null,
     @SerialName("backdrop_path")
+    @Serializable(with = LenientTextListSerializer::class)
     val backdropPath: List<String?>? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
@@ -151,6 +160,7 @@ data class XtreamUserInfo(
     @SerialName("message")
     val message: String? = null,
     @SerialName("auth")
+    @Serializable(with = LenientIntSerializer::class)
     val auth: Int = 0,
     @SerialName("status")
     val status: String = "",
@@ -165,6 +175,7 @@ data class XtreamUserInfo(
     @SerialName("max_connections")
     val maxConnections: String? = null,
     @SerialName("allowed_output_formats")
+    @Serializable(with = LenientTextListSerializer::class)
     val allowedOutputFormats: List<String?>? = null,
 )
 
@@ -183,6 +194,7 @@ data class XtreamServerInfo(
     @SerialName("timezone")
     val timezone: String? = null,
     @SerialName("timestamp_now")
+    @Serializable(with = LenientLongOrNullSerializer::class)
     val timestampNow: Long? = null,
     @SerialName("time_now")
     val timeNow: String? = null,
@@ -191,8 +203,10 @@ data class XtreamServerInfo(
 @Serializable
 data class SeriesInfo(
     @SerialName("info")
+    @Serializable(with = SeriesDetailsOrNullSerializer::class)
     val info: SeriesDetails? = null,
     @SerialName("seasons")
+    @Serializable(with = LenientSeasonListSerializer::class)
     val seasons: List<Season?> = emptyList(),
     @Serializable(with = EpisodesMapSerializer::class)
     @SerialName("episodes")
@@ -224,12 +238,14 @@ data class SeriesDetails(
     @SerialName("rating")
     val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("rating_5based")
+    @Serializable(with = LenientDoubleOrNullSerializer::class)
     val rating5based: Double? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
     @SerialName("episode_run_time")
     val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("backdrop_path")
+    @Serializable(with = LenientTextListSerializer::class)
     val backdropPath: List<String?>? = null,
     @SerialName("category_id")
     val categoryId: String? = null,
@@ -243,10 +259,12 @@ data class SeriesDetails(
 @Serializable
 data class Season(
     @SerialName("season_number")
+    @Serializable(with = LenientIntSerializer::class)
     val seasonNumber: Int = 0,
     @SerialName("name")
     val name: String = "",
     @SerialName("episode_count")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val episodeCount: Int? = null,
     @SerialName("cover")
     val cover: String? = null,
@@ -259,6 +277,7 @@ data class Episode(
     @SerialName("id")
     val id: String = "",
     @SerialName("episode_num")
+    @Serializable(with = LenientIntSerializer::class)
     val episodeNum: Int = 0,
     @SerialName("title")
     val title: String = "",
@@ -267,6 +286,7 @@ data class Episode(
     @SerialName("info")
     val info: EpisodeInfo? = null,
     @SerialName("season")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val season: Int? = null,
 )
 
@@ -292,8 +312,10 @@ data class EpisodeInfo(
     @SerialName("duration")
     val duration: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("duration_secs")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val durationSecs: Int? = null,
     @SerialName("bitrate")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val bitrate: Int? = null,
     @SerialName("rating")
     val rating: kotlinx.serialization.json.JsonElement? = null,
@@ -305,8 +327,10 @@ data class EpisodeInfo(
 @Serializable
 data class VodInfo(
     @SerialName("info")
+    @Serializable(with = MovieInfoOrNullSerializer::class)
     val info: MovieInfo? = null,
     @SerialName("movie_data")
+    @Serializable(with = MovieDataOrNullSerializer::class)
     val movieData: MovieData? = null,
 )
 
@@ -352,6 +376,7 @@ data class MovieInfo(
 @Serializable
 data class MovieData(
     @SerialName("stream_id")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val streamId: Int? = null,
     @SerialName("name")
     val name: String? = null,
@@ -362,8 +387,10 @@ data class MovieData(
 @Serializable
 data class VideoInfo(
     @SerialName("width")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val width: Int? = null,
     @SerialName("height")
+    @Serializable(with = LenientIntOrNullSerializer::class)
     val height: Int? = null,
     @SerialName("codec_name")
     val codecName: String? = null,

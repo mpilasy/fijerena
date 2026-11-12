@@ -1,0 +1,7 @@
+{"epg_listings": [
+ {"id": "1", "epg_id": "7", "title": "Not base64!", "lang": "en", "start": "2026-01-01 01:00:00", "end": "2026-01-01 02:00:00",
+  "description": "Plain text, not base64.", "channel_id": "channel1.invalid", "start_timestamp": 1767229200, "stop_timestamp": "1767232800",
+  "now_playing": "1", "has_archive": ""},
+ {"id": "2", "epg_id": "7", "title": "UHJvZ3JhbW1lIDI=", "lang": "en", "start": "2026-01-01 02:00:00", "end": "2026-01-01 03:00:00",
+  "description": null, "channel_id": "channel1.invalid", "start_timestamp": "", "stop_timestamp": "", "has_archive": "1"}
+]}

@@ -1,6 +1,6 @@
 # Provider data tests
 
-**Status:** In progress. Phases 1 and 2 done 2026-11-11. The maintainer took the recommended answer (a) to
+**Status:** In progress. Phases 1 to 3 done 2026-11-11; Phase 4 waits for AC-5 of the audit cleanups plan. The maintainer took the recommended answer (a) to
 PD-Q1 to PD-Q6 on 2026-11-11.
 
 ## Goal
@@ -178,7 +178,7 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 (Xtream by hand, see Done) |
-| 3 | Not started |
+| 3 | Done 2026-11-11 |
 | 4 | Not started |
 | 5 | Not started |
 
@@ -207,6 +207,24 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
   - **Finding (Remote M3U, not fixed):** an entry whose URL is a PHP page
     (`…/georgia_play.php?id=…`) reads as not live, because `M3uParser.isLiveUrl` looks only at the
     URL's end, `/live/` and two ports. Every iptv-org entry is a live channel.
+- **Phase 3 (2026-11-11):** 30 `var-` files under fixtures/xtream/ (lists, items, login, panel
+  guide), read by `XtreamVariantsTest` (17 tests) and `XtreamResponseTest`. `XtreamPayloads` is
+  gone: its bodies are `var-get_series_info-*` and `var-get_vod_info-*` files. 15 of the 17 new
+  tests failed before the fix (only the numbers-as-text list and the refused login passed). The
+  fix (PD-Q5 (a)) is in `XtreamLenientSerializers.kt` (core:player model):
+  - `""` or text in an Int, Long or Double field failed the whole entry, and so the whole list
+    (`num`, `stream_id`, `tv_archive`, `tv_archive_duration`, `series_id`, `rating_5based`,
+    `parent_id`), a show's details (`season_number`, `episode_count`), one episode (`episode_num`,
+    `season`, `duration_secs`, `bitrate`), a film's details (`movie_data.stream_id`), the login
+    (`auth`, `timestamp_now`) or a guide answer (`has_archive`). `Lenient*Serializer` reads a number
+    or its text, and gives 0 (a field with a default) or null for anything else.
+  - `[]` for a film's `info` or `movie_data` or a show's `info` read as Malformed, so a show lost its
+    episodes. `ObjectOrNullSerializer` reads anything but an object as null.
+  - `{}` for `seasons`, `epg_listings` or `allowed_output_formats`, and one text for
+    `backdrop_path` or `allowed_output_formats`, failed the answer. `LenientListSerializer` reads a
+    list, an object's values, or one item; `""` is an empty list.
+  - A video `width` of `""` dropped the whole `video` object; now only the width is null.
+  - The login answer still stores and reads back the same (`AccountManager` keeps it as JSON).
 
 ## Risks
 

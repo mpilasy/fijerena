@@ -1,0 +1,7 @@
+[
+ {"num": "", "name": "Channel 1", "stream_type": "live", "stream_id": 31, "stream_icon": "", "epg_channel_id": "channel1.invalid",
+  "added": "", "category_id": "1", "custom_sid": "", "tv_archive": "", "direct_source": "", "tv_archive_duration": ""},
+ {"num": 2, "name": "Channel 2", "stream_type": "live", "stream_id": "32", "stream_icon": "", "epg_channel_id": "",
+  "added": "1735689600", "category_id": "1", "custom_sid": "", "tv_archive": 1, "direct_source": "", "tv_archive_duration": "7"},
+ {"num": 3, "name": "Channel 3", "stream_type": "live", "stream_id": "", "category_id": "1", "tv_archive": 0}
+]

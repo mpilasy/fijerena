@@ -1,0 +1,7 @@
+[
+ {"num": 1, "name": "Show 1", "series_id": 51, "cover": "https://img.invalid/51.jpg", "category_id": "7",
+  "backdrop_path": "https://img.invalid/51-backdrop.jpg"},
+ {"num": 2, "name": "Show 2", "series_id": 52, "category_id": "7", "backdrop_path": {}},
+ {"num": 3, "name": "Show 3", "series_id": 53, "category_id": "7", "backdrop_path": ""},
+ {"num": 4, "name": "Show 4", "series_id": 54, "category_id": "7", "backdrop_path": ["https://img.invalid/54-backdrop.jpg"]}
+]

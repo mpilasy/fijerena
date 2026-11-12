@@ -1,0 +1,6 @@
+[
+ {"num": null, "name": "Channel 1", "stream_type": "live", "stream_id": 41, "stream_icon": null, "epg_channel_id": null,
+  "added": null, "category_id": "1", "custom_sid": null, "tv_archive": null, "direct_source": null, "tv_archive_duration": null},
+ {"num": "", "name": "Channel 2", "stream_type": "live", "stream_id": 42, "stream_icon": "", "epg_channel_id": "",
+  "added": "", "category_id": "1", "custom_sid": "", "tv_archive": "", "direct_source": "", "tv_archive_duration": ""}
+]
