@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Updates check for space first:** a guide refresh, a catalogue update and a playlist download now check that the device has enough free storage before they start. When it does not, the update stops at once and says that the storage is almost full, and your guide and catalogue stay as they are. TV and phone.
+
 ## Version: 0.9.20261112015711
 
 - **A full storage is no longer a "network error":** when the device's storage filled up during a catalogue update, a guide download or a playlist download, the app said "network error" and tried again and again, writing the same data each time. Now it says that the storage is almost full and stops, until you free up space. TV and phone.

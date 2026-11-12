@@ -27,7 +27,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
 
     companion object {
         private const val TAG = "EpgIndexDatabase"
-        private const val DB_NAME = "epg_index.db"
+        internal const val DB_NAME = "epg_index.db"
 
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null

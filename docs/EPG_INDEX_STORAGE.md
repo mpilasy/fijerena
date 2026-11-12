@@ -21,6 +21,7 @@ All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
 | `journal_size_limit` | `onOpen`, through `execPragma` | 10 MB |
 | Reclaim | `EpgIndexer.incrementalVacuum()`, after every refresh that ingested rows, after a purge and after `EpgFtsRebuildWorker`'s rebuild | 2000-page batches, `wal_checkpoint(TRUNCATE)` and one retry when a batch frees nothing (§3); always ends with `wal_checkpoint(TRUNCATE)`, so the WAL file shrinks also when there are no free pages |
 | WAL checkpoint before an FTS rebuild | `rebuildFtsAndUpdateState`, `swapAndRebuildFts` | `PASSIVE`: `TRUNCATE` blocked every reader for the length of the rebuild |
+| Free space before a write | `EpgFileManager.shouldUseStaging` and `ingestDownloadedSource`; `EpgIndexer.ftsRebuildShortfall` (in `rebuildFtsAndUpdateState` and `EpgFtsRebuildWorker`) | `StorageSpace.shortfall`: the need (`SpaceNeed`) and a 50 MB margin. Staged ingest 1.5 × this file, else direct; a direct ingest the uncompressed source (10 × a `.gz` file); an FTS rebuild 0.5 × this file. Without the space the step does not start: the source keeps its rows and a `STORAGE_LOW` error, and a rebuild leaves an `Indexed` state as it was (the low storage plan) |
 
 `mmap_size` is not set (§6). Clearing the guide (`EpgIndexer.clearAll()`) deletes the file and its
 `-wal`/`-shm` and lets Room recreate it, so a cleared index also gets a fresh 4 KB page size.

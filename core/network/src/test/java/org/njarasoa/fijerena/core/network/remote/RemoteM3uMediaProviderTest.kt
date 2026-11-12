@@ -11,6 +11,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.ErrorKind
+import org.njarasoa.fijerena.core.network.FreeSpace
+import org.njarasoa.fijerena.core.network.NotEnoughSpaceException
 import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.robolectric.RobolectricTestRunner
@@ -117,5 +120,29 @@ class RemoteM3uMediaProviderTest {
         assertTrue(result.exceptionOrNull()?.isDiskFull() == true)
         assertEquals(1, requests.get())
         assertEquals(emptyList<String>(), context.cacheDir.list { _, name -> name.startsWith("remote_m3u_10_") }!!.toList())
+    }
+
+    // The low storage plan, Phase 2: 2 × Content-Length and the 50 MB margin must be free first.
+    @Test
+    fun `not enough space stops the download before it writes, and it is not tried again`() {
+        playlists["list.m3u"] = playlist("First")
+        val written = AtomicInteger()
+        val countingOutput: (File) -> OutputStream = {
+            object : OutputStream() {
+                override fun write(b: Int) {
+                    written.incrementAndGet()
+                }
+            }
+        }
+        val tenMb = FreeSpace { 10L * 1024 * 1024 }
+
+        val result = runBlocking { RemoteM3uMediaProvider(12L, url("list.m3u"), context, countingOutput, tenMb).refreshCatalog() }
+
+        val failure = result.exceptionOrNull() as NotEnoughSpaceException
+        assertEquals(ErrorKind.STORAGE_LOW, failure.error.kind)
+        assertEquals("Need 50 MB, 10 MB free", failure.error.raw)
+        assertEquals(1, requests.get())
+        assertEquals(0, written.get())
+        assertEquals(emptyList<String>(), context.cacheDir.list { _, name -> name.startsWith("remote_m3u_12_") }!!.toList())
     }
 }

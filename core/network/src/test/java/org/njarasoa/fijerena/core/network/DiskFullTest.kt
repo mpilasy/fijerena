@@ -79,4 +79,17 @@ class DiskFullTest {
     fun `the tries go on to the last without a full disk`() {
         assertEquals(listOf(1, 2, 3), triesUntilDiskFull(3) { IOException("connection reset") }.toList())
     }
+
+    // The low storage plan, Phase 2: a job that did not start for lack of space.
+    @Test
+    fun `not enough space reads as storage low and stops the tries`() {
+        val notEnough = NotEnoughSpaceException(StoredError(ErrorKind.STORAGE_LOW, raw = StorageSpace.needText(420L shl 20, 180L shl 20)))
+
+        assertTrue(notEnough.isDiskFull())
+        assertNull(notEnough.networkCause())
+        assertEquals(ErrorKind.STORAGE_LOW, errorKind(notEnough, context))
+        assertEquals(StoredError(ErrorKind.STORAGE_LOW, raw = "Need 420 MB, 180 MB free"), StoredError.of(notEnough, context))
+        var failure: Throwable? = null
+        assertEquals(listOf(1), triesUntilDiskFull(5) { failure }.onEach { failure = notEnough }.toList())
+    }
 }

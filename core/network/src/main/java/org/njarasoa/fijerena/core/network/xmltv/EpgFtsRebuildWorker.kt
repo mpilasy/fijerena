@@ -66,12 +66,20 @@ class EpgFtsRebuildWorker(
             // An incremental update a killed run left continues where it stopped, waiting while
             // something plays (the pausable guide indexing plan, IX2); a stale index is rebuilt
             // whole.
-            if (indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause({ isMediaPlaying(applicationContext) }))) {
-                indexer.rebuildFtsAndUpdateState()
-            }
+            val rebuild = indexer.isFtsStale() || !indexer.resumeIncrementalIndex(PlaybackPause({ isMediaPlaying(applicationContext) }))
+            // Not enough space for the rebuild: it does not start, and the worker is not tried again
+            // (LS-Q5). The index stays stale, and the next start of the app schedules the worker.
+            val shortfall = if (rebuild) EpgIndexer.ftsRebuildShortfall(applicationContext) else null
+            if (rebuild && shortfall == null) indexer.rebuildFtsAndUpdateState()
             indexer.incrementalVacuum()
-            Log.i(TAG, "doWork: FTS rebuild complete")
-            Result.success()
+            if (shortfall == null) {
+                Log.i(TAG, "doWork: FTS rebuild complete")
+                Result.success()
+            } else {
+                Log.w(TAG, "doWork: FTS rebuild not started: ${shortfall.raw}")
+                CrashLog.note("guide search index rebuild (after restart) not started: storage low", shortfall.raw.orEmpty())
+                Result.failure()
+            }
         } catch (e: CancellationException) {
             // WorkManager stopped this run — not a rebuild failure.
             throw e

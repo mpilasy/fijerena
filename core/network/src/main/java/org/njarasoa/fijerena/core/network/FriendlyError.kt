@@ -111,8 +111,9 @@ fun Throwable.networkCause(): Throwable? =
 /**
  * True when this exception or one of its causes says that the device storage is full: SQLite's
  * SQLITE_FULL ([SQLiteFullException]), an [ErrnoException] with ENOSPC, or an IOException with the
- * ENOSPC text ("write failed: ENOSPC (No space left on device)"). A full disk is never transient:
- * a new try writes the same data again and fails again.
+ * ENOSPC text ("write failed: ENOSPC (No space left on device)"). Also a job that did not start for
+ * lack of space ([NotEnoughSpaceException]). A full disk is never transient: a new try writes the
+ * same data again and fails again.
  */
 fun Throwable.isDiskFull(): Boolean = causeChain().any { it.isDiskFullItself() }
 
@@ -127,6 +128,7 @@ fun triesUntilDiskFull(
 
 private fun Throwable.isDiskFullItself(): Boolean =
     this is SQLiteFullException ||
+        this is NotEnoughSpaceException ||
         (this is ErrnoException && errno == OsConstants.ENOSPC) ||
         (this is IOException && message.orEmpty().let { "ENOSPC" in it || it.contains("No space left on device", ignoreCase = true) })
 

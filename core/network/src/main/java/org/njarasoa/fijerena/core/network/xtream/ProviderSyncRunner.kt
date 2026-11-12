@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.ErrorKind
+import org.njarasoa.fijerena.core.network.FreeSpace
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.SpaceNeed
 import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
@@ -26,6 +28,7 @@ import org.njarasoa.fijerena.core.network.networkCause
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xtream.db.CatalogSearchIndex
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
@@ -93,16 +96,45 @@ object ProviderSyncRunner {
      * Syncs one provider, with in-run retries of transient network failures.
      * The returned errors are codes ([StoredError]): persist their encoded form via
      * `updateSyncStats`, and show their message in the app language in use.
+     *
+     * With storage low, or with less free [space] than the catalogue needs ([SpaceNeed.catalogueSync]),
+     * the sync does not start; the source keeps a failure that says so. Storage low is
+     * [Outcome.Transient]: the storage-not-low rule holds [XtreamSyncWorker]'s retry until there
+     * is space. Not enough space for this catalogue is [Outcome.Permanent]: the next period starts
+     * it again (the low storage plan, LS-Q5).
      */
     suspend fun syncProvider(
         context: Context,
         provider: ProviderEntity,
         password: String,
+        space: FreeSpace = FreeSpace.of(context),
     ): Outcome {
-        // With storage low the sync does not start; the source keeps a failure that says so.
-        StorageSpace.lowFreeBytes(context)?.let { free ->
-            return Outcome.Transient(StoredError(ErrorKind.STORAGE_LOW, catalogue = true, raw = StorageSpace.rawText(free)))
+        val lowFree = StorageSpace.lowFreeBytes(context)
+        val catalogueBytes = context.getDatabasePath(XtreamDatabase.DB_NAME).length()
+        val shortfall = StorageSpace.shortfall(SpaceNeed.catalogueSync(catalogueBytes), space)
+        return when {
+            lowFree != null -> {
+                Outcome.Transient(StoredError(ErrorKind.STORAGE_LOW, catalogue = true, raw = StorageSpace.rawText(lowFree)))
+            }
+
+            shortfall != null -> {
+                Log.w(TAG, "Sync not started for ${provider.name}: ${shortfall.raw}")
+                CrashLog.note("catalogue sync not started: ${provider.name}", shortfall.raw.orEmpty())
+                Outcome.Permanent(shortfall.copy(catalogue = true))
+            }
+
+            else -> {
+                syncCounted(context, provider, password)
+            }
         }
+    }
+
+    /** [syncWithRetries], counted in [running] and [firstSyncs] while it runs. */
+    private suspend fun syncCounted(
+        context: Context,
+        provider: ProviderEntity,
+        password: String,
+    ): Outcome {
         runningCounts.update { it + (provider.id to (it[provider.id] ?: 0) + 1) }
         if (provider.lastSyncedAtMs == 0L) firstSyncIds.update { it + provider.id }
         try {

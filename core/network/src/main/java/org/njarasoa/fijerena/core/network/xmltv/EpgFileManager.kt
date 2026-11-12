@@ -39,8 +39,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.ErrorKind
+import org.njarasoa.fijerena.core.network.FreeSpace
 import org.njarasoa.fijerena.core.network.HttpStatusException
+import org.njarasoa.fijerena.core.network.NotEnoughSpaceException
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.SpaceNeed
 import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -55,6 +58,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.triesUntilDiskFull
 import org.njarasoa.fijerena.core.network.utils.await
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.PlaybackPause
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.isMediaPlaying
@@ -358,6 +362,9 @@ class EpgFileManager private constructor(
     private val appSettings by lazy { AppSettings(context) }
     private val scope = AppScopes.create("EpgFileManager", Dispatchers.Default)
 
+    /** The free space that each download and ingest checks before it starts. */
+    private val freeSpace = FreeSpace.of(context)
+
     private var processJob: Job? = null
 
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
@@ -410,31 +417,18 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Whether there is free space for staged ingestion. Staging doubles epg_programme for a while,
-     * so it needs more than 1.5 times the current DB size free.
+     * Whether there is free space for staged ingestion ([SpaceNeed.stagedIngest]): staging doubles
+     * epg_programme for a while. Else the run ingests directly into the live tables, and each
+     * source checks its own space first (LS-Q1 (a), see [ingestDownloadedSource]).
      */
     private fun shouldUseStaging(): Boolean {
-        return try {
-            val dbFile = context.getDatabasePath("epg_index.db")
-            if (!dbFile.exists()) return true // Fresh install, staging is safe
-
-            val dbSize = dbFile.length()
-            val availableSpace = context.dataDir.usableSpace
-
-            val isSafe = availableSpace > (dbSize * 1.5).toLong()
-
-            if (!isSafe) {
-                Log.w(
-                    TAG,
-                    "Low storage detected: available=${availableSpace / 1024 / 1024}MB, db=${dbSize / 1024 / 1024}MB. Falling back to blocking sync.",
-                )
-            }
-            isSafe
-        } catch (e: Exception) {
-            // cancellation-ok: non-suspend
-            Log.w(TAG, "Failed to check storage for staging, defaulting to false", e)
-            false
+        // 0 when the file is not there (a fresh install): staging needs the margin only.
+        val dbSize = context.getDatabasePath(EpgIndexDatabase.DB_NAME).length()
+        val shortfall = StorageSpace.shortfall(SpaceNeed.stagedIngest(dbSize), freeSpace)
+        if (shortfall != null) {
+            Log.w(TAG, "Not enough space for staged ingestion (${shortfall.raw}): direct ingestion")
         }
+        return shortfall == null
     }
 
     @OptIn(UnstableApi::class)
@@ -1462,6 +1456,11 @@ class EpgFileManager private constructor(
 
                             val body = response.body
                             val contentLength = body.contentLength()
+                            // Not enough space for the file: the download does not start, and is
+                            // not tried again (a full disk, isDiskFull). The source keeps the error.
+                            StorageSpace
+                                .shortfall(SpaceNeed.xmltvDownload(contentLength, source.lastDownloadBytes), freeSpace)
+                                ?.let { throw NotEnoughSpaceException(it) }
                             val digest = if (!isGzip) java.security.MessageDigest.getInstance("SHA-256") else null
                             var totalRead = 0L
 
@@ -1679,6 +1678,14 @@ class EpgFileManager private constructor(
                         ),
                     )
                 }
+            }
+
+            // Direct ingest with not enough space for the source's rows: the ingest does not start,
+            // the source keeps its guide and a storage-low error (LS-Q1 (a)).
+            if (!useStaging) {
+                StorageSpace
+                    .shortfall(SpaceNeed.directIngest(downloaded.tmpFile.length(), isGzip), freeSpace)
+                    ?.let { throw NotEnoughSpaceException(it) }
             }
 
             val ingestStartMs = System.currentTimeMillis()

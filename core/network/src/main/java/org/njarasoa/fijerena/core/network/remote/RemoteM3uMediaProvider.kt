@@ -7,8 +7,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
+import org.njarasoa.fijerena.core.network.FreeSpace
 import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.InvalidPlaylistException
+import org.njarasoa.fijerena.core.network.NotEnoughSpaceException
+import org.njarasoa.fijerena.core.network.SpaceNeed
+import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.local.M3uParser
 import org.njarasoa.fijerena.core.network.triesUntilDiskFull
@@ -25,6 +29,8 @@ class RemoteM3uMediaProvider(
     private val context: Context,
     // Opens the file that a download writes to. Tests give a stream that fails as a full disk.
     private val openOutput: (File) -> OutputStream = { it.outputStream() },
+    // The free space that a download checks before it starts. Tests give a fake.
+    private val freeSpace: FreeSpace = FreeSpace.of(context),
 ) : BaseM3uMediaProvider() {
     companion object {
         private const val TAG = "RemoteM3uProvider"
@@ -121,6 +127,12 @@ class RemoteM3uMediaProvider(
                     }
                     break
                 }
+
+                // Not enough space for the temp file and the cache file: the download does not
+                // start, and is not tried again (a full disk, isDiskFull).
+                StorageSpace
+                    .shortfall(SpaceNeed.remoteM3uDownload(connection.contentLengthLong), freeSpace)
+                    ?.let { throw NotEnoughSpaceException(it) }
 
                 // A unique name per download: two connect()s at once would otherwise write into
                 // the same file and publish each other's half-written playlist.

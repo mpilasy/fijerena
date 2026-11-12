@@ -1,6 +1,6 @@
 # Low storage
 
-**Status:** In progress. Phase 1 done 2026-11-11 (LS-Q5: (a)). Open questions LS-Q1 to LS-Q4 and LS-Q6 wait for the user.
+**Status:** In progress. Phases 1 and 2 done 2026-11-11. Decided 2026-11-11: LS-Q1, LS-Q2, LS-Q4, LS-Q5 and LS-Q6, each (a). LS-Q3 waits for the user.
 
 ## Goal
 
@@ -73,12 +73,12 @@ not know how much space a job needs.
 
 | # | Question | Options |
 |---|----------|---------|
-| LS-Q1 | Not enough space for a staged guide refresh? | (a) **Direct ingest as today, but only when there is space for it**; else the source gets `STORAGE_LOW` and keeps its guide. Recommended: the guide stays current while space allows, and a failed direct ingest heals at the next refresh. (b) Skip the refresh. The old guide stays whole but gets older. |
-| LS-Q2 | Image cache size? | (a) **2% of the storage, from 64 MB to 512 MB** (Coil `maxSizePercent` with a minimum and a maximum). Recommended: about 160 MB on an 8 GB TV. (b) Keep 512 MB. |
+| LS-Q1 | Not enough space for a staged guide refresh? **Decided: (a).** | (a) **Direct ingest as today, but only when there is space for it**; else the source gets `STORAGE_LOW` and keeps its guide. Recommended: the guide stays current while space allows, and a failed direct ingest heals at the next refresh. (b) Skip the refresh. The old guide stays whole but gets older. |
+| LS-Q2 | Image cache size? **Decided: (a).** | (a) **2% of the storage, from 64 MB to 512 MB** (Coil `maxSizePercent` with a minimum and a maximum). Recommended: about 160 MB on an 8 GB TV. (b) Keep 512 MB. |
 | LS-Q3 | A way to clear the image cache outside safe mode? It is a look-and-feel change. | (a) **A Clear Image Cache icon action on the image cache row of Device Info**, TV and phone. Recommended. (b) None. |
-| LS-Q4 | The message? | (a) **One message for every writer**: `error_storage_low` gets a new text that says what to clear. Recommended. (b) A message for each writer. |
+| LS-Q4 | The message? **Decided: (a).** | (a) **One message for every writer**: `error_storage_low` gets a new text that says what to clear. Recommended. (b) A message for each writer. |
 | LS-Q5 | A worker that hits a full disk? **Decided: (a).** | (a) **Finish with the stored `STORAGE_LOW` error and no retry.** The storage-not-low rule and the next period start it again. Recommended. (b) `Result.retry()` with back-off. |
-| LS-Q6 | How to test on an emulator? The user decides before any emulator data change. | (a) **A debug-only free-space value set over adb** for the checks and messages, and one real run with a filler file in the app's own cache folder, deleted after. Recommended. (b) A new emulator with a small data partition. |
+| LS-Q6 | How to test on an emulator? The user decides before any emulator data change. **Decided: (a).** | (a) **A debug-only free-space value set over adb** for the checks and messages, and one real run with a filler file in the app's own cache folder, deleted after. Recommended. (b) A new emulator with a small data partition. |
 
 ## Design
 
@@ -97,7 +97,8 @@ not know how much space a job needs.
 
 ### Space each writer needs (starting values)
 
-Phase 2 measures each value on the emulator and corrects it.
+Phase 2 kept these values, in `SpaceNeed` (see the Phase 2 Done note). The emulator check of Phase 4
+measures them.
 
 | Writer | Check before | Need |
 |---|---|---|
@@ -180,7 +181,7 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 | Phase | Status |
 |---|---|
 | 1 | Done 2026-11-11 |
-| 2 | Not started |
+| 2 | Done 2026-11-11 |
 | 3 | Not started |
 | 4 | Not started |
 
@@ -204,6 +205,44 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 - Tests: `DiskFullTest` (Robolectric: each form, `errorKind`, `networkCause`, the tries),
   `ProviderSyncRunnerRetryTest`, `CatalogSyncFailureTest` (one sync try), `GuideWorkerRetryTest`,
   `RemoteM3uMediaProviderTest` (an output stream that fails with ENOSPC: one request, no temp file).
+
+**Phase 2 done (2026-11-11):**
+- `FreeSpace`, `StorageSpace.shortfall`, `StorageSpace.MARGIN_BYTES` (50 MB) and `SpaceNeed` (the
+  sizes of the table) are in StorageSpace.kt. `FreeSpace.of(context)` reads the free space of
+  `filesDir`. A storage whose size reads 0 (File gives 0 when it cannot read it) counts as having
+  space, so that the check never stops every job.
+- Decision: the Nerd text gives the need with the margin ("Need 450 MB, 449 MB free" for a 400 MB
+  need), so the two values show why the job did not start.
+- Decision, not in the design: `NotEnoughSpaceException`. A download or an ingest throws it when
+  the check fails, and `isDiskFull` is true for it. So the Phase 1 paths do the rest: no other try,
+  no back-off, the temp file deleted, `STORAGE_LOW` stored with the Nerd text.
+- Where each check is:
+  - XMLTV download: after the response headers (Content-Length is known only then), before the
+    file opens. A 304 needs no check.
+  - Staged ingest: `shouldUseStaging` is the check of 1.5 × epg_index.db. On a fresh install it
+    needs the margin only; before, a fresh install always staged.
+  - Direct ingest (LS-Q1 (a)): for each source, after its download and the unchanged checks, before
+    its first row. The file size is known only then.
+  - FTS rebuild: in `rebuildFtsAndUpdateState`, so the direct path and the purges have it, and in
+    `EpgFtsRebuildWorker`. The worker then does not rebuild, still runs the vacuum, and returns
+    `Result.failure()` (LS-Q5). A rebuild with no space does not mark the index stale, and an
+    `Indexed` state stays as it was; another state becomes `Failed` with the message.
+  - Catalogue sync: in `syncProvider`, after the storage-low check. Decision: the outcome is
+    `Permanent`, not `Transient`, so `XtreamSyncWorker` does not try again; the next period does.
+  - Remote M3U: after the response code, before the temp file. With no Content-Length the need is
+    the margin only.
+- Sizes: not measured; this phase had no emulator, and the LS-Q6 checks come in Phase 4. No value
+  changed. The docs agree with two of them: the search index is 84 to 96 MB of a 198 MB
+  epg_index.db on the TV emulator (`EpgIndexer.optimizeFts`, docs/EPG_INDEX_STORAGE.md §8), about
+  0.45 ×, so 0.5 × for a rebuild; `swapAndRebuildFts` grows the WAL by about the index size, so
+  1.5 × for staging. The 10 × of a `.gz` file has no measure in the code or the docs.
+- Tests: `StorageSpaceTest` (shortfall at, below and above the need with the margin; each size),
+  `DiskFullTest` (`NotEnoughSpaceException`), `ProviderSyncRunnerSpaceTest`,
+  `RemoteM3uMediaProviderTest` (one request, nothing written, no temp file),
+  `GuideWorkerRetryTest` (the worker: no rebuild, `Result.failure()`), `EpgIndexerFullDiskTest`
+  (the rebuild keeps the `Indexed` state). The XMLTV download and the ingest checks have no test of
+  their own: `EpgFileManager` is a singleton that downloads; the sizes, `shortfall` and the Phase 1
+  paths that the exception takes have tests.
 
 ## Risks
 

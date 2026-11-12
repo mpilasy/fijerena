@@ -534,7 +534,7 @@ abstract class XtreamDatabase : RoomDatabase() {
             }
 
         const val DB_VERSION = 32
-        private const val DB_NAME = "xtream_v2.db"
+        internal const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
         // that may still drop tables. Every later version has user data (watch_state since v15,

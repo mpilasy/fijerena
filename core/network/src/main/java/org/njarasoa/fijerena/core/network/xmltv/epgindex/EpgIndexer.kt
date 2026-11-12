@@ -15,6 +15,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.FreeSpace
+import org.njarasoa.fijerena.core.network.NotEnoughSpaceException
+import org.njarasoa.fijerena.core.network.SpaceNeed
+import org.njarasoa.fijerena.core.network.StorageSpace
+import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -133,6 +138,16 @@ class EpgIndexer private constructor(
             instance ?: synchronized(this) {
                 instance ?: EpgIndexer(context.applicationContext).also { instance = it }
             }
+
+        /**
+         * A storage-low error when there is not enough free space for a rebuild of the search
+         * index ([SpaceNeed.ftsRebuild]); null when there is.
+         */
+        fun ftsRebuildShortfall(context: Context): StoredError? =
+            StorageSpace.shortfall(
+                SpaceNeed.ftsRebuild(context.getDatabasePath(EpgIndexDatabase.DB_NAME).length()),
+                FreeSpace.of(context),
+            )
     }
 
     private val _state = MutableStateFlow<EpgIndexState>(EpgIndexState.NotIndexed)
@@ -493,8 +508,12 @@ class EpgIndexer private constructor(
     suspend fun rebuildFtsAndUpdateState() =
         withContext(Dispatchers.IO) {
             val startMs = System.currentTimeMillis()
+            val previousState = _state.value
             Log.i(TAG, "rebuildFtsAndUpdateState: starting FTS rebuild")
             try {
+                // Not enough space: the rebuild does not start, and the index is not marked stale
+                // by it (see the catch below).
+                ftsRebuildShortfall(context)?.let { throw NotEnoughSpaceException(it) }
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
 
@@ -572,7 +591,10 @@ class EpgIndexer private constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 CrashLog.record("guide search index rebuild failed", e)
-                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
+                // A rebuild with no space for it leaves an indexed guide as it was: its rows are all
+                // there, and search reads them without the index while it is stale.
+                _state.value = previousState.takeIf { e is NotEnoughSpaceException && it is EpgIndexState.Indexed }
+                    ?: EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }
 
