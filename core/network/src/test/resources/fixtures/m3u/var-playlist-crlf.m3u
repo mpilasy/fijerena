@@ -1,0 +1,6 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="news.example" group-title="News",News Channel
+https://stream.invalid/news/index.m3u8
+
+#EXTINF:-1 tvg-id="music.example" group-title="Music",Music Channel
+https://stream.invalid/music/index.m3u8

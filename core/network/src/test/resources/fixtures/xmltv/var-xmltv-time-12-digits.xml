@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<!-- XMLTV DTD: a time can leave out digits from the right. Here no seconds, in local time (+0300). -->
+<tv generator-info-name="fijerena-fixture">
+  <channel id="news.example">
+    <display-name>News Channel</display-name>
+    <icon src="https://img.invalid/news.png"/>
+  </channel>
+  <channel id="music.example">
+    <display-name>Music Channel</display-name>
+  </channel>
+  <programme start="202611112100 +0300" stop="202611112200 +0300" channel="news.example">
+    <title>News</title>
+  </programme>
+  <programme start="202611112200 +0300" stop="202611112330 +0300" channel="news.example">
+    <title>Film</title>
+  </programme>
+  <programme start="202611112100 +0300" stop="202611112200 +0300" channel="music.example">
+    <title>Music</title>
+  </programme>
+</tv>

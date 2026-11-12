@@ -168,6 +168,9 @@ class EpgFileManager private constructor(
             return requestBuilder.build()
         }
 
+        /** True when [file] starts with the gzip magic bytes (1f 8b). */
+        internal fun isGzipFile(file: File): Boolean = file.inputStream().use { it.read() == 0x1f && it.read() == 0x8b }
+
         /**
          * Whether a matching content hash is enough to skip the ingest. A real ingest still runs
          * once a day, and a skip needs the live index to hold the source's rows ([indexHasRows],
@@ -1663,9 +1666,11 @@ class EpgFileManager private constructor(
     ): IngestOutcome {
         val source = downloaded.source
         val label = downloaded.label
-        val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         try {
+            // A guide can come compressed at a URL without `.gz` (an Xtream panel's xmltv.php,
+            // with no Content-Encoding for OkHttp to undo): the file's first bytes tell.
+            val isGzip = source.url.endsWith(".gz", ignoreCase = true) || withContext(Dispatchers.IO) { isGzipFile(downloaded.tmpFile) }
             // A `.gz` gets its hash here, from the decompressed content (see downloadSource),
             // before a real parse.
             var contentSha256 = downloaded.contentSha256

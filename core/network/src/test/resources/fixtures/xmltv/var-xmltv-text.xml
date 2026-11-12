@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<!-- XMLTV DTD: text as CDATA, with XML entities and character references, and a title in two languages. -->
+<tv generator-info-name="fijerena-fixture">
+  <channel id="news.example">
+    <display-name lang="fr">Cha&#238;ne Info</display-name>
+    <display-name lang="en">News Channel</display-name>
+  </channel>
+  <programme start="20261111180000 +0000" stop="20261111190000 +0000" channel="news.example">
+    <title><![CDATA[Tom & Jerry <Classics>]]></title>
+    <desc lang="en"><![CDATA[A cat chases a mouse. <b>Not</b> markup here.]]></desc>
+    <category lang="en">Cartoon</category>
+  </programme>
+  <programme start="20261111190000 +0000" stop="20261111200000 +0000" channel="news.example">
+    <title lang="en">Rock &amp; Roll &lt;Live&gt; &quot;Tonight&quot; &apos;26</title>
+    <desc lang="en">Caf&#233; music &#x2014; live.</desc>
+  </programme>
+  <programme start="20261111200000 +0000" stop="20261111210000 +0000" channel="news.example">
+    <title lang="fr">Le Journal</title>
+    <title lang="en">The News</title>
+    <desc lang="fr">Les nouvelles du jour.</desc>
+    <desc lang="en">The news of the day.</desc>
+  </programme>
+</tv>

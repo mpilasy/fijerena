@@ -9,11 +9,7 @@ import org.njarasoa.fijerena.core.network.fixture
  * (https://iptv-org.github.io/iptv/index.m3u, the Unlicense), recorded 2026-11-11 with
  * scripts/record-provider-fixtures.py and trimmed to one entry of each shape: an `http-user-agent`
  * attribute with commas in it, an `http-referrer`, `#EXTVLCOPT` lines, and HLS, DASH and PHP stream
- * URLs.
- *
- * Every entry of this playlist is a live channel, but the PHP entry reads as not live: [M3uParser]
- * finds live by the URL's end or a `/live/` in it. Not asserted here; the provider data tests plan
- * records it as a finding.
+ * URLs. Every entry of this playlist is a live channel.
  */
 class M3uRecordedPlaylistTest {
     private val entries = M3uParser.parse(fixture("m3u/rec-index.m3u").reader().buffered()).toList()
@@ -36,7 +32,7 @@ class M3uRecordedPlaylistTest {
     }
 
     @Test
-    fun `an HLS stream reads as live`() {
-        assertEquals(listOf(true, true, true), listOf(entries[0], entries[2], entries[3]).map { it.isLive })
+    fun `every entry reads as live, the PHP page too`() {
+        assertEquals(listOf(true, true, true, true, true), entries.map { it.isLive })
     }
 }

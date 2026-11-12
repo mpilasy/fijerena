@@ -1,0 +1,2 @@
+# Keep the line ends of a fixture that shows them: git would turn CRLF into LF (core.autocrlf).
+*-crlf.* -text

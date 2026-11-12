@@ -165,6 +165,13 @@ object XmltvParser {
         )
     }
 
+    /**
+     * The length of a programme without `stop` (the XMLTV DTD lets a feed leave it out). The guide
+     * index then ends it at the next start on its channel (`EpgIndexer.clipOverlaps`), so only the
+     * last programme of a channel keeps this length. Long enough for a film or a match.
+     */
+    const val NO_STOP_LENGTH_SECONDS = 4 * 60 * 60L
+
     /** Max characters to keep from any single text field (title, desc, category). */
     private const val MAX_TEXT_LENGTH = 2000
 
@@ -177,25 +184,28 @@ object XmltvParser {
             ""
         }
 
+    /**
+     * A <programme>, or null without `start`, `channel` or a title, or with a time it cannot read.
+     * Without `stop` (the XMLTV DTD lets a feed leave it out) it lasts [NO_STOP_LENGTH_SECONDS].
+     */
     private fun parseProgramme(
         parser: XmlPullParser,
         timezoneOverrideHours: Int = this.timezoneOverrideHours,
     ): XmltvProgramme? {
-        val startStr = parser.getAttributeValue(null, "start") ?: return null
-        val stopStr = parser.getAttributeValue(null, "stop") ?: return null
-        val channelId = parser.getAttributeValue(null, "channel") ?: return null
-
-        val startEpoch = parseTimestamp(startStr, timezoneOverrideHours)
-        val endEpoch = parseTimestamp(stopStr, timezoneOverrideHours)
-        if (startEpoch == 0L || endEpoch == 0L) return null
+        val channelId = parser.getAttributeValue(null, "channel")
+        val startEpoch = parser.getAttributeValue(null, "start")?.let { parseTimestamp(it, timezoneOverrideHours) } ?: 0L
+        val endEpoch =
+            parser.getAttributeValue(null, "stop")?.let { parseTimestamp(it, timezoneOverrideHours) }
+                ?: (startEpoch + NO_STOP_LENGTH_SECONDS)
 
         var title: String? = null
         var description: String? = null
         var category: String? = null
 
         var depth = 1
-        while (depth > 0) {
-            val event = parser.next()
+        var event = XmlPullParser.START_TAG
+        while (depth > 0 && event != XmlPullParser.END_DOCUMENT) {
+            event = parser.next()
             when (event) {
                 XmlPullParser.START_TAG -> {
                     depth++
@@ -226,23 +236,22 @@ object XmltvParser {
                 XmlPullParser.END_TAG -> {
                     depth--
                 }
-
-                XmlPullParser.END_DOCUMENT -> {
-                    break
-                }
             }
         }
 
-        if (title == null) return null
-
-        return XmltvProgramme(
-            channelId = channelId,
-            startEpoch = startEpoch,
-            endEpoch = endEpoch,
-            title = title,
-            description = description,
-            category = category,
-        )
+        val readTitle = title
+        return if (channelId != null && readTitle != null && startEpoch != 0L && endEpoch != 0L) {
+            XmltvProgramme(
+                channelId = channelId,
+                startEpoch = startEpoch,
+                endEpoch = endEpoch,
+                title = readTitle,
+                description = description,
+                category = category,
+            )
+        } else {
+            null
+        }
     }
 
     /**

@@ -19,7 +19,11 @@ object M3uParser {
     private const val LOGO_PREFIX = "tvg-logo=\""
     private const val ID_PREFIX = "tvg-id=\""
     private const val EXTINF_PREFIX = "#EXTINF:"
-    private const val EXTM3U_HEADER = "#EXTM3U"
+    private const val BYTE_ORDER_MARK = '\uFEFF'
+    private const val NO_GROUP = "Uncategorized"
+
+    /** A URL path that ends in one of these is a live stream; the query after it does not count. */
+    private val LIVE_PATH_ENDS = listOf(".m3u8", ".ts", ".php")
 
     private data class PendingEntry(
         val name: String,
@@ -28,59 +32,51 @@ object M3uParser {
         val tvgId: String?,
     )
 
+    /**
+     * The entries of an extended M3U playlist. The `#EXTM3U` header is optional (some playlists
+     * leave it out), and a byte-order mark or spaces before a line are not part of it.
+     */
     fun parse(reader: BufferedReader): Sequence<M3uEntry> =
         sequence {
-            val iterator = reader.lineSequence().iterator()
-
-            if (!iterator.hasNext()) return@sequence
-
-            val firstLine = iterator.next()
-            // Use trimStart to avoid full string allocation
-            if (!firstLine.trimStart().startsWith(EXTM3U_HEADER)) {
-                return@sequence
-            }
-
             var pendingEntry: PendingEntry? = null
 
-            while (iterator.hasNext()) {
-                val line = iterator.next()
-
-                if (line.isEmpty()) continue
-
-                // Using trimStart() creates a new string only if there is whitespace.
-                val trimmedLine = if (line.isNotEmpty() && line[0].isWhitespace()) line.trimStart() else line
-                if (trimmedLine.isEmpty()) continue
+            for (line in reader.lineSequence()) {
+                // trimStart() makes a new string only when the line starts with a space or a mark.
+                val first = line.firstOrNull()
+                val trimmedLine =
+                    if (first != null && (first.isWhitespace() || first == BYTE_ORDER_MARK)) {
+                        line.trimStart { it.isWhitespace() || it == BYTE_ORDER_MARK }
+                    } else {
+                        line
+                    }
 
                 if (trimmedLine.startsWith(EXTINF_PREFIX)) {
                     // The original string and an offset: no removePrefix allocation.
                     val offset = EXTINF_PREFIX.length
 
                     val name = extractName(trimmedLine, offset)
-                    val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset) ?: "Uncategorized"
+                    val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset)?.ifBlank { null } ?: NO_GROUP
                     val logo = extractAttribute(trimmedLine, LOGO_PREFIX, offset)
                     val tvgId = extractAttribute(trimmedLine, ID_PREFIX, offset)
 
                     pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
-                } else if (!trimmedLine.startsWith("#")) {
-                    if (pendingEntry != null) {
-                        // Ensure URL is clean by trimming the end (handles trailing spaces/newlines)
-                        val url = trimmedLine.trimEnd()
+                } else if (pendingEntry != null && trimmedLine.isNotEmpty() && !trimmedLine.startsWith("#")) {
+                    // Ensure URL is clean by trimming the end (handles trailing spaces/newlines)
+                    val url = trimmedLine.trimEnd()
 
-                        if (url.isNotBlank()) {
-                            val isLive = isLiveUrl(url)
-                            yield(
-                                M3uEntry(
-                                    pendingEntry.name,
-                                    pendingEntry.groupTitle,
-                                    pendingEntry.logo,
-                                    pendingEntry.tvgId,
-                                    url,
-                                    isLive,
-                                ),
-                            )
-                        }
-                        pendingEntry = null
+                    if (url.isNotBlank()) {
+                        yield(
+                            M3uEntry(
+                                pendingEntry.name,
+                                pendingEntry.groupTitle,
+                                pendingEntry.logo,
+                                pendingEntry.tvgId,
+                                url,
+                                isLiveUrl(url),
+                            ),
+                        )
                     }
+                    pendingEntry = null
                 }
             }
         }
@@ -163,14 +159,30 @@ object M3uParser {
         }
     }
 
+    /**
+     * The name after the first comma outside quotes: a quoted attribute can hold a comma
+     * (`group-title="News, Weather"`), and so can the name. With unbalanced quotes, the last comma.
+     */
     private fun extractName(
         line: String,
         startIndex: Int,
     ): String {
-        val commaIndex = line.lastIndexOf(',')
+        var inQuotes = false
+        var commaIndex = -1
+        var index = startIndex
+        while (commaIndex == -1 && index < line.length) {
+            val char = line[index]
+            if (char == '"') {
+                inQuotes = !inQuotes
+            } else if (char == ',' && !inQuotes) {
+                commaIndex = index
+            }
+            index++
+        }
+        val nameComma = if (commaIndex == -1) line.lastIndexOf(',') else commaIndex
         // Ensure comma is after the metadata start
-        return if (commaIndex >= startIndex) {
-            line.substring(commaIndex + 1).trim()
+        return if (nameComma >= startIndex) {
+            line.substring(nameComma + 1).trim()
         } else {
             "Unknown"
         }
@@ -191,12 +203,17 @@ object M3uParser {
         return line.substring(valueStartIndex, valueEndIndex)
     }
 
+    /**
+     * Live when the URL's path ends in a stream or script extension (`.m3u8`, `.ts`, `.php`), or the
+     * URL has `/live/` or an Xtream port. The query and fragment do not count: `….m3u8?token=…` and
+     * `…/play.php?id=…` are live.
+     */
     private fun isLiveUrl(url: String): Boolean {
         // One lowercase copy measured faster than several case-insensitive scans
         // (endsWith/contains with ignoreCase = true).
         val lower = url.lowercase()
-        return lower.endsWith(".m3u8") ||
-            lower.endsWith(".ts") ||
+        val pathEnd = lower.indexOfAny(charArrayOf('?', '#')).takeIf { it >= 0 } ?: lower.length
+        return LIVE_PATH_ENDS.any { lower.startsWith(it, pathEnd - it.length) } ||
             lower.contains("/live/") ||
             lower.contains(":8080/") ||
             lower.contains(":25461/")

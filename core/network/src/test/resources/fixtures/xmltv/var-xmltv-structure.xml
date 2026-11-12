@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<!--
+  XMLTV DTD: `stop` is optional on a programme, and `display-name` on a channel is required but
+  some feeds leave it out. A programme can name a channel that the file does not list.
+-->
+<tv generator-info-name="fijerena-fixture">
+  <channel id="news.example">
+    <display-name>News Channel</display-name>
+  </channel>
+  <channel id="nameless.example">
+    <icon src="https://img.invalid/nameless.png"/>
+  </channel>
+  <programme start="20261111180000 +0000" channel="news.example">
+    <title>Morning Show</title>
+  </programme>
+  <programme start="20261111183000 +0000" channel="news.example">
+    <title>Weather</title>
+  </programme>
+  <programme start="20261111190000 +0000" channel="news.example">
+    <title>Late Film</title>
+  </programme>
+  <programme start="20261111180000 +0000" stop="20261111190000 +0000" channel="nameless.example">
+    <title>Quiz</title>
+  </programme>
+  <programme start="20261111180000 +0000" stop="20261111190000 +0000" channel="unlisted.example">
+    <title>Unlisted Show</title>
+  </programme>
+</tv>

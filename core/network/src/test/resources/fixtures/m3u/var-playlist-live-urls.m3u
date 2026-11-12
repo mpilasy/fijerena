@@ -1,0 +1,11 @@
+#EXTM3U
+#EXTINF:-1 group-title="Live",PHP Page
+http://stream.invalid/play.php?id=news
+#EXTINF:-1 group-title="Live",HLS With Query
+https://stream.invalid/news/index.m3u8?expires=0
+#EXTINF:-1 group-title="Live",TS With Query
+https://stream.invalid/news/stream.ts?id=1
+#EXTINF:-1 group-title="Films",Film File
+https://stream.invalid/films/film.mp4
+#EXTINF:-1 group-title="Films",Film File With Query
+https://stream.invalid/films/film.mkv?play=1

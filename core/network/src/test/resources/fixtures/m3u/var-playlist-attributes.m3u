@@ -1,0 +1,9 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="news.example" tvg-name="News, Weather" group-title="News, Weather",News, Weather and Sport
+https://stream.invalid/news/index.m3u8
+#EXTINF:-1 tvg-id="music.example" group-title="",Music Channel
+https://stream.invalid/music/index.m3u8
+#EXTINF:-1 tvg-id="film.example" tvg-logo="https://img.invalid/film.png" group-title="Films",Film Channel
+#EXTVLCOPT:http-user-agent=ExamplePlayer/1.0
+#EXTVLCOPT:http-referrer=https://www.example.com/
+https://stream.invalid/film/index.m3u8

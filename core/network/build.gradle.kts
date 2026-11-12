@@ -96,6 +96,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    // The XML pull parser that Android ships (kxml2), so the XMLTV parser tests run on the plain
+    // JVM: the android.jar stub gives no parser there (the provider data tests plan, PD-Q4).
+    testImplementation(libs.kxml2)
 
     // Room migrations on the JVM: Robolectric runs MigrationTestHelper against its own SQLite
     // (SettingsDatabaseMigration15To16Test), no device needed.

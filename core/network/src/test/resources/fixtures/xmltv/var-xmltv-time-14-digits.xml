@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<!-- XMLTV DTD: 14 digits, a space, then the offset. -->
+<tv generator-info-name="fijerena-fixture">
+  <channel id="news.example">
+    <display-name>News Channel</display-name>
+    <icon src="https://img.invalid/news.png"/>
+  </channel>
+  <channel id="music.example">
+    <display-name>Music Channel</display-name>
+  </channel>
+  <programme start="20261111180000 +0000" stop="20261111190000 +0000" channel="news.example">
+    <title>News</title>
+  </programme>
+  <programme start="20261111190000 +0000" stop="20261111203000 +0000" channel="news.example">
+    <title>Film</title>
+  </programme>
+  <programme start="20261111180000 +0000" stop="20261111190000 +0000" channel="music.example">
+    <title>Music</title>
+  </programme>
+</tv>

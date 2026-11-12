@@ -1,6 +1,6 @@
 # Provider data tests
 
-**Status:** In progress. Phases 1 to 3 done 2026-11-11; Phase 4 waits for AC-5 of the audit cleanups plan. The maintainer took the recommended answer (a) to
+**Status:** In progress. Phases 1 to 4 done 2026-11-11; Phase 5 not started. The maintainer took the recommended answer (a) to
 PD-Q1 to PD-Q6 on 2026-11-11.
 
 ## Goal
@@ -179,7 +179,7 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 (Xtream by hand, see Done) |
 | 3 | Done 2026-11-11 |
-| 4 | Not started |
+| 4 | Done 2026-11-11 |
 | 5 | Not started |
 
 ## Done
@@ -204,8 +204,8 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
     set writes `rec-<action>.json`; the test then reads those and the `-bridge` files go.
   - **M3U recorded:** `m3u/rec-index.m3u`, 5 entries of the iptv-org playlist (Unlicense, checked
     2026-11-11), read by `M3uRecordedPlaylistTest`.
-  - **Finding (Remote M3U, not fixed):** an entry whose URL is a PHP page
-    (`…/georgia_play.php?id=…`) reads as not live, because `M3uParser.isLiveUrl` looks only at the
+  - **Finding (Remote M3U, fixed in Phase 4):** an entry whose URL is a PHP page
+    (`…/georgia_play.php?id=…`) read as not live, because `M3uParser.isLiveUrl` looked only at the
     URL's end, `/live/` and two ports. Every iptv-org entry is a live channel.
 - **Phase 3 (2026-11-11):** 30 `var-` files under fixtures/xtream/ (lists, items, login, panel
   guide), read by `XtreamVariantsTest` (17 tests) and `XtreamResponseTest`. `XtreamPayloads` is
@@ -225,6 +225,31 @@ One commit per phase. Each commit updates this plan (Progress, Status) and the d
     list, an object's values, or one item; `""` is an empty list.
   - A video `width` of `""` dropped the whole `video` object; now only the width is null.
   - The login answer still stores and reads back the same (`AccountManager` keeps it as JSON).
+- **Phase 4 (2026-11-11):** kxml2 2.3.0 is a `testImplementation` of core:network (PD-Q4 (a)): it
+  wins over the android.jar stub, so `XmltvVariantsTest` (10 tests) runs the index's parse
+  functions on the plain JVM. 6 files under fixtures/xmltv/: the same guide in the four time forms
+  (14 digits, 12 digits, no space before the zone, no zone; the AC-5 fix holds), text (CDATA,
+  entities, a title in two languages) and structure (no `stop`, a channel without
+  `display-name`, a programme for an unlisted channel). `EpgIndexerTimeFormsTest` (Robolectric, 5)
+  runs `ingestFromStream` once per time form and checks the file's zone. 7 `var-playlist-*` files
+  under fixtures/m3u/ (a `.gitattributes` there keeps the CRLF file's line ends), read by
+  `M3uVariantsTest` (9 tests). 3 XMLTV and 6 M3U tests failed before the fixes (PD-Q5 (a)):
+  - A programme without `stop` was dropped; the DTD makes `stop` optional. It now lasts
+    `XmltvParser.NO_STOP_LENGTH_SECONDS` (4 hours), and `clipOverlaps` ends it at the next start
+    on its channel.
+  - **Gzip at a URL without `.gz`** (the finding this phase was to record): the ingest read the
+    compressed bytes as XML and failed ("unterminated entity ref"). `ingestDownloadedSource` now
+    also reads a file that starts with the gzip magic bytes as gzip (`isGzipFile`).
+    `EpgFileManagerGzipTest` (Robolectric, 3) compresses the 14-digit file at run time; no binary
+    fixture, so the privacy gate reads every fixture as text.
+  - M3U: the PHP entry (the Phase 2 finding) and a stream URL with a query (`….m3u8?expires=0`)
+    read as not live; `isLiveUrl` now looks at the path without its query, and `.php` counts as
+    live. A byte-order mark before the first line, or no `#EXTM3U` header, gave no entries at all
+    (the source failed with "no valid entries"); the header is now optional and a mark is
+    skipped. A comma in the name cut the name at its last comma; the name now starts after the
+    first comma outside quotes. An empty `group-title` made a group with no name; it is now
+    Uncategorized. CRLF, `x-tvg-url` in the header and `#EXTVLCOPT` lines already read; the app
+    does not use `x-tvg-url` (not a parser fix: a feature, not planned).
 
 ## Risks
 
