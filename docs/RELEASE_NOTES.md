@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261112140702
 
 - **Clear Image Cache on TV:** the action is now inside the Storage card, at the end of the image cache row. Down to the Storage section goes straight to it. Its label no longer crosses the card's edge. TV.
 
