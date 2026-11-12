@@ -1088,6 +1088,37 @@
     <string name="live_sync_device_this">This device</string>
     <string name="live_sync_device_build_unknown">Build not reported yet</string>
     <string name="live_sync_device_build_older">Older build</string>
+    <string name="live_sync_device_logs_unknown">Logs not reported yet</string>
+    <string name="live_sync_device_logs_none">No problems in 7 days</string>
+    <string name="live_sync_device_logs_counts">%1$s in 7 days</string>
+    <plurals name="live_sync_logs_crashes">
+        <item quantity="one">%1$d crash</item>
+        <item quantity="other">%1$d crashes</item>
+    </plurals>
+    <plurals name="live_sync_logs_anrs">
+        <item quantity="one">%1$d ANR</item>
+        <item quantity="other">%1$d ANRs</item>
+    </plurals>
+    <plurals name="live_sync_logs_killed">
+        <item quantity="one">%1$d stop by the system</item>
+        <item quantity="other">%1$d stops by the system</item>
+    </plurals>
+    <plurals name="live_sync_logs_errors">
+        <item quantity="one">%1$d error</item>
+        <item quantity="other">%1$d errors</item>
+    </plurals>
+    <string name="device_logs_title">Device Logs</string>
+    <string name="device_logs_sent">Sent %1$s</string>
+    <string name="device_logs_failed_calls">Failed server calls (24 h): %1$d</string>
+    <string name="device_logs_safe_mode">Started in safe mode %1$s</string>
+    <string name="device_logs_kind_crash">Crash</string>
+    <string name="device_logs_kind_anr">ANR</string>
+    <string name="device_logs_kind_killed">Stopped by the system</string>
+    <string name="device_logs_kind_error">Error</string>
+    <string name="device_logs_this_build">This build</string>
+    <string name="device_logs_before_update">Before the last update</string>
+    <string name="device_logs_screen">Screen: %1$s</string>
+    <string name="device_logs_empty">No problems reported</string>
     <string name="live_sync_device_last_seen">Last seen %1$s</string>
     <string name="live_sync_device_remove">Remove</string>
     <string name="live_sync_device_rename">Rename</string>

@@ -1234,6 +1234,37 @@
     <string name="live_sync_device_this">Ity fitaovana ity</string>
     <string name="live_sync_device_build_unknown">Mbola tsy nambara ny dika</string>
     <string name="live_sync_device_build_older">Dika taloha</string>
+    <string name="live_sync_device_logs_unknown">Mbola tsy nambara ny tatitra</string>
+    <string name="live_sync_device_logs_none">Tsy nisy olana tao anatin\'ny 7 andro</string>
+    <string name="live_sync_device_logs_counts">%1$s tao anatin\'ny 7 andro</string>
+    <plurals name="live_sync_logs_crashes">
+        <item quantity="one">fianjerana %1$d</item>
+        <item quantity="other">fianjerana %1$d</item>
+    </plurals>
+    <plurals name="live_sync_logs_anrs">
+        <item quantity="one">ANR %1$d</item>
+        <item quantity="other">ANR %1$d</item>
+    </plurals>
+    <plurals name="live_sync_logs_killed">
+        <item quantity="one">najanon\'ny rafitra %1$d</item>
+        <item quantity="other">najanon\'ny rafitra %1$d</item>
+    </plurals>
+    <plurals name="live_sync_logs_errors">
+        <item quantity="one">fahadisoana %1$d</item>
+        <item quantity="other">fahadisoana %1$d</item>
+    </plurals>
+    <string name="device_logs_title">Tatitry ny fitaovana</string>
+    <string name="device_logs_sent">Nalefa %1$s</string>
+    <string name="device_logs_failed_calls">Antso tsy nety tamin\'ny mpizara (24 ora): %1$d</string>
+    <string name="device_logs_safe_mode">Natomboka tamin\'ny fomba voaaro %1$s</string>
+    <string name="device_logs_kind_crash">Fianjerana</string>
+    <string name="device_logs_kind_anr">ANR</string>
+    <string name="device_logs_kind_killed">Najanon\'ny rafitra</string>
+    <string name="device_logs_kind_error">Fahadisoana</string>
+    <string name="device_logs_this_build">Ity dika ity</string>
+    <string name="device_logs_before_update">Talohan\'ny fanavaozana farany</string>
+    <string name="device_logs_screen">Efijery: %1$s</string>
+    <string name="device_logs_empty">Tsy nisy olana nambara</string>
     <string name="live_sync_device_last_seen">Hita farany %1$s</string>
     <string name="live_sync_device_remove">Esory</string>
     <string name="live_sync_device_rename">Hanova anarana</string>

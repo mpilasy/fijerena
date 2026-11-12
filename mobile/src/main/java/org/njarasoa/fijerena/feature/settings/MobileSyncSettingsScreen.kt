@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.DeviceReport
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -52,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.DeviceBuildLine
+import org.njarasoa.fijerena.core.ui.sync.DeviceReportLine
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.isOlderBuild
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
@@ -81,13 +83,17 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MobileSyncSettingsScreen(onBack: () -> Unit) {
+fun MobileSyncSettingsScreen(
+    onBack: () -> Unit,
+    onDeviceLogs: (deviceId: String, deviceName: String) -> Unit = { _, _ -> },
+) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
+    val deviceReports by viewModel.deviceReports.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val shareLogs by viewModel.shareLogs.collectAsStateWithLifecycle()
     val stopStates by viewModel.stopStates.collectAsStateWithLifecycle()
@@ -175,12 +181,17 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         label = stringResource(R.string.live_sync_share_logs),
                         supportingText = stringResource(R.string.live_sync_share_logs_desc),
                     )
-                    DevicesPanel(ui.devices, nowPlaying, deviceBuilds, stopStates, onStop = {
-                        confirmStop = it
-                    }, onRename = { renaming = it }, onRemove = {
-                        confirmRemove =
-                            it
-                    })
+                    DevicesPanel(
+                        devices = ui.devices,
+                        nowPlaying = nowPlaying,
+                        builds = deviceBuilds,
+                        reports = if (LocalNerd.current) deviceReports else null,
+                        stopStates = stopStates,
+                        onStop = { confirmStop = it },
+                        onRename = { renaming = it },
+                        onLogs = { onDeviceLogs(it.id, it.name) },
+                        onRemove = { confirmRemove = it },
+                    )
                     CinemaButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
                         CinemaText(stringResource(R.string.live_sync_leave), role = TextRole.Label, tone = TextTone.Inherit)
                     }
@@ -371,12 +382,34 @@ private fun DevicesPanel(
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
     /** Each device's reported build, by device id (the device builds plan). */
     builds: Map<String, DeviceBuild>,
+    /**
+     * Each device's report, by device id, for a Nerd; null for anyone else, who sees no report line
+     * and no Logs action (the device diagnostics sync plan).
+     */
+    reports: Map<String, DeviceReport>?,
     stopStates: Map<String, SyncSettingsViewModel.StopState>,
     onStop: (SyncWire.Device) -> Unit,
     onRename: (SyncWire.Device) -> Unit,
+    onLogs: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
-    val active = devices?.filterNot { it.revoked } ?: return
+    devices?.filterNot { it.revoked }?.let { active ->
+        DevicesList(active, nowPlaying, builds, reports, stopStates, onStop, onRename, onLogs, onRemove)
+    }
+}
+
+@Composable
+private fun DevicesList(
+    active: List<SyncWire.Device>,
+    nowPlaying: Map<String, SyncPayloads.NowPlaying>,
+    builds: Map<String, DeviceBuild>,
+    reports: Map<String, DeviceReport>?,
+    stopStates: Map<String, SyncSettingsViewModel.StopState>,
+    onStop: (SyncWire.Device) -> Unit,
+    onRename: (SyncWire.Device) -> Unit,
+    onLogs: (SyncWire.Device) -> Unit,
+    onRemove: (SyncWire.Device) -> Unit,
+) {
     val listedBuilds = active.mapNotNull { builds[it.id] }
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
@@ -400,6 +433,8 @@ private fun DevicesPanel(
                             )
                         }
                         DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
+                        // This device's own logs are in Settings → About → Logs.
+                        if (reports != null && !device.current) DeviceReportLine(reports[device.id])
                         nowPlaying[device.id]?.let {
                             CinemaText(nowPlayingLine(it), role = TextRole.BodySmall, tone = TextTone.Accent)
                         }
@@ -438,6 +473,13 @@ private fun DevicesPanel(
                         icon = CinemaIcons.Edit,
                         label = stringResource(R.string.live_sync_device_rename),
                     )
+                    if (reports != null && !device.current) {
+                        IconAction(
+                            onClick = { onLogs(device) },
+                            icon = CinemaIcons.Logs,
+                            label = stringResource(R.string.settings_diagnostics_title),
+                        )
+                    }
                     if (!device.current) {
                         IconAction(
                             onClick = { onRemove(device) },

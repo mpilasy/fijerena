@@ -1054,8 +1054,16 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 }
 
                 composable<Screen.SyncSettings> {
+                    org.njarasoa.fijerena.feature.settings.MobileSyncSettingsScreen(
+                        onBack = { navController.navigateUp() },
+                        onDeviceLogs = { id, name -> navController.navigateOnce(Screen.DeviceLogs(id, name)) },
+                    )
+                }
+
+                composable<Screen.DeviceLogs> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.DeviceLogs>()
                     org.njarasoa.fijerena.feature.settings
-                        .MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
+                        .MobileDeviceLogsScreen(route.deviceId, route.deviceName, onBack = { navController.navigateUp() })
                 }
 
                 composable<Screen.NewerData> {

@@ -117,6 +117,7 @@ internal fun NavDestination.topScreen(): TopScreen =
 internal fun NavDestination.isSettingsTree(): Boolean =
     hasRoute<Screen.Settings>() ||
         hasRoute<Screen.SyncSettings>() ||
+        hasRoute<Screen.DeviceLogs>() ||
         hasRoute<Screen.AddProvider>() ||
         hasRoute<Screen.ProviderSelection>() ||
         hasRoute<Screen.EpgManagement>() ||

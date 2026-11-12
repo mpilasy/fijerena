@@ -251,7 +251,7 @@ private fun DiagnosticsList(
  * Puts [text] on the clipboard. Android 13 and later show their own confirmation, so the toast is
  * only for older versions.
  */
-private fun copyToClipboard(
+internal fun copyToClipboard(
     context: Context,
     label: String,
     text: String,

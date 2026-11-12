@@ -34,6 +34,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.DeviceReport
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -50,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.DeviceBuildLine
+import org.njarasoa.fijerena.core.ui.sync.DeviceReportLine
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.isOlderBuild
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
@@ -70,7 +72,11 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
@@ -80,15 +86,19 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Settings → Live sync on TV. A TV has no camera: it joins by showing a handoff QR code for a
- * phone of the group to scan, and adds devices by showing an invite for them to scan.
+ * phone of the group to scan, and adds devices by showing an invite for them to scan. A Nerd's
+ * devices list has a Logs action on the other devices' rows, which opens [onDeviceLogs] with the
+ * device's id and name; Back returns to that action.
  */
 @Composable
-fun SyncSettingsScreen() {
+fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> Unit = { _, _ -> }) {
     val context = LocalContext.current
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val deviceBuilds by viewModel.deviceBuilds.collectAsStateWithLifecycle()
+    val deviceReports by viewModel.deviceReports.collectAsStateWithLifecycle()
+    val returnFocus = rememberNavReturnFocus()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val shareLogs by viewModel.shareLogs.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
@@ -99,13 +109,15 @@ fun SyncSettingsScreen() {
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
 
     // Entry focus on Sync now (Add a device while a sync runs, as Sync now is disabled then); else the
-    // screen opened with nothing focused.
+    // screen opened with nothing focused. Not on the way back from a device's Logs: the hand-back below
+    // puts focus on that device's Logs action.
     val syncNowFocus = remember { FocusRequester() }
     val addDeviceFocus = remember { FocusRequester() }
     val pairing = ui.handoffQr != null || ui.inviteQr != null
     LaunchedEffect(status.linked, pairing) {
-        if (status.linked && !pairing) syncNowFocus.requestFocusWithRetry(fallback = addDeviceFocus)
+        if (status.linked && !pairing && returnFocus.key == null) syncNowFocus.requestFocusWithRetry(fallback = addDeviceFocus)
     }
+    NavReturnFocusEffect(returnFocus, fallback = syncNowFocus)
 
     Column(
         modifier =
@@ -172,10 +184,17 @@ fun SyncSettingsScreen() {
             // Leave button's beam, so plain focus search went to the share switch.
             val lastActionFocus = remember { FocusRequester() }
             val hasDevices = ui.devices.orEmpty().any { !it.revoked }
-            DevicesPanel(ui.devices, nowPlaying, deviceBuilds, lastActionFocus, onRename = { renaming = it }, onRemove = {
-                confirmRemove =
-                    it
-            })
+            DevicesPanel(
+                devices = ui.devices,
+                nowPlaying = nowPlaying,
+                builds = deviceBuilds,
+                reports = if (LocalNerd.current) deviceReports else null,
+                lastActionFocus = lastActionFocus,
+                returnFocus = returnFocus,
+                onRename = { renaming = it },
+                onLogs = { onDeviceLogs(it.id, it.name) },
+                onRemove = { confirmRemove = it },
+            )
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             CinemaText(
                 stringResource(R.string.provider_section_danger_zone),
@@ -394,70 +413,95 @@ private fun LinkedPanel(
 }
 
 @Composable
-private fun DevicesPanel(
+internal fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
     /** Each device's reported build, by device id (the device builds plan). */
     builds: Map<String, DeviceBuild>,
+    /**
+     * Each device's report, by device id, for a Nerd; null for anyone else, who sees no report line
+     * and no Logs action (the device diagnostics sync plan).
+     */
+    reports: Map<String, DeviceReport>?,
     /** On the last row's last button: Up from Leave below lands there. */
     lastActionFocus: FocusRequester,
+    /** A Logs action records itself here, so Back from the device's Logs comes back to it. */
+    returnFocus: NavReturnFocus,
     onRename: (SyncWire.Device) -> Unit,
+    onLogs: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val scale = LocalUiScale.current
-    val active = devices?.filterNot { it.revoked } ?: return
-    val listedBuilds = active.mapNotNull { builds[it.id] }
-    val last = active.lastOrNull()
-    TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-            CinemaText(
-                stringResource(R.string.live_sync_devices_title),
-                role = TextRole.Heading,
-                tone = TextTone.Primary,
-            )
-            active.forEach { device ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        CinemaText(device.name, role = TextRole.Heading, tone = TextTone.Primary)
-                        // A playing device's status line says it is there; last seen only when idle.
-                        if (device.current) {
-                            CinemaText(
-                                stringResource(R.string.live_sync_device_this),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
-                        } else if (device.id !in nowPlaying) {
-                            CinemaText(
-                                stringResource(R.string.live_sync_device_last_seen, liveSyncRelative(device.lastSeen)),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
+    val active = devices?.filterNot { it.revoked }
+    if (active != null) {
+        val listedBuilds = active.mapNotNull { builds[it.id] }
+        val last = active.lastOrNull()
+        TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                CinemaText(
+                    stringResource(R.string.live_sync_devices_title),
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
+                )
+                active.forEach { device ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            CinemaText(device.name, role = TextRole.Heading, tone = TextTone.Primary)
+                            // A playing device's status line says it is there; last seen only when idle.
+                            if (device.current) {
+                                CinemaText(
+                                    stringResource(R.string.live_sync_device_this),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
+                                )
+                            } else if (device.id !in nowPlaying) {
+                                CinemaText(
+                                    stringResource(R.string.live_sync_device_last_seen, liveSyncRelative(device.lastSeen)),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
+                                )
+                            }
+                            DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
+                            // This device's own logs are in Settings → About → Logs.
+                            if (reports != null && !device.current) DeviceReportLine(reports[device.id])
+                            nowPlaying[device.id]?.let {
+                                CinemaText(
+                                    nowPlayingLine(it),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
+                                )
+                            }
                         }
-                        DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
-                        nowPlaying[device.id]?.let {
-                            CinemaText(
-                                nowPlayingLine(it),
-                                role = TextRole.BodySmall,
-                                tone = TextTone.Secondary,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(Spacing.sm.scaled(scale)))
-                    TvIconAction(
-                        onClick = { onRename(device) },
-                        icon = CinemaIcons.Edit,
-                        label = stringResource(R.string.live_sync_device_rename),
-                        modifier = if (device == last && device.current) Modifier.focusRequester(lastActionFocus) else Modifier,
-                    )
-                    if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))
                         TvIconAction(
-                            onClick = { onRemove(device) },
-                            icon = CinemaIcons.Delete,
-                            label = stringResource(R.string.live_sync_device_remove),
-                            danger = true,
-                            modifier = if (device == last) Modifier.focusRequester(lastActionFocus) else Modifier,
+                            onClick = { onRename(device) },
+                            icon = CinemaIcons.Edit,
+                            label = stringResource(R.string.live_sync_device_rename),
+                            modifier = if (device == last && device.current) Modifier.focusRequester(lastActionFocus) else Modifier,
                         )
+                        if (reports != null && !device.current) {
+                            val key = "logs:${device.id}"
+                            Spacer(Modifier.width(Spacing.sm.scaled(scale)))
+                            TvIconAction(
+                                onClick = {
+                                    returnFocus.leaveFrom(key)
+                                    onLogs(device)
+                                },
+                                icon = CinemaIcons.Logs,
+                                label = stringResource(R.string.settings_diagnostics_title),
+                                modifier = Modifier.navReturnFocusTarget(returnFocus, key),
+                            )
+                        }
+                        if (!device.current) {
+                            Spacer(Modifier.width(Spacing.sm.scaled(scale)))
+                            TvIconAction(
+                                onClick = { onRemove(device) },
+                                icon = CinemaIcons.Delete,
+                                label = stringResource(R.string.live_sync_device_remove),
+                                danger = true,
+                                modifier = if (device == last) Modifier.focusRequester(lastActionFocus) else Modifier,
+                            )
+                        }
                     }
                 }
             }

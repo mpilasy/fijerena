@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dialpad
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -104,6 +105,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -166,6 +168,7 @@ import androidx.compose.material.icons.sharp.ContentCopy
 import androidx.compose.material.icons.sharp.DateRange
 import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.DeleteForever
+import androidx.compose.material.icons.sharp.Description
 import androidx.compose.material.icons.sharp.Dialpad
 import androidx.compose.material.icons.sharp.Edit
 import androidx.compose.material.icons.sharp.ExpandLess
@@ -586,6 +589,11 @@ object CinemaIcons {
     val CloudOff: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.CloudOff, Icons.Outlined.CloudOff, Icons.Sharp.CloudOff)
+
+    /** A device's Logs on Live Sync (the device diagnostics sync plan). */
+    val Logs: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Description, Icons.Outlined.Description, Icons.Sharp.Description)
 
     /** A favourite whose source no longer lists it: the "Gone from source" mark. */
     val LinkOff: ImageVector

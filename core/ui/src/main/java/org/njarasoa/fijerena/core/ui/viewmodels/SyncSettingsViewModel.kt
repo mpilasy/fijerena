@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
+import org.njarasoa.fijerena.core.network.sync.DeviceReport
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.PinRequests
@@ -87,6 +88,12 @@ class SyncSettingsViewModel(
             val me = current.devices?.firstOrNull { it.current }?.id
             if (me == null) builds else builds + (me to DeviceBuild.current(app))
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Each device's report, by device id (the device diagnostics sync plan): a Nerd sees it on the devices list. */
+    val deviceReports: StateFlow<Map<String, DeviceReport>> =
+        AppSettings(app)
+            .observeDeviceReports()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private fun Ui.named(names: Map<String, String>) = copy(devices = devices?.map { d -> names[d.id]?.let { d.copy(name = it) } ?: d })
 

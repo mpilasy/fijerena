@@ -272,6 +272,17 @@ sealed interface Screen {
     @Serializable
     data object SyncSettings : Screen
 
+    /**
+     * Live Sync → a device's Logs (a Nerd's, the device diagnostics sync plan): the report that
+     * device of the sync group sent. [deviceName] is the name its row showed, for a device the group
+     * never renamed.
+     */
+    @Serializable
+    data class DeviceLogs(
+        val deviceId: String,
+        val deviceName: String = "",
+    ) : Screen
+
     /** Settings → About → Logs (everyone with Settings; also Safe mode): recorded crashes and process exit reasons. */
     @Serializable
     data object Diagnostics : Screen

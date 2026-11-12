@@ -1050,6 +1050,37 @@
     <string name="live_sync_device_this">Cet appareil</string>
     <string name="live_sync_device_build_unknown">Version pas encore signalée</string>
     <string name="live_sync_device_build_older">Version plus ancienne</string>
+    <string name="live_sync_device_logs_unknown">Journaux pas encore signalés</string>
+    <string name="live_sync_device_logs_none">Aucun problème en 7 jours</string>
+    <string name="live_sync_device_logs_counts">%1$s en 7 jours</string>
+    <plurals name="live_sync_logs_crashes">
+        <item quantity="one">%1$d plantage</item>
+        <item quantity="other">%1$d plantages</item>
+    </plurals>
+    <plurals name="live_sync_logs_anrs">
+        <item quantity="one">%1$d ANR</item>
+        <item quantity="other">%1$d ANR</item>
+    </plurals>
+    <plurals name="live_sync_logs_killed">
+        <item quantity="one">%1$d arrêt par le système</item>
+        <item quantity="other">%1$d arrêts par le système</item>
+    </plurals>
+    <plurals name="live_sync_logs_errors">
+        <item quantity="one">%1$d erreur</item>
+        <item quantity="other">%1$d erreurs</item>
+    </plurals>
+    <string name="device_logs_title">Journaux de l’appareil</string>
+    <string name="device_logs_sent">Envoyé le %1$s</string>
+    <string name="device_logs_failed_calls">Appels au serveur échoués (24 h) : %1$d</string>
+    <string name="device_logs_safe_mode">Démarré en mode sans échec le %1$s</string>
+    <string name="device_logs_kind_crash">Plantage</string>
+    <string name="device_logs_kind_anr">ANR</string>
+    <string name="device_logs_kind_killed">Arrêté par le système</string>
+    <string name="device_logs_kind_error">Erreur</string>
+    <string name="device_logs_this_build">Cette version</string>
+    <string name="device_logs_before_update">Avant la dernière mise à jour</string>
+    <string name="device_logs_screen">Écran : %1$s</string>
+    <string name="device_logs_empty">Aucun problème signalé</string>
     <string name="live_sync_device_last_seen">Vu %1$s</string>
     <string name="live_sync_device_remove">Retirer</string>
     <string name="live_sync_device_rename">Renommer</string>

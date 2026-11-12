@@ -12,7 +12,9 @@
 # Settings focus tests (2026-10-24, Phase 3): LiveSyncSetupFocusTest (tv/src/test, feature/settings)
 # checks the setup panel (not linked). No test covers the linked screen, so this walk is unchanged.
 # 2026-11-11 (device diagnostics sync plan, Phase 2): the Share Logs with My Sync Group switch under
-# the share switch. Edited by hand, not re-recorded yet.
+# the share switch. Edited by hand, not re-recorded yet. Walked as a profile that is not a Nerd:
+# a Nerd also has a Logs action between Rename and Remove on the rows of the other devices (Phase 3;
+# DeviceLogsFocusTest in tv/src/test covers it and Back from Device Logs).
 @start Sync now
 UP	Add a device
 DOWN	Sync now

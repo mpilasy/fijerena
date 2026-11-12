@@ -99,6 +99,7 @@ fun NavBackStackEntry?.isAdminOnly(): Boolean =
             it.hasRoute<Screen.ProviderSelection>() ||
             it.hasRoute<Screen.EpgManagement>() ||
             it.hasRoute<Screen.SyncSettings>() ||
+            it.hasRoute<Screen.DeviceLogs>() ||
             it.hasRoute<Screen.ParentalControls>() ||
             it.hasRoute<Screen.ParentalListEdit>() ||
             it.hasRoute<Screen.ParentalCheck>()
@@ -117,6 +118,7 @@ fun NavDestination?.isPinGuarded(): Boolean =
                 hasRoute<Screen.ProfileEdit>() ||
                 hasRoute<Screen.EpgManagement>() ||
                 hasRoute<Screen.SyncSettings>() ||
+                hasRoute<Screen.DeviceLogs>() ||
                 hasRoute<Screen.ParentalControls>() ||
                 hasRoute<Screen.ParentalListEdit>() ||
                 hasRoute<Screen.ParentalCheck>()

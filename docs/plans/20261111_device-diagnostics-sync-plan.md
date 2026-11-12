@@ -1,6 +1,6 @@
 # Device diagnostics over live sync
 
-**Status:** In progress since 2026-11-11. Phases 1 and 2 done. The user decided DD-Q1 to DD-Q7, all (a).
+**Status:** In progress since 2026-11-11. Phases 1 to 3 done; the emulator check waits. The user decided DD-Q1 to DD-Q7, all (a).
 
 ## Goal
 
@@ -205,7 +205,7 @@ RELEASE_NOTES. No Room migration.
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
-| 3 | Not started |
+| 3 | Done 2026-11-11 (emulator check waits) |
 | 4 | Not started |
 
 **Phase 1 done (2026-11-11):**
@@ -233,6 +233,25 @@ RELEASE_NOTES. No Room migration.
   (`scripts/focus-walks/live-sync.txt` edited by hand).
 - Tests: `AppSettingsDeviceReportsTest`, `SyncApplierDeviceReportTest`, and `SyncCodecTest`: a report at
   the cap whose texts are all quotes and backslashes (escaped twice more on the way) stays under 64 Ki sealed.
+
+**Phase 3 done (2026-11-11):**
+
+- Shared in core/ui (`sync/DeviceReportLine.kt`): `DeviceReportSummary`, `DeviceReportLine`, `DeviceLogsHeaderLines`,
+  `DeviceLogsEntryLines`, `deviceReportText` (Copy and Share), `DeviceReport.recentSafeModeAt`.
+  `DeviceLogsViewModel` follows the report, the build and the name of one device.
+- `Screen.DeviceLogs(deviceId, deviceName = "")`: the name the row showed comes with the route, for a device
+  the group never renamed (the server's name is not in the prefs). Admin only and PIN guarded, as Live Sync
+  (`isAdminOnly`, `isPinGuarded`); on TV in the Settings tree.
+- Both devices lists: the report line and the Logs icon action (`CinemaIcons.Logs`) on the other devices'
+  rows, for a Nerd only. TV: `NavReturnFocus` brings Back to the Logs action; Live Sync's first focus skips
+  while it is pending. `DevicesPanel` (TV) is internal now, for its test.
+- Device Logs page: TV `DeviceLogsScreen` (focusable cards, focus on the first block), phone
+  `MobileDeviceLogsScreen` (Copy and Share in the top bar, as on Logs).
+- Strings en, fr, mg. Departures: "Before the last update" and "Started in safe mode" are in sentence case
+  (values, not titles), and the kind "Stopped by the system".
+- Debug: `SyncDebugReceiver` `test-error [--es msg <text>]` records an error and sends the report again.
+- Tests: `DeviceLogsFocusTest` (TV: Logs between Rename and Remove, the page's first focus, Back to Logs),
+  `MobileDeviceLogsScreenTest`, and `DeviceReportLineTest` (in the mobile module: core/ui runs no Robolectric).
 
 ## Difficulty
 

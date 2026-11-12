@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * Debug builds only: drives live sync over adb, for scripted checks (Settings → Live sync is the UI). Results go
@@ -31,6 +32,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncEngine
  * - `handoff --es url <server> [--es name <device name>]` — logs the text of a handoff QR code,
  *   then waits (up to ten minutes) for a device of an account to scan it, and joins
  * - `now` — a sync pass; `status` — link, cursor, last sync; `unlink`
+ * - `test-error [--es msg <text>]` — records an error in Logs and sends the device report again
  */
 class SyncDebugReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -108,6 +110,16 @@ class SyncDebugReceiver : BroadcastReceiver() {
                 accounts.leave()
                 SyncManager.getInstance(app).onLinkChanged()
                 Log.i(TAG, "unlink: done")
+            }
+
+            // The device diagnostics sync plan: an error in Logs, with a URL to check the masking,
+            // then the report again (it goes with the next sync pass).
+            "test-error" -> {
+                val message = intent.getStringExtra("msg") ?: "Test error from adb: GET http://panel.example/live/user/pass/1.ts"
+                CrashLog.record("debug test error", IllegalStateException(message))
+                SyncManager.getInstance(app).reportLogsNow()
+                SyncManager.getInstance(app).requestSync(0)
+                Log.i(TAG, "test-error: recorded")
             }
 
             else -> {
