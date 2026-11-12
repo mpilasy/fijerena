@@ -6,7 +6,9 @@ import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
+import android.view.Window
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -71,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.components.glassCard
+import org.njarasoa.fijerena.ui.player.toSpec
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -434,7 +437,10 @@ fun TvStatsOverlay(
                             CompactStatRow(stringResource(R.string.player_stats_fps), stats.videoFrameRate)
                             StatNameRow(
                                 stringResource(R.string.player_stats_display),
-                                displayModes?.let { displayModeText(it.current) } ?: naText,
+                                displayModes?.let { modes ->
+                                    val mode = displayModeText(modes.current)
+                                    if (modes.matched) stringResource(R.string.player_stats_display_matched, mode) else mode
+                                } ?: naText,
                             )
                             StatNameRow(
                                 stringResource(R.string.player_stats_modes),
@@ -668,22 +674,30 @@ fun TvStatsOverlay(
     }
 }
 
-/** The display's mode now and the modes it offers. */
+/** The display's mode now, the modes it offers, and the mode the app asked for (0: none). */
 private data class DisplayModes(
     val current: ModeSpec,
     val supported: List<ModeSpec>,
-)
+    val requestedId: Int,
+) {
+    /** Match Frame Rate asked for the mode in place. */
+    val matched: Boolean get() = requestedId != 0 && requestedId == current.id
+}
 
-private fun Display.Mode.toSpec() = ModeSpec(modeId, physicalWidth, physicalHeight, refreshRate)
-
-private fun readDisplayModes(display: Display?): DisplayModes? =
-    display?.let { d -> DisplayModes(d.mode.toSpec(), d.supportedModes.map { it.toSpec() }) }
+private fun readDisplayModes(
+    display: Display?,
+    window: Window?,
+): DisplayModes? =
+    display?.let { d ->
+        DisplayModes(d.mode.toSpec(), d.supportedModes.map { it.toSpec() }, window?.attributes?.preferredDisplayModeId ?: 0)
+    }
 
 /** The modes of the display that shows the player, read again when the display changes its mode. */
 @Composable
 private fun rememberDisplayModes(): DisplayModes? {
     val view = LocalView.current
-    var modes by remember(view) { mutableStateOf(readDisplayModes(view.display)) }
+    val window = LocalActivity.current?.window
+    var modes by remember(view, window) { mutableStateOf(readDisplayModes(view.display, window)) }
     DisposableEffect(view) {
         val manager = view.context.getSystemService(DisplayManager::class.java)
         val listener =
@@ -693,7 +707,7 @@ private fun rememberDisplayModes(): DisplayModes? {
                 override fun onDisplayRemoved(displayId: Int) = Unit
 
                 override fun onDisplayChanged(displayId: Int) {
-                    if (displayId == view.display?.displayId) modes = readDisplayModes(view.display)
+                    if (displayId == view.display?.displayId) modes = readDisplayModes(view.display, window)
                 }
             }
         manager?.registerDisplayListener(listener, Handler(Looper.getMainLooper()))

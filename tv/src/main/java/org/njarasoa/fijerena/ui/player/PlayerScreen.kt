@@ -141,6 +141,8 @@ fun PlayerScreen(
 ) {
     // Full screen: the controls have their own clock, so the screens' clock goes.
     HideTvClock()
+    // Full screen only: the display's refresh rate follows the content's frame rate while the switch is on.
+    MatchFrameRateEffect()
     // Over video: dark in every theme (ProvideMediaTheme).
     TvMediaTheme {
         val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()

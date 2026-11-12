@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.feature.settings
 
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.testing.SettingsFixture
 import org.njarasoa.fijerena.testing.SettingsFocusTest
 import org.njarasoa.fijerena.testing.back
@@ -31,6 +34,7 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             down("Reminder Time / How long before the start a reminder rings, on this device / 10 minutes before"),
             down("Show Clock / The time at the top right of every screen"),
             down("Night Audio / Quieter loud sounds, clearer speech"),
+            down("$MATCH_FRAME_RATE / $MATCH_FRAME_RATE_DESC"),
             down("Show Key Input / The last 10 keys the app received"),
             // The end of the section: Sources & Guide is a section of its own.
             down("Show Key Input"),
@@ -38,6 +42,7 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             // the switch still off.
             center("10 minutes"),
             left("Show Key Input"),
+            up(MATCH_FRAME_RATE),
             up("Night Audio"),
             up("Show Clock"),
             up("Reminder Time"),
@@ -60,5 +65,60 @@ class SettingsThisDeviceFocusTest : SettingsFocusTest() {
             up("Language"),
             back("This Device"),
         )
+    }
+
+    @Test
+    fun `an Admin turns Match Frame Rate on and off, and the device keeps it`() {
+        open(SettingsFixture.ADMIN)
+        assertFalse(AppSettings(context).matchFrameRate)
+        walk.run(
+            *toAdminSection("This Device"),
+            center("Language"),
+            *sectionDown(THIS_DEVICE_ROWS, "Language", MATCH_FRAME_RATE),
+            // OK turns the switch on; focus stays on its row.
+            center(MATCH_FRAME_RATE),
+        )
+        rule.waitForIdle()
+        assertTrue(AppSettings(context).matchFrameRate)
+
+        walk.run(center(MATCH_FRAME_RATE))
+        rule.waitForIdle()
+        assertFalse(AppSettings(context).matchFrameRate)
+    }
+
+    @Test
+    fun `Match Frame Rate opens with the saved value`() {
+        seed(SettingsFixture.ADMIN)
+        AppSettings(context).matchFrameRate = true
+        showSettings()
+        walk.run(
+            *toAdminSection("This Device"),
+            center("Language"),
+            *sectionDown(THIS_DEVICE_ROWS, "Language", MATCH_FRAME_RATE),
+            // The row reads the saved on, so OK turns it off.
+            center(MATCH_FRAME_RATE),
+        )
+        rule.waitForIdle()
+        assertFalse(AppSettings(context).matchFrameRate)
+    }
+
+    private companion object {
+        const val MATCH_FRAME_RATE = "Match Frame Rate"
+        const val MATCH_FRAME_RATE_DESC =
+            "The screen changes to the frame rate of the video. It goes black for a few seconds while it changes."
+
+        /** Admin → This Device as an Admin sees it on the fixture's data. */
+        val THIS_DEVICE_ROWS =
+            listOf(
+                "Language",
+                "Text & Grid Size",
+                "Items in Recent",
+                "Add a Channel to Recent After",
+                "Reminder Time",
+                "Show Clock",
+                "Night Audio",
+                MATCH_FRAME_RATE,
+                "Show Key Input",
+            )
     }
 }

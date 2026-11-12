@@ -47,6 +47,8 @@ data class SettingsUiState(
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val showClock: Boolean = false,
+    /** TV: the full-screen player asks for a display mode at the video's frame rate (the match frame rate plan). */
+    val matchFrameRate: Boolean = false,
     /** Minutes before the start a reminder rings on this device (the Reminders page plan, RP-D11). */
     val reminderLeadMinutes: Int = ReminderSchedule.DEFAULT_LEAD_MINUTES,
     val showTmdbCharts: Boolean = true,
@@ -84,6 +86,7 @@ class SettingsViewModel(
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 showClock = appSettings.showClock,
+                matchFrameRate = appSettings.matchFrameRate,
                 reminderLeadMinutes = appSettings.reminderLeadMinutes,
                 showTmdbCharts = appSettings.showTmdbCharts,
                 showSports = appSettings.showSports,
@@ -193,6 +196,13 @@ class SettingsViewModel(
         if (!appSettings.isAdmin) return
         appSettings.showClock = show
         _uiState.value = _uiState.value.copy(showClock = show)
+    }
+
+    fun updateMatchFrameRate(on: Boolean) {
+        if (appSettings.isAdmin) {
+            appSettings.matchFrameRate = on
+            _uiState.value = _uiState.value.copy(matchFrameRate = on)
+        }
     }
 
     fun updateNightAudio(on: Boolean) {

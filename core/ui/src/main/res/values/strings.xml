@@ -600,6 +600,7 @@
     <string name="player_stats_fps">FPS</string>
     <string name="player_stats_display">Display</string>
     <string name="player_stats_modes">Modes</string>
+    <string name="player_stats_display_matched">%1$s (matched)</string>
     <string name="player_stats_bitrate">Bitrate</string>
     <string name="player_stats_rate">Rate</string>
     <string name="player_stats_ch">Ch</string>
@@ -1213,6 +1214,8 @@
     <string name="settings_watch_delay_row_title">Add a Channel to Recent After</string>
     <string name="settings_show_clock_title">Show Clock</string>
     <string name="settings_show_clock_desc">The time at the top right of every screen. The player always shows it.</string>
+    <string name="settings_match_frame_rate_title">Match Frame Rate</string>
+    <string name="settings_match_frame_rate_desc">The screen changes to the frame rate of the video. It goes black for a few seconds while it changes.</string>
     <string name="settings_key_input_title">Show Key Input</string>
     <string name="settings_key_input_desc">The last 10 keys the app received, at the top right of every screen. Turns itself off after the time you pick.</string>
     <string name="settings_key_input_until">Turns off at %1$s.</string>

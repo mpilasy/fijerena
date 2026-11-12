@@ -880,6 +880,8 @@
     <string name="settings_watch_delay_row_title">Ampidirina ao amin\'ny Vao haingana ny fantsona aorian\'ny</string>
     <string name="settings_show_clock_title">Asehoy ny famataranandro</string>
     <string name="settings_show_clock_desc">Ny ora eo ambony ankavanan\'ny efijery rehetra. Asehon\'ny mpamaky foana izany.</string>
+    <string name="settings_match_frame_rate_title">Hafainganan\'ny sary mifanaraka</string>
+    <string name="settings_match_frame_rate_desc">Miova ho amin\'ny hafainganan\'ny sarin\'ny video ny efijery. Mainty mandritra ny segondra vitsivitsy izy rehefa miova.</string>
     <string name="settings_key_input_title">Asehoy ny bokotra voatsindry</string>
     <string name="settings_key_input_desc">Ireo bokotra 10 farany noraisin\'ny app, eo ambony ankavanan\'ny efijery rehetra. Maty ho azy rehefa tapitra ny fotoana nofidinao.</string>
     <string name="settings_key_input_until">Maty amin\'ny %1$s.</string>
@@ -1027,6 +1029,7 @@
     <string name="player_stats_fps">FPS</string>
     <string name="player_stats_display">Efijery</string>
     <string name="player_stats_modes">Fomba</string>
+    <string name="player_stats_display_matched">%1$s (mifanaraka)</string>
     <string name="player_stats_bitrate">Tahan\'ny bit</string>
     <string name="player_stats_rate">Tahany</string>
     <string name="player_stats_ch">Làlana</string>

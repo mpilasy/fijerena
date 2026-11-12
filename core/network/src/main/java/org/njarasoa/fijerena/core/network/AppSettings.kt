@@ -90,6 +90,7 @@ class AppSettings(
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
+        private const val KEY_MATCH_FRAME_RATE = "match_frame_rate"
         private const val KEY_KEY_INPUT_UNTIL = "key_input_until"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
@@ -261,6 +262,16 @@ class AppSettings(
     var nightAudio: Boolean
         get() = prefs.getBoolean(NightAudioSetting.KEY, false)
         set(value) = prefs.edit { putBoolean(NightAudioSetting.KEY, value) }
+
+    /**
+     * Match Frame Rate (TV, This Device): the full-screen player asks the display for a mode at
+     * the frame rate of the content. Per device, never synced (not in [SYNCED_SETTING_KEYS]) and
+     * not exported: each TV and its HDMI chain react in their own way. Off until turned on: the
+     * screen goes black for a few seconds at each change. See the match frame rate plan.
+     */
+    var matchFrameRate: Boolean
+        get() = prefs.getBoolean(KEY_MATCH_FRAME_RATE, false)
+        set(value) = prefs.edit { putBoolean(KEY_MATCH_FRAME_RATE, value) }
 
     /** [nightAudio], now and on every change (from the player menu or This Device). */
     fun observeNightAudio(): Flow<Boolean> =

@@ -6,6 +6,7 @@
 - **Clear Image Cache:** Settings → About → Device Info has a new action on the image cache row that clears the posters and logos kept on the device. It asks first. On TV, press Right on the Storage section. TV and phone.
 - **A smaller image cache on small devices:** the posters and logos kept on the device now take at most 2% of its storage (from 64 MB to 512 MB), not always 512 MB. An 8 GB TV keeps about 160 MB. TV and phone.
 - **Safe mode and a full storage:** when the app starts in safe mode and the storage is almost full, the safe-mode screen now says so and what to clear, as a full storage can make the app close. TV and phone.
+- **Match Frame Rate (TV):** a new switch in Settings → This Device, off by default. When it is on, a film plays at a display mode that matches its frame rate: a 24 fps film at 24 Hz, a 25 fps film at 50 Hz, so the picture no longer judders. The screen goes black for a few seconds at the change; the film waits and then plays, so you miss nothing. Back from the player puts the TV back to its usual mode. Stats for Nerds shows "(matched)" beside the display mode.
 
 ## Version: 0.9.20261112034854
 

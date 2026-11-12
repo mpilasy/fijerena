@@ -1423,6 +1423,8 @@ class StreamingPlaybackService : MediaSessionService() {
         _playbackState.value = PlaybackState.Idle
         // A stopped stream is not kept on screen: whatever plays next starts from black.
         _newStreamStarting.value = true
+        // A stopped stream has no frame rate: the next player screen must not match its mode to it.
+        contentFrameRateTracker.newStream(isLive = false)
         // A remote Stop sent for the playback just stopped must not reach the next one. Idle
         // publishes nothing, so the new id is not shown until something plays.
         playSessionId.value = UUID.randomUUID().toString()

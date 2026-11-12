@@ -747,6 +747,18 @@ fun SettingsScreen(
                                                                             label = stringResource(R.string.night_audio_title),
                                                                             description = nightAudioDescription(),
                                                                         )
+                                                                        TvSwitchRow(
+                                                                            checked = uiState.matchFrameRate,
+                                                                            onCheckedChange = viewModel::updateMatchFrameRate,
+                                                                            label =
+                                                                                stringResource(
+                                                                                    R.string.settings_match_frame_rate_title,
+                                                                                ),
+                                                                            description =
+                                                                                stringResource(
+                                                                                    R.string.settings_match_frame_rate_desc,
+                                                                                ),
+                                                                        )
                                                                         KeyInputSettingsRow(
                                                                             until = keyInputUntil,
                                                                             onTurnOn = { openPicker(SettingPicker.KEY_INPUT) },

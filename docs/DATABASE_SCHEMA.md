@@ -797,6 +797,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `show_sports` | BOOLEAN | The sports teams, leagues and games (absent = on). Off, no sports API is called. Per device, set by an Admin; not synced, not exported |
 | `new_episodes_told_at_<profileId>` | LONG | The newest find of new episodes that the Home banner told that profile about on this device (ms). Not synced: each device finds new episodes itself |
 | `night_audio` | BOOLEAN | Night Audio (absent = off; `NightAudioProcessor.KEY`): quiet speech louder, loud sounds quieter. Per device, not synced; the player service reads the key directly |
+| `match_frame_rate` | BOOLEAN | Match Frame Rate (TV, absent = off): the full-screen player asks the display for a mode at the content's frame rate. Per device: not synced, not exported |
 | `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
 | `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
 | `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |

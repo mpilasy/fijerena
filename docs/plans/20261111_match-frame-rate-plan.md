@@ -1,7 +1,8 @@
 # Match Frame Rate (TV)
 
-**Status:** Phase 1 done 2026-11-11 (the rate and the Stats for Nerds rows; no mode switch yet).
-Open questions MF-Q1 to MF-Q6 wait for the user before Phase 2.
+**Status:** Phase 2 done 2026-11-11: films play at a matching mode with the This Device switch on.
+Phase 3 (Live TV full screen) is next. The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with
+option (a).
 
 ## Goal
 
@@ -84,16 +85,18 @@ on a Shield by the user (Phase 1 check). The Stats for Nerds lines of Phase 1 sh
   Both fit a 50 Hz (59.94 Hz) mode, so the family rule below covers them.
 - An HLS stream can have variants at 25 and 50 fps. They are in the same family: no switch.
 
-## Open questions
+## Questions (decided 2026-11-11)
+
+The user took the recommended option (a) for each question.
 
 | # | Question | Options |
 |---|----------|---------|
-| MF-Q1 | Which mechanism? | (a) **`preferredDisplayModeId` on every API level.** One path, works on the Shields, the mode choice is unit-tested. Keep Media3's default ONLY_IF_SEAMLESS strategy (harmless). Recommended. (b) (A) on Android 11, (B) on Android 12 and later. Two paths to test, and the Bravia's Android version decides which one runs. (c) (B) only. The Shields get nothing. |
-| MF-Q2 | Default of the switch? | (a) **Off until turned on**, like Night Audio. The blank screen at the start of a film surprises a user who did not ask for it. Recommended. (b) On. |
-| MF-Q3 | Live TV in full screen? | (a) **Switch only when the family changes** (24, 50 or 60 Hz; 59.94 and 60 count as one, 23.976 and 24 as one). Zapping from one 50 Hz channel to another does not blank. The mode stays across zaps. Recommended. (b) VOD only; live stays at the system mode. (c) Switch on every channel whose exact rate differs. Many blanks. |
-| MF-Q4 | Back from Live TV full screen to the preview? | (a) **Back to the system mode when `PlayerScreen` closes.** Simple, and the lists never run at 24 Hz. Each preview to full screen round trip on a 50 Hz channel blanks twice. Recommended. (b) Keep the mode until the Live TV screen closes. Fewer blanks; the preview and lists run at the content's rate. |
-| MF-Q5 | Hold a film during the switch? | (a) **Yes, VOD only.** The film waits (paused in the app) until the display reports the new mode plus a short settle, at most 6 seconds, then plays. The user misses nothing. Recommended. (b) No. The first 2 to 5 seconds play on a blank screen. Live never waits in either case. |
-| MF-Q6 | Android 12 and later: the system's Match Content Frame Rate (Never, Seamless only, Always)? | (a) **Never: no switch. Seamless only or Always: switch.** The app switch is an explicit opt-in, so it goes past the "Seamless only" default, but the user's "Never" wins. Recommended. (b) Switch only with "Always". On most devices the feature then needs a second setting. (c) Ignore it. Only the Bravia can be on Android 12 or later. |
+| MF-Q1 | Which mechanism? **Decided: (a).** | (a) **`preferredDisplayModeId` on every API level.** One path, works on the Shields, the mode choice is unit-tested. Keep Media3's default ONLY_IF_SEAMLESS strategy (harmless). Recommended. (b) (A) on Android 11, (B) on Android 12 and later. Two paths to test, and the Bravia's Android version decides which one runs. (c) (B) only. The Shields get nothing. |
+| MF-Q2 | Default of the switch? **Decided: (a).** | (a) **Off until turned on**, like Night Audio. The blank screen at the start of a film surprises a user who did not ask for it. Recommended. (b) On. |
+| MF-Q3 | Live TV in full screen? **Decided: (a).** | (a) **Switch only when the family changes** (24, 50 or 60 Hz; 59.94 and 60 count as one, 23.976 and 24 as one). Zapping from one 50 Hz channel to another does not blank. The mode stays across zaps. Recommended. (b) VOD only; live stays at the system mode. (c) Switch on every channel whose exact rate differs. Many blanks. |
+| MF-Q4 | Back from Live TV full screen to the preview? **Decided: (a).** | (a) **Back to the system mode when `PlayerScreen` closes.** Simple, and the lists never run at 24 Hz. Each preview to full screen round trip on a 50 Hz channel blanks twice. Recommended. (b) Keep the mode until the Live TV screen closes. Fewer blanks; the preview and lists run at the content's rate. |
+| MF-Q5 | Hold a film during the switch? **Decided: (a).** | (a) **Yes, VOD only.** The film waits (paused in the app) until the display reports the new mode plus a short settle, at most 6 seconds, then plays. The user misses nothing. Recommended. (b) No. The first 2 to 5 seconds play on a blank screen. Live never waits in either case. |
+| MF-Q6 | Android 12 and later: the system's Match Content Frame Rate (Never, Seamless only, Always)? **Decided: (a).** | (a) **Never: no switch. Seamless only or Always: switch.** The app switch is an explicit opt-in, so it goes past the "Seamless only" default, but the user's "Never" wins. Recommended. (b) Switch only with "Always". On most devices the feature then needs a second setting. (c) Ignore it. Only the Bravia can be on Android 12 or later. |
 
 ## Design
 
@@ -186,7 +189,7 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
 | Phase | Status |
 |---|---|
 | 1 | Done 2026-11-11 |
-| 2 | Not started |
+| 2 | Done 2026-11-11 |
 | 3 | Not started |
 
 **Phase 1 done 2026-11-11.** `FrameRateEstimator` and `ContentFrameRate` (core/player/.../display/),
@@ -206,6 +209,28 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
   rate with two decimals when the format has none.
 - Display reads `3840×2160 · 23.976 Hz` (no "(matched)" until Phase 2 asks for a mode); Modes lists
   the refresh rates at the current resolution only, as the design says.
+
+**Phase 2 done 2026-11-11.** `AppSettings.matchFrameRate` (`match_frame_rate`) and its TV row
+**Match Frame Rate** in This Device under Night Audio (`SettingsViewModel.updateMatchFrameRate`, Admin
+only, as Show Clock); `pickDisplayMode` and `displayModeToRequest` (core/player/.../display/
+`DisplayModeChoice.kt`); `DisplayModeMatcher` and `MatchFrameRateEffect` (tv/.../ui/player/), called by
+`PlayerScreen`; "(matched)" on the Stats Display row. Decisions taken in the code:
+- Among modes that fit equally well, the mode in place comes first. 25, 29.97 and 30 fps try the
+  multiples 2×, 1×, 3×, 4×, 5×; the other rates 1× to 5×.
+- `StreamingPlaybackService.stop()` now also resets the rate (one line). Without it, a new player
+  screen read the rate of the stream before until the new stream started.
+- The matcher reads live or VOD from the service's metadata, which the service sets where it resets
+  the rate, not from the screen.
+- The hold uses `service.pause()` and `service.resume()`. Only a film that plays waits, and it plays
+  again only when it is still paused (the user can press Play during the wait). The 1.5 s settle is
+  inside the 6 s.
+- A film shows its first frames before the pause: the container rate comes with the first frame
+  (Phase 1).
+- "(matched)" reads the window's `preferredDisplayModeId` at each display change: no shared state.
+- A new rate during a film (only from the frames, when the format has none) asks again; a rate whose
+  mode is in place asks nothing.
+- The CI focus walk (`ci-settings.txt`) stops at Night Audio, so it did not change; the Robolectric
+  This Device test walks the new row.
 
 ## Difficulty
 
