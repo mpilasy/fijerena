@@ -144,43 +144,27 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
             if (storageLow) {
                 CinemaText(stringResource(NetworkR.string.error_storage_low), role = TextRole.Body, tone = TextTone.Danger)
             }
-            Row(
+            SafeModeActions(
+                canSendLogs = canSendLogs,
+                onContinue = { activity?.let { SafeMode.leave(it) } },
+                onClearCaches = {
+                    focusTarget = FOCUS_CLEAR
+                    confirmingClear = true
+                },
+                onShowLogs = {
+                    focusTarget = FOCUS_DIAGNOSTICS
+                    onShowDiagnostics()
+                },
+                onSendLogs = {
+                    focusTarget = FOCUS_SEND
+                    viewModel.sendLogs()
+                },
                 modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                CinemaPrimaryButton(
-                    onClick = { activity?.let { SafeMode.leave(it) } },
-                    text = stringResource(R.string.safe_mode_continue),
-                    modifier = Modifier.focusRequester(continueFocus),
-                )
-                CinemaSecondaryButton(
-                    onClick = {
-                        focusTarget = FOCUS_CLEAR
-                        confirmingClear = true
-                    },
-                    text = stringResource(R.string.safe_mode_clear_caches),
-                    modifier = Modifier.focusRequester(clearFocus),
-                )
-                CinemaSecondaryButton(
-                    onClick = {
-                        focusTarget = FOCUS_DIAGNOSTICS
-                        onShowDiagnostics()
-                    },
-                    text = stringResource(R.string.safe_mode_diagnostics),
-                    modifier = Modifier.focusRequester(diagnosticsFocus),
-                )
-                if (canSendLogs) {
-                    TvIconAction(
-                        onClick = {
-                            focusTarget = FOCUS_SEND
-                            viewModel.sendLogs()
-                        },
-                        icon = CinemaIcons.Send,
-                        label = stringResource(R.string.safe_mode_send_logs),
-                        modifier = Modifier.focusRequester(sendFocus),
-                    )
-                }
-            }
+                continueFocus = continueFocus,
+                clearFocus = clearFocus,
+                diagnosticsFocus = diagnosticsFocus,
+                sendFocus = sendFocus,
+            )
         }
     }
 
@@ -195,6 +179,54 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
             },
             onDismiss = { confirmingClear = false },
         )
+    }
+}
+
+/**
+ * Continue, Clear caches, Show logs and, when [canSendLogs], the send icon action. The icon action
+ * is taller than the text buttons, so the row centres them all on one line.
+ */
+@Composable
+internal fun SafeModeActions(
+    canSendLogs: Boolean,
+    onContinue: () -> Unit,
+    onClearCaches: () -> Unit,
+    onShowLogs: () -> Unit,
+    onSendLogs: () -> Unit,
+    modifier: Modifier = Modifier,
+    continueFocus: FocusRequester = remember { FocusRequester() },
+    clearFocus: FocusRequester = remember { FocusRequester() },
+    diagnosticsFocus: FocusRequester = remember { FocusRequester() },
+    sendFocus: FocusRequester = remember { FocusRequester() },
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(LocalUiScale.current)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CinemaPrimaryButton(
+            onClick = onContinue,
+            text = stringResource(R.string.safe_mode_continue),
+            modifier = Modifier.focusRequester(continueFocus),
+        )
+        CinemaSecondaryButton(
+            onClick = onClearCaches,
+            text = stringResource(R.string.safe_mode_clear_caches),
+            modifier = Modifier.focusRequester(clearFocus),
+        )
+        CinemaSecondaryButton(
+            onClick = onShowLogs,
+            text = stringResource(R.string.safe_mode_diagnostics),
+            modifier = Modifier.focusRequester(diagnosticsFocus),
+        )
+        if (canSendLogs) {
+            TvIconAction(
+                onClick = onSendLogs,
+                icon = CinemaIcons.Send,
+                label = stringResource(R.string.safe_mode_send_logs),
+                modifier = Modifier.focusRequester(sendFocus),
+            )
+        }
     }
 }
 

@@ -4,6 +4,8 @@
 
 - **Device Info on the phone:** on the image cache row, the size now lines up with the other rows' values, and the label no longer wraps early. Its Clear Image Cache icon stays at the row's end. Phone.
 - **Text stays inside tall rows (TV):** in a Look with round buttons (Rounded, Console, Groove, Dial), a row with several lines of text was as round as a button, so its corners cut off the start of the first and last lines. Home's "Your Sources" dialog showed "c5test" for "ac5test" and "ears" for "bears". Now a row's corner is at most as round as a one-line row, so all of its text shows. One-line rows keep their round ends. TV.
+- **Guide source cards in Malagasy (TV):** on Guide Sources, the figures of each card (last update, times, programmes until, channels, programmes) no longer show one letter per line when their labels are long. The figures that do not fit go to a second line. TV.
+- **Safe mode buttons on one line (TV):** the icon action Send logs to my sync group was lower than Continue, Clear caches and Show logs. Now all four are centred on one line. TV.
 
 ## Version: 0.9.20261112184527
 

@@ -509,9 +509,12 @@ fun TvEpgManagementScreen(
                                 } else {
                                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                                    Row(
+                                    // Long labels (Malagasy) do not fit on one line: the stats that do not fit go to
+                                    // the next line, each at its full width, never squeezed to a letter per line.
+                                    FlowRow(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                                     ) {
                                         val lastIngested =
                                             if (source.lastIngestedAtMs > 0) {
