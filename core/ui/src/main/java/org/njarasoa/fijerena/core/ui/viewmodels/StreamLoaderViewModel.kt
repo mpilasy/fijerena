@@ -38,11 +38,18 @@ import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.ItemLanguages
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.StartTracks
+import org.njarasoa.fijerena.core.player.domain.TrackLanguagePreference
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.isResumableAt
+import org.njarasoa.fijerena.core.player.domain.normalisedLanguage
+import org.njarasoa.fijerena.core.player.domain.preferredAudioLanguages
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
+import org.njarasoa.fijerena.core.player.domain.startTracks
+import org.njarasoa.fijerena.core.player.domain.titleNamesSubtitles
 import org.njarasoa.fijerena.core.player.model.EngineStream
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -105,8 +112,13 @@ class StreamLoaderViewModel(
             val currentEpgProgram: EpgProgram? = null,
             val nextEpgProgram: EpgProgram? = null,
             val isFavorite: Boolean = false,
-            val savedAudioTrackIndex: Int? = null,
-            val savedSubtitleTrackIndex: Int? = null,
+            // Where the audio and the subtitles start: the item's or the series' saved choice, the
+            // profile's track languages, or the stream's default (the preferred track languages plan).
+            val startTracks: StartTracks = StartTracks(),
+            // The profile's track languages; blank for Live TV and catch-up, which do not use them.
+            val trackLanguages: TrackLanguagePreference = TrackLanguagePreference(),
+            // What the item tells about its languages; TMDB's original language lands with the detail.
+            val itemLanguages: ItemLanguages = ItemLanguages(),
             // Set for episode playback only — the OSD uses it as the big title, demoting
             // [streamName] (the episode title) to a subtitle line.
             val seriesName: String? = null,
@@ -127,7 +139,11 @@ class StreamLoaderViewModel(
             val archiveDays: Int = 0,
             // The source this stream plays from, for live sync's "now playing".
             val sourceName: String? = null,
-        ) : StreamState()
+        ) : StreamState() {
+            /** The audio languages Media3 prefers when the stream starts; empty: English. */
+            val preferredAudioLanguages: List<String>
+                get() = preferredAudioLanguages(trackLanguages, itemLanguages)
+        }
 
         data class Error(
             val message: String,
@@ -317,17 +333,20 @@ class StreamLoaderViewModel(
                     if (window != null) resumePos = window.programOffsetSec * MILLIS_PER_SECOND
 
                     // An episode with no saved track choice of its own takes the series' most recent one. If
-                    // the episode has either track set, its own choice wins.
-                    if (contentType == ContentType.TV_SHOWS &&
-                        series != null &&
-                        savedAudioIndex == null &&
-                        savedSubtitleIndex == null
-                    ) {
-                        repo.getSeriesTrackPrefs(series, contentType)?.let { (audioIdx, subtitleIdx) ->
-                            savedAudioIndex = audioIdx
-                            savedSubtitleIndex = subtitleIdx
+                    // the episode has either track set, its own choice wins (startTracks).
+                    val seriesTracks =
+                        if (contentType == ContentType.TV_SHOWS &&
+                            series != null &&
+                            savedAudioIndex == null &&
+                            savedSubtitleIndex == null
+                        ) {
+                            repo.getSeriesTrackPrefs(series, contentType)
+                        } else {
+                            null
                         }
-                    }
+                    // Films and episodes only: Live TV and catch-up keep the stream's tracks.
+                    val usesTrackLanguages = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
+                    val trackLanguages = if (usesTrackLanguages) appSettings.trackLanguages else TrackLanguagePreference()
 
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
                     val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else channels.value.items
@@ -349,8 +368,15 @@ class StreamLoaderViewModel(
                             currentEpgProgram = null,
                             nextEpgProgram = null,
                             isFavorite = isFav,
-                            savedAudioTrackIndex = savedAudioIndex,
-                            savedSubtitleTrackIndex = savedSubtitleIndex,
+                            startTracks =
+                                startTracks(
+                                    savedAudioIndex,
+                                    savedSubtitleIndex,
+                                    seriesTracks,
+                                    trackLanguages.takeIf { usesTrackLanguages },
+                                ),
+                            trackLanguages = trackLanguages,
+                            itemLanguages = itemLanguages(streamName, seriesName, activeStreams.find { it.id == streamId }),
                             seriesName = if (contentType == ContentType.TV_SHOWS) seriesName else null,
                             logoUrl = if (isLiveTv) channelLogo(streamId, activeStreams) else null,
                             catchupLabel = window?.let { catchupLabel(context, streamName, it.startEpochSec + it.programOffsetSec) },
@@ -471,6 +497,7 @@ class StreamLoaderViewModel(
         var logoUrl: String? = null
         var nextEpisode: EpisodeItem? = null
         var plotlessEpisode: EpisodeItem? = null
+        var originalLanguage: String? = null
         if (contentType != ContentType.LIVE_TV) {
             val currentItem = currentStreams.find { it.id == streamId }
             description = currentItem?.metadata?.plot
@@ -490,6 +517,7 @@ class StreamLoaderViewModel(
                         episodeLabel = "S$season:E${curEp.episodeNumber}"
                     }
                     logoUrl = repo.getTmdbLogoUrl(detail.metadata.tmdbId, contentType)
+                    originalLanguage = detail.metadata.facts.originalLanguage
 
                     val sorted = detail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
                     val flat = detail.flattenedEpisodes(sorted)
@@ -503,6 +531,7 @@ class StreamLoaderViewModel(
                 movieDetailResult.getOrNull()?.let { detail ->
                     description = detail.metadata.plot
                     logoUrl = repo.getTmdbLogoUrl(detail.metadata.tmdbId, contentType)
+                    originalLanguage = detail.metadata.facts.originalLanguage
                 }
             }
         } else {
@@ -521,6 +550,9 @@ class StreamLoaderViewModel(
                     nextEpisode = nextEpisode,
                     supportsAutoplayNext = repo.supportsAutoplayNextEpisode,
                     archiveDays = archiveDays,
+                    itemLanguages =
+                        normalisedLanguage(originalLanguage)?.let { currentState.itemLanguages.copy(original = it) }
+                            ?: currentState.itemLanguages,
                 )
             } else {
                 currentState
@@ -1263,4 +1295,23 @@ internal class RecentWrite(
 private suspend fun plainDelay(ms: Long): Boolean {
     delay(ms)
     return true
+}
+
+/**
+ * What a stream's names tell about its languages: the language of the title's code ("FR - …",
+ * else the series'), whether its tags name subtitles, and TMDB's original language when the list
+ * [item] already has it. The detail gives the original language later, if it is not known yet.
+ */
+internal fun itemLanguages(
+    streamName: String,
+    seriesName: String?,
+    item: MediaItem?,
+): ItemLanguages {
+    val names = listOfNotNull(streamName, seriesName)
+    return ItemLanguages(
+        original = normalisedLanguage(item?.metadata?.facts?.originalLanguage),
+        // A code in capitals is a tag ("NF", "MULTI"), not a language.
+        title = names.firstNotNullOfOrNull { name -> providerCode(name)?.language?.takeIf { code -> code.all { it.isLowerCase() } } },
+        titleNamesSubtitles = names.any(::titleNamesSubtitles),
+    )
 }

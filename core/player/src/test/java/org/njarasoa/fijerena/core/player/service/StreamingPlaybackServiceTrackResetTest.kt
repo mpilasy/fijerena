@@ -16,11 +16,16 @@ import io.mockk.spyk
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.PositionSave
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
 /** Subtitles Off and track picks belong to one item: a new item starts on its own default tracks. */
@@ -36,6 +41,7 @@ class StreamingPlaybackServiceTrackResetTest {
         mockk<DefaultTrackSelector.Parameters.Builder>().also {
             every { it.setTrackTypeDisabled(any(), any()) } returns it
             every { it.clearOverrides() } returns it
+            every { it.setPreferredAudioLanguages(*anyVararg()) } returns it
             every { it.build() } returns built
         }
     private val selector =
@@ -46,6 +52,8 @@ class StreamingPlaybackServiceTrackResetTest {
 
     private val film = PlayerMetadata(title = "Film", streamUrl = "http://example.test/movie/1.mkv")
     private val otherFilm = PlayerMetadata(title = "Other film", streamUrl = "http://example.test/movie/2.mkv")
+    private val frenchFilm =
+        PlayerMetadata(title = "French film", streamUrl = "http://example.test/movie/3.mkv", preferredAudioLanguages = listOf("fr", "ja"))
 
     companion object {
         // Media3 1.9's ExoPlayer reads Build.DEVICE when its class loads.
@@ -86,6 +94,30 @@ class StreamingPlaybackServiceTrackResetTest {
             builder.clearOverrides()
             selector.setParameters(built)
         }
+    }
+
+    @Test
+    fun `a new item prefers the profile's audio languages, else English`() {
+        service.playStream(frenchFilm)
+        verify { builder.setPreferredAudioLanguages("fr", "ja") }
+
+        service.playStream(otherFilm)
+        verify { builder.setPreferredAudioLanguages("en") }
+    }
+
+    @Test
+    fun `subtitles off from the profile's languages are not saved`() {
+        val saves = mutableListOf<PositionSave>()
+        runBlocking {
+            val collector = launch(Dispatchers.Unconfined) { StreamingPlaybackService.positionSaves.collect { saves += it } }
+            service.disableSubtitles(persist = false)
+            service.selectSubtitleTrack(-1, persist = false)
+            service.disableSubtitles()
+            collector.cancel()
+        }
+        verify(exactly = 3) { builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true) }
+        // Only the viewer's own Off is saved.
+        assertEquals(listOf(-1), saves.map { it.subtitleTrackIndex })
     }
 
     @Test

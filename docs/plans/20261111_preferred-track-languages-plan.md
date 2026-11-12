@@ -1,6 +1,6 @@
 # Preferred track languages
 
-**Status:** In progress since 2026-11-11. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). Phases 1 and 2 done; Phases 3 and 4 follow. The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
+**Status:** In progress since 2026-11-11. PL-Q1 to PL-Q7 decided 2026-11-11 (see Open questions). Phases 1 to 3 done; Phase 4 follows. The per-stream track reset was fixed on its own 2026-11-11. No Phase 5 (PL-Q5 a).
 
 ## Goal
 
@@ -200,7 +200,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
-| 3 | Not started |
+| 3 | Done 2026-11-11 |
 | 4 | Not started |
 | 5 | Dropped (PL-Q5 a) |
 
@@ -208,6 +208,7 @@ Off reuses `player_subtitles_off`. If Android has no Malagasy names for a langua
 
 - **Phase 1 (2026-11-11):** `TrackLanguage.kt` (core/player domain): `normalisedLanguage`, `labelLanguage`, `audioLanguage`, `subtitleLanguage`, `playingAudioLanguage`, `isCommentary`, `isAudioDescription`, `isSdh`, `isForced`, `titleNamesSubtitles`, `pickAudioTrack`, `pickSubtitleTrack` (`SubtitlePick`: Keep, Off, Track), with `TrackLanguagePreference` and `ItemLanguages`. `languageOfCode` moved there from `SearchFacets.kt`, which now uses it. `AudioTrackInfo` and `SubtitleTrackInfo` carry `languageCode`, `roleFlags` and `selectionFlags`, filled by the service and `PlaybackViewModel`. A label code counts only in capitals or as the whole label, and codec words ("HE-AAC", "DTS-ES", "HI") never count. With no track in the subtitle language, or audio in an unknown language, the pick is Off; Off still shows a forced track in the audio's language. Tests: `TrackLanguageTest` (21).
 - **Phase 2 (2026-11-11):** `AppSettings` keys `audio_language`, `subtitle_language` and `subtitles_other_audio_only`, per profile (`profileKey`) and in `SYNCED_SETTING_KEYS` and `PER_PROFILE_SETTING_KEYS`. `trackLanguages(profileId)` gives a `TrackLanguagePreference` (the switch on until set); `setAudioLanguage`, `setSubtitleLanguage` and `setSubtitlesOtherAudioOnly` queue the record (`SettingsSyncQueue.setting`). `applyRemoteSetting` keeps a blank value, a 2- or 3-letter lower-case code, and `off` for subtitles only, and drops any other value and a record for no profile (R-09). `ProfileRepository` removes the keys with the profile (`removeTrackLanguages`). Not in the backup file. docs/DATABASE_SCHEMA.md §4 lists the keys. Tests: `AppSettingsTrackLanguageTest` (10).
+- **Phase 3 (2026-11-11):** `StartTracks.kt` (core/player domain): `startTracks` (item, then series, then profile, then stream default, each type on its own), `startTrackActions` (the changes to make once the tracks are known: a saved index applied and saved again; a profile pick not saved, and made only when it is not the track that plays), `preferredAudioLanguages`. `StreamState.Success` carries `startTracks`, `trackLanguages` (blank for Live TV and catch-up) and `itemLanguages` (the title's code and subtitle tags at load; TMDB's original language from the list item, else from the detail in the enrichment). The shared helper `applyStartTracks` (core/ui) replaces the restore blocks of `TvPlayerScreen` and `MobilePlayerScreen`; it reads the latest `itemLanguages`, so an original language that lands after the stream started still counts. `PlayerMetadata.preferredAudioLanguages` goes to `resetTrackChoices`, which sets `setPreferredAudioLanguages` (empty: `PlayerConfigFactory.DEFAULT_AUDIO_LANGUAGE`, "en"). The service's `selectAudioTrack`, `selectSubtitleTrack` and `disableSubtitles` take `persist` (true by default; the pickers do not change). Tests: `StartTracksTest` (13), two new cases in `StreamingPlaybackServiceTrackResetTest` (preferred languages, an Off that is not saved). docs/FEATURES.md → Player → Track selection.
 
 ## Difficulty
 

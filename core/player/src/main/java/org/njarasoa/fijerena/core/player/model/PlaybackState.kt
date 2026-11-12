@@ -60,6 +60,9 @@ data class PlayerMetadata(
     val catchupLabel: String? = null,
     // The source the stream plays from. Only live sync's "now playing" reads it.
     val sourceName: String? = null,
+    // The audio languages Media3 prefers when this stream starts (the profile's track languages;
+    // see preferredAudioLanguages). Empty: English, as before.
+    val preferredAudioLanguages: List<String> = emptyList(),
 )
 
 data class AudioTrackInfo(

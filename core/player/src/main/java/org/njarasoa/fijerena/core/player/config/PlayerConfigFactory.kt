@@ -14,13 +14,16 @@ object PlayerConfigFactory {
         VOD,
     }
 
+    /** The audio language Media3 prefers when the profile sets none, and for Live TV (the preferred track languages plan). */
+    const val DEFAULT_AUDIO_LANGUAGE = "en"
+
     fun createTrackSelector(context: Context): DefaultTrackSelector {
         val capabilities = DeviceDetector.detect()
 
         val parameters =
             DefaultTrackSelector.Parameters
                 .Builder()
-                .setPreferredAudioLanguage("en")
+                .setPreferredAudioLanguage(DEFAULT_AUDIO_LANGUAGE)
                 .apply {
                     val (maxWidth, maxHeight) = capabilities.maxResolution
                     setMaxVideoSize(maxWidth, maxHeight)

@@ -875,7 +875,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         // A new playback: a remote Stop sent for the previous one must never stop this one.
         playSessionId.value = UUID.randomUUID().toString()
-        if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player)
+        if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player, metadata.preferredAudioLanguages)
         _currentMetadata.value = metadata
         contentFrameRateTracker.newStream(metadata.isLive)
 
@@ -1493,11 +1493,15 @@ class StreamingPlaybackService : MediaSessionService() {
         return audioTracks
     }
 
-    fun selectAudioTrack(consolidatedIndex: Int) {
+    /** Selects the audio track at [consolidatedIndex] of [getAudioTracks]; [persist] false: not saved as the item's choice. */
+    fun selectAudioTrack(
+        consolidatedIndex: Int,
+        persist: Boolean = true,
+    ) {
         val tracks = getAudioTracks()
         if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
             val track = tracks[consolidatedIndex]
-            selectAudioTrack(track.groupIndex, track.trackIndex)
+            selectAudioTrack(track.groupIndex, track.trackIndex, persist)
         }
     }
 
@@ -1534,107 +1538,116 @@ class StreamingPlaybackService : MediaSessionService() {
         return subtitleTracks
     }
 
-    fun selectSubtitleTrack(consolidatedIndex: Int) {
+    /** Selects the subtitle track at [consolidatedIndex] of [getSubtitleTracks] (-1: off); [persist] false: not saved as the item's choice. */
+    fun selectSubtitleTrack(
+        consolidatedIndex: Int,
+        persist: Boolean = true,
+    ) {
         if (consolidatedIndex == -1) {
-            disableSubtitles()
-            return
-        }
-        val tracks = getSubtitleTracks()
-        if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
-            val track = tracks[consolidatedIndex]
-            selectSubtitleTrack(track.groupIndex, track.trackIndex)
+            disableSubtitles(persist)
+        } else {
+            getSubtitleTracks().getOrNull(consolidatedIndex)?.let { selectSubtitleTrack(it.groupIndex, it.trackIndex, persist) }
         }
     }
 
     fun selectAudioTrack(
         groupIndex: Int,
         trackIndex: Int,
+        persist: Boolean = true,
     ) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
-        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+        val trackSelector = player?.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+        val trackGroup =
+            player
+                ?.currentTracks
+                ?.groups
+                ?.getOrNull(groupIndex)
+                ?.takeIf { trackIndex >= 0 && trackIndex < it.length }
+        if (player != null && trackSelector != null && trackGroup != null) {
+            val trackSelectionOverride =
+                androidx.media3.common.TrackSelectionOverride(
+                    trackGroup.mediaTrackGroup,
+                    listOf(trackIndex),
+                )
 
-        val currentTracks = player.currentTracks
-        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+            trackSelector.parameters =
+                trackSelector.parameters
+                    .buildUpon()
+                    .setOverrideForType(trackSelectionOverride)
+                    .build()
 
-        val trackGroup = currentTracks.groups[groupIndex]
-        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
-
-        val trackSelectionOverride =
-            androidx.media3.common.TrackSelectionOverride(
-                trackGroup.mediaTrackGroup,
-                listOf(trackIndex),
-            )
-
-        val parameters =
-            trackSelector.parameters
-                .buildUpon()
-                .setOverrideForType(trackSelectionOverride)
-                .build()
-
-        trackSelector.parameters = parameters
-
-        // Save the choice now. Persist the consolidated (flattened, cross-group) index, not the
-        // in-group trackIndex: selectAudioTrack(consolidatedIndex) restores it, and that overload
-        // indexes into getAudioTracks()'s flattened list.
-        val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
-        savePosition(
-            player.currentPosition,
-            player.duration,
-            !player.isPlaying,
-            audioIndex = consolidatedIndex.takeIf { it >= 0 },
-        )
+            // Save the choice now. Persist the consolidated (flattened, cross-group) index, not the
+            // in-group trackIndex: selectAudioTrack(consolidatedIndex) restores it, and that overload
+            // indexes into getAudioTracks()'s flattened list. A pick of the profile's track languages
+            // is not saved (persist false).
+            if (persist) {
+                val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+                savePosition(
+                    player.currentPosition,
+                    player.duration,
+                    !player.isPlaying,
+                    audioIndex = consolidatedIndex.takeIf { it >= 0 },
+                )
+            }
+        }
     }
 
     fun selectSubtitleTrack(
         groupIndex: Int,
         trackIndex: Int,
+        persist: Boolean = true,
     ) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
-        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+        val trackSelector = player?.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+        val trackGroup =
+            player
+                ?.currentTracks
+                ?.groups
+                ?.getOrNull(groupIndex)
+                ?.takeIf { trackIndex >= 0 && trackIndex < it.length }
+        if (player != null && trackSelector != null && trackGroup != null) {
+            val trackSelectionOverride =
+                androidx.media3.common.TrackSelectionOverride(
+                    trackGroup.mediaTrackGroup,
+                    listOf(trackIndex),
+                )
 
-        val currentTracks = player.currentTracks
-        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+            trackSelector.parameters =
+                trackSelector.parameters
+                    .buildUpon()
+                    // A prior disableSubtitles() ("Off", or a saved -1 restored at episode start)
+                    // leaves TRACK_TYPE_TEXT disabled, and that flag wins over any override. Clear it,
+                    // or picking a language does nothing.
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+                    .setOverrideForType(trackSelectionOverride)
+                    .build()
 
-        val trackGroup = currentTracks.groups[groupIndex]
-        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
-
-        val trackSelectionOverride =
-            androidx.media3.common.TrackSelectionOverride(
-                trackGroup.mediaTrackGroup,
-                listOf(trackIndex),
-            )
-
-        val parameters =
-            trackSelector.parameters
-                .buildUpon()
-                // A prior disableSubtitles() ("Off", or a saved -1 restored at episode start)
-                // leaves TRACK_TYPE_TEXT disabled, and that flag wins over any override. Clear it,
-                // or picking a language does nothing.
-                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
-                .setOverrideForType(trackSelectionOverride)
-                .build()
-
-        trackSelector.parameters = parameters
-
-        // Save the choice now. Persist the consolidated index, not the in-group trackIndex:
-        // selectSubtitleTrack(consolidatedIndex) restores it from getSubtitleTracks()'s flattened
-        // list.
-        val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
-        savePosition(
-            player.currentPosition,
-            player.duration,
-            !player.isPlaying,
-            subtitleIndex = consolidatedIndex.takeIf { it >= 0 },
-        )
+            // Save the choice now. Persist the consolidated index, not the in-group trackIndex:
+            // selectSubtitleTrack(consolidatedIndex) restores it from getSubtitleTracks()'s flattened
+            // list. A pick of the profile's track languages is not saved (persist false).
+            if (persist) {
+                val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+                savePosition(
+                    player.currentPosition,
+                    player.duration,
+                    !player.isPlaying,
+                    subtitleIndex = consolidatedIndex.takeIf { it >= 0 },
+                )
+            }
+        }
     }
 
     /**
      * A new item starts on its own default tracks: the previous item's Subtitles Off and track
      * picks do not carry over. Its saved choice, if any, is restored after this. The same item
      * played again (Retry, a reconnect, a return from the screensaver) keeps the viewer's picks,
-     * because those paths restore no saved choice.
+     * because those paths restore no saved choice. Media3 prefers [audioLanguages] (the profile's
+     * track languages), else English, as before.
      */
-    private fun resetTrackChoices(player: androidx.media3.exoplayer.ExoPlayer) {
+    private fun resetTrackChoices(
+        player: androidx.media3.exoplayer.ExoPlayer,
+        audioLanguages: List<String>,
+    ) {
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector
         if (trackSelector != null) {
             trackSelector.parameters =
@@ -1642,24 +1655,26 @@ class StreamingPlaybackService : MediaSessionService() {
                     .buildUpon()
                     .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
                     .clearOverrides()
-                    .build()
+                    .setPreferredAudioLanguages(
+                        *audioLanguages.ifEmpty { listOf(PlayerConfigFactory.DEFAULT_AUDIO_LANGUAGE) }.toTypedArray(),
+                    ).build()
         }
     }
 
-    fun disableSubtitles() {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
-        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+    /** Subtitles off; [persist] false: not saved as the item's choice. */
+    fun disableSubtitles(persist: Boolean = true) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+        val trackSelector = player?.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+        if (player != null && trackSelector != null) {
+            trackSelector.parameters =
+                trackSelector.parameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+                    .build()
 
-        val parameters =
-            trackSelector.parameters
-                .buildUpon()
-                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
-                .build()
-
-        trackSelector.parameters = parameters
-
-        // Save the choice now (-1 for disabled).
-        savePosition(player.currentPosition, player.duration, !player.isPlaying, subtitleIndex = -1)
+            // Save the choice now (-1 for disabled), unless the profile's track languages made it.
+            if (persist) savePosition(player.currentPosition, player.duration, !player.isPlaying, subtitleIndex = -1)
+        }
     }
 
     fun selectVideoQuality(

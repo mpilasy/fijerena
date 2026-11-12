@@ -55,8 +55,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -99,6 +97,7 @@ import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.SendItem
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.applyStartTracks
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
@@ -663,30 +662,11 @@ fun MobilePlayerContent(
                             programTitle = state.currentEpgProgram?.title,
                             catchupLabel = state.catchupLabel,
                             sourceName = state.sourceName,
+                            preferredAudioLanguages = state.preferredAudioLanguages,
                         )
                     viewModel.playStream(metadata, state.resumePosition)
-
-                    if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                        // playbackState is a plain StateFlow, not Compose snapshot state: in
-                        // snapshotFlow{} it emits once and never again, so this would wait for
-                        // ever.
-                        val readyState =
-                            viewModel.playbackState
-                                .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                                .first()
-
-                        if (readyState !is PlaybackState.Error) {
-                            val service = StreamingPlaybackService.getInstance()
-                            if (service != null) {
-                                state.savedAudioTrackIndex?.let { audioIdx ->
-                                    service.selectAudioTrack(audioIdx)
-                                }
-                                state.savedSubtitleTrackIndex?.let { subIdx ->
-                                    service.selectSubtitleTrack(subIdx)
-                                }
-                            }
-                        }
-                    }
+                    // The saved track choices, else the profile's track languages, once the tracks are known.
+                    applyStartTracks(state, viewModel.playbackState, loaderViewModel.state)
                 }
             }
         }

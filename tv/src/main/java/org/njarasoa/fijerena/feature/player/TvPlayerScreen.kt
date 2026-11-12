@@ -27,8 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
@@ -48,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.applyStartTracks
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.ui.components.TvErrorState
@@ -265,28 +264,8 @@ fun TvPlayerScreen(
         if (state is StreamLoaderViewModel.StreamState.Success) {
             catchupAskedAtSec = System.currentTimeMillis() / 1000
             playbackViewModel.playStream(state.playerMetadata(), state.resumePosition)
-
-            // Restore saved track choices when the player is ready.
-            if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                // playbackState is a plain StateFlow, not snapshot state: snapshotFlow {} would emit once and wait
-                // for ever, so tracks were never restored. Collect the flow directly, as MobilePlayerScreen does.
-                val readyState =
-                    playbackViewModel.playbackState
-                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                        .first() // Wait for the first ready state, or stop on Error so a failed stream does not hang this.
-
-                if (readyState !is PlaybackState.Error) {
-                    val service = StreamingPlaybackService.getInstance()
-                    if (service != null) {
-                        state.savedAudioTrackIndex?.let { audioIdx ->
-                            service.selectAudioTrack(audioIdx)
-                        }
-                        state.savedSubtitleTrackIndex?.let { subIdx ->
-                            service.selectSubtitleTrack(subIdx)
-                        }
-                    }
-                }
-            }
+            // The saved track choices, else the profile's track languages, once the tracks are known.
+            applyStartTracks(state, playbackViewModel.playbackState, loaderViewModel.state)
         }
     }
 
@@ -444,6 +423,7 @@ private fun StreamLoaderViewModel.StreamState.Success.playerMetadata(): PlayerMe
         programTitle = currentEpgProgram?.title,
         catchupLabel = catchupLabel,
         sourceName = sourceName,
+        preferredAudioLanguages = preferredAudioLanguages,
     )
 
 /** Before the stream is known: the wait picture for the route's kind of content, nothing named yet. */
