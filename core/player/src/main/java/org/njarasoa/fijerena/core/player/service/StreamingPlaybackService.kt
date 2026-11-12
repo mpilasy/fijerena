@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.display.ContentFrameRate
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
 import org.njarasoa.fijerena.core.player.model.EngineStream
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
@@ -174,6 +175,11 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private val _measuredFps = MutableStateFlow(0f)
     val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
+
+    // The content's frame rate, for Stats and the match frame rate plan: the format's rate for VOD
+    // when it is set, else the rate the frames show. Null while it is not known.
+    private val contentFrameRateTracker = ContentFrameRate()
+    val contentFrameRate: StateFlow<Float?> = contentFrameRateTracker.rate
 
     private val _measuredDroppedFps = MutableStateFlow(0f)
     val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
@@ -608,6 +614,10 @@ class StreamingPlaybackService : MediaSessionService() {
                 .setWakeMode(C.WAKE_MODE_NETWORK)
 
         val player = playerBuilder.build()
+        // Called on the playback thread for each frame that is about to show.
+        player.setVideoFrameMetadataListener { presentationTimeUs, _, format, _ ->
+            contentFrameRateTracker.onFrame(presentationTimeUs, format.frameRate)
+        }
 
         mediaSession = MediaSession.Builder(this, player).build()
 
@@ -867,6 +877,7 @@ class StreamingPlaybackService : MediaSessionService() {
         playSessionId.value = UUID.randomUUID().toString()
         if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player)
         _currentMetadata.value = metadata
+        contentFrameRateTracker.newStream(metadata.isLive)
 
         // Fast-startup mode, and the buffer profile for the stream type.
         setRecycling(false)
@@ -1420,6 +1431,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun seekTo(position: Long) {
         lastSeekTimeMs = SystemClock.elapsedRealtime()
+        contentFrameRateTracker.onSeek()
         mediaSession?.player?.seekTo(position)
         freedWhilePaused?.let { freed ->
             val moved = freed.copy(position = position)

@@ -1,6 +1,7 @@
 # Match Frame Rate (TV)
 
-**Status:** Planned 2026-11-11, not started. Open questions MF-Q1 to MF-Q6 wait for the user.
+**Status:** Phase 1 done 2026-11-11 (the rate and the Stats for Nerds rows; no mode switch yet).
+Open questions MF-Q1 to MF-Q6 wait for the user before Phase 2.
 
 ## Goal
 
@@ -184,9 +185,27 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
+| 1 | Done 2026-11-11 |
 | 2 | Not started |
 | 3 | Not started |
+
+**Phase 1 done 2026-11-11.** `FrameRateEstimator` and `ContentFrameRate` (core/player/.../display/),
+`StreamingPlaybackService.contentFrameRate`, and the **Display** and **Modes** rows in `TvStatsOverlay`
+(`displayModeText`, `refreshRatesText`, `ModeSpec` in `DisplayModes.kt`). Decisions taken in the code:
+- The median step alone cannot tell 23.976 from 24 when the times have jitter (MKV stores times in
+  whole milliseconds: 41 and 42 ms steps). The median step finds the nominal step, each step counts
+  as its nearest number of nominal steps (a missing frame counts as two), and a least-squares line
+  through the frame counts and the times gives the rate.
+- The window is at least 60 steps and at least 2 seconds: 60 steps of a 59.94 fps stream cover 1
+  second only, too short to tell 59.94 from 60 under 1 ms of jitter. So 50 and 60 fps keep 100 and
+  120 steps.
+- VOD takes `Format.frameRate` from the frame metadata listener, so the rate is known from the first
+  frame, not at `onTracksChanged`. Phase 2's hold can read it there if it must know before.
+- A seek resets the estimate (null until 2 seconds of frames); a VOD container rate stays.
+- The fps row now shows a container rate with its decimals (23.976 showed as 23), and the frames'
+  rate with two decimals when the format has none.
+- Display reads `3840×2160 · 23.976 Hz` (no "(matched)" until Phase 2 asks for a mode); Modes lists
+  the refresh rates at the current resolution only, as the design says.
 
 ## Difficulty
 

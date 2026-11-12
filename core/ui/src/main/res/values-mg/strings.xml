@@ -1021,6 +1021,8 @@
     <string name="player_stats_codec">Codec</string>
     <string name="player_stats_res">Refy</string>
     <string name="player_stats_fps">FPS</string>
+    <string name="player_stats_display">Efijery</string>
+    <string name="player_stats_modes">Fomba</string>
     <string name="player_stats_bitrate">Tahan\'ny bit</string>
     <string name="player_stats_rate">Tahany</string>
     <string name="player_stats_ch">Làlana</string>
@@ -1042,7 +1044,7 @@
     <string name="player_stats_model">Modely</string>
     <string name="player_stats_api">API</string>
     <string name="player_stats_measured_fps">%1$s fps (norefesina)</string>
-    <string name="player_stats_fps_unit">%1$d fps</string>
+    <string name="player_stats_fps_unit">%1$s fps</string>
     <string name="player_stats_seconds_unit">%1$ds</string>
     <string name="player_stats_rebuf_time_format">%1$d.%2$ds</string>
     <string name="player_stats_dropped_format">%1$d / %2$d</string>

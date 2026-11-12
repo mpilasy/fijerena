@@ -582,6 +582,8 @@
     <string name="player_stats_codec">Codec</string>
     <string name="player_stats_res">Rés</string>
     <string name="player_stats_fps">FPS</string>
+    <string name="player_stats_display">Écran</string>
+    <string name="player_stats_modes">Modes</string>
     <string name="player_stats_bitrate">Débit</string>
     <string name="player_stats_rate">Taux</string>
     <string name="player_stats_ch">Ch</string>
@@ -603,7 +605,7 @@
     <string name="player_stats_model">Modèle</string>
     <string name="player_stats_api">API</string>
     <string name="player_stats_measured_fps">%1$s fps (mesuré)</string>
-    <string name="player_stats_fps_unit">%1$d fps</string>
+    <string name="player_stats_fps_unit">%1$s fps</string>
     <string name="player_stats_seconds_unit">%1$ds</string>
     <string name="player_stats_rebuf_time_format">%1$d.%2$ds</string>
     <string name="player_stats_dropped_format">%1$d / %2$d</string>

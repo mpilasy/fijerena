@@ -2,6 +2,10 @@
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
+import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.Looper
+import android.view.Display
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +45,10 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
 import org.njarasoa.fijerena.core.player.audio.audioOutputLabel
 import org.njarasoa.fijerena.core.player.audio.nightAudioGainLabel
+import org.njarasoa.fijerena.core.player.display.ModeSpec
+import org.njarasoa.fijerena.core.player.display.displayModeText
+import org.njarasoa.fijerena.core.player.display.rateText
+import org.njarasoa.fijerena.core.player.display.refreshRatesText
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.formatBitrate
@@ -152,6 +161,9 @@ fun TvStatsOverlay(
         ?: remember { mutableStateOf(0) }
     val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
+    val serviceContentFrameRate by StreamingPlaybackService.getInstance()?.contentFrameRate?.collectAsStateWithLifecycle(null)
+        ?: remember { mutableStateOf<Float?>(null) }
+    val displayModes = rememberDisplayModes()
     val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
     val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(
@@ -270,9 +282,13 @@ fun TvStatsOverlay(
 
                 val fmt = selectedVideoFormat
                 val mFps = serviceMeasuredFps
+                val contentFps = serviceContentFrameRate
                 curVideoFrameRate =
                     if (fmt != null && fmt.frameRate > 0) {
-                        resources.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
+                        resources.getString(R.string.player_stats_fps_unit, rateText(fmt.frameRate))
+                    } else if (contentFps != null) {
+                        // The rate the frame times show: two decimals tell 23.98 from 24.
+                        resources.getString(R.string.player_stats_measured_fps, String.format(java.util.Locale.US, "%.2f", contentFps))
                     } else if (mFps > 0) {
                         resources.getString(R.string.player_stats_measured_fps, String.format(java.util.Locale.US, "%.1f", mFps))
                     } else {
@@ -416,6 +432,14 @@ fun TvStatsOverlay(
                             CompactStatRow(stringResource(R.string.player_stats_codec), stats.videoCodec)
                             CompactStatRow(stringResource(R.string.player_stats_res), stats.videoResolution)
                             CompactStatRow(stringResource(R.string.player_stats_fps), stats.videoFrameRate)
+                            StatNameRow(
+                                stringResource(R.string.player_stats_display),
+                                displayModes?.let { displayModeText(it.current) } ?: naText,
+                            )
+                            StatNameRow(
+                                stringResource(R.string.player_stats_modes),
+                                displayModes?.let { refreshRatesText(it.supported, it.current) } ?: naText,
+                            )
                             CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.videoBitrate)
 
                             SectionHeader(stringResource(R.string.player_stats_audio))
@@ -644,7 +668,41 @@ fun TvStatsOverlay(
     }
 }
 
-/** A label and a long value (a provider's raw name): the label keeps its width, the value wraps to two lines. */
+/** The display's mode now and the modes it offers. */
+private data class DisplayModes(
+    val current: ModeSpec,
+    val supported: List<ModeSpec>,
+)
+
+private fun Display.Mode.toSpec() = ModeSpec(modeId, physicalWidth, physicalHeight, refreshRate)
+
+private fun readDisplayModes(display: Display?): DisplayModes? =
+    display?.let { d -> DisplayModes(d.mode.toSpec(), d.supportedModes.map { it.toSpec() }) }
+
+/** The modes of the display that shows the player, read again when the display changes its mode. */
+@Composable
+private fun rememberDisplayModes(): DisplayModes? {
+    val view = LocalView.current
+    var modes by remember(view) { mutableStateOf(readDisplayModes(view.display)) }
+    DisposableEffect(view) {
+        val manager = view.context.getSystemService(DisplayManager::class.java)
+        val listener =
+            object : DisplayManager.DisplayListener {
+                override fun onDisplayAdded(displayId: Int) = Unit
+
+                override fun onDisplayRemoved(displayId: Int) = Unit
+
+                override fun onDisplayChanged(displayId: Int) {
+                    if (displayId == view.display?.displayId) modes = readDisplayModes(view.display)
+                }
+            }
+        manager?.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
+        onDispose { manager?.unregisterDisplayListener(listener) }
+    }
+    return modes
+}
+
+/** A label and a long value (a provider's raw name, the display modes): the label keeps its width, the value wraps to two lines. */
 @Composable
 private fun StatNameRow(
     label: String,

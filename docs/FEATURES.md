@@ -326,7 +326,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 TV: the Stats button (every profile, as on the phone); a non-focusable panel in the top-right corner, so the player keeps the keys; double-OK or Back hides it. Mobile: the Stats button; closed with its X. Updated every second.
 
 - **NAME:** the provider's raw name (and the series' raw name for an episode); for a source with extra logins, which one this stream plays on ("Login 2 of 3")
-- **VIDEO:** codec, resolution, frame rate, bitrate
+- **VIDEO:** codec, resolution, frame rate (the container's rate with its decimals, "23.976 fps"; for a live stream or a file without one, the rate of the frame times with two decimals, "25.00 fps (measured)"), bitrate; on TV also **Display**, the display mode now ("3840×2160 · 59.94 Hz"), and **Modes**, the refresh rates the display offers at that resolution ("23.976, 24, 50, 59.94, 60 Hz")
 - **AUDIO:** codec, sample rate, channels, bitrate
 - **NETWORK:** connection (Ethernet, Wi-Fi, Mobile data, VPN; Ethernet uses the Wi-Fi buffers), speed, measured bandwidth, buffer health, buffered position, rebuffer count/duration, ABR quality switches
 - **PLAYBACK:** position, duration
