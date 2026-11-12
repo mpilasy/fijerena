@@ -115,7 +115,7 @@ object TvInputDefaults {
         )
 
     @Composable
-    fun shape(): ListItemShape = ListItemDefaults.shape(shape = cornerShape(CornerRadius.small))
+    fun shape(): ListItemShape = ListItemDefaults.shape(shape = cornerShape(CornerRadius.row))
 
     @Composable
     fun glow(): ListItemGlow =
@@ -129,7 +129,7 @@ object TvInputDefaults {
     private fun focusBorder(): Border =
         Border(
             border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = TvFocusTokens.focusedRowOutline),
-            shape = cornerShape(CornerRadius.small),
+            shape = cornerShape(CornerRadius.row),
         )
 }
 

@@ -45,7 +45,7 @@ internal fun TvInputListItem(
         modifier =
             modifier.currentIndicator(
                 active = selected,
-                shape = cornerShape(CornerRadius.small),
+                shape = cornerShape(CornerRadius.row),
                 containerScale = listItemScale(interactionSource, enabled),
             ),
         enabled = enabled,

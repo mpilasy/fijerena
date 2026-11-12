@@ -130,11 +130,11 @@ fun Modifier.tabChipFill(isFocused: Boolean): Modifier =
  */
 @Composable
 fun Modifier.restingRowGround(isFocused: Boolean = false): Modifier =
-    background(if (isFocused) TvFocusTokens.focusedContainer else TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
+    background(if (isFocused) TvFocusTokens.focusedContainer else TvFocusTokens.restingContainer, cornerShape(CornerRadius.row))
         .border(
             width = TvFocusTokens.focusBorderWidth,
             color = if (isFocused) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
-            shape = cornerShape(CornerRadius.small),
+            shape = cornerShape(CornerRadius.row),
         )
 
 private data class TvFocusableElement(
