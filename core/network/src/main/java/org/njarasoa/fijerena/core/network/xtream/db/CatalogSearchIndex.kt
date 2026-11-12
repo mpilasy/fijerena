@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.xtream.db
 
 import android.content.Context
 import android.util.Log
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -19,23 +20,33 @@ internal object CatalogSearchIndex {
 
     /**
      * Merges each index that has more than one segment; an index already in one segment (no change
-     * since the last call) is left alone. Never throws: a failure leaves the index as it was.
+     * since the last call) is left alone. Never throws: a failure (a full disk, for example) leaves
+     * the index as it was, the catalogue sync that called this does not fail, and the next sync
+     * compacts.
      */
     suspend fun compact(context: Context) =
         withContext(Dispatchers.IO) {
-            val db = XtreamDatabase.getInstance(context).openHelper.writableDatabase
-            TABLES.forEach { table ->
-                try {
-                    val segments = db.query("SELECT COUNT(*) FROM `${table}_segdir`").use { if (it.moveToFirst()) it.getInt(0) else 0 }
-                    if (segments > 1) {
-                        val startMs = System.currentTimeMillis()
-                        db.execSQL("INSERT INTO `$table`(`$table`) VALUES('optimize')")
-                        Log.i(TAG, "$table: merged $segments segments in ${System.currentTimeMillis() - startMs} ms")
-                    }
-                } catch (e: Exception) {
-                    // cancellation-ok: a blocking SQLite call, no suspension point inside
-                    Log.w(TAG, "$table: optimize failed", e)
-                }
+            try {
+                compactTables(XtreamDatabase.getInstance(context).openHelper.writableDatabase)
+            } catch (e: Exception) {
+                // cancellation-ok: a blocking SQLite call, no suspension point inside
+                Log.w(TAG, "Could not open the catalogue to compact it", e)
             }
         }
+
+    private fun compactTables(db: SupportSQLiteDatabase) {
+        TABLES.forEach { table ->
+            try {
+                val segments = db.query("SELECT COUNT(*) FROM `${table}_segdir`").use { if (it.moveToFirst()) it.getInt(0) else 0 }
+                if (segments > 1) {
+                    val startMs = System.currentTimeMillis()
+                    db.execSQL("INSERT INTO `$table`(`$table`) VALUES('optimize')")
+                    Log.i(TAG, "$table: merged $segments segments in ${System.currentTimeMillis() - startMs} ms")
+                }
+            } catch (e: Exception) {
+                // cancellation-ok: a blocking SQLite call, no suspension point inside
+                Log.w(TAG, "$table: optimize failed", e)
+            }
+        }
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.media3.common.util.UnstableApi
 import androidx.work.BackoffPolicy
@@ -709,7 +710,8 @@ class EpgFileManager private constructor(
         processAllSourcesInternal(sources)
     }
 
-    private data class DownloadedSource(
+    @VisibleForTesting
+    internal data class DownloadedSource(
         val source: EpgSourceEntity,
         val label: String,
         val tmpFile: File,
@@ -726,7 +728,8 @@ class EpgFileManager private constructor(
     )
 
     /** [ingestDownloadedSource]'s result: the stats, plus the [IngestRecord] it held back on the staging path. */
-    private data class IngestOutcome(
+    @VisibleForTesting
+    internal data class IngestOutcome(
         val stats: SourceStats,
         val pending: IngestRecord? = null,
     )
@@ -1045,6 +1048,8 @@ class EpgFileManager private constructor(
                 }
                 Log.e(TAG, "processAllSources failed: ${e.message}", e)
                 CrashLog.record("guide refresh failed", e)
+                // A full disk on the staging path (the swap, for example): staging goes now.
+                if (useStaging && e.isDiskFull()) freeStagingAfterFullDisk(EpgIndexer.getInstance(context), null)
                 _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
@@ -1311,6 +1316,7 @@ class EpgFileManager private constructor(
                 }
                 Log.e(TAG, "processSingleSource failed: ${e.message}", e)
                 CrashLog.record("guide refresh failed", e)
+                if (useStaging && e.isDiskFull()) freeStagingAfterFullDisk(EpgIndexer.getInstance(context), null)
                 _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isNerdMode))
             }
         }
@@ -1644,7 +1650,8 @@ class EpgFileManager private constructor(
      * the staging path the rows only reach the live guide at the swap, so the [IngestRecord] is
      * returned instead and the caller writes it after the swap commits ([swapThenMarkIngested]).
      */
-    private suspend fun ingestDownloadedSource(
+    @VisibleForTesting
+    internal suspend fun ingestDownloadedSource(
         downloaded: DownloadedSource,
         sourceDao: EpgSourceDao,
         indexer: EpgIndexer,
@@ -1799,11 +1806,34 @@ class EpgFileManager private constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error ingesting source: $label", e)
+            // A full disk on the staging path: this source's staging rows go now, not at the start
+            // of the next run. The live guide stays as it was.
+            if (useStaging && e.isDiskFull()) freeStagingAfterFullDisk(indexer, listOf(source.id))
             val display = StoredError.of(e, context).encode()
             sourceDao.markError(source.id, display)
             return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
         } finally {
             downloaded.tmpFile.delete()
+        }
+    }
+
+    /**
+     * After a full disk on the staging path: deletes the staging rows of [sourceIds] (all of them
+     * when null) and gives their space back to the device at once ([EpgIndexer.incrementalVacuum]).
+     * The live guide stays as it was. Never throws: on a full disk the delete can fail too, and
+     * the next run clears staging before it starts.
+     */
+    private suspend fun freeStagingAfterFullDisk(
+        indexer: EpgIndexer,
+        sourceIds: List<Long>?,
+    ) {
+        try {
+            if (sourceIds == null) indexer.clearStaging() else indexer.clearStagingForSources(sourceIds)
+            indexer.incrementalVacuum()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Clearing staging after a full disk failed", e)
         }
     }
 

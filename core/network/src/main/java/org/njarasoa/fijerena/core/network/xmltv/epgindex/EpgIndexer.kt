@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.network.xmltv.epgindex
 import android.content.Context
+import android.database.sqlite.SQLiteException
+import android.database.sqlite.SQLiteFullException
 import android.util.Log
 import androidx.core.content.edit
 import androidx.room.withTransaction
@@ -21,6 +23,7 @@ import org.njarasoa.fijerena.core.network.SpaceNeed
 import org.njarasoa.fijerena.core.network.StorageSpace
 import org.njarasoa.fijerena.core.network.StoredError
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.isDiskFull
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgOffsetShift
@@ -317,15 +320,13 @@ class EpgIndexer private constructor(
                                     channelCount++
 
                                     if (channelBatch.size >= batchSize || channelStagingBatch.size >= batchSize) {
-                                        writeMutex.withLock {
-                                            db.withTransaction {
-                                                if (useStaging) {
-                                                    dao.insertChannelsStagingIgnore(
-                                                        channelStagingBatch,
-                                                    )
-                                                } else {
-                                                    dao.insertChannelsIgnore(channelBatch)
-                                                }
+                                        writeBatch(db) {
+                                            if (useStaging) {
+                                                dao.insertChannelsStagingIgnore(
+                                                    channelStagingBatch,
+                                                )
+                                            } else {
+                                                dao.insertChannelsIgnore(channelBatch)
                                             }
                                         }
                                         channelBatch.clear()
@@ -339,15 +340,13 @@ class EpgIndexer private constructor(
                             "programme" -> {
                                 // Flush any remaining channels before starting programmes
                                 if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
-                                    writeMutex.withLock {
-                                        db.withTransaction {
-                                            if (useStaging) {
-                                                dao.insertChannelsStagingIgnore(
-                                                    channelStagingBatch,
-                                                )
-                                            } else {
-                                                dao.insertChannelsIgnore(channelBatch)
-                                            }
+                                    writeBatch(db) {
+                                        if (useStaging) {
+                                            dao.insertChannelsStagingIgnore(
+                                                channelStagingBatch,
+                                            )
+                                        } else {
+                                            dao.insertChannelsIgnore(channelBatch)
                                         }
                                     }
                                     channelBatch.clear()
@@ -371,15 +370,13 @@ class EpgIndexer private constructor(
                                     itemsSinceLastProgressUpdate++
 
                                     if (programmeBatch.size >= batchSize || programmeStagingBatch.size >= batchSize) {
-                                        writeMutex.withLock {
-                                            db.withTransaction {
-                                                if (useStaging) {
-                                                    dao.insertProgrammesStaging(
-                                                        programmeStagingBatch,
-                                                    )
-                                                } else {
-                                                    dao.insertProgrammes(programmeBatch)
-                                                }
+                                        writeBatch(db) {
+                                            if (useStaging) {
+                                                dao.insertProgrammesStaging(
+                                                    programmeStagingBatch,
+                                                )
+                                            } else {
+                                                dao.insertProgrammes(programmeBatch)
                                             }
                                         }
                                         programmeBatch.clear()
@@ -403,17 +400,13 @@ class EpgIndexer private constructor(
                 }
 
                 if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
-                    writeMutex.withLock {
-                        db.withTransaction {
-                            if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
-                        }
+                    writeBatch(db) {
+                        if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
                     }
                 }
                 if (programmeBatch.isNotEmpty() || programmeStagingBatch.isNotEmpty()) {
-                    writeMutex.withLock {
-                        db.withTransaction {
-                            if (useStaging) dao.insertProgrammesStaging(programmeStagingBatch) else dao.insertProgrammes(programmeBatch)
-                        }
+                    writeBatch(db) {
+                        if (useStaging) dao.insertProgrammesStaging(programmeStagingBatch) else dao.insertProgrammes(programmeBatch)
                     }
                 }
 
@@ -438,6 +431,33 @@ class EpgIndexer private constructor(
                 throw e
             }
         }
+
+    /**
+     * Runs [block] in one transaction under [writeMutex]. On SQLITE_FULL, SQLite can roll the whole
+     * transaction back by itself (a REPLACE batch of a direct ingest does). The ROLLBACK that ends
+     * the transaction then fails with "cannot rollback - no transaction is active", and that error
+     * hid the full disk: the source showed a generic error. This throws the full disk instead.
+     */
+    private suspend fun writeBatch(
+        db: EpgIndexDatabase,
+        block: suspend () -> Unit,
+    ) {
+        var diskFull: SQLiteFullException? = null
+        try {
+            writeMutex.withLock {
+                db.withTransaction {
+                    try {
+                        block()
+                    } catch (e: SQLiteFullException) {
+                        diskFull = e
+                        throw e
+                    }
+                }
+            }
+        } catch (e: SQLiteException) {
+            throw diskFull?.also { if (it !== e) it.addSuppressed(e) } ?: e
+        }
+    }
 
     /**
      * Deletes the `xtream://<providerId>` EPG sources that older builds created for themselves, one
@@ -591,9 +611,10 @@ class EpgIndexer private constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 CrashLog.record("guide search index rebuild failed", e)
-                // A rebuild with no space for it leaves an indexed guide as it was: its rows are all
-                // there, and search reads them without the index while it is stale.
-                _state.value = previousState.takeIf { e is NotEnoughSpaceException && it is EpgIndexState.Indexed }
+                // A rebuild with no space for it, or that fills the disk (SQLite rolls it back),
+                // leaves an indexed guide as it was: its rows are all there, and search reads them
+                // without the index while it is stale.
+                _state.value = previousState.takeIf { e.isDiskFull() && it is EpgIndexState.Indexed }
                     ?: EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isNerdMode))
             }
         }

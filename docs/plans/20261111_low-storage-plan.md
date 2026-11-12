@@ -1,6 +1,6 @@
 # Low storage
 
-**Status:** In progress. Phases 1 and 2 done 2026-11-11. Decided 2026-11-11: LS-Q1, LS-Q2, LS-Q4, LS-Q5 and LS-Q6, each (a). LS-Q3 waits for the user.
+**Status:** In progress. Phases 1 to 3 done 2026-11-11. Decided 2026-11-11: LS-Q1, LS-Q2, LS-Q4, LS-Q5 and LS-Q6, each (a). LS-Q3 waits for the user.
 
 ## Goal
 
@@ -182,7 +182,7 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
 |---|---|
 | 1 | Done 2026-11-11 |
 | 2 | Done 2026-11-11 |
-| 3 | Not started |
+| 3 | Done 2026-11-11 |
 | 4 | Not started |
 
 **Phase 1 done (2026-11-11):**
@@ -243,6 +243,34 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
   (the rebuild keeps the `Indexed` state). The XMLTV download and the ingest checks have no test of
   their own: `EpgFileManager` is a singleton that downloads; the sizes, `shortfall` and the Phase 1
   paths that the exception takes have tests.
+
+**Phase 3 done (2026-11-11):**
+- Staged ingest: a full disk in a source's ingest deletes that source's staging rows and runs
+  `incrementalVacuum` at once (`freeStagingAfterFullDisk`). A full disk later in the run (the swap,
+  for example) clears all of staging. Neither throws: on a full disk the delete can fail too, and
+  the next run clears staging before it starts.
+- Direct ingest: no code change was needed for the validators. Only `markIngested` writes them,
+  and it runs only after a whole ingest.
+- Finding: the `max_page_count` test of a direct ingest gave a GENERIC error, not `STORAGE_LOW`.
+  On SQLITE_FULL in a REPLACE batch, SQLite rolls the whole transaction back by itself. The
+  ROLLBACK that ends Room's `withTransaction` then fails with "cannot rollback - no transaction is
+  active", and that error took the place of the `SQLiteFullException`. `EpgIndexer.writeBatch` now
+  keeps the `SQLiteFullException` and throws it, with the other error as a suppressed one. The
+  staged batches and the catalogue batches gave `SQLiteFullException` already.
+- FTS rebuild (the check of the design): before, a failed rebuild showed `EpgIndexState.Failed`,
+  "Couldn't prepare the guide" on Live TV, although the guide rows were all there. Now a full disk
+  in the rebuild (SQLite rolls it back) leaves an `Indexed` state as it was. The index stays marked
+  stale, so search reads the guide without it, and the next start rebuilds it.
+- Catalogue: `CatalogSearchIndex.compact` caught a failure of each index already; the opening of
+  the database was outside that catch. Now nothing in `compact` throws, so a failed compact never
+  fails the sync.
+- Tests (Robolectric, in-memory databases, `PRAGMA max_page_count` for a real SQLITE_FULL):
+  `EpgFileManagerFullDiskTest` (staged: the live guide stays, staging is empty, `STORAGE_LOW`, no
+  `markIngested`; direct: the old rows stay, `STORAGE_LOW`, no `markIngested`; the file is gone),
+  `EpgIndexerFullDiskTest` (a rebuild that fills the disk keeps `Indexed`), `CatalogFullDiskTest`
+  (a catalogue batch rolls back whole, is a full disk and is not transient; a compact that fills
+  the disk does not throw and leaves the segments as they were). `ingestDownloadedSource` and its
+  two data classes are `internal` for the test.
 
 ## Risks
 
