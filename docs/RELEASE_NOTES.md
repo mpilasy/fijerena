@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Clear Image Cache on TV:** the action is now inside the Storage card, at the end of the image cache row. Down to the Storage section goes straight to it. Its label no longer crosses the card's edge. TV.
+
 ## Version: 0.9.20261112112540
 
 - **Storage almost full says what to clear:** when an update stops because the storage is almost full, the message now says how to free up space: remove apps that you do not use, or clear the image cache (Settings → About → Device Info) or the guide data (Settings → Sources & Guide → Guide Data Maintenance). TV and phone.

@@ -4,12 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -21,9 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.HorizontalAlignmentLine
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +37,6 @@ import org.njarasoa.fijerena.core.ui.utils.AppNotices
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
-import org.njarasoa.fijerena.ui.components.buttons.TvButtonStyle
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
@@ -49,7 +45,6 @@ import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
-import kotlin.math.min
 
 /**
  * Settings → About → Device info on TV. Each section is one focus stop so the D-pad scrolls
@@ -105,9 +100,9 @@ fun DeviceInfoScreen() {
 }
 
 /**
- * The page without its view model, for the focus test. Every section has a slot of one icon's
- * width at its right, so that the cards keep one width; the slot holds the section's action, if it
- * has one. The focused action's label grows to the left over the card's empty end.
+ * The page without its view model, for the focus test. A section's action sits at the end of its
+ * row, inside the card, and takes the section's focus stop; its focused label grows to the left over
+ * the row's empty end, so it stays inside the card.
  */
 @Composable
 internal fun DeviceInfoContent(
@@ -171,32 +166,26 @@ internal fun DeviceInfoContent(
         }
         itemsIndexed(sections.orEmpty()) { index, section ->
             val action = section.rows.firstNotNullOfOrNull { it.action }
-            val slotWidth = TvButtonStyle.iconButtonSize.scaled(scale)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+            val firstFocus = if (index == 0) Modifier.focusRequester(firstSectionFocus) else Modifier
+            // A clickable card that does nothing, so each section takes D-pad focus (and the list scrolls to it).
+            // A section with an action gives its focus to the action instead.
+            TvCard(
+                onClick = {},
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(if (action != null) Modifier.focusProperties { canFocus = false } else firstFocus)
+                        .leftToRail(),
+                look = TvCardLooks.infoBlock(),
             ) {
-                // A clickable card that does nothing, so each section takes D-pad focus (and the list scrolls to it).
-                TvCard(
-                    onClick = {},
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .then(if (index == 0) Modifier.focusRequester(firstSectionFocus) else Modifier)
-                            .then(if (action != null) Modifier.alignBy(ActionRowMiddle) else Modifier)
-                            .leftToRail(),
-                    look = TvCardLooks.infoBlock(),
+                Column(
+                    Modifier.padding(Spacing.md.scaled(scale)),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
-                    Column(
-                        Modifier.padding(Spacing.md.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                    ) {
-                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
-                        section.rows.forEach { row ->
-                            Row(
-                                modifier = if (row.action != null) Modifier.markActionRowMiddle() else Modifier,
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                            ) {
+                    CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
+                    section.rows.forEach { row ->
+                        Box {
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
                                 CinemaText(
                                     row.label.asString(),
                                     modifier = Modifier.weight(LABEL_WEIGHT),
@@ -210,23 +199,25 @@ internal fun DeviceInfoContent(
                                     tone = TextTone.Primary,
                                 )
                             }
+                            row.action?.let { rowAction ->
+                                // Over the row's end, centred on its line, so the row keeps the size and
+                                // columns of the others. The focused label grows to the left, inside the card.
+                                Box(Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
+                                    TvIconAction(
+                                        onClick = { onAction(rowAction) },
+                                        icon = CinemaIcons.ClearData,
+                                        label = stringResource(actionLabel(rowAction)),
+                                        modifier =
+                                            Modifier
+                                                .wrapContentSize(Alignment.CenterEnd, unbounded = true)
+                                                .then(firstFocus)
+                                                .focusRequester(actionFocus)
+                                                .leftToRail(),
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-                if (action != null) {
-                    Box(
-                        modifier = Modifier.width(slotWidth).alignBy { it.measuredHeight / 2 },
-                        contentAlignment = Alignment.CenterEnd,
-                    ) {
-                        TvIconAction(
-                            onClick = { onAction(action) },
-                            icon = CinemaIcons.ClearData,
-                            label = stringResource(actionLabel(action)),
-                            modifier = Modifier.wrapContentWidth(Alignment.End, unbounded = true).focusRequester(actionFocus),
-                        )
-                    }
-                } else {
-                    Spacer(Modifier.width(slotWidth))
                 }
             }
         }
@@ -236,18 +227,6 @@ internal fun DeviceInfoContent(
 private fun actionLabel(action: DeviceInfoAction): Int =
     when (action) {
         DeviceInfoAction.CLEAR_IMAGE_CACHE -> R.string.device_info_clear_image_cache
-    }
-
-/** The middle of the row that has an action; its section's slot puts the action's icon on it. */
-private val ActionRowMiddle = HorizontalAlignmentLine(::min)
-
-/** Gives [ActionRowMiddle] at this row's middle. The card and its column pass it up to the section's row. */
-private fun Modifier.markActionRowMiddle(): Modifier =
-    layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        layout(placeable.width, placeable.height, mapOf(ActionRowMiddle to placeable.height / 2)) {
-            placeable.place(0, 0)
-        }
     }
 
 private const val LABEL_WEIGHT = 0.4f

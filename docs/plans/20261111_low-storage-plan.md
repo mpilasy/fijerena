@@ -298,6 +298,11 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
   the danger action "Clear", focus on Cancel), as rule 7 of the focus contract asks for every
   destructive action; the plan did not say. Then a notice: "Image cache cleared" or "Couldn't clear
   the image cache".
+- Fix (2026-11-12): on TV the action first sat in a slot right of the cards, and its focused label
+  crossed the Storage card's right edge. It now sits over the end of the image cache row, inside the
+  card, and is the Storage section's focus stop (the card itself does not take focus). The row keeps
+  the height and columns of the others; the focused label grows to the left over the row's empty
+  end.
   - TV: each section has a slot of one icon's width at its right, so the cards keep one width; the
     Storage section's slot holds the icon, on the image cache row's line (an alignment line from
     the row, through the card, to the section's row). Right on Storage reaches it, Left goes back,
@@ -331,8 +336,8 @@ docs/EPG_INDEX_STORAGE.md, RELEASE_NOTES).
      (the new process reads the real free space).
   3. Clear Image Cache, each emulator: open a few lists with posters, then
      `adb -s <serial> shell run-as <pkg> du -sk cache/image_cache`. Settings → About → Device Info.
-     TV: Down to Storage, Right: "Clear image cache" shows on the icon, on the image cache row;
-     Left goes back to Storage; Right, OK: the dialog opens on Cancel; Clear: the notice "Image
+     TV: Down to Storage stops on the icon: "Clear image cache" shows on it, inside the card, on
+     the image cache row; OK: the dialog opens on Cancel; Clear: the notice "Image
      cache cleared", the image cache row shows a small size, focus is on the icon again. Phone:
      long press the icon (tooltip), tap it, Clear. Run `du -sk cache/image_cache` again: smaller.
   4. Image cache limit: `adb -s <serial> shell run-as <pkg> df -k files` gives the storage size;
