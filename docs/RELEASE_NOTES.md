@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261113190650
 
 - **Team page opens on the next game:** a team's results of the last 30 days are now above its coming games, oldest first. The page opens on the next game (on TV, with focus on it); scroll up for the results, down for the later games. TV and phone.
 - **Games in progress show the score:** a game that is on shows its score in the title and where it is ("66'", "HT") in place of its start time, on the team and league pages, in the Sports section and in the game's sheet. A schedule with a game on is read again after 2 minutes (before, after an hour); a game that has just ended reaches the results within an hour. TV and phone.
