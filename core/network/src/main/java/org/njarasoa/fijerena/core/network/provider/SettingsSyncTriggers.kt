@@ -70,6 +70,7 @@ internal object SettingsSyncTriggers {
         )
 
         val source = queue("'${SyncKind.EPG_SOURCE}'", "NEW.`source_key`")
+        // `enabled` is left out: each device turns a guide source on or off for itself.
         createTrigger(
             db,
             "sync_epg_source_insert",
@@ -84,7 +85,6 @@ internal object SettingsSyncTriggers {
                     "url",
                     "label",
                     "timezone_offset_hours",
-                    "enabled",
                     "refresh_interval_hours",
                 )}) " +
                 "BEGIN $TICK $source END",

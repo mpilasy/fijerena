@@ -205,9 +205,11 @@ class EpgManagementViewModel(
         EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings))
 
     /**
-     * The card's on/off switch. A source's own guide ([AutoXmltvSources.isAutoXmltvSource]) follows
-     * "Provides a guide", so the switch sets that, as the viewer's choice, exactly as Edit Source
-     * does; any other guide source is turned on or off by itself.
+     * The card's on/off switch, for this device only: the on/off state of a guide source does not
+     * sync, so a big guide can be on for one device and off for another. A source's own guide
+     * ([AutoXmltvSources.isAutoXmltvSource]) is turned off by itself too, not through "Provides a
+     * guide", which syncs with the source. Turning it on also sets "Provides a guide" when that is
+     * off (the viewer's choice), or the next catalogue sync would turn it off again.
      */
     fun setSourceEnabled(
         card: GuideCard,
@@ -216,8 +218,10 @@ class EpgManagementViewModel(
         viewModelScope.launchGuarded("EpgManagementViewModel.setSourceEnabled") {
             withContext(Dispatchers.IO) {
                 val owner = card.ownGuideOf
-                if (owner != null) {
-                    providerRepository.setProvidesGuide(owner.id, enabled, byUser = true)
+                if (owner != null && enabled) {
+                    if (!providerRepository.getProviderSettings(owner.id).providesGuideOn) {
+                        providerRepository.setProvidesGuide(owner.id, true, byUser = true)
+                    }
                     AutoXmltvSources.reconcileStored(context, owner.id)
                 } else {
                     // On the row as it is now: the page's copy can be older than an import since.

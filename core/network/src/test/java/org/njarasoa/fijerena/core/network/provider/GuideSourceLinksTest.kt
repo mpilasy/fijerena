@@ -82,6 +82,22 @@ class GuideSourceLinksTest {
         }
 
     @Test
+    fun `turning a guide on or off queues nothing, a label change queues it`() =
+        runBlocking {
+            val a = provider("a")
+            val dao = db.epgSourceDao()
+            val id = dao.insertGuide(EpgSourceEntity(url = "http://epg.test/g.xml"), listOf(a))
+            val guide = dao.getSourceById(id)!!
+            allSent()
+
+            dao.updateSource(guide.copy(enabled = false))
+            assertEquals(emptyList<String>(), queuedKeys())
+
+            dao.updateSource(guide.copy(enabled = false, label = "G"))
+            assertEquals(listOf(guide.sourceKey), queuedKeys())
+        }
+
+    @Test
     fun `deleting a guide deletes its links and aliases`() =
         runBlocking {
             val a = provider("a")

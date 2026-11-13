@@ -28,7 +28,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * A guide source's own refresh interval travels with its record; a record without one (an older
- * version) keeps this device's value. See the sources guide profiles plan → P5.
+ * version) keeps this device's value. See the sources guide profiles plan → P5. The on/off state
+ * stays each device's own.
  */
 class SyncApplierEpgSourceTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)
@@ -91,7 +92,32 @@ class SyncApplierEpgSourceTest {
         val updated = applyAndCaptureUpdate(legacy)
 
         assertEquals(6, updated.refreshIntervalHours)
-        assertFalse(updated.enabled)
+    }
+
+    @Test
+    fun `a received record keeps this device's on or off state`() {
+        coEvery { sync.sourceByKey("src-1") } returns local.copy(enabled = false)
+        val turnedOn = applyAndCaptureUpdate(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", local.url, "B", 0, true, 12)))
+        assertFalse(turnedOn.enabled)
+        assertEquals("B", turnedOn.label)
+
+        coEvery { sync.sourceByKey("src-1") } returns local.copy(enabled = true)
+        val turnedOff = applyAndCaptureUpdate(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", local.url, "B", 0, false, 12)))
+        assertTrue(turnedOff.enabled)
+    }
+
+    @Test
+    fun `a new source arrives on or off as the sender has it`() {
+        coEvery { sync.sourceByKey("src-1") } returns null
+        coEvery { sync.guidesAtUrl(any()) } returns emptyList()
+        val inserted = slot<EpgSourceEntity>()
+        coEvery { sources.insertGuide(capture(inserted), listOf(7L)) } returns 1L
+
+        val turnedOff = SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", "http://epg.test/new.xml", "N", 0, false))
+
+        runBlocking { applier().apply(listOf(record(turnedOff))) }
+
+        assertFalse(inserted.captured.enabled)
     }
 
     @Test

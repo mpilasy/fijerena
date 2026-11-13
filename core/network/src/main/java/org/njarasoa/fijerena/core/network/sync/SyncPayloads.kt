@@ -210,6 +210,10 @@ object SyncPayloads {
      * record from an older build, which names only [providerKey]. [providerKey] is always the
      * first link, so an older build sees the guide for that source (the one guide source per URL
      * plan, OG-Q3).
+     *
+     * [enabled]: the sender's on/off state. A receiver uses it only for a guide source it does not
+     * have yet; an existing one keeps its own state, and turning a source on or off sends nothing.
+     * An older build still applies it.
      */
     @Serializable
     data class EpgSource(

@@ -900,7 +900,10 @@ class SyncApplier(
         }
     }
 
-    /** The synced fields of [remote] on [existing]; an interval of null keeps the one here. */
+    /**
+     * The synced fields of [remote] on [existing]; an interval of null keeps the one here. The
+     * on/off state stays this device's own: a big guide can be on for one device and off for another.
+     */
     private suspend fun writeFields(
         existing: EpgSourceEntity,
         remote: EpgSourceEntity,
@@ -909,7 +912,6 @@ class SyncApplier(
             url = remote.url,
             label = remote.label,
             timezoneOffsetHours = remote.timezoneOffsetHours,
-            enabled = remote.enabled,
             refreshIntervalHours = remote.refreshIntervalHours ?: existing.refreshIntervalHours,
         ),
     )

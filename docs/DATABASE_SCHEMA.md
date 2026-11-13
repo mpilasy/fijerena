@@ -202,7 +202,7 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 |---|---|---|
 | `sync_providers_insert` / `_update` | insert; update changing `name`, `url`, `username`, `type`, `config` or `providerSettings` | `provider` |
 | `sync_profiles_insert` / `_update` | insert; update changing `name` or `colorIndex` | `profile` |
-| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled` or `refresh_interval_hours` (`provider_id` until v20) | `epg_source` |
+| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours` or `refresh_interval_hours` (`enabled` until 2026-11-13: each device keeps its own on/off state; `provider_id` until v20) | `epg_source` |
 | `sync_epg_source_provider_insert` / `_delete` (v20) | a link added or removed, while its guide source exists | the guide source's `epg_source` key |
 | `sync_epg_source_delete` | delete | records an `epg_source` tombstone (which queues it) |
 | none (v20, in `EpgSourceDao.deleteGuide` / `unlink`) | an alias removed with its guide or its link | records an `epg_source` tombstone for the alias key, unless `applying` is set |
