@@ -26,8 +26,8 @@ class SportsDataTest {
                 "search/v2" in url && "European" in url -> sportsFixture("espn_search_league_european_championship.json")
                 "search/v2" in url -> sportsFixture("espn_search_league.json")
                 "leagues/dropdown?sport=soccer" in url -> sportsFixture("espn_leagues_soccer.json")
+                "soccer/all/teams/359/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_all.json")
                 "soccer/all/teams/359/schedule" in url -> sportsFixture("espn_schedule_soccer_all.json")
-                "soccer/eng.1/teams/359/schedule" in url -> sportsFixture("espn_results_soccer_eng1.json")
                 "hockey/nhl/teams/1/schedule" in url -> sportsFixture("espn_schedule_nhl.json")
                 "club-schedule-season/BOS" in url -> sportsFixture("nhl_club_schedule.json")
                 else -> throw IOException("down: $url")
@@ -72,22 +72,27 @@ class SportsDataTest {
         }
 
     @Test
-    fun `a soccer team's results come from each competition of its coming games, newest first`() =
+    fun `a soccer team's results come from every competition, a cup too, newest first`() =
         runBlocking<Unit> {
             val results = data("2026-11-02T12:00:00Z").teamResults(arsenal)
-            assertEquals(listOf("2026-11-01", "2026-10-24", "2026-10-18", "2026-10-10"), results.map { utcDay(it.startEpochSec) })
+            assertEquals(
+                listOf("2026-11-01", "2026-10-27", "2026-10-24", "2026-10-21", "2026-10-18", "2026-10-13", "2026-10-10"),
+                results.map { utcDay(it.startEpochSec) },
+            )
             assertEquals("Liverpool" to "0", results.first().home.name to results.first().homeScore)
             assertEquals("1", results.first().awayScore)
-            assertTrue(calls.any { "soccer/eng.1/teams/359/schedule" in it })
-            // The Champions League schedule is down: its games are left out, the page still gets the rest.
-            assertTrue(calls.any { "soccer/uefa.champions/teams/359/schedule" in it })
+            assertEquals("soccer/eng.league_cup", results[1].competition.id)
+            assertEquals(listOf("fixture=false"), calls.filter { "soccer/all/teams/359" in it }.map { it.substringAfter('?') })
         }
 
     @Test
     fun `results keep only the last 30 days`() =
         runBlocking<Unit> {
             val results = data("2026-11-15T12:00:00Z").teamResults(arsenal)
-            assertEquals(listOf("2026-11-01", "2026-10-24", "2026-10-18"), results.map { utcDay(it.startEpochSec) })
+            assertEquals(
+                listOf("2026-11-01", "2026-10-27", "2026-10-24", "2026-10-21", "2026-10-18"),
+                results.map { utcDay(it.startEpochSec) },
+            )
         }
 
     @Test

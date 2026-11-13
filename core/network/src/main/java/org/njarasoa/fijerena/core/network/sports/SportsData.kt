@@ -95,17 +95,18 @@ class SportsData(
 
     /**
      * [team]'s results of the last [days] days, newest first: the games that ended, with both
-     * scores. A soccer team's come from each competition of its coming games (the `all` answer
-     * has no current played games); another team's from its season schedule. A competition that
-     * cannot be read is left out; nothing throws.
+     * scores. A soccer team's come from its played games of every competition; another team's from
+     * its season schedule. A read that fails gives none; nothing throws.
      */
     suspend fun teamResults(
         team: SportsTeam,
         days: Int = RESULT_DAYS,
     ): List<SportsGame> {
         if (!enabled() || team.source != SportsSource.ESPN) return emptyList()
-        val schedule = attempt(mutableListOf(), "ESPN team schedule") { espnTeamSchedule(team) }
-        val games = if (team.sport == EspnParser.SOCCER) espnSoccerResults(team, schedule) else schedule
+        val games =
+            attempt(mutableListOf(), "ESPN results") {
+                if (team.sport == EspnParser.SOCCER) espnSoccerResults(team) else espnTeamSchedule(team)
+            }
         val fromSec = now() / 1000 - days * DAY_SEC
         return games
             .filter { it.state == GameState.FINISHED && it.homeScore != null && it.awayScore != null && it.startEpochSec >= fromSec }
@@ -147,25 +148,11 @@ class SportsData(
         }
     }
 
-    /** A soccer team's games of each competition of its [coming] games, each read once. */
-    private suspend fun espnSoccerResults(
-        team: SportsTeam,
-        coming: List<SportsGame>,
-    ): List<SportsGame> {
+    /** A soccer team's played games of every competition (each game names its own). */
+    private suspend fun espnSoccerResults(team: SportsTeam): List<SportsGame> {
         val espnId = EspnParser.espnTeamId(team.id)
-        val slugs = coming.mapNotNull { EspnParser.splitLeague(it.competition.id)?.second }.distinct()
-        return coroutineScope {
-            slugs
-                .map { slug ->
-                    async {
-                        attempt(mutableListOf(), "ESPN results $slug") {
-                            scheduleFromCache("results_espn_${slug}_$espnId", { EspnParser.schedule(it, EspnParser.SOCCER, slug) }) {
-                                api.espnSoccerTeamResults(slug, espnId)
-                            }
-                        }
-                    }
-                }.awaitAll()
-                .flatten()
+        return scheduleFromCache("results_espn_soccer_$espnId", { EspnParser.schedule(it, EspnParser.SOCCER, null) }) {
+            api.espnSoccerTeamResults(espnId)
         }
     }
 

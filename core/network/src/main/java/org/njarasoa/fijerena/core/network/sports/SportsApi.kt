@@ -90,9 +90,9 @@ class SportsApi(
     ): String = call(SportsSource.ESPN, "$ESPN_SITE/sports/$sport/$league/teams")
 
     /**
-     * A team's games. A soccer team's games of every competition (league, cups, UEFA) come only
-     * from the `all` league with `fixture=true`; without it ESPN sends the played games of one
-     * league. Other sports send the whole season of the team's league.
+     * A team's games. A soccer team's coming games of every competition (league, cups, UEFA) come
+     * only from the `all` league with `fixture=true` (the played ones: [espnSoccerTeamResults]).
+     * Other sports send the whole season of the team's league.
      */
     suspend fun espnTeamSchedule(
         sport: String,
@@ -105,11 +105,12 @@ class SportsApi(
             call(SportsSource.ESPN, "$ESPN_SITE/sports/$sport/$league/teams/$espnTeamId/schedule")
         }
 
-    /** A soccer team's games of one competition [league], the played ones with their scores. */
-    suspend fun espnSoccerTeamResults(
-        league: String,
-        espnTeamId: String,
-    ): String = call(SportsSource.ESPN, "$ESPN_SITE/sports/soccer/$league/teams/$espnTeamId/schedule")
+    /**
+     * A soccer team's played games of every competition, with their scores, also of a cup it is
+     * out of: the `all` league with `fixture=false` (without it, ESPN sends an out-of-date season).
+     */
+    suspend fun espnSoccerTeamResults(espnTeamId: String): String =
+        call(SportsSource.ESPN, url("$ESPN_SITE/sports/soccer/all/teams/$espnTeamId/schedule", "fixture" to "false"))
 
     /**
      * A league's games of one [day]. The range form (`dates=YYYYMMDD-YYYYMMDD`) answers HTTP 400

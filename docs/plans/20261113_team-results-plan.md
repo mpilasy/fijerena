@@ -16,8 +16,11 @@ more: no heading, no message (user, 2026-11-13).
   score.
 - **Football** (`soccer`): the app reads `soccer/all/teams/{id}/schedule?fixture=true`, the coming
   games of every competition. Each game names its competition (`league.slug`, for example `eng.1`,
-  `uefa.champions`, `uefa.nations`). Without `fixture=true`, the `all` answer is out of date (an
-  English club's August games; Germany's games of 2024).
+  `uefa.champions`, `uefa.nations`). With no parameter, the `all` answer is out of date (an
+  English club's August games; Germany's games of 2024). With `fixture=false` (or `season=2026`)
+  it holds the played games of every competition, with their scores, also of a cup the team is out
+  of (found 2026-11-13 after Phase 2, when the user asked about a team knocked out of the Europa
+  League: Arsenal's League Cup game, Bayern's German Cup game, Germany's Nations League games).
 - **The played games of one competition** come from `soccer/{slug}/teams/{id}/schedule`, with
   each side's score (`competitors[].score.displayValue`) and `status.type.completed`. Checked
   2026-11-13: Arsenal in `eng.1` (7 Nov, Arsenal 1–0 Hull City), in `uefa.champions` (21 Oct,
@@ -35,9 +38,9 @@ more: no heading, no message (user, 2026-11-13).
     given). `EspnParser` reads both forms of `score`.
   - `SportsData.teamResults(team, days = 30)`: the team's games with state `FINISHED`, both scores,
     and a start in the last [days] days, newest first.
-    - Football: one schedule per competition of the team's coming games (the cached
-      `fixture=true` answer), each once. A football team's id has no league (`soccer/{id}`), so a
-      competition with no coming game (a cup the team is out of) gives no results.
+    - Football: `soccer/all/teams/{id}/schedule?fixture=false`, one request for every
+      competition. (Phases 1 and 2 first read one schedule per competition of the team's coming
+      games, which missed a competition the team was out of; replaced the same day.)
     - Other sports: the schedule `teamGames` reads (the same cache entry).
     - Each answer is kept as the other schedules are (`SportsCache.scheduleMaxAgeMs`). A failed
       read leaves its games out; it never fails the page.
@@ -55,7 +58,7 @@ more: no heading, no message (user, 2026-11-13).
 
 | Phase | What | Tests |
 |---|---|---|
-| 1 | Scores in `EspnParser` (both forms), `SportsData.teamResults`, the football competitions | Parser: a schedule's object score, a scoreboard's string score, no score; `teamResults`: the 30-day window, finished only, newest first, the football competitions from the fixtures, a failed competition left out |
+| 1 | Scores in `EspnParser` (both forms), `SportsData.teamResults`, the football competitions | Parser: a schedule's object score, a scoreboard's string score, no score; `teamResults`: the 30-day window, finished only, newest first, every football competition from one request, a failed read gives none |
 | 2 | `SportsTeamViewModel.results`; the TV and phone rows; strings (en, fr, mg); docs (FEATURES, RELEASE_NOTES) | The view model: results after the games, empty on failure; a Compose test for each app: rows with the score, nothing when empty |
 
 ## Progress
