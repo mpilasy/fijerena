@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261113211629
 
 - **Games not found on a slow device:** on the Chromecast HD, the first sports page after the app started said "Not found on your channels" for every game: reading the profile's channels took longer than the 20 seconds a game's search may take. The channels now have their own limit of 2 minutes; the rows show that they are looking until then. TV and phone.
 
