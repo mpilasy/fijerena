@@ -5,6 +5,7 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,12 +48,15 @@ fun EmbeddedPlayerSurface(
     // Gets the video view, so the frame on screen can be copied.
     sceneFrame: SceneFrame? = null,
 ) {
-    // The playback service is created asynchronously; bump a tick once it's ready (and if it is
-    // recycled) so the AndroidView update block re-runs and (re)binds the live player.
+    // The playback service is created asynchronously; bump a tick once it's ready (and each time a
+    // service publishes a new player: TV Home and back starts a new instance) so the AndroidView
+    // update block re-runs and (re)binds the live player. Without it the view keeps the released
+    // player, and the new one plays with no surface: black, with no frames.
     var bindTick by remember { mutableIntStateOf(0) }
     // True until the stream on screen draws its first frame; black until then.
     var newStreamStarting by remember { mutableStateOf(true) }
-    LaunchedEffect(Unit) {
+    val publishCount by StreamingPlaybackService.publishCount.collectAsState()
+    LaunchedEffect(publishCount) {
         val service = StreamingPlaybackService.awaitInstanceOrNull() ?: return@LaunchedEffect
         bindTick++
         if (keepLastFrame) service.newStreamStarting.collect { newStreamStarting = it }

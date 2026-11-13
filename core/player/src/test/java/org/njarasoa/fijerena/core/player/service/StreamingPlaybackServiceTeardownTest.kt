@@ -106,6 +106,23 @@ class StreamingPlaybackServiceTeardownTest {
     }
 
     @Test
+    fun `a recreated service changes the publish count, so the screen binds its new player`() {
+        // TV Home → return: the player screen stays and a new instance plays. The video view keys
+        // on the count; with the old player bound, the video stayed black (no frames).
+        service.publishInstance()
+        val before = StreamingPlaybackService.publishCount.value
+        service.stopAndRelease()
+        val recreated = StreamingPlaybackService()
+        recreated.mediaSession = session
+        recreated.mainHandler = mockk<Handler>(relaxed = true)
+
+        recreated.publishInstance()
+
+        assertEquals(before + 1, StreamingPlaybackService.publishCount.value)
+        recreated.stopAndRelease()
+    }
+
+    @Test
     fun `teardown publishes a final position save`() {
         val saves = savesDuring { service.stopAndRelease() }
 

@@ -145,15 +145,11 @@ fun TvStatsOverlay(
         )
     }
 
-    val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L)
-        ?: remember { mutableStateOf(0L) }
     val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L)
         ?: remember { mutableStateOf(0L) }
 
     val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
-    val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L)
-        ?: remember { mutableStateOf(0L) }
     val serviceRebufferCount by StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
     val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L)
@@ -162,10 +158,6 @@ fun TvStatsOverlay(
         ?: remember { mutableStateOf(0L) }
     val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
-    val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
-        ?: remember { mutableStateOf(0f) }
-    val serviceContentFrameRate by StreamingPlaybackService.getInstance()?.contentFrameRate?.collectAsStateWithLifecycle(null)
-        ?: remember { mutableStateOf<Float?>(null) }
     val displayModes = rememberDisplayModes()
     val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
@@ -213,10 +205,13 @@ fun TvStatsOverlay(
         var curStreamElapsed = "0:00"
 
         while (true) {
-            StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+            // The service of now at each tick: Home and back, or a new film, plays on a new service
+            // instance, and the states collected at the first composition stay with the old one.
+            val service = StreamingPlaybackService.getInstance()
+            service?.getPlayer()?.let { p ->
                 curBufferedPosition = p.bufferedPosition
 
-                val newDroppedFrames = serviceDroppedFrames
+                val newDroppedFrames = service.droppedFrames.value
                 curDroppedFrames = newDroppedFrames
 
                 val currentPos = p.currentPosition
@@ -284,8 +279,8 @@ fun TvStatsOverlay(
                 }
 
                 val fmt = selectedVideoFormat
-                val mFps = serviceMeasuredFps
-                val contentFps = serviceContentFrameRate
+                val mFps = service.measuredFps.value
+                val contentFps = service.contentFrameRate.value
                 curVideoFrameRate =
                     if (fmt != null && fmt.frameRate > 0) {
                         resources.getString(R.string.player_stats_fps_unit, rateText(fmt.frameRate))
@@ -298,7 +293,7 @@ fun TvStatsOverlay(
                         naText
                     }
 
-                val bw = serviceBandwidth
+                val bw = service.bandwidthEstimate.value
                 if (currentVideoBitrate <= 0 && bw > 0) {
                     val estimatedBitrate = (bw * 0.9).toInt()
                     curVideoBitrate = "~" + formatBitrate(estimatedBitrate)
@@ -318,7 +313,7 @@ fun TvStatsOverlay(
             val curHeap = AppPerformanceMonitor.heapSnapshot()
             val curUiFramesSkipped = jankMonitor.skippedFrames
 
-            val startTime = serviceStartTimeMs
+            val startTime = service?.streamStartTimeMs?.value ?: 0L
             if (startTime > 0L) {
                 val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000
                 val hours = elapsedSec / 3600

@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.display.ContentFrameRate
+import org.njarasoa.fijerena.core.player.display.RenderedFrameRate
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
 import org.njarasoa.fijerena.core.player.model.EngineStream
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
@@ -173,8 +174,10 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _qualitySwitchCount = MutableStateFlow(0)
     val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
 
+    // The frames shown each second, counted on the playback thread by the frame metadata listener.
     private val _measuredFps = MutableStateFlow(0f)
     val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
+    private val renderedFrameRate = RenderedFrameRate()
 
     // The content's frame rate, for Stats and the match frame rate plan: the format's rate for VOD
     // when it is set, else the rate the frames show. Null while it is not known.
@@ -429,6 +432,7 @@ class StreamingPlaybackService : MediaSessionService() {
         synchronized(instanceLock) {
             instance = this
             instanceReady.complete(this)
+            _publishCount.update { it + 1 }
         }
     }
 
@@ -617,6 +621,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // Called on the playback thread for each frame that is about to show.
         player.setVideoFrameMetadataListener { presentationTimeUs, _, format, _ ->
             contentFrameRateTracker.onFrame(presentationTimeUs, format.frameRate)
+            renderedFrameRate.onFrame(SystemClock.elapsedRealtime())?.let { _measuredFps.value = it }
         }
 
         mediaSession = MediaSession.Builder(this, player).build()
@@ -729,9 +734,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
                 onQualitySwitch = { count ->
                     _qualitySwitchCount.value = count
-                },
-                onFpsUpdate = { fps ->
-                    _measuredFps.value = fps
                 },
                 onDroppedFpsUpdate = { droppedFps ->
                     _measuredDroppedFps.value = droppedFps
@@ -878,6 +880,7 @@ class StreamingPlaybackService : MediaSessionService() {
         if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player, metadata.preferredAudioLanguages)
         _currentMetadata.value = metadata
         contentFrameRateTracker.newStream(metadata.isLive)
+        _measuredFps.value = 0f
 
         // Fast-startup mode, and the buffer profile for the stream type.
         setRecycling(false)
@@ -1425,6 +1428,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _newStreamStarting.value = true
         // A stopped stream has no frame rate: the next player screen must not match its mode to it.
         contentFrameRateTracker.newStream(isLive = false)
+        _measuredFps.value = 0f
         // A remote Stop sent for the playback just stopped must not reach the next one. Idle
         // publishes nothing, so the new id is not shown until something plays.
         playSessionId.value = UUID.randomUUID().toString()
@@ -2148,7 +2152,6 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onExhaustionRebuffer: (count: Int) -> Unit,
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
         private val onQualitySwitch: (count: Int) -> Unit,
-        private val onFpsUpdate: (fps: Float) -> Unit,
         private val onDroppedFpsUpdate: (droppedFps: Float) -> Unit,
         private val onRecentDropRateUpdate: (dropRatePercent: Float) -> Unit,
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
@@ -2206,9 +2209,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 val delta = currentTime - fpsLastTimeMs
                 if (delta >= 1000) {
                     val frames = totalFrames - fpsLastFrameCount
-                    val fps = (frames * 1000f) / delta
-                    onFpsUpdate(fps)
-
                     val dropped = droppedFrames - fpsLastDroppedFrameCount
                     val droppedFps = (dropped * 1000f) / delta
                     onDroppedFpsUpdate(droppedFps)
@@ -2368,6 +2368,15 @@ class StreamingPlaybackService : MediaSessionService() {
                 .AtomicBoolean(false)
 
         fun getInstance(): StreamingPlaybackService? = instance
+
+        private val _publishCount = MutableStateFlow(0)
+
+        /**
+         * Goes up each time a service publishes itself with a new player: a new instance (TV Home
+         * and back, a new film) or a start after [stopAndRelease]. A screen that keeps the player,
+         * its view or its states keys on it, or it stays with the player of the old instance.
+         */
+        val publishCount: StateFlow<Int> = _publishCount.asStateFlow()
 
         /**
          * Loads the FFmpeg native library, which [initializePlayer] checks on the main thread from

@@ -2,7 +2,7 @@
 
 **Status:** Done 2026-11-11 (Phases 1 to 3): films and Live TV in full screen play at a matching
 mode with the This Device switch on. The device checks (Checks, Phases 2 and 3) wait for the user on
-the Shields and the Bravia. TV emulator check 2026-11-12: see Progress (finding: FPS shows N/A). The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with option (a).
+the Shields and the Bravia. TV emulator check 2026-11-12: see Progress (FPS "N/A" found and fixed). The user decided MF-Q1 to MF-Q6 on 2026-11-11, each with option (a).
 
 ## Goal
 
@@ -196,7 +196,21 @@ NAVIGATION_GUIDE.md (the This Device row, Phase 2) and RELEASE_NOTES.md.
 off, and a 25 fps film plays with no crash with the switch on (the emulator has one 60 Hz mode, so
 no switch happens). Finding: Stats for Nerds shows FPS "N/A" for the 25 fps test films, where the
 Phase 1 check showed "25.00 fps (measured)"; with no content rate, the switch has nothing to match.
-Under investigation.
+Cause, found and fixed on 2026-11-12: after Home and back during a film, the player screen stays and
+a new `StreamingPlaybackService` instance plays it. `EmbeddedPlayerSurface` bound the player only
+once (its `LaunchedEffect(Unit)`), so the video view kept the released player and the new player had
+no surface: sound and position went on, the picture stayed black, and no frame reached the frame
+metadata listener, so `contentFrameRate` stayed null. Now the service counts each publish
+(`StreamingPlaybackService.publishCount`) and the view binds again on each new count. Two more
+faults found on the way, also fixed: `TvStatsOverlay` (and `MobileStatsOverlay`) read the
+measured rate, the content rate, the dropped frames and the stream time through states collected
+at its first composition, which stayed with the old instance (Home and back showed the old
+"25.00 fps" over a black picture); now its update loop reads the service of now at each tick. And
+the "measured" fallback never filled during playback: Media3 1.9 reports frame processing offsets
+only when the renderer stops; now `RenderedFrameRate` counts the frames that the frame metadata
+listener gets in 2-second windows, so a 10 fps film reads "10.0 fps (measured)". Emulator check
+after the fix: a 25 fps film reads "25.00 fps (measured)" before and after Home and back, with the
+picture, switch on and off; The Little Robot (10 fps) reads "10.0 fps (measured)".
 
 **Phase 1 done 2026-11-11.** `FrameRateEstimator` and `ContentFrameRate` (core/player/.../display/),
 `StreamingPlaybackService.contentFrameRate`, and the **Display** and **Modes** rows in `TvStatsOverlay`

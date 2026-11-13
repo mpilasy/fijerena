@@ -7,6 +7,9 @@
 - **Guide source cards in Malagasy (TV):** on Guide Sources, the figures of each card (last update, times, programmes until, channels, programmes) no longer show one letter per line when their labels are long. The figures that do not fit go to a second line. TV.
 - **Safe mode buttons on one line (TV):** the icon action Send logs to my sync group was lower than Continue, Clear caches and Show logs. Now all four are centred on one line. TV.
 - **Search: Right from the rail goes to the search field:** on Search (the catalogue and the Guide tab) and on Search the Guide, Right from the navigation rail sometimes put focus on the red Clear all of the recent searches. Now Right goes back to the item you came from, or to the search field when that item is gone. TV.
+- **Video after Home and back (TV):** when you pressed Home during a film and then opened the app again, the film played on with sound but a black picture until you pressed a key, and Stats for Nerds showed FPS "N/A". Now the picture comes back at once. TV.
+- **Stats for Nerds follows the playback of now:** after Home and back, Stats could show the frame rate, dropped frames and stream time of the playback before. Now they always show the playback on screen. TV and phone.
+- **Frame rate of any video:** when a video gives no frame rate, Stats for Nerds now shows the frames shown each second, for example "10.0 fps (measured)", where it showed "N/A". On TV this is for a rate that is not a usual one (24, 25, 30, 50 or 60 fps); a usual rate shows with two decimals, as before. TV and phone.
 
 ## Version: 0.9.20261112184527
 

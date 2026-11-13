@@ -111,15 +111,11 @@ fun MobileStatsOverlay(
     var networkSpeed by remember { mutableStateOf(naText) }
     var bufferHealth by remember { mutableStateOf(0) }
 
-    val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L)
-        ?: remember { mutableStateOf(0L) }
     val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L)
         ?: remember { mutableStateOf(0L) }
 
     val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
-    val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L)
-        ?: remember { mutableStateOf(0L) }
     val serviceRebufferCount by StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
     val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L)
@@ -128,8 +124,6 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0L) }
     val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
-    val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
-        ?: remember { mutableStateOf(0f) }
     val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
     val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(
@@ -164,17 +158,20 @@ fun MobileStatsOverlay(
         var currentAudioBitrate = 0
 
         while (true) {
-            StreamingPlaybackService.getInstance()?.let { service ->
+            // The service of now at each tick: a new service instance must not leave the states
+            // collected at the first composition on the old one.
+            val service = StreamingPlaybackService.getInstance()
+            if (service != null) {
                 val newOutput =
                     service.audioOutputEncoding.value?.let { audioOutputLabel(it, pcmOutputText, passthroughOutputFormat) } ?: naText
                 if (newOutput != audioOutput) audioOutput = newOutput
                 val newGain = service.nightAudioGainDb()?.let(::nightAudioGainLabel)
                 if (newGain != nightAudioGain) nightAudioGain = newGain
             }
-            StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+            service?.getPlayer()?.let { p ->
                 bufferedPosition = p.bufferedPosition
 
-                val newDroppedFrames = serviceDroppedFrames
+                val newDroppedFrames = service.droppedFrames.value
                 if (newDroppedFrames != droppedFrames) droppedFrames = newDroppedFrames
 
                 val currentPos = p.currentPosition
@@ -267,7 +264,7 @@ fun MobileStatsOverlay(
                 // containers without a static rate), so it is computed every tick, not only when
                 // tracks change.
                 val fmt = selectedVideoFormat
-                val mFps = serviceMeasuredFps
+                val mFps = service.measuredFps.value
                 val newFrameRate =
                     if (fmt != null && fmt.frameRate > 0) {
                         "${fmt.frameRate.toInt()} fps"
@@ -280,7 +277,7 @@ fun MobileStatsOverlay(
 
                 // Video bitrate still unknown but a bandwidth estimate exists: use part of it as a
                 // guess (VOD / IPTV).
-                val bw = serviceBandwidth
+                val bw = service.bandwidthEstimate.value
                 if (currentVideoBitrate <= 0 && bw > 0) {
                     val estimatedBitrate = (bw * 0.9).toInt()
                     val newVideoBitrate = "~" + formatBitrate(estimatedBitrate)
@@ -302,7 +299,7 @@ fun MobileStatsOverlay(
             heap = AppPerformanceMonitor.heapSnapshot()
             uiFramesSkipped = jankMonitor.skippedFrames
 
-            val startTime = serviceStartTimeMs
+            val startTime = service?.streamStartTimeMs?.value ?: 0L
             if (startTime > 0L) {
                 val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000
                 val hours = elapsedSec / 3600
