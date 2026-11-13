@@ -74,6 +74,18 @@ class SportsParsersTest {
     }
 
     @Test
+    fun `ESPN scores, a schedule's object, a scoreboard's string, none for a coming game`() {
+        val nhl = EspnParser.schedule(sportsFixture("espn_schedule_nhl.json"), "hockey", "nhl").first { it.id == "401892604" }
+        assertEquals("4" to "1", nhl.homeScore to nhl.awayScore)
+
+        val board = EspnParser.scoreboard(sportsFixture("espn_scoreboard_soccer.json"), "soccer", "eng.1").first { it.id == "401879246" }
+        assertEquals("0" to "0", board.homeScore to board.awayScore)
+
+        val coming = EspnParser.schedule(sportsFixture("espn_schedule_soccer_all.json"), "soccer", null).first()
+        assertEquals(null to null, coming.homeScore to coming.awayScore)
+    }
+
+    @Test
     fun `ESPN scoreboards take the competition from the answer's league`() {
         val nhl = EspnParser.scoreboard(sportsFixture("espn_scoreboard_nhl.json"), "hockey", "nhl")
         assertTrue(nhl.isNotEmpty())

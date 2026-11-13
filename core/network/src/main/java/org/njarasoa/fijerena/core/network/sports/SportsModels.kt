@@ -78,7 +78,8 @@ enum class BroadcasterOrigin { ESPN, NHL, MLB }
 /**
  * A game between two teams (or an event such as a race, where [away] is null). [startEpochSec] is
  * UTC. [competition] is the league or cup the game is played in, as the source names it.
- * [broadcasters] is empty until they are known.
+ * [broadcasters] is empty until they are known. [homeScore] and [awayScore]: each side's score as
+ * the source shows it, null when it gives none.
  */
 data class SportsGame(
     val source: SportsSource,
@@ -89,6 +90,8 @@ data class SportsGame(
     val competition: SportsLeague,
     val state: GameState = GameState.SCHEDULED,
     val broadcasters: List<Broadcaster> = emptyList(),
+    val homeScore: String? = null,
+    val awayScore: String? = null,
 )
 
 /** A game's state, as far as the sources tell it. */

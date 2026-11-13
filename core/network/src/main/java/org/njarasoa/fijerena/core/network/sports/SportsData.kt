@@ -93,6 +93,26 @@ class SportsData(
         return withBroadcasters(coming(games).take(limit)).also(onGames)
     }
 
+    /**
+     * [team]'s results of the last [days] days, newest first: the games that ended, with both
+     * scores. A soccer team's come from each competition of its coming games (the `all` answer
+     * has no current played games); another team's from its season schedule. A competition that
+     * cannot be read is left out; nothing throws.
+     */
+    suspend fun teamResults(
+        team: SportsTeam,
+        days: Int = RESULT_DAYS,
+    ): List<SportsGame> {
+        if (!enabled() || team.source != SportsSource.ESPN) return emptyList()
+        val schedule = attempt(mutableListOf(), "ESPN team schedule") { espnTeamSchedule(team) }
+        val games = if (team.sport == EspnParser.SOCCER) espnSoccerResults(team, schedule) else schedule
+        val fromSec = now() / 1000 - days * DAY_SEC
+        return games
+            .filter { it.state == GameState.FINISHED && it.homeScore != null && it.awayScore != null && it.startEpochSec >= fromSec }
+            .distinctBy { it.id }
+            .sortedByDescending { it.startEpochSec }
+    }
+
     /** [league]'s games of the next [days] days, soonest first, with their broadcasters. */
     suspend fun leagueGames(
         league: SportsLeague,
@@ -124,6 +144,28 @@ class SportsData(
         val league = if (parts.size == 3) parts[1] else EspnParser.splitLeague(team.league)?.second
         return scheduleFromCache("schedule_espn_${team.id}", { EspnParser.schedule(it, sport, league) }) {
             api.espnTeamSchedule(sport, league, parts.last())
+        }
+    }
+
+    /** A soccer team's games of each competition of its [coming] games, each read once. */
+    private suspend fun espnSoccerResults(
+        team: SportsTeam,
+        coming: List<SportsGame>,
+    ): List<SportsGame> {
+        val espnId = EspnParser.espnTeamId(team.id)
+        val slugs = coming.mapNotNull { EspnParser.splitLeague(it.competition.id)?.second }.distinct()
+        return coroutineScope {
+            slugs
+                .map { slug ->
+                    async {
+                        attempt(mutableListOf(), "ESPN results $slug") {
+                            scheduleFromCache("results_espn_${slug}_$espnId", { EspnParser.schedule(it, EspnParser.SOCCER, slug) }) {
+                                api.espnSoccerTeamResults(slug, espnId)
+                            }
+                        }
+                    }
+                }.awaitAll()
+                .flatten()
         }
     }
 
@@ -256,6 +298,9 @@ class SportsData(
 
         /** A team page's games at most. */
         const val TEAM_GAMES = 10
+
+        /** A team page's results: the days back. */
+        const val RESULT_DAYS = 30
 
         /** A league page's days. */
         const val LEAGUE_DAYS = 7

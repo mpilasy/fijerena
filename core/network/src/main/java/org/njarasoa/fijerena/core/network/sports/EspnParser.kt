@@ -1,6 +1,10 @@
 package org.njarasoa.fijerena.core.network.sports
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * ESPN's answers (`site.api.espn.com`, `site.web.api.espn.com`) as [SportsTeam], [SportsLeague] and
@@ -178,8 +182,18 @@ object EspnParser {
             competition = competition,
             state = (contest.status ?: status).toState(),
             broadcasters = broadcasters(broadcasts),
+            homeScore = home?.score.scoreText(),
+            awayScore = away?.score.scoreText(),
         )
     }
+
+    /** A side's score: a scoreboard sends a string, a schedule an object with `displayValue`. */
+    private fun JsonElement?.scoreText(): String? =
+        when (this) {
+            is JsonPrimitive -> contentOrNull.clean()
+            is JsonObject -> (this["displayValue"] as? JsonPrimitive)?.contentOrNull.clean()
+            else -> null
+        }
 
     private fun TeamRef.toTeam(
         sport: String,
@@ -350,6 +364,7 @@ object EspnParser {
     private data class Competitor(
         val homeAway: String? = null,
         val team: TeamRef? = null,
+        val score: JsonElement? = null,
     )
 
     @Serializable

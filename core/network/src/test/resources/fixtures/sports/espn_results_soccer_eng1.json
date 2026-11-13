@@ -1,0 +1,224 @@
+{
+  "events": [
+    {
+      "id": "401879246",
+      "date": "2026-11-01T16:30Z",
+      "name": "Arsenal at Liverpool",
+      "competitions": [
+        {
+          "date": "2026-11-01T16:30Z",
+          "status": {
+            "type": {
+              "name": "STATUS_FULL_TIME",
+              "state": "post",
+              "completed": true
+            }
+          },
+          "competitors": [
+            {
+              "homeAway": "home",
+              "team": {
+                "id": "364",
+                "displayName": "Liverpool",
+                "abbreviation": "LIV"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401879246/competitions/401879246/competitors/364/scores/38?lang=en&region=us",
+                "value": 0.0,
+                "displayValue": "0",
+                "winner": false,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            },
+            {
+              "homeAway": "away",
+              "team": {
+                "id": "359",
+                "displayName": "Arsenal",
+                "abbreviation": "ARS"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401879246/competitions/401879246/competitors/359/scores/38?lang=en&region=us",
+                "value": 1.0,
+                "displayValue": "1",
+                "winner": true,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "401878768",
+      "date": "2026-10-24T14:00Z",
+      "name": "Everton at Arsenal",
+      "competitions": [
+        {
+          "date": "2026-10-24T14:00Z",
+          "status": {
+            "type": {
+              "name": "STATUS_FULL_TIME",
+              "state": "post",
+              "completed": true
+            }
+          },
+          "competitors": [
+            {
+              "homeAway": "home",
+              "team": {
+                "id": "359",
+                "displayName": "Arsenal",
+                "abbreviation": "ARS"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401878768/competitions/401878768/competitors/359/scores/38?lang=en&region=us",
+                "value": 2.0,
+                "displayValue": "2",
+                "winner": true,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            },
+            {
+              "homeAway": "away",
+              "team": {
+                "id": "368",
+                "displayName": "Everton",
+                "abbreviation": "EVE"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401878768/competitions/401878768/competitors/368/scores/38?lang=en&region=us",
+                "value": 0.0,
+                "displayValue": "0",
+                "winner": false,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "401878769",
+      "date": "2026-10-18T15:30Z",
+      "name": "Arsenal at Nottingham Forest",
+      "competitions": [
+        {
+          "date": "2026-10-18T15:30Z",
+          "status": {
+            "type": {
+              "name": "STATUS_FULL_TIME",
+              "state": "post",
+              "completed": true
+            }
+          },
+          "competitors": [
+            {
+              "homeAway": "home",
+              "team": {
+                "id": "393",
+                "displayName": "Nottingham Forest",
+                "abbreviation": "NFO"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401878769/competitions/401878769/competitors/393/scores/38?lang=en&region=us",
+                "value": 0.0,
+                "displayValue": "0",
+                "winner": false,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            },
+            {
+              "homeAway": "away",
+              "team": {
+                "id": "359",
+                "displayName": "Arsenal",
+                "abbreviation": "ARS"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401878769/competitions/401878769/competitors/359/scores/38?lang=en&region=us",
+                "value": 1.0,
+                "displayValue": "1",
+                "winner": true,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "401879268",
+      "date": "2026-10-10T11:30Z",
+      "name": "Leeds United at Arsenal",
+      "competitions": [
+        {
+          "date": "2026-10-10T11:30Z",
+          "status": {
+            "type": {
+              "name": "STATUS_FULL_TIME",
+              "state": "post",
+              "completed": true
+            }
+          },
+          "competitors": [
+            {
+              "homeAway": "home",
+              "team": {
+                "id": "359",
+                "displayName": "Arsenal",
+                "abbreviation": "ARS"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401879268/competitions/401879268/competitors/359/scores/38?lang=en&region=us",
+                "value": 2.0,
+                "displayValue": "2",
+                "winner": true,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            },
+            {
+              "homeAway": "away",
+              "team": {
+                "id": "357",
+                "displayName": "Leeds United",
+                "abbreviation": "LEE"
+              },
+              "score": {
+                "$ref": "http://sports.core.api.espn.pvt/v2/sports/soccer/leagues/eng.1/events/401879268/competitions/401879268/competitors/357/scores/38?lang=en&region=us",
+                "value": 1.0,
+                "displayValue": "1",
+                "winner": false,
+                "source": {
+                  "id": "38",
+                  "description": "SA.ENVOY"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -41,6 +41,7 @@ check "ESPN league search" '[.results[] | select(.type == "league")] | length > 
 check "ESPN league list (names of soccer leagues)" '.leagues | length > 0' "$ESPN_SITE/leagues/dropdown?sport=soccer&limit=500"
 check "ESPN league teams" '.sports[0].leagues[0].teams | length > 0' "$ESPN_SITE/sports/hockey/nhl/teams"
 check "ESPN soccer team schedule (every competition)" '.events | type == "array"' "$ESPN_SITE/sports/soccer/all/teams/359/schedule?fixture=true"
+check "ESPN soccer team results (one competition, with scores)" '[.events[] | select(.competitions[0].status.type.completed) | .competitions[0].competitors[0].score.displayValue] | length > 0' "$ESPN_SITE/sports/soccer/eng.1/teams/359/schedule"
 check "ESPN team schedule" '.events | length > 0' "$ESPN_SITE/sports/hockey/nhl/teams/1/schedule"
 check "ESPN scoreboard (one day)" '.events | type == "array"' "$ESPN_SITE/sports/soccer/eng.1/scoreboard?dates=$TODAY_COMPACT"
 check "NHL club schedule" '.games | length > 0' "https://api-web.nhle.com/v1/club-schedule-season/BOS/now"
