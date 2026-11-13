@@ -14,7 +14,10 @@ import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A result on the phone's team page (the team results plan): the score in the title, the competition after it, no click. */
+/**
+ * The phone's sports cards (the team results plan): a result has the score in the title, the
+ * competition after it, no click; a game in progress has the score and its clock.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "en")
 class MobileResultCardTest {
@@ -43,5 +46,26 @@ class MobileResultCardTest {
 
         composeTestRule.onNodeWithText("Arsenal 2 – 1 Chelsea").assertHasNoClickAction()
         composeTestRule.onNodeWithText("Premier League", substring = true).assertExists()
+    }
+
+    @Test
+    fun `a game in progress shows the score and the clock in place of the start`() {
+        val game =
+            SportsGame(
+                SportsSource.ESPN,
+                "on",
+                1_700_000_000,
+                arsenal,
+                chelsea,
+                league,
+                GameState.LIVE,
+                homeScore = "1",
+                awayScore = "0",
+                clock = "HT",
+            )
+        composeTestRule.setContent { MobileGameCard(game = game, channels = emptyList(), onClick = {}, team = arsenal) }
+
+        composeTestRule.onNodeWithText("Arsenal 1 – 0 Chelsea").assertExists()
+        composeTestRule.onNodeWithText("HT · Premier League").assertExists()
     }
 }

@@ -173,6 +173,8 @@ object EspnParser {
         val away = contest.competitors.firstOrNull { it !== home }
         val homeTeam = home?.team?.toTeam(sport, league) ?: return null
         val broadcasts = contest.geoBroadcasts.ifEmpty { contest.broadcasts }
+        val gameStatus = contest.status ?: status
+        val state = gameStatus.toState()
         return SportsGame(
             source = SportsSource.ESPN,
             id = id,
@@ -180,10 +182,12 @@ object EspnParser {
             home = homeTeam,
             away = away?.team?.toTeam(sport, league),
             competition = competition,
-            state = (contest.status ?: status).toState(),
+            state = state,
             broadcasters = broadcasters(broadcasts),
             homeScore = home?.score.scoreText(),
             awayScore = away?.score.scoreText(),
+            // While it is on: "66'", "HT"; ESPN's short detail, else its clock.
+            clock = if (state == GameState.LIVE) gameStatus?.type?.shortDetail.clean() ?: gameStatus?.displayClock.clean() else null,
         )
     }
 
@@ -389,6 +393,7 @@ object EspnParser {
     @Serializable
     private data class Status(
         val type: StatusType? = null,
+        val displayClock: String? = null,
     )
 
     @Serializable
@@ -396,5 +401,6 @@ object EspnParser {
         val name: String? = null,
         val state: String? = null,
         val completed: Boolean = false,
+        val shortDetail: String? = null,
     )
 }

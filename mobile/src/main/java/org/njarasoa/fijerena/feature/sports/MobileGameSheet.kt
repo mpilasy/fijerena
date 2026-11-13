@@ -41,7 +41,8 @@ import org.njarasoa.fijerena.core.ui.sports.asksBeforeWatching
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
-import org.njarasoa.fijerena.core.ui.sports.gameTitle
+import org.njarasoa.fijerena.core.ui.sports.clockOr
+import org.njarasoa.fijerena.core.ui.sports.gameRowTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
@@ -83,11 +84,11 @@ fun MobileGameSheet(
     val day = Instant.ofEpochSecond(game.startEpochSec).atZone(ZoneId.systemDefault()).toLocalDate()
     CinemaSheet(onDismissRequest = onDismiss, rows = true) {
         CinemaSheetHeader(
-            title = gameTitle(resources, game),
+            title = gameRowTitle(resources, game),
             subtitle =
                 listOfNotNull(
                     game.competition.name.takeIf { it.isNotBlank() },
-                    DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
+                    clockOr(game, DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec))),
                 ).joinToString(" · "),
             actions = actions,
         )

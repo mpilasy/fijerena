@@ -59,7 +59,8 @@ import org.njarasoa.fijerena.core.ui.sports.asksBeforeWatching
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
-import org.njarasoa.fijerena.core.ui.sports.gameTitle
+import org.njarasoa.fijerena.core.ui.sports.clockOr
+import org.njarasoa.fijerena.core.ui.sports.gameRowTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.sports.watchQuestionTitle
@@ -126,7 +127,7 @@ fun GameSheetOverlay(
     val subtitle =
         listOfNotNull(
             game.competition.name.takeIf { it.isNotBlank() },
-            DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec)),
+            clockOr(game, DateText.dayAndTime(DateText.shortDayLabel(resources, day), TimeFormat.formatTime(game.startEpochSec))),
         ).joinToString(" · ")
     val first = Modifier.focusRequester(firstRow)
 
@@ -150,7 +151,7 @@ fun GameSheetOverlay(
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(vertical = Spacing.md)) {
             TvScreenHeader(
-                title = gameTitle(resources, game),
+                title = gameRowTitle(resources, game),
                 subtitle = subtitle,
                 actions = actions,
                 modifier = Modifier.padding(horizontal = Spacing.lg),

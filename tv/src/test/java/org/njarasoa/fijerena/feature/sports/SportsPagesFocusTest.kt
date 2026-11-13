@@ -124,11 +124,23 @@ class SportsPagesFocusTest {
     }
 
     @Test
-    fun `team page - the results follow the games, each with its score, Down reaches them`() {
-        val result =
+    fun `team page - the results are above the games, the page opens on the next game, Up reaches the newest result`() {
+        val older =
             SportsGame(
                 SportsSource.ESPN,
-                "past",
+                "older",
+                1_699_000_000,
+                LIVERPOOL,
+                ARSENAL,
+                LEAGUE,
+                GameState.FINISHED,
+                homeScore = "0",
+                awayScore = "3",
+            )
+        val newest =
+            SportsGame(
+                SportsSource.ESPN,
+                "newest",
                 1_700_000_000,
                 ARSENAL,
                 CHELSEA,
@@ -137,13 +149,41 @@ class SportsPagesFocusTest {
                 homeScore = "2",
                 awayScore = "1",
             )
-        val vm = SportsTeamViewModel(FakeData(results = listOf(result)), ARSENAL).also { created += it }
+        val vm = SportsTeamViewModel(FakeData(results = listOf(newest, older)), ARSENAL).also { created += it }
         rule.setContent {
             WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
         }
         walk.awaitFocused("C / Arsenal v Chelsea")
-        walk.run(down("L / Liverpool v Arsenal"), down("C / Arsenal 2 – 1 Chelsea / Premier League"))
         rule.onAllNodesWithText("Last 30 Days").onFirst().assertExists()
+        walk.run(
+            up("C / Arsenal 2 – 1 Chelsea / Premier League"),
+            up("L / Liverpool 0 – 3 Arsenal / Premier League"),
+            down("C / Arsenal 2 – 1 Chelsea / Premier League"),
+            down("C / Arsenal v Chelsea"),
+            down("L / Liverpool v Arsenal"),
+        )
+    }
+
+    @Test
+    fun `team page - a game in progress shows its score and clock`() {
+        val live =
+            SportsGame(
+                SportsSource.ESPN,
+                "1",
+                1_700_000_000,
+                ARSENAL,
+                CHELSEA,
+                LEAGUE,
+                GameState.LIVE,
+                homeScore = "1",
+                awayScore = "0",
+                clock = "66'",
+            )
+        val vm = SportsTeamViewModel(FakeData(games = listOf(live)), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
+        }
+        walk.awaitFocused("C / Arsenal 1 – 0 Chelsea / Premier League · 66'")
     }
 
     @Test

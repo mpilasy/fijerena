@@ -86,6 +86,24 @@ class SportsParsersTest {
     }
 
     @Test
+    fun `ESPN game on has its clock, a game that ended or is to come has none`() {
+        fun answer(
+            state: String,
+            detail: String,
+        ) = """{"events":[{"id":"9","date":"2026-11-13T18:00Z","league":{"slug":"uefa.nations","name":"UEFA Nations League"},
+            "competitions":[{"status":{"displayClock":"45'+2'","type":{"name":"STATUS_HALFTIME","state":"$state","shortDetail":"$detail"}},
+            "competitors":[{"homeAway":"home","team":{"id":"2619","displayName":"Moldova"},"score":{"displayValue":"1"}},
+            {"homeAway":"away","team":{"id":"483","displayName":"Kazakhstan"},"score":{"displayValue":"1"}}]}]}]}"""
+
+        val on = EspnParser.schedule(answer("in", "HT"), "soccer", null).single()
+        assertEquals(GameState.LIVE, on.state)
+        assertEquals("HT", on.clock)
+        assertEquals("1" to "1", on.homeScore to on.awayScore)
+        assertEquals(null, EspnParser.schedule(answer("post", "FT"), "soccer", null).single().clock)
+        assertEquals("45'+2'", EspnParser.schedule(answer("in", ""), "soccer", null).single().clock)
+    }
+
+    @Test
     fun `ESPN scoreboards take the competition from the answer's league`() {
         val nhl = EspnParser.scoreboard(sportsFixture("espn_scoreboard_nhl.json"), "hockey", "nhl")
         assertTrue(nhl.isNotEmpty())

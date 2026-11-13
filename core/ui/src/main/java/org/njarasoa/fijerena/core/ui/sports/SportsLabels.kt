@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.sports
 import android.content.res.Resources
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
+import org.njarasoa.fijerena.core.network.sports.GameState
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
@@ -55,6 +56,21 @@ fun resultTitle(
         resources.getString(R.string.sports_result_format, game.home.name, game.homeScore.orEmpty(), game.awayScore.orEmpty(), it.name)
     }
         ?: game.home.name
+
+/** Whether [game] is on with both scores known: its rows show the score and the clock (the team results plan, Phase 4). */
+fun showsLiveScore(game: SportsGame): Boolean = game.state == GameState.LIVE && game.homeScore != null && game.awayScore != null
+
+/** A game row's or sheet's title: with the score while the game is on ([resultTitle]), else [gameTitle]. */
+fun gameRowTitle(
+    resources: Resources,
+    game: SportsGame,
+): String = if (showsLiveScore(game)) resultTitle(resources, game) else gameTitle(resources, game)
+
+/** Where a game that is on is ("66'", "HT"), else [otherwise] (its start). */
+fun clockOr(
+    game: SportsGame,
+    otherwise: String,
+): String = game.clock?.takeIf { game.state == GameState.LIVE } ?: otherwise
 
 /** A result's competition and day: "UEFA Nations League · Yesterday", "… · Sat 1 Nov". */
 fun resultDetails(

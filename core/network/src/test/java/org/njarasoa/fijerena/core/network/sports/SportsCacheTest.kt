@@ -75,4 +75,16 @@ class SportsCacheTest {
         assertEquals(SportsCache.SCHEDULE_SOON_MAX_AGE_MS, SportsCache.scheduleMaxAgeMs(games, nowMs))
         assertEquals(SportsCache.SCHEDULE_MAX_AGE_MS, SportsCache.scheduleMaxAgeMs(games.drop(2), nowMs))
     }
+
+    @Test
+    fun `a schedule with a game on stays fresh 2 minutes`() {
+        val nowMs = epoch("2026-11-01T12:00:00Z") * 1000
+        val game = EspnParser.schedule(sportsFixture("espn_schedule_soccer_all.json"), "soccer", null).first()
+        val started = game.copy(startEpochSec = nowMs / 1000 - 60 * 60)
+        assertEquals(SportsCache.SCHEDULE_LIVE_MAX_AGE_MS, SportsCache.scheduleMaxAgeMs(listOf(started), nowMs))
+        val on = game.copy(state = GameState.LIVE)
+        assertEquals(SportsCache.SCHEDULE_LIVE_MAX_AGE_MS, SportsCache.scheduleMaxAgeMs(listOf(on), nowMs))
+        val ended = started.copy(state = GameState.FINISHED)
+        assertEquals(SportsCache.SCHEDULE_MAX_AGE_MS, SportsCache.scheduleMaxAgeMs(listOf(ended), nowMs))
+    }
 }

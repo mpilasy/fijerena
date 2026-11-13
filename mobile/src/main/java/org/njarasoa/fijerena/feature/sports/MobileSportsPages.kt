@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,16 +106,16 @@ fun MobileSportsTeamScreen(
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders).
         teamBell = shown,
-        // The results of the last 30 days (the team results plan); nothing at all when there are none.
-        extra = {
+        // The results of the last 30 days above the games, oldest first (the team results plan,
+        // Phase 3): the page opens on the next game, the results a scroll up. Nothing at all when there are none.
+        beforeCount = if (results.isEmpty()) 0 else results.size + 1,
+        before = {
             if (results.isNotEmpty()) {
-                endOfDays(key = "results_end_of_days")
-                item(key = "results_heading", contentType = AFTER_DAYS) {
-                    MobileSportsHeading(stringResource(R.string.sports_results_heading), modifier = Modifier.padding(top = Spacing.md))
-                }
-                items(results, key = {
-                    "result:${it.source.id}:${it.id}"
-                }, contentType = { AFTER_DAYS }) { game -> MobileResultCard(game = game, team = shown) }
+                item(key = "results_heading") { MobileSportsHeading(stringResource(R.string.sports_results_heading)) }
+                items(
+                    results.asReversed(),
+                    key = { "result:${it.source.id}:${it.id}" },
+                ) { game -> MobileResultCard(game = game, team = shown) }
             }
         },
     )
@@ -192,6 +193,8 @@ private fun MobileSportsPage(
     onPlay: (Screen.CategoryList) -> Unit,
     onBack: () -> Unit,
     teamBell: SportsTeam? = null,
+    beforeCount: Int = 0,
+    before: LazyListScope.() -> Unit = {},
     extra: LazyListScope.() -> Unit = {},
 ) {
     val resources = LocalResources.current
@@ -204,6 +207,10 @@ private fun MobileSportsPage(
     val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
     val cardColors = sportsCardColors()
+    // With rows above the games ([before]: a team's results), the page opens on the games' heading.
+    LaunchedEffect(beforeCount > 0, loaded != null) {
+        if (beforeCount > 0 && loaded != null && listState.firstVisibleItemIndex == 0) listState.scrollToItem(1 + beforeCount)
+    }
     Scaffold(
         topBar = {
             MobileScreenHeader(title = title, onBack = onBack) {
@@ -243,6 +250,7 @@ private fun MobileSportsPage(
                     }
                 }
             }
+            before()
             when (games) {
                 GamesState.Loading -> {
                     item(key = "loading") {
@@ -270,6 +278,9 @@ private fun MobileSportsPage(
                                 icon = CinemaIcons.DateRange,
                             )
                         }
+                    } else if (beforeCount > 0) {
+                        // Under the results, a heading tells the coming games from them.
+                        item(key = "games_heading") { MobileSportsHeading(stringResource(R.string.sports_next_games_heading)) }
                     }
                     for (day in days) {
                         stickyHeader(

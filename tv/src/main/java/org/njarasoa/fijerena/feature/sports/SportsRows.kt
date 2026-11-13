@@ -35,8 +35,9 @@ import org.njarasoa.fijerena.core.ui.sports.MoreChannelsBadge
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
+import org.njarasoa.fijerena.core.ui.sports.clockOr
 import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
-import org.njarasoa.fijerena.core.ui.sports.gameTitle
+import org.njarasoa.fijerena.core.ui.sports.gameRowTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.sports.resultDetails
@@ -257,12 +258,12 @@ fun TvGameRow(
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val resources = LocalResources.current
-    val title = gameTitle(resources, game)
+    val title = gameRowTitle(resources, game)
     val logoTeams = gameLogoTeams(game, team)
     val details =
         listOfNotNull(
             game.competition.name.takeIf { it.isNotBlank() },
-            TimeFormat.formatTime(game.startEpochSec),
+            clockOr(game, TimeFormat.formatTime(game.startEpochSec)),
         ).joinToString(" · ")
     Row(
         modifier =

@@ -124,18 +124,28 @@ class SportsCache(
         /** As [SCHEDULE_MAX_AGE_MS] with a game in the next 2 days: 1 hour (TV is often named late). */
         const val SCHEDULE_SOON_MAX_AGE_MS = HOUR_MS
 
+        /** As [SCHEDULE_MAX_AGE_MS] with a game on (started, not ended): 2 minutes, for its score and clock. */
+        const val SCHEDULE_LIVE_MAX_AGE_MS = 2 * 60 * 1000L
+
         /** League and team lists: 7 days. */
         const val LIST_MAX_AGE_MS = 7 * DAY_MS
 
         /**
-         * How long [games] stay fresh at [nowMs]: [SCHEDULE_SOON_MAX_AGE_MS] when one that has not
-         * ended starts in the next 2 days, else [SCHEDULE_MAX_AGE_MS].
+         * How long [games] stay fresh at [nowMs]: [SCHEDULE_LIVE_MAX_AGE_MS] when one that has not
+         * ended has started (in the last 3 hours, or the source says it is on);
+         * [SCHEDULE_SOON_MAX_AGE_MS] when one starts in the next 2 days; else [SCHEDULE_MAX_AGE_MS].
          */
         fun scheduleMaxAgeMs(
             games: List<SportsGame>,
             nowMs: Long,
         ): Long {
             val nowSec = nowMs / 1000
+            val on =
+                games.any { game ->
+                    game.state == GameState.LIVE ||
+                        (game.state == GameState.SCHEDULED && nowSec - game.startEpochSec in 0..SOON_PAST_SEC)
+                }
+            if (on) return SCHEDULE_LIVE_MAX_AGE_MS
             val soon =
                 games.any { game ->
                     game.state != GameState.FINISHED &&

@@ -151,9 +151,12 @@ class SportsData(
     /** A soccer team's played games of every competition (each game names its own). */
     private suspend fun espnSoccerResults(team: SportsTeam): List<SportsGame> {
         val espnId = EspnParser.espnTeamId(team.id)
-        return scheduleFromCache("results_espn_soccer_$espnId", { EspnParser.schedule(it, EspnParser.SOCCER, null) }) {
-            api.espnSoccerTeamResults(espnId)
-        }
+        // At most an hour old, so a game that has just ended comes (the answer had no sign of it).
+        return cache.get(
+            "results_espn_soccer_$espnId",
+            { EspnParser.schedule(it, EspnParser.SOCCER, null) },
+            { minOf(SportsCache.scheduleMaxAgeMs(it, now()), SportsCache.SCHEDULE_SOON_MAX_AGE_MS) },
+        ) { api.espnSoccerTeamResults(espnId) }
     }
 
     private suspend fun espnLeagueGames(

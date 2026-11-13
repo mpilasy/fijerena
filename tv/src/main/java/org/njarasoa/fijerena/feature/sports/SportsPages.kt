@@ -126,18 +126,13 @@ fun SportsTeamScreen(
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders); its slot always.
         teamBell = shown,
-        // The results of the last 30 days (the team results plan); nothing at all when there are none.
-        extra = { _, _ ->
+        // The results of the last 30 days above the games, oldest first (the team results plan,
+        // Phase 3): Up from the next game reaches the newest. Nothing at all when there are none.
+        beforeCount = if (results.isEmpty()) 0 else results.size + 1,
+        before = {
             if (results.isNotEmpty()) {
-                endOfDays(key = "results_end_of_days")
-                item(key = "results_heading", contentType = AFTER_DAYS) {
-                    TvSportsHeading(stringResource(R.string.sports_results_heading), modifier = Modifier.padding(top = Spacing.lg))
-                }
-                items(
-                    results,
-                    key = { "result:${it.source.id}:${it.id}" },
-                    contentType = { AFTER_DAYS },
-                ) { game -> TvResultRow(game = game, team = shown) }
+                item(key = "results_heading") { TvSportsHeading(stringResource(R.string.sports_results_heading)) }
+                items(results.asReversed(), key = { "result:${it.source.id}:${it.id}" }) { game -> TvResultRow(game = game, team = shown) }
             }
         },
     )
@@ -232,6 +227,8 @@ private fun TvSportsPage(
     onBack: () -> Unit,
     secondFocus: FocusRequester? = null,
     teamBell: SportsTeam? = null,
+    beforeCount: Int = 0,
+    before: LazyListScope.() -> Unit = {},
     extra: LazyListScope.(NavReturnFocus, LazyListState) -> Unit = { _, _ -> },
 ) {
     val resources = LocalResources.current
@@ -278,7 +275,15 @@ private fun TvSportsPage(
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         // The header stays whole while focus is on the first game (its card or its bell): the TV
         // pivot would scroll that row to a third of the way down and cut the header at the top.
-        KeepHeroInView(scrollToTop = { listState.animateScrollToItem(0) }) { firstGameModifier ->
+        // With rows above the games ([before]: a team's results), "the top" is the games' heading:
+        // the page opens on the next game, the rows above it a scroll up.
+        val gamesIndex = 1 + beforeCount
+        LaunchedEffect(beforeCount > 0, loaded != null) {
+            if (beforeCount > 0 && loaded != null && !returnFocus.isReturn && listState.firstVisibleItemIndex == 0) {
+                listState.scrollToItem(gamesIndex)
+            }
+        }
+        KeepHeroInView(scrollToTop = { listState.animateScrollToItem(if (beforeCount > 0) gamesIndex else 0) }) { firstGameModifier ->
             LazyColumn(
                 state = listState,
                 // Back on the root, before the focused control: see NAVIGATION_GUIDE → TV Back on Detail Screens.
@@ -327,6 +332,7 @@ private fun TvSportsPage(
                         )
                     }
                 }
+                before()
                 when (games) {
                     GamesState.Loading -> {
                         item(key = "loading") {

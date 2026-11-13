@@ -42,9 +42,10 @@ import org.njarasoa.fijerena.core.ui.sports.UpcomingGame
 import org.njarasoa.fijerena.core.ui.sports.canRemind
 import org.njarasoa.fijerena.core.ui.sports.channelLetter
 import org.njarasoa.fijerena.core.ui.sports.channelNote
+import org.njarasoa.fijerena.core.ui.sports.clockOr
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
-import org.njarasoa.fijerena.core.ui.sports.gameTitle
+import org.njarasoa.fijerena.core.ui.sports.gameRowTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
 import org.njarasoa.fijerena.core.ui.sports.resultDetails
@@ -222,10 +223,10 @@ fun MobileGameCard(
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val resources = LocalResources.current
-    val title = gameTitle(resources, game)
+    val title = gameRowTitle(resources, game)
     val details =
         listOfNotNull(
-            TimeFormat.formatTime(game.startEpochSec),
+            clockOr(game, TimeFormat.formatTime(game.startEpochSec)),
             game.competition.name.takeIf { it.isNotBlank() },
         ).joinToString(" · ")
     val best = channels?.firstOrNull()
