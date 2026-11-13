@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261113170116
 
 - **Guide sources on or off for each device:** with Live Sync, turning a guide source on or off no longer changes it on the other devices. A big guide can stay on for a Shield and off for a smaller TV; there, Clear guide data on its card frees the space. Labels, time offsets, refresh intervals and the sources a guide is for still sync. A guide source that comes from another device arrives on or off as it is there. A device on an older build still takes the on/off state it receives, so update every device. TV and phone.
 
