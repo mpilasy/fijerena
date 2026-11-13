@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261113182628
 
 - **Team results:** a team's page in Sports now shows its results of the last 30 days, newest first, each with the score, the competition and the day. A football team's results cover every competition, also a cup or a European competition it was knocked out of. When there is no result, nothing more shows. TV and phone.
 - **Day heading over a league's teams:** on a league page, the last day's heading of the games stayed pinned at the top over the league's teams, as if they were games of that day. Now it hides once the teams reach it. The same goes for a team's results. TV and phone.
