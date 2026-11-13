@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.network.sports.BroadcasterOrigin
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
+import org.njarasoa.fijerena.core.network.sports.GameState
 import org.njarasoa.fijerena.core.network.sports.LiveChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
@@ -77,12 +78,15 @@ class SportsPagesFocusTest {
 
     private class FakeData(
         val games: List<SportsGame> = GAMES,
+        val results: List<SportsGame> = emptyList(),
     ) : SportsPageData {
         val follows = MutableStateFlow(FollowedSports.Followed())
 
         override val nerd = false
 
         override suspend fun teamGames(team: SportsTeam) = games
+
+        override suspend fun teamResults(team: SportsTeam) = results
 
         override suspend fun leagueGames(league: SportsLeague) = games
 
@@ -117,6 +121,39 @@ class SportsPagesFocusTest {
                     emptyList()
                 }
             }
+    }
+
+    @Test
+    fun `team page - the results follow the games, each with its score, Down reaches them`() {
+        val result =
+            SportsGame(
+                SportsSource.ESPN,
+                "past",
+                1_700_000_000,
+                ARSENAL,
+                CHELSEA,
+                LEAGUE,
+                GameState.FINISHED,
+                homeScore = "2",
+                awayScore = "1",
+            )
+        val vm = SportsTeamViewModel(FakeData(results = listOf(result)), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
+        }
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        walk.run(down("L / Liverpool v Arsenal"), down("C / Arsenal 2 – 1 Chelsea / Premier League"))
+        rule.onAllNodesWithText("Last 30 Days").onFirst().assertExists()
+    }
+
+    @Test
+    fun `team page - no results, no heading`() {
+        val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
+        }
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        assertEquals(0, rule.onAllNodesWithText("Last 30 Days").fetchSemanticsNodes().size)
     }
 
     @Test

@@ -62,6 +62,9 @@ interface SportsPageData {
 
     suspend fun teamGames(team: SportsTeam): List<SportsGame>
 
+    /** [team]'s results of the last 30 days, newest first; empty when there are none or they cannot be read. */
+    suspend fun teamResults(team: SportsTeam): List<SportsGame> = emptyList()
+
     suspend fun leagueGames(league: SportsLeague): List<SportsGame>
 
     suspend fun leagueTeams(league: SportsLeague): List<SportsTeam>
@@ -262,6 +265,13 @@ class SportsTeamViewModel(
             .map { f -> f.teams.any { it.source == team.source && it.id == team.id } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val _results = MutableStateFlow<List<SportsGame>>(emptyList())
+
+    /** The team's results of the last 30 days, newest first; empty while they load, and when there are none. */
+    val results: StateFlow<List<SportsGame>> = _results.asStateFlow()
+
+    private var resultsJob: Job? = null
+
     init {
         load()
     }
@@ -270,6 +280,17 @@ class SportsTeamViewModel(
 
     override fun onGames(games: List<SportsGame>) {
         _team.value = teamFromGames(_team.value, games)
+        loadResults()
+    }
+
+    // After the coming games, which a soccer team's results need (their competitions), and once:
+    // Retry reads them again only when none came.
+    private fun loadResults() {
+        if (resultsJob?.isActive == true || _results.value.isNotEmpty()) return
+        resultsJob =
+            viewModelScope.launchGuarded("SportsTeamViewModel.results", Dispatchers.IO) {
+                _results.value = data.teamResults(_team.value)
+            }
     }
 
     /** Follows the team, or stops following it. */
@@ -404,6 +425,8 @@ class AppSportsPageData(
     override val nerd: Boolean get() = settings.isNerdMode
 
     override suspend fun teamGames(team: SportsTeam): List<SportsGame> = sports.teamGames(team)
+
+    override suspend fun teamResults(team: SportsTeam): List<SportsGame> = sports.teamResults(team)
 
     override suspend fun leagueGames(league: SportsLeague): List<SportsGame> = sports.leagueGames(league)
 

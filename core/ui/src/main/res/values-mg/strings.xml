@@ -121,6 +121,9 @@
     <string name="sports_starts_at">Manomboka amin\'ny %1$s</string>
     <string name="sports_matching">Mitady fantsona…</string>
     <string name="sports_game_format">%1$s – %2$s</string>
+    <string name="sports_results_heading">Lalao 30 andro farany</string>
+    <!-- A team page's result: home team, home score, away score, away team ("Germany 2 – 0 Serbia"). -->
+    <string name="sports_result_format">%1$s %2$s – %3$s %4$s</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Fanatanjahantena</string>
     <string name="sports_following_heading">Arahina</string>

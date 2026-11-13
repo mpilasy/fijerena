@@ -121,6 +121,9 @@
     <string name="sports_starts_at">Starts at %1$s</string>
     <string name="sports_matching">Looking for channels…</string>
     <string name="sports_game_format">%1$s v %2$s</string>
+    <string name="sports_results_heading">Last 30 Days</string>
+    <!-- A team page's result: home team, home score, away score, away team ("Germany 2 – 0 Serbia"). -->
+    <string name="sports_result_format">%1$s %2$s – %3$s %4$s</string>
     <!-- The Sports section, the Upcoming Games row and the reminder bells (the sports teams plan) -->
     <string name="sports_title">Sports</string>
     <string name="sports_following_heading">Following</string>

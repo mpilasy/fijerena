@@ -47,6 +47,8 @@ import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
+import org.njarasoa.fijerena.core.ui.sports.resultDetails
+import org.njarasoa.fijerena.core.ui.sports.resultTitle
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -270,6 +272,39 @@ fun MobileGameCard(
                 }
             }
             trailing?.invoke(this)
+        }
+    }
+}
+
+/**
+ * A result on a team page (the team results plan): the game card's logos, the title with the score
+ * and the competition and day. No click: a result opens nothing.
+ */
+@Composable
+fun MobileResultCard(
+    game: SportsGame,
+    modifier: Modifier = Modifier,
+    team: SportsTeam? = null,
+    cardColors: CardColors = sportsCardColors(),
+) {
+    val resources = LocalResources.current
+    CinemaCard(modifier = modifier.fillMaxWidth(), colors = cardColors) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(CinemaSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        ) {
+            GameLogos(gameLogoTeams(game, team))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                CinemaText(text = resultTitle(resources, game), role = TextRole.Heading, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                CinemaText(
+                    text = resultDetails(resources, game),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

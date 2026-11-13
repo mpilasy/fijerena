@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,6 +39,8 @@ import org.njarasoa.fijerena.core.ui.sports.gameLogoTeams
 import org.njarasoa.fijerena.core.ui.sports.gameTitle
 import org.njarasoa.fijerena.core.ui.sports.noChannelNote
 import org.njarasoa.fijerena.core.ui.sports.opponentIn
+import org.njarasoa.fijerena.core.ui.sports.resultDetails
+import org.njarasoa.fijerena.core.ui.sports.resultTitle
 import org.njarasoa.fijerena.core.ui.sports.shownChannelName
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -285,8 +289,51 @@ fun TvGameRow(
 }
 
 /**
+ * A result on a team page (the team results plan): the game row's logos, the title with the score
+ * and the competition and day. The card takes focus, so the list scrolls to it, and has no action.
+ * An empty slot of a bell's width ends the row, so the cards line up with the game rows' ([TvGameBell]).
+ */
+@Composable
+fun TvResultRow(
+    game: SportsGame,
+    modifier: Modifier = Modifier,
+    team: SportsTeam? = null,
+) {
+    val resources = LocalResources.current
+    Row(
+        modifier =
+            Modifier
+                .padding(horizontal = Spacing.md)
+                .fillMaxWidth()
+                .height(TvDimensions.cardHeight),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TvCard(
+            onClick = {},
+            look = TvCardLooks.listRow(),
+            modifier =
+                modifier
+                    .leftToRail()
+                    .weight(1f)
+                    .fillMaxHeight(),
+        ) {
+            GameRowContent(
+                channels = null,
+                title = resultTitle(resources, game),
+                logoTeams = gameLogoTeams(game, team),
+                details = resultDetails(resources, game),
+                showChannel = false,
+            )
+        }
+        Spacer(modifier = Modifier.width(TvButtonStyle.iconButtonSize))
+    }
+}
+
+/**
  * A game row's logos (one team at the row's height; two at half of it, one above the other, home on
- * top as in the title; a team's first letter when it has none), its two lines and its best channel.
+ * top as in the title; a team's first letter when it has none), its two lines and its best channel
+ * ([showChannel]; none for a result).
  */
 @Composable
 private fun GameRowContent(
@@ -294,6 +341,7 @@ private fun GameRowContent(
     title: String,
     logoTeams: List<SportsTeam>,
     details: String,
+    showChannel: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxSize().padding(Spacing.sm),
@@ -315,7 +363,7 @@ private fun GameRowContent(
             CinemaText(text = title, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
             CinemaText(text = details, role = TextRole.Body, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        TvBestChannel(channels = channels, modifier = Modifier.weight(BEST_CHANNEL_WEIGHT))
+        if (showChannel) TvBestChannel(channels = channels, modifier = Modifier.weight(BEST_CHANNEL_WEIGHT))
     }
 }
 

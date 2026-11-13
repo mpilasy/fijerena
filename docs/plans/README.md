@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-11-13 | [Team results](./20261113_team-results-plan.md) | A team's page shows its results of the last 30 days with the scores (TV and phone); nothing when there are none | In progress 2026-11-13 |
+| 2026-11-13 | [Team results](./20261113_team-results-plan.md) | A team's page shows its results of the last 30 days with the scores (TV and phone); nothing when there are none | Done 2026-11-13 (Phases 1 and 2) |
 | 2026-11-12 | [Catalogue footprint](./20261112_catalogue-footprint-plan.md) | A smaller catalogue database (most of the app's footprint): drop indexes that repeat another, store each source's common image address start once | Parked 2026-11-12, not started; CF-Q1 to CF-Q3 open |
 | 2026-11-11 | [Audit cleanups](./20261111_audit-cleanups-plan.md) | Five small fixes the 2026-11-11 code audit confirmed: a scope leak in AppContainer, v2 test rule in mobile tests, lifecycle-aware flow collection, hoisted search regexes, standard XMLTV timestamp parsing | AC-5 done 2026-11-11; AC-1 to AC-4 not started |
 | 2026-11-11 | [Match frame rate](./20261111_match-frame-rate-plan.md) | The TV app plays full-screen video at a display mode that matches the content's frame rate (24 fps at 24 Hz, 50 Hz channels at 50 Hz), with a This Device switch | Done 2026-11-11 (Phases 1 to 3: films and Live TV full screen); TV emulator check 2026-11-12 found FPS "N/A" (black video after Home and back; fixed); device checks on the Shields and the Bravia wait for the user |

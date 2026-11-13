@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -51,14 +53,17 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.panel
+import org.njarasoa.fijerena.core.ui.sports.AFTER_DAYS
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
+import org.njarasoa.fijerena.core.ui.sports.endOfDays
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberEndedDayKey
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
@@ -107,6 +112,7 @@ fun SportsTeamScreen(
     val shown by viewModel.team.collectAsStateWithLifecycle()
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    val results by viewModel.results.collectAsStateWithLifecycle()
     TvSportsPage(
         title = shown.name,
         subtitle = teamDetails(resources, shown),
@@ -120,6 +126,20 @@ fun SportsTeamScreen(
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders); its slot always.
         teamBell = shown,
+        // The results of the last 30 days (the team results plan); nothing at all when there are none.
+        extra = { _, _ ->
+            if (results.isNotEmpty()) {
+                endOfDays(key = "results_end_of_days")
+                item(key = "results_heading", contentType = AFTER_DAYS) {
+                    TvSportsHeading(stringResource(R.string.sports_results_heading), modifier = Modifier.padding(top = Spacing.lg))
+                }
+                items(
+                    results,
+                    key = { "result:${it.source.id}:${it.id}" },
+                    contentType = { AFTER_DAYS },
+                ) { game -> TvResultRow(game = game, team = shown) }
+            }
+        },
     )
 }
 
@@ -161,10 +181,16 @@ fun SportsLeagueScreen(
         extra = { returnFocus, listState ->
             val list = teams.orEmpty()
             if (list.isNotEmpty()) {
-                item(key = "teams_heading") {
+                endOfDays(key = "teams_end_of_days")
+                item(key = "teams_heading", contentType = AFTER_DAYS) {
                     TvSportsHeading(stringResource(R.string.search_tab_teams), modifier = Modifier.padding(top = Spacing.lg))
                 }
-                itemsIndexed(list, key = { _, team -> "team:${team.source.id}:${team.id}" }) { index, team ->
+                itemsIndexed(list, key = {
+                    _,
+                    team,
+                    ->
+                    "team:${team.source.id}:${team.id}"
+                }, contentType = { _, _ -> AFTER_DAYS }) { index, team ->
                     val key = "team:${team.source.id}:${team.id}"
                     TvSportsItemRow(
                         name = team.name,
@@ -213,6 +239,7 @@ private fun TvSportsPage(
     val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     val pinnedDay = rememberPinnedDayKey(listState)
+    val endedDay = rememberEndedDayKey(listState)
     val returnFocus = rememberNavReturnFocus()
     val followFocus = remember { FocusRequester() }
     val firstGameFocus = remember { FocusRequester() }
@@ -337,6 +364,7 @@ private fun TvSportsPage(
                                 TvDayHeading(
                                     text = DateText.dayLabel(resources, day.date),
                                     pinned = pinnedDay == "day:${day.date}",
+                                    modifier = Modifier.alpha(if (endedDay == "day:${day.date}") 0f else 1f),
                                 )
                             }
                             for (game in day.games) {

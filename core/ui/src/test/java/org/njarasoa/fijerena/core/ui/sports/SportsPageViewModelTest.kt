@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,11 +27,13 @@ import org.njarasoa.fijerena.core.network.sports.BroadcasterOrigin
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
+import org.njarasoa.fijerena.core.network.sports.GameState
 import org.njarasoa.fijerena.core.network.sports.LiveChannel
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsSource
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
+import java.io.IOException
 
 /**
  * The team and league pages (the sports teams plan → Screens): the games, then each game's
@@ -43,9 +46,18 @@ class SportsPageViewModelTest {
         var failure: Exception? = null,
         var matchFailure: Exception? = null,
         var teamsFailure: Exception? = null,
+        var results: List<SportsGame> = emptyList(),
+        var resultsFailure: Exception? = null,
     ) : SportsPageData {
         val follows = MutableStateFlow(FollowedSports.Followed())
         var reads = 0
+        var resultReads = 0
+
+        override suspend fun teamResults(team: SportsTeam): List<SportsGame> {
+            resultReads++
+            resultsFailure?.let { throw it }
+            return results
+        }
 
         override suspend fun teamGames(team: SportsTeam): List<SportsGame> {
             reads++
@@ -113,6 +125,30 @@ class SportsPageViewModelTest {
 
     private fun SportsGamesViewModel.awaitMatched(): GamesState.Loaded =
         games.await { it is GamesState.Loaded && it.channels.size == it.games.size } as GamesState.Loaded
+
+    @Test
+    fun `the team page reads the results after the games`() {
+        val result = GAMES.first().copy(id = "past", state = GameState.FINISHED, homeScore = "2", awayScore = "0")
+        val data = FakeData(results = listOf(result))
+        val vm = teamPage(data)
+
+        vm.awaitMatched()
+        assertEquals(listOf(result), vm.results.await { it.isNotEmpty() })
+        assertEquals(1, data.resultReads)
+    }
+
+    @Test
+    fun `results that fail, or a team with none, leave the list empty`() {
+        val failing = FakeData(resultsFailure = IOException("down"))
+        val vm = teamPage(failing)
+        vm.awaitMatched()
+        runBlocking { withTimeout(TIMEOUT_MS) { while (failing.resultReads == 0) delay(10) } }
+        assertTrue(vm.results.value.isEmpty())
+
+        val none = teamPage(FakeData())
+        none.awaitMatched()
+        assertTrue(none.results.value.isEmpty())
+    }
 
     @Test
     fun `the team page shows the games, then each game's channel`() {

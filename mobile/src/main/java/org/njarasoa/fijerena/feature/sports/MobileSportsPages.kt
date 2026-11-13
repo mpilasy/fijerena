@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -41,13 +42,16 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.sports.AFTER_DAYS
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
+import org.njarasoa.fijerena.core.ui.sports.endOfDays
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
 import org.njarasoa.fijerena.core.ui.sports.liveRoute
+import org.njarasoa.fijerena.core.ui.sports.rememberEndedDayKey
 import org.njarasoa.fijerena.core.ui.sports.rememberGameBells
 import org.njarasoa.fijerena.core.ui.sports.rememberPinnedDayKey
 import org.njarasoa.fijerena.core.ui.sports.route
@@ -87,6 +91,7 @@ fun MobileSportsTeamScreen(
     val shown by viewModel.team.collectAsStateWithLifecycle()
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    val results by viewModel.results.collectAsStateWithLifecycle()
     MobileSportsPage(
         title = shown.name,
         subtitle = teamDetails(resources, shown),
@@ -100,6 +105,18 @@ fun MobileSportsTeamScreen(
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders).
         teamBell = shown,
+        // The results of the last 30 days (the team results plan); nothing at all when there are none.
+        extra = {
+            if (results.isNotEmpty()) {
+                endOfDays(key = "results_end_of_days")
+                item(key = "results_heading", contentType = AFTER_DAYS) {
+                    MobileSportsHeading(stringResource(R.string.sports_results_heading), modifier = Modifier.padding(top = Spacing.md))
+                }
+                items(results, key = {
+                    "result:${it.source.id}:${it.id}"
+                }, contentType = { AFTER_DAYS }) { game -> MobileResultCard(game = game, team = shown) }
+            }
+        },
     )
 }
 
@@ -138,10 +155,11 @@ fun MobileSportsLeagueScreen(
         extra = {
             val list = teams.orEmpty()
             if (list.isNotEmpty()) {
-                item(key = "teams_heading") {
+                endOfDays(key = "teams_end_of_days")
+                item(key = "teams_heading", contentType = AFTER_DAYS) {
                     MobileSportsHeading(stringResource(R.string.search_tab_teams), modifier = Modifier.padding(top = Spacing.md))
                 }
-                items(list, key = { "team:${it.source.id}:${it.id}" }) { team ->
+                items(list, key = { "team:${it.source.id}:${it.id}" }, contentType = { AFTER_DAYS }) { team ->
                     MobileSportsItemCard(
                         name = team.name,
                         details = teamDetails(resources, team),
@@ -181,6 +199,7 @@ private fun MobileSportsPage(
     val nowSec = remember { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     val pinnedDay = rememberPinnedDayKey(listState)
+    val endedDay = rememberEndedDayKey(listState)
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
@@ -256,7 +275,13 @@ private fun MobileSportsPage(
                         stickyHeader(
                             key = "day:${day.date}",
                             contentType = DAY_HEADING,
-                        ) { MobileDayHeading(DateText.dayLabel(resources, day.date), pinned = pinnedDay == "day:${day.date}") }
+                        ) {
+                            MobileDayHeading(
+                                DateText.dayLabel(resources, day.date),
+                                pinned = pinnedDay == "day:${day.date}",
+                                modifier = Modifier.alpha(if (endedDay == "day:${day.date}") 0f else 1f),
+                            )
+                        }
                         items(day.games, key = { "game:${it.key}" }) { game ->
                             MobileGameCard(
                                 game = game,

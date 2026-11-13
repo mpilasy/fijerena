@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased
+
+- **Team results:** a team's page in Sports now shows its results of the last 30 days, newest first, each with the score, the competition and the day. A football team's results come from the competitions it still has games in, so a cup it is out of does not show. When there is no result, nothing more shows. TV and phone.
+- **Day heading over a league's teams:** on a league page, the last day's heading of the games stayed pinned at the top over the league's teams, as if they were games of that day. Now it hides once the teams reach it. The same goes for a team's results. TV and phone.
+
 ## Version: 0.9.20261113170116
 
 - **Guide sources on or off for each device:** with Live Sync, turning a guide source on or off no longer changes it on the other devices. A big guide can stay on for a Shield and off for a smaller TV; there, Clear guide data on its card frees the space. Labels, time offsets, refresh intervals and the sources a guide is for still sync. A guide source that comes from another device arrives on or off as it is there. A device on an older build still takes the on/off state it receives, so update every device. TV and phone.

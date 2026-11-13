@@ -6,6 +6,7 @@ import org.njarasoa.fijerena.core.network.sports.GameChannelHow
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.DateText
 
 // The words of the sports screens, the same on TV and phone (the sports teams plan → Screens).
 
@@ -44,6 +45,26 @@ fun gameTitle(
     resources: Resources,
     game: SportsGame,
 ): String = game.away?.let { resources.getString(R.string.sports_game_format, game.home.name, it.name) } ?: game.home.name
+
+/** A result's title with the score, home first as in [gameTitle]: "Germany 2 – 0 Serbia". */
+fun resultTitle(
+    resources: Resources,
+    game: SportsGame,
+): String =
+    game.away?.let {
+        resources.getString(R.string.sports_result_format, game.home.name, game.homeScore.orEmpty(), game.awayScore.orEmpty(), it.name)
+    }
+        ?: game.home.name
+
+/** A result's competition and day: "UEFA Nations League · Yesterday", "… · Sat 1 Nov". */
+fun resultDetails(
+    resources: Resources,
+    game: SportsGame,
+): String =
+    listOfNotNull(
+        game.competition.name.takeIf { it.isNotBlank() },
+        DateText.shortDayLabel(resources, DateText.day(game.startEpochSec)),
+    ).joinToString(" · ")
 
 /** Whether [team] plays [game] at home: the game's home side has its id. */
 fun isHomeGame(
