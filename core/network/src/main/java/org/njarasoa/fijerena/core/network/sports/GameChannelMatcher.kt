@@ -131,7 +131,7 @@ class GameChannelMatcher(
         // The last channel list prepared, for every matcher of the process.
         @Volatile private var prepared: Prepared? = null
 
-        private fun prepare(channels: List<LiveChannel>): Prepared =
+        private fun preparedFor(channels: List<LiveChannel>): Prepared =
             prepared?.takeIf { it.channels === channels } ?: synchronized(this) {
                 prepared?.takeIf { it.channels === channels } ?: Prepared(channels).also { prepared = it }
             }
@@ -197,6 +197,11 @@ class GameChannelMatcher(
         fun toArray(): IntArray = items.copyOf(size)
     }
 
+    /** Builds now what [match] builds from [channels] on its first call (folded names, a word index). */
+    fun prepare(channels: List<LiveChannel>) {
+        preparedFor(channels)
+    }
+
     /** The ways to watch [game] on [channels] (the profile's live channels), best first. Pass the same list for each game. */
     suspend fun match(
         game: SportsGame,
@@ -206,7 +211,7 @@ class GameChannelMatcher(
         val toSec = game.startEpochSec + AFTER_SEC
         val text = GameText(game)
 
-        val prepared = prepare(channels)
+        val prepared = preparedFor(channels)
         val visible = prepared.visible
         val broadcasters = game.broadcasters.distinctBy { it.name.lowercase() to it.country }
         val channelsOf: List<Pair<Broadcaster, List<Int>>> =

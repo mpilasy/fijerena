@@ -109,7 +109,9 @@ sealed interface GamesState {
  * Reads the games ([loadGames]) into [state], then each game's channels as the [matcher] finds
  * them, [MATCH_PARALLEL] games at a time in the games' order, so the first rows fill first. A game
  * whose match takes longer than [matchTimeoutMs] finds no channel: its row says "Not found" and
- * never stays on "Looking for channels…". A failed read sets [GamesState.Failed] ([rawOf]: its raw
+ * never stays on "Looking for channels…". Making the [matcher] (the profile's channel list, read
+ * once per process, and its index) has its own, longer limit, [channelsTimeoutMs]: on a slow device
+ * the first read takes more than one game's limit. A failed read sets [GamesState.Failed] ([rawOf]: its raw
  * text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets the games before
  * their channels. Shared by the team and league pages and the Teams search's best team.
  */
@@ -120,6 +122,7 @@ internal suspend fun readGamesAndChannels(
     rawOf: (Throwable) -> String?,
     onGames: (List<SportsGame>) -> Unit = {},
     matchTimeoutMs: Long = MATCH_TIMEOUT_MS,
+    channelsTimeoutMs: Long = CHANNELS_TIMEOUT_MS,
 ) {
     val games =
         try {
@@ -135,7 +138,7 @@ internal suspend fun readGamesAndChannels(
     if (games != null) {
         onGames(games)
         state.value = GamesState.Loaded(games)
-        if (games.isNotEmpty()) matchChannels(state, games, matcher, matchTimeoutMs)
+        if (games.isNotEmpty()) matchChannels(state, games, matcher, matchTimeoutMs, channelsTimeoutMs)
     }
 }
 
@@ -144,10 +147,11 @@ private suspend fun matchChannels(
     games: List<SportsGame>,
     matcher: suspend () -> GameMatcher,
     matchTimeoutMs: Long,
+    channelsTimeoutMs: Long,
 ) {
     val found =
         try {
-            withTimeoutOrNull(matchTimeoutMs) { matcher() } ?: GameMatcher { emptyList() }
+            withTimeoutOrNull(channelsTimeoutMs) { matcher() } ?: GameMatcher { emptyList() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -177,6 +181,12 @@ internal const val MATCH_PARALLEL = 3
 
 /** The longest a game's match may take before its row says "Not found". */
 internal const val MATCH_TIMEOUT_MS = 20_000L
+
+/**
+ * The longest making the matcher may take before every row says "Not found". The Chromecast HD
+ * took more than 20 seconds to read a large source's channels after the app started.
+ */
+internal const val CHANNELS_TIMEOUT_MS = 120_000L
 
 /**
  * [route] (a team as a route or a search names it) completed from its own entry in [games]: the
@@ -446,6 +456,8 @@ class AppSportsPageData(
         withContext(Dispatchers.IO) {
             val channels = ReminderChannelFinder.liveChannels(context)
             val matcher = GameChannelMatcher(EpgGuideLookup.load(context))
+            // The index of the channels too, here: in the first game's match it used that game's limit.
+            matcher.prepare(channels)
             GameMatcher { game -> SportsChannels.withIcons(context, matcher.match(game, channels)) }
         }
 }

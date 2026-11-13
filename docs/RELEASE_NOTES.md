@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Games not found on a slow device:** on the Chromecast HD, the first sports page after the app started said "Not found on your channels" for every game: reading the profile's channels took longer than the 20 seconds a game's search may take. The channels now have their own limit of 2 minutes; the rows show that they are looking until then. TV and phone.
+
 ## Version: 0.9.20261113190650
 
 - **Team page opens on the next game:** a team's results of the last 30 days are now above its coming games, oldest first. The page opens on the next game (on TV, with focus on it); scroll up for the results, down for the later games. TV and phone.

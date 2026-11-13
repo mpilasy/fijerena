@@ -244,6 +244,24 @@ class SportsPageViewModelTest {
     }
 
     @Test
+    fun `a matcher slower to make than one game's limit still finds the channels`() {
+        val state = MutableStateFlow<GamesState>(GamesState.Loading)
+        val channel = GameChannel(CHANNEL, null, null, GameChannelHow.BROADCASTER_CHANNEL)
+        val matcher = GameMatcher { listOf(channel) }
+
+        runBlocking {
+            readGamesAndChannels(state, { GAMES }, {
+                delay(400L)
+                matcher
+            }, { null }, matchTimeoutMs = 200L, channelsTimeoutMs = 2_000L)
+        }
+
+        val loaded = state.value as GamesState.Loaded
+        assertEquals(listOf(channel), loaded.channelsOf(GAMES[0]))
+        assertEquals(listOf(channel), loaded.channelsOf(GAMES[1]))
+    }
+
+    @Test
     fun `the league page lists its teams by name and follows the league`() {
         val data = FakeData()
         val vm = leaguePage(data)
