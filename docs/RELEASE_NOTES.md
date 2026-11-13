@@ -1,13 +1,13 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261113021022
 
 - **Device Info on the phone:** on the image cache row, the size now lines up with the other rows' values, and the label no longer wraps early. Its Clear Image Cache icon stays at the row's end. Phone.
 - **Text stays inside tall rows (TV):** in a Look with round buttons (Rounded, Console, Groove, Dial), a row with several lines of text was as round as a button, so its corners cut off the start of the first and last lines. Home's "Your Sources" dialog showed "c5test" for "ac5test" and "ears" for "bears". Now a row's corner is at most as round as a one-line row, so all of its text shows. One-line rows keep their round ends. TV.
 - **Guide source cards in Malagasy (TV):** on Guide Sources, the figures of each card (last update, times, programmes until, channels, programmes) no longer show one letter per line when their labels are long. The figures that do not fit go to a second line. TV.
 - **Safe mode buttons on one line (TV):** the icon action Send logs to my sync group was lower than Continue, Clear caches and Show logs. Now all four are centred on one line. TV.
 - **Search: Right from the rail goes to the search field:** on Search (the catalogue and the Guide tab) and on Search the Guide, Right from the navigation rail sometimes put focus on the red Clear all of the recent searches. Now Right goes back to the item you came from, or to the search field when that item is gone. TV.
-- **Video after Home and back (TV):** when you pressed Home during a film and then opened the app again, the film played on with sound but a black picture until you pressed a key, and Stats for Nerds showed FPS "N/A". Now the picture comes back at once. TV.
+- **Video after Home and back:** when you pressed Home during a film and then opened the app again, the film played on with sound but a black picture, and Stats for Nerds showed FPS "N/A". Now the picture comes back at once. TV and phone.
 - **Stats for Nerds follows the playback of now:** after Home and back, Stats could show the frame rate, dropped frames and stream time of the playback before. Now they always show the playback on screen. TV and phone.
 - **Frame rate of any video:** when a video gives no frame rate, Stats for Nerds now shows the frames shown each second, for example "10.0 fps (measured)", where it showed "N/A". On TV this is for a rate that is not a usual one (24, 25, 30, 50 or 60 fps); a usual rate shows with two decimals, as before. TV and phone.
 
