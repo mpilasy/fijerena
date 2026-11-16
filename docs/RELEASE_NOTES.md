@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261116200546
 
 - **Refused Jellyfin password:** when a Jellyfin server refuses the saved password, a pop-up says so over any screen. For an Admin, Enter Password opens the source's Edit Source on an empty password field (after the Admin PIN, if the profile has one); live sync then gives the new password to the other devices. Anyone else is told to ask an admin. Not Now hides it for that source until it signs in again or the app restarts. A device that is still signed in does not use the password, so a wrong one could reach the sync group without anyone seeing it. TV and phone.
 - **Password check in Add Source and Edit Source:** after one Jellyfin source was checked, the next check of any Jellyfin login reused that check's session and passed without sending the password, so a wrong password was saved. Each check now signs in with the password typed. TV and phone.
