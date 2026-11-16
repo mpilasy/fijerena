@@ -143,10 +143,13 @@ private const val KEY_SAVE = "save"
  * [onGuideSources]), Library data and the Danger zone. Each column is a `tvPane`: Left/Right move
  * between them, Up/Down stay inside. First focus is the Name edit button; Back from the guide
  * sources returns to Guide sources. Content filters are edited on each profile's page (D8).
+ * [focusPassword] (the refused password pop-up): a Jellyfin source's password loads empty and
+ * takes first focus.
  */
 @Composable
 fun TvAddProviderScreen(
     editId: Long = -1L,
+    focusPassword: Boolean = false,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
     onGuideSources: (providerId: Long) -> Unit = {},
@@ -253,7 +256,8 @@ fun TvAddProviderScreen(
                 // The source's login, the same for every profile.
                 val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
-                password = login.password
+                // From the refused password pop-up: the saved one is wrong, so the field starts empty.
+                password = if (focusPassword && provider.type == "JELLYFIN") "" else login.password
                 selectedType =
                     try {
                         ProviderType.valueOf(provider.type)
@@ -393,6 +397,7 @@ fun TvAddProviderScreen(
     // read-only and skipped by focus, the name field takes [nameModifier] and the type's
     // fields sit in one focus stop of the Connection pane ([fieldsModifier]).
     val nameFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
     val connectionFields: @Composable (Modifier, Modifier?) -> Unit = { nameModifier, fieldsModifier ->
         // Provider type dropdown (D-pad friendly). Read-only and skipped by focus when editing: the type of
         // a source cannot change, so the first D-pad stop is the Name field's edit button.
@@ -445,6 +450,7 @@ fun TvAddProviderScreen(
                         isEditMode = isEditMode,
                         isBusy = isBusy,
                         onErrorChange = { error = it },
+                        passwordFocusRequester = passwordFocusRequester,
                         onQuickConnectClick = {
                             showQuickConnectDialog = true
                         },
@@ -532,12 +538,16 @@ fun TvAddProviderScreen(
                 }
             }
 
-            // First focus once the source has loaded: the Name edit button (T-12).
+            // First focus once the source has loaded: the Name edit button (T-12), or the password's
+            // from the refused password pop-up.
             val connectionLoaded = loadedConnection != null
             // Back from the guide sources lands on Guide sources, once the source has loaded.
             NavReturnFocusEffect(returnFocus, prepare = { snapshotFlow { currentProvider != null }.first { it } })
             LaunchedEffect(connectionLoaded) {
-                if (connectionLoaded && !returnFocus.isReturn) nameFocusRequester.requestFocusWithRetry()
+                if (connectionLoaded && !returnFocus.isReturn) {
+                    (if (focusPassword && selectedType == ProviderType.JELLYFIN) passwordFocusRequester else nameFocusRequester)
+                        .requestFocusWithRetry()
+                }
             }
 
             Column(

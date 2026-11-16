@@ -323,6 +323,11 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="browse_sign_in_ask_admin">Mbola tsy tafiditra ity loharano ity. Angataho ny mpitantana hampiditra azy.</string>
+    <string name="login_refused_title">Nolavin\'i %1$s ny tenimiafina</string>
+    <string name="login_refused_text">Tsy afaka miditra amin\'i %1$s amin\'ny tenimiafina voatahiry i Fijerena. Ampidiro indray ny tenimiafina. Mahazo ny tenimiafina vaovao koa ireo fitaovana mifampifanaraka amin\'ity.</string>
+    <string name="login_refused_ask_admin">Tsy afaka miditra amin\'i %1$s amin\'ny tenimiafina voatahiry i Fijerena. Angataho ny mpitantana hampiditra indray ny tenimiafina.</string>
+    <string name="login_refused_enter_password">Ampidiro ny tenimiafina</string>
+    <string name="login_refused_not_now">Rehefa avy eo</string>
     <string name="login_server_url_label">URL-n\'ny mpizara</string>
     <string name="login_username_label">Anaran\'ny mpampiasa</string>
     <string name="login_password_label">Tenimiafina</string>

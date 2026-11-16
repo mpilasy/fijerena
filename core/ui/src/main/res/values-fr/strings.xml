@@ -323,6 +323,11 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="browse_sign_in_ask_admin">Cette source n’est pas encore connectée. Demandez à un admin de la connecter.</string>
+    <string name="login_refused_title">%1$s a refusé le mot de passe</string>
+    <string name="login_refused_text">Fijerena ne peut pas se connecter à %1$s avec le mot de passe enregistré. Saisissez à nouveau le mot de passe. Les appareils synchronisés avec celui-ci reçoivent aussi le nouveau mot de passe.</string>
+    <string name="login_refused_ask_admin">Fijerena ne peut pas se connecter à %1$s avec le mot de passe enregistré. Demandez à un admin de saisir à nouveau le mot de passe.</string>
+    <string name="login_refused_enter_password">Saisir le mot de passe</string>
+    <string name="login_refused_not_now">Plus tard</string>
     <string name="login_server_url_label">URL du serveur</string>
     <string name="login_username_label">Nom d’utilisateur</string>
     <string name="login_password_label">Mot de passe</string>

@@ -370,6 +370,7 @@ class ProviderRepository(
                 remove(KEY_JELLYFIN_TOKEN)
                     .remove(KEY_JELLYFIN_USER_ID)
             }
+            RefusedLogins.forget(id)
         }
         MediaProviderFactory.providerChanged(id)
     }
@@ -889,6 +890,7 @@ class ProviderRepository(
             if (password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, password)
             remove(KEY_JELLYFIN_TOKEN).remove(KEY_JELLYFIN_USER_ID)
         }
+        RefusedLogins.forget(providerId)
         if (password != null) {
             org.njarasoa.fijerena.core.network.CredentialStoreHealth
                 .clear(context)

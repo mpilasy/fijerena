@@ -11,10 +11,13 @@ sealed interface Screen {
      * Add/edit provider screen.
      *
      * @param editId If > 0, edit the provider with this ID instead of creating new
+     * @param focusPassword Edit mode: first focus on an empty password field (the refused password
+     *   pop-up's Enter Password).
      */
     @Serializable
     data class AddProvider(
         val editId: Long = -1L,
+        val focusPassword: Boolean = false,
     ) : Screen
 
     /** Login screen: the entry point for unauthenticated users. */

@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -92,6 +93,7 @@ import org.njarasoa.fijerena.ui.theme.*
 @Composable
 fun MobileAddProviderScreen(
     editId: Long = -1L,
+    focusPassword: Boolean = false,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
     onGuideSources: (providerId: Long) -> Unit = {},
@@ -114,6 +116,10 @@ fun MobileAddProviderScreen(
     var streamOutputFormat by remember { mutableStateOf("m3u8") }
     var playlistType by remember { mutableStateOf("m3u_plus") }
     var passwordVisible by remember { mutableStateOf(false) }
+    // From the refused password pop-up ([focusPassword]): a Jellyfin source's password loads empty
+    // and takes focus, with the keyboard.
+    val passwordFocusRequester = remember { FocusRequester() }
+    var passwordFocusPending by remember { mutableStateOf(false) }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     // The connection as loaded (edit mode): Back with anything different asks before dropping it.
@@ -195,7 +201,9 @@ fun MobileAddProviderScreen(
                 // The source's login, the same for every profile.
                 val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
-                password = login.password
+                // From the refused password pop-up: the saved one is wrong, so the field starts empty.
+                passwordFocusPending = focusPassword && provider.type == "JELLYFIN"
+                password = if (passwordFocusPending) "" else login.password
                 selectedType =
                     try {
                         ProviderType.valueOf(provider.type)
@@ -216,6 +224,13 @@ fun MobileAddProviderScreen(
                 }
                 loadedConnection = listOf(name, url, username, password, host, shareName)
             }
+        }
+    }
+
+    LaunchedEffect(passwordFocusPending) {
+        if (passwordFocusPending) {
+            passwordFocusRequester.requestFocus()
+            passwordFocusPending = false
         }
     }
 
@@ -430,6 +445,7 @@ fun MobileAddProviderScreen(
                 onQcCodeChange = { qcCode = it },
                 onQcSecretChange = { qcSecret = it },
                 onQcErrorChange = { qcError = it },
+                passwordFocusRequester = passwordFocusRequester,
             )
 
             if (isEditMode) {

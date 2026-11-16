@@ -323,6 +323,12 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="browse_sign_in_ask_admin">This source isn\'t signed in yet. Ask an admin to sign it in.</string>
+    <!-- A source's server refused the saved password: the pop-up over any screen. %1$s: the source's name. -->
+    <string name="login_refused_title">%1$s Refused the Password</string>
+    <string name="login_refused_text">Fijerena can\'t sign in to %1$s with the saved password. Enter the password again. Devices that sync with this one get the new password too.</string>
+    <string name="login_refused_ask_admin">Fijerena can\'t sign in to %1$s with the saved password. Ask an admin to enter the password again.</string>
+    <string name="login_refused_enter_password">Enter Password</string>
+    <string name="login_refused_not_now">Not Now</string>
     <string name="login_server_url_label">Server URL</string>
     <string name="login_username_label">Username</string>
     <string name="login_password_label">Password</string>

@@ -94,6 +94,7 @@ import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
+import org.njarasoa.fijerena.feature.provider.components.RefusedLoginHost
 import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
@@ -1211,6 +1212,7 @@ fun TvNavHost(
                             }
                             TvAddProviderScreen(
                                 editId = addProviderScreen.editId,
+                                focusPassword = addProviderScreen.focusPassword,
                                 onBack = {
                                     navController.navigateUp()
                                 },
@@ -1336,6 +1338,21 @@ fun TvNavHost(
                             onDismiss = { browseChoice = null },
                         )
                     }
+                    // A source's server refused the saved password: Enter Password opens the source's form on it.
+                    RefusedLoginHost(
+                        admin = admin,
+                        onSourceForm =
+                            navController
+                                .currentBackStackEntryAsState()
+                                .value
+                                ?.destination
+                                ?.hasRoute<Screen.AddProvider>() == true,
+                        onEnterPassword = { id ->
+                            // The source's Browse choice, open under the pop-up, would stay over the form.
+                            browseChoice = null
+                            navController.navigate(Screen.AddProvider(editId = id, focusPassword = true)) { launchSingleTop = true }
+                        },
+                    )
                 }
                 // The app's plain messages (AppNotices), over the screens; never focused.
                 TvNoticeHost()

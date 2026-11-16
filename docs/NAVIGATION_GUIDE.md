@@ -9,7 +9,7 @@ Type-safe navigation with Navigation Compose and kotlinx.serialization routes. T
 ```kotlin
 sealed interface Screen {
     @Serializable data object ProviderSelection : Screen  // "Sources"
-    @Serializable data class AddProvider(val editId: Long = -1L) : Screen  // add, or edit when editId > 0
+    @Serializable data class AddProvider(val editId: Long = -1L, val focusPassword: Boolean = false) : Screen  // add, or edit when editId > 0; focusPassword: empty password field first (refused password pop-up)
     @Serializable data object Login : Screen  // in neither nav graph
     @Serializable data object ProfilePicker : Screen  // "Who's Watching?"
     @Serializable data class ProfileEdit(val profileId: String, val admin: Boolean = false) : Screen  // a profile's page (mobile; TV shows it inside Settings); admin = Settings → Profiles, with the Admin rows
@@ -163,6 +163,7 @@ EpgBrowser ─→ CategoryList(LIVE_TV, category, channel)   Watch
            ├─→ EpgGuide("recent", Recent)                 TV Guide button (source with live channels)
            └─→ EpgManagement(providerId = 0)              Guide Sources button (no source chooser)
 AddProvider(editId) ─→ EpgManagement(editId)             Guide Sources row (source with live channels): opens on that source's first card, else its Add
+any screen ─→ AddProvider(editId, focusPassword = true)  Enter Password in the refused password pop-up (RefusedLoginHost, Admin only, behind the Settings PIN); Back returns to that screen
 
 Search ─→ TmdbTitle                        a "Not in your sources" result (wanted titles plan)
 Search ─→ Person                           a person in the People type's results (people search plan)

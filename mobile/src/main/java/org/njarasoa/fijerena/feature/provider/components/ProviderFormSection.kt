@@ -12,6 +12,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -52,6 +54,7 @@ fun ColumnScope.ProviderFormSection(
     onQcCodeChange: (String) -> Unit,
     onQcSecretChange: (String) -> Unit,
     onQcErrorChange: (String?) -> Unit,
+    passwordFocusRequester: FocusRequester? = null,
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     when (selectedType) {
@@ -191,7 +194,7 @@ fun ColumnScope.ProviderFormSection(
                     IconAction(onClick = { onPasswordVisibleChange(!passwordVisible) }, icon = image, label = description)
                 },
                 keyboardOptions = FieldKeyboards.Password,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().then(passwordFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
             )
 
             if (!isEditMode) {

@@ -112,6 +112,7 @@ import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
+import org.njarasoa.fijerena.feature.provider.components.RefusedLoginHost
 import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
@@ -930,6 +931,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     }
                     MobileAddProviderScreen(
                         editId = addProviderScreen.editId,
+                        focusPassword = addProviderScreen.focusPassword,
                         onBack = {
                             navController.navigateUp()
                         },
@@ -1409,6 +1411,14 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
         // After the NavHost, so it draws over the screen.
         MobileClockOverlay(clock)
+        // A source's server refused the saved password: Enter Password opens the source's form on it.
+        RefusedLoginHost(
+            admin = admin,
+            onSourceForm = currentEntry?.destination?.hasRoute<Screen.AddProvider>() == true,
+            onEnterPassword = { id ->
+                leaveTabRoot { navController.navigate(Screen.AddProvider(editId = id, focusPassword = true)) { launchSingleTop = true } }
+            },
+        )
         // E1: Add Source over Settings, once (a recreated Activity keeps its back stack).
         var addSourceOpened by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) {

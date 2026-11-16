@@ -174,7 +174,9 @@ object MediaProviderFactory {
                 Settings.Secure.ANDROID_ID,
             ) ?: "fijerena-${entity.id}"
 
-        val prefs = getJellyfinSessionPrefs(context, entity.id)
+        // Not for id 0, the source form's test login: with a session kept from an earlier test, the
+        // test signed in without sending the password, and a wrong one was saved.
+        val prefs = if (entity.id > 0) getJellyfinSessionPrefs(context, entity.id) else null
         val savedToken = prefs?.getString("jellyfin_token", null)
         val savedUserId = prefs?.getString("jellyfin_user_id", null)
 
@@ -186,6 +188,18 @@ object MediaProviderFactory {
             deviceId = deviceId,
             savedToken = savedToken,
             savedUserId = savedUserId,
+            // The password as stored now: a screen that keeps this instance after Edit Source saved
+            // a new password signs in with the new one.
+            latestPassword =
+                if (entity.id > 0) {
+                    {
+                        org.njarasoa.fijerena.core.network.provider
+                            .ProviderRepository(context.applicationContext)
+                            .getPassword(entity.id)
+                    }
+                } else {
+                    null
+                },
             onSessionSaved = { token, userId ->
                 prefs
                     ?.edit()

@@ -7,6 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.njarasoa.fijerena.core.network.TtlCache
+import org.njarasoa.fijerena.core.network.provider.RefusedLogins
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -38,6 +39,8 @@ class JellyfinMediaProvider(
     savedUserId: String? = null,
     private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
     private val onSessionCleared: (() -> Unit)? = null,
+    // The password as stored now, read at each sign-in; null: [password].
+    private val latestPassword: (() -> String?)? = null,
     injectedApi: JellyfinApiService? = null,
     private val now: () -> Long = System::currentTimeMillis,
 ) : MediaProvider {
@@ -79,21 +82,26 @@ class JellyfinMediaProvider(
 
     // A refused login is the answer for [REJECTED_LOGIN_RETRY_MS]: the requests waiting behind it,
     // and any that come right after, fail at once instead of sending the same username and
-    // password again. Editing the source builds a new provider, so a corrected login is tried
-    // straight away.
+    // password again. A new password is tried straight away.
     private var rejectedAtMs: Long? = null
     private var rejection: Throwable? = null
+    private var rejectedPassword: String? = null
 
     override suspend fun connect(): Result<Unit> =
         connectMutex.withLock {
             if (isConnected()) return@withLock Result.success(Unit)
+            val signInPassword = latestPassword?.invoke() ?: password
             val rejectedAt = rejectedAtMs
             val lastRejection = rejection
-            if (rejectedAt != null && lastRejection != null && now() - rejectedAt < REJECTED_LOGIN_RETRY_MS) {
+            if (rejectedAt != null &&
+                lastRejection != null &&
+                rejectedPassword == signInPassword &&
+                now() - rejectedAt < REJECTED_LOGIN_RETRY_MS
+            ) {
                 return@withLock Result.failure(lastRejection)
             }
             api
-                .authenticate(username, password)
+                .authenticate(username, signInPassword)
                 .also { result ->
                     result.onSuccess {
                         rejectedAtMs = null
@@ -101,11 +109,17 @@ class JellyfinMediaProvider(
                         val token = api.getAccessToken()
                         val uid = api.getUserId()
                         if (token != null && uid != null) onSessionSaved?.invoke(token, uid)
+                        RefusedLogins.forget(providerId)
                     }
                     result.onFailure { e ->
                         if (e is JellyfinLoginRejectedException) {
                             rejectedAtMs = now()
                             rejection = e
+                            rejectedPassword = signInPassword
+                            // 401: the password. A 403 (account disabled) is not fixed by a new one.
+                            if ((e.cause as? ClientRequestException)?.response?.status == HttpStatusCode.Unauthorized) {
+                                RefusedLogins.report(providerId)
+                            }
                         }
                     }
                 }.map { }

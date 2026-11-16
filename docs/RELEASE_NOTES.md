@@ -1,5 +1,11 @@
 # Release Notes
 
+## Unreleased
+
+- **Refused Jellyfin password:** when a Jellyfin server refuses the saved password, a pop-up says so over any screen. For an Admin, Enter Password opens the source's Edit Source on an empty password field (after the Admin PIN, if the profile has one); live sync then gives the new password to the other devices. Anyone else is told to ask an admin. Not Now hides it for that source until it signs in again or the app restarts. A device that is still signed in does not use the password, so a wrong one could reach the sync group without anyone seeing it. TV and phone.
+- **Password check in Add Source and Edit Source:** after one Jellyfin source was checked, the next check of any Jellyfin login reused that check's session and passed without sending the password, so a wrong password was saved. Each check now signs in with the password typed. TV and phone.
+- **New password after an error:** a screen that failed to sign in to a Jellyfin source signs in with the new password on Retry after Edit Source saved it. Before, it kept the old one until the screen was opened again. TV and phone.
+
 ## Version: 0.9.20261113211629
 
 - **Games not found on a slow device:** on the Chromecast HD, the first sports page after the app started said "Not found on your channels" for every game: reading the profile's channels took longer than the 20 seconds a game's search may take. The channels now have their own limit of 2 minutes; the rows show that they are looking until then. TV and phone.
