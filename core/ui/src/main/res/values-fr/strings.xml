@@ -713,6 +713,15 @@
     <string name="about_source_code_desc">Le code de l’application, libre à lire et à modifier</string>
     <string name="about_latest_release">Dernière version</string>
     <string name="about_latest_release_desc">Télécharger les dernières applications TV et téléphone</string>
+    <string name="about_get_app_title">Obtenir l’application</string>
+    <string name="about_get_phone_obtainium">Application téléphone avec Obtainium</string>
+    <string name="about_get_tv_obtainium">Application TV avec Obtainium</string>
+    <string name="about_get_obtainium_desc">Installe l’application et vous prévient quand une mise à jour est prête</string>
+    <string name="about_badge_obtainium">Disponible sur Obtainium</string>
+    <string name="about_badge_github">Disponible sur GitHub</string>
+    <string name="about_badge_caption_phone">Application téléphone</string>
+    <string name="about_badge_caption_tv">Application TV</string>
+    <string name="about_badge_caption_both">Les deux applications</string>
     <string name="about_privacy">Politique de confidentialité</string>
     <string name="about_privacy_desc">Ce que l’application garde et ce qu’elle envoie (en anglais)</string>
     <string name="about_report_problem">Signaler un problème</string>

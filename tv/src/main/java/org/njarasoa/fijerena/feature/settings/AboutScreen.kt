@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,7 +29,9 @@ import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.SettingsRowKind
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.legal.AppDownload
 import org.njarasoa.fijerena.core.ui.legal.ProjectLink
+import org.njarasoa.fijerena.core.ui.legal.QrLink
 import org.njarasoa.fijerena.core.ui.legal.aboutCommitLine
 import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -43,12 +48,14 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Settings → About → About Fijerena on TV. The version row (OK counts toward Admin, 7 taps) with
  * the build and the no-content notice; the copyright and licence notice; the project's links,
- * each opening its QR code; Terms of Use and Open-Source Licences; the TMDB and sports data
+ * each opening its QR code; Get the App: the Obtainium badges of the phone and TV apps and the
+ * GitHub badge, each a row that opens its QR code; Terms of Use and Open-Source Licences; the TMDB and sports data
  * credits. Every block is one focusable row (focus contract rule 3). Focus starts on the version
  * row, comes back to Terms or Licences from their screens and to a link when its dialog closes.
  */
@@ -69,9 +76,9 @@ fun AboutScreen(
     }
     NavReturnFocusEffect(returnFocus, listState = listState, fallback = firstFocus)
 
-    val linkFocus = remember { ProjectLink.entries.associateWith { FocusRequester() } }
-    var shownLink by remember { mutableStateOf<ProjectLink?>(null) }
-    var closedLink by remember { mutableStateOf<ProjectLink?>(null) }
+    val linkFocus = remember { (ProjectLink.entries + AppDownload.entries).associateWith<QrLink, FocusRequester> { FocusRequester() } }
+    var shownLink by remember { mutableStateOf<QrLink?>(null) }
+    var closedLink by remember { mutableStateOf<QrLink?>(null) }
     LaunchedEffect(closedLink) {
         closedLink?.let { linkFocus.getValue(it).requestFocusWithRetry() }
         closedLink = null
@@ -126,6 +133,28 @@ fun AboutScreen(
             }
         }
         item {
+            // The badges, as in the README; OK shows the QR code, for a phone to scan (a TV has no
+            // browser to rely on).
+            SettingsSection(title = stringResource(R.string.about_get_app_title)) {
+                AppDownload.entries.forEach { download ->
+                    SettingsRow(
+                        title = stringResource(download.titleRes),
+                        description = stringResource(download.descriptionRes) + "\n" + download.shownUrl,
+                        onClick = { shownLink = download },
+                        modifier = Modifier.leftToRail(),
+                        focusRequester = linkFocus.getValue(download),
+                        trailing = {
+                            Image(
+                                painter = painterResource(download.badge),
+                                contentDescription = stringResource(download.badgeDescriptionRes),
+                                modifier = Modifier.height(TvDimensions.iconXLarge),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+        item {
             SettingsSection(title = stringResource(R.string.about_legal_title)) {
                 SettingsRow(
                     title = stringResource(R.string.terms_title),
@@ -175,7 +204,7 @@ fun AboutScreen(
 /** A project link's QR code beside its address: a phone camera opens the page the TV can't. */
 @Composable
 private fun ProjectLinkDialog(
-    link: ProjectLink,
+    link: QrLink,
     onDismiss: () -> Unit,
 ) {
     val scale = LocalUiScale.current

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Get the App in About:** Settings → About → About Fijerena has "Get it on" badges for Obtainium (the phone app and the TV app) and GitHub, as in the README. On the phone, an Obtainium badge shows its QR code and the GitHub badge opens the release page; on TV, each badge is a row that shows its QR code, for a phone to scan. Latest Release moved there from Links. TV and phone.
 - **Easier to read docs:** the README is now for users, with download buttons for GitHub and Obtainium (phone app and TV app). A new User Guide (docs/USER_GUIDE.md) shows how to use the apps. Privacy and Terms of Use start with a short summary in plain words. The developer part moved to docs/DEVELOPING.md.
 
 ## Version: 0.9.20261117194826

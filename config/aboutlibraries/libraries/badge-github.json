@@ -1,0 +1,16 @@
+{
+  "uniqueId": "image:badge-github",
+  "name": "GitHub badge (image)",
+  "artifactVersion": "",
+  "description": "The \"Get it on GitHub\" badge in About Fijerena.",
+  "website": "https://github.com/Kunzisoft/Github-badge",
+  "developers": [
+    {
+      "name": "Kunzisoft"
+    }
+  ],
+  "licenses": [
+    "CC-BY-SA-3.0"
+  ],
+  "tag": "image"
+}

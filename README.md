@@ -8,15 +8,6 @@
 
 Free and open source. No ads, no tracking, no account.
 
-<a href="https://github.com/mpilasy/fijerena/releases/latest"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub" height="80"></a>
-
-<table>
-  <tr>
-    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22org.njarasoa.fijerena.mobile%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fmpilasy%2Ffijerena%22%2C%22author%22%3A%22mpilasy%22%2C%22name%22%3A%22Fijerena%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22fijerena-phone%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22appName%5C%22%3A%5C%22Fijerena%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/298b48a0c6088abbee3c0f0db2ede755fbeef9e6/assets/graphics/badge_obtainium.png" alt="Get the phone app with Obtainium" height="80"></a><br><b>Phone app</b></td>
-    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22org.njarasoa.fijerena%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fmpilasy%2Ffijerena%22%2C%22author%22%3A%22mpilasy%22%2C%22name%22%3A%22Fijerena%20TV%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22fijerena-tv%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22appName%5C%22%3A%5C%22Fijerena%20TV%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/298b48a0c6088abbee3c0f0db2ede755fbeef9e6/assets/graphics/badge_obtainium.png" alt="Get the TV app with Obtainium" height="80"></a><br><b>TV app</b></td>
-  </tr>
-</table>
-
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Android 11+](https://img.shields.io/badge/Android-11+-green.svg)](#will-it-run-on-my-device)
 [![Latest release](https://img.shields.io/github/v/release/mpilasy/fijerena)](https://github.com/mpilasy/fijerena/releases/latest)
@@ -53,30 +44,41 @@ subscriptions, and it does not recommend any. You need one of these:
 
 You alone are responsible for the sources you add (see [Terms of Use](#terms-of-use)).
 
-## Install
+## Get the App
 
-There are two apps. Install the **TV app** on a TV or TV box, and the **phone app** on a phone.
+There are two apps: the **TV app** for a TV or a TV box, and the **phone app** for a phone.
 
-### With Obtainium (recommended: it keeps the app up to date)
+**Obtainium**: installs each release as soon as it is on GitHub, and tells you when there is an
+update. The badges add the app with an APK filter, so Obtainium picks the right APK and does not
+ask.
 
-[Obtainium](https://github.com/ImranR98/Obtainium) installs apps from their GitHub releases and
-tells you when there is an update.
+<table>
+  <tr>
+    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522org.njarasoa.fijerena.mobile%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Fmpilasy%252Ffijerena%2522%252C%2522author%2522%253A%2522mpilasy%2522%252C%2522name%2522%253A%2522Fijerena%2522%252C%2522additionalSettings%2522%253A%2522%257B%255C%2522apkFilterRegEx%255C%2522%253A%255C%2522fijerena-phone%255C%2522%257D%2522%257D"><img src="core/ui/src/main/res/drawable-nodpi/badge_obtainium.png" alt="Get the phone app on Obtainium" height="80"></a><br><b>Phone App</b></td>
+    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522org.njarasoa.fijerena%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Fmpilasy%252Ffijerena%2522%252C%2522author%2522%253A%2522mpilasy%2522%252C%2522name%2522%253A%2522Fijerena%2520TV%2522%252C%2522additionalSettings%2522%253A%2522%257B%255C%2522apkFilterRegEx%255C%2522%253A%255C%2522fijerena-tv%255C%2522%257D%2522%257D"><img src="core/ui/src/main/res/drawable-nodpi/badge_obtainium.png" alt="Get the TV app on Obtainium" height="80"></a><br><b>TV App</b></td>
+  </tr>
+</table>
 
-- **On a phone:** install Obtainium, then tap the **Phone app** button above.
-- **On a TV:** install Obtainium on the TV, then add the app by hand: **Add App**, the address
-  `https://github.com/mpilasy/fijerena`, and in **APK filter** type `fijerena-tv`.
-  (On a phone, the **TV app** button does the same.)
+On a TV, install [Obtainium](https://github.com/ImranR98/Obtainium) and add the app by hand:
+**Add App**, the address `https://github.com/mpilasy/fijerena`, and `fijerena-tv` in **APK
+filter**.
 
-### From GitHub
+**GitHub**: download the APK from the latest release and open it. Android asks you to allow your
+browser or file manager to install apps.
 
-1. Open the [latest release](https://github.com/mpilasy/fijerena/releases/latest).
-2. Download `fijerena-phone-….apk` for a phone, or `fijerena-tv-….apk` for a TV.
-3. Open the file and allow your browser or file manager to install apps when Android asks.
+<a href="https://github.com/mpilasy/fijerena/releases/latest"><img src="core/ui/src/main/res/drawable-nodpi/badge_github.png" alt="Get it on GitHub" height="80"></a>
 
-On a TV, the easiest way is often a downloader app on the TV, or a file manager that opens the APK
-from a USB stick or a network folder.
+Each [GitHub release](https://github.com/mpilasy/fijerena/releases) has two APKs:
+- **Phone** (`fijerena-phone-<version>.apk`): the touch app, `org.njarasoa.fijerena.mobile`.
+- **TV** (`fijerena-tv-<version>.apk`): the app for the remote, `org.njarasoa.fijerena`.
 
-F-Droid is planned from version 1.0.
+The two apps have different app IDs, so one device can have both. On a TV, a downloader app or a
+file manager that opens the APK from a USB stick or a network folder is often the easiest way.
+
+**F-Droid**: planned from version 1.0.
+
+Settings → About → About Fijerena has the same badges, with QR codes, to pass the app to another
+person.
 
 ## Getting Started
 
@@ -160,6 +162,10 @@ for details.
   AS17-148-22727), which is in the public domain as a work of NASA. The red/cyan 3D glasses over
   it were drawn for this project (2026-10-26) and are licensed with the app under
   GPL-3.0-or-later.
+- **Store badges** (`core/ui/src/main/res/drawable-nodpi/`): the Obtainium badge
+  (`badge_obtainium.png`) is by Imran Remtulla, from [Obtainium](https://github.com/ImranR98/Obtainium),
+  licensed under the GPL version 3 only. The GitHub badge (`badge_github.png`) is by Kunzisoft, from
+  [Github-badge](https://github.com/Kunzisoft/Github-badge), licensed under CC BY-SA 3.0.
 - **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2018 The Manrope
   Project Authors, licensed under the SIL Open Font License 1.1
   ([licenses/fonts/manrope-OFL.txt](licenses/fonts/manrope-OFL.txt)).

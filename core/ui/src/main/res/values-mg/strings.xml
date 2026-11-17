@@ -655,6 +655,15 @@
     <string name="about_source_code_desc">Ny kaodin\'ny rindranasa, malalaka hovakiana sy hovaina</string>
     <string name="about_latest_release">Dikan-teny farany</string>
     <string name="about_latest_release_desc">Alaivo ny rindranasa vaovao indrindra ho an\'ny fahitalavitra sy ny finday</string>
+    <string name="about_get_app_title">Alaivo ny rindranasa</string>
+    <string name="about_get_phone_obtainium">Rindranasa finday amin\'ny Obtainium</string>
+    <string name="about_get_tv_obtainium">Rindranasa fahitalavitra amin\'ny Obtainium</string>
+    <string name="about_get_obtainium_desc">Mametraka ny rindranasa ary milaza aminao rehefa misy fanavaozana</string>
+    <string name="about_badge_obtainium">Alaivo amin\'ny Obtainium</string>
+    <string name="about_badge_github">Alaivo amin\'ny GitHub</string>
+    <string name="about_badge_caption_phone">Rindranasa finday</string>
+    <string name="about_badge_caption_tv">Rindranasa fahitalavitra</string>
+    <string name="about_badge_caption_both">Ireo rindranasa roa</string>
     <string name="about_privacy">Fiarovana ny fiainana manokana</string>
     <string name="about_privacy_desc">Izay tehirizin\'ny rindranasa sy izay alefany (amin\'ny teny anglisy)</string>
     <string name="about_report_problem">Hitatitra olana</string>

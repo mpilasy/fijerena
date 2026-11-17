@@ -1,9 +1,13 @@
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,8 +19,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.BuildConfig
@@ -26,9 +34,12 @@ import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.legal.AppDownload
 import org.njarasoa.fijerena.core.ui.legal.ProjectLink
+import org.njarasoa.fijerena.core.ui.legal.QrLink
 import org.njarasoa.fijerena.core.ui.legal.aboutCommitLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.utils.rememberAdminTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -43,8 +54,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 /**
  * Settings → About → About Fijerena on the phone: the version (7 taps turn Admin on), the
  * no-content notice, the copyright and licence notice and the build; the project's links, each
- * opening its QR code and an Open in Browser button; Terms of Use and Open-Source Licences; the
- * TMDB and sports data credits.
+ * opening its QR code and an Open in Browser button; Get the App: the Obtainium badges of the phone
+ * and TV apps (their QR code) and the GitHub badge (the release page at once); Terms of Use and
+ * Open-Source Licences; the TMDB and sports data credits.
  */
 @Composable
 fun MobileAboutScreen(
@@ -56,7 +68,7 @@ fun MobileAboutScreen(
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val onVersionClick = rememberAdminTapHandler(uiState.adminExists, viewModel::enableAdmin)
-    var shownLink by remember { mutableStateOf<ProjectLink?>(null) }
+    var shownLink by remember { mutableStateOf<QrLink?>(null) }
 
     LicensesScaffold(stringResource(R.string.about_title), onBack) { padding ->
         LazyColumn(
@@ -97,6 +109,21 @@ fun MobileAboutScreen(
                 }
             }
             item {
+                SettingsGroupHeader(stringResource(R.string.about_get_app_title))
+                // The badges, as in the README: Obtainium shows its QR code, for another phone to
+                // scan; GitHub opens the release page.
+                Row(
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                ) {
+                    AppDownload.entries.forEach { download ->
+                        AppBadge(download) {
+                            if (download == AppDownload.GITHUB) openExternalUrl(context, download.url) else shownLink = download
+                        }
+                    }
+                }
+            }
+            item {
                 SettingsGroupHeader(stringResource(R.string.about_legal_title))
                 SettingsListRow(
                     title = stringResource(R.string.terms_title),
@@ -131,7 +158,9 @@ fun MobileAboutScreen(
     shownLink?.let { link ->
         CinemaAlertDialog(
             onDismissRequest = { shownLink = null },
-            title = stringResource(link.titleRes),
+            // A badge's QR code is titled with what it gets ("TV App"): its row title takes two
+            // lines here and pushed the hint out of the dialog. The address names Obtainium.
+            title = stringResource(if (link is AppDownload) link.captionRes else link.titleRes),
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -156,3 +185,36 @@ fun MobileAboutScreen(
         )
     }
 }
+
+/** A "Get it on" badge, with what it gets under it ("Phone App"). */
+@Composable
+private fun RowScope.AppBadge(
+    download: AppDownload,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .weight(1f)
+                .clip(cornerShape(CinemaSpacing.xs))
+                // look-ok: a store badge is the button, as on its store's own pages
+                .clickable(role = Role.Button, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+    ) {
+        Image(
+            painter = painterResource(download.badge),
+            contentDescription = stringResource(download.badgeDescriptionRes),
+            modifier = Modifier.fillMaxWidth().aspectRatio(BADGE_ASPECT_RATIO),
+        )
+        CinemaText(
+            stringResource(download.captionRes),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** The badges' images are 646 × 250. */
+private const val BADGE_ASPECT_RATIO = 646f / 250f

@@ -1,0 +1,16 @@
+{
+  "uniqueId": "image:badge-obtainium",
+  "name": "Obtainium badge (image)",
+  "artifactVersion": "",
+  "description": "The \"Get it on Obtainium\" badge in About Fijerena.",
+  "website": "https://github.com/ImranR98/Obtainium",
+  "developers": [
+    {
+      "name": "Imran Remtulla"
+    }
+  ],
+  "licenses": [
+    "GPL-3.0-only"
+  ],
+  "tag": "image"
+}

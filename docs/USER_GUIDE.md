@@ -24,10 +24,13 @@ separate, so you can have both on one device if you want.
 
 - **With Obtainium** (it tells you when there is an update): add the address
   `https://github.com/mpilasy/fijerena`, with the APK filter `fijerena-phone` for the phone app or
-  `fijerena-tv` for the TV app. The buttons in the [README](../README.md#install) do this for you
+  `fijerena-tv` for the TV app. The badges in the [README](../README.md#get-the-app) do this for you
   on a phone.
 - **From GitHub:** download the APK from the
   [latest release](https://github.com/mpilasy/fijerena/releases/latest) and open it.
+
+To pass the app to another person, open Settings → About → About Fijerena → Get the App: each
+badge shows a QR code to scan with a phone.
 
 You need Android 11 or later. See the README for the [devices it runs on](../README.md#will-it-run-on-my-device).
 
