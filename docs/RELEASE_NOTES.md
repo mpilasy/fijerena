@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261117170534
 
 - **Sports pages stay up to date:** the Sports section and the team and league pages read their games again while they are open: when the games are 15 minutes old or from an earlier day, and every 2 minutes while a game is on, so its score and clock move. A game that has ended no longer stays in the list until the next visit. TV and phone.
 - **Pull to refresh in Sports:** on the phone, pull the Sports section or a team or league page down to read the games and find their channels again at once.
