@@ -15,6 +15,9 @@ class SportsDataTest {
 
     private val calls = mutableListOf<String>()
 
+    // The played games of every competition are down.
+    private var resultsDown = false
+
     // The saved answer for each URL; an unknown URL fails as a source that is down.
     private val transport =
         SportsTransport { url ->
@@ -28,6 +31,12 @@ class SportsDataTest {
                 "leagues/dropdown?sport=soccer" in url -> sportsFixture("espn_leagues_soccer.json")
                 "soccer/all/teams/359/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_all.json")
                 "soccer/all/teams/359/schedule" in url -> sportsFixture("espn_schedule_soccer_all.json")
+                resultsDown && "fixture=false" in url -> throw IOException("down: $url")
+                "soccer/all/teams/5533/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_madagascar.json")
+                "soccer/all/teams/5533/schedule" in url && "fixture=true" in url -> sportsFixture("espn_schedule_soccer_madagascar.json")
+                "soccer/caf.nations_qual/teams/5533/schedule" in url -> sportsFixture("espn_schedule_caf_nations_qual_madagascar.json")
+                "soccer/all/teams/481/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_germany.json")
+                "soccer/uefa.nations/teams/481/schedule" in url -> sportsFixture("espn_schedule_uefa_nations_germany.json")
                 "hockey/nhl/teams/1/schedule" in url -> sportsFixture("espn_schedule_nhl.json")
                 "club-schedule-season/BOS" in url -> sportsFixture("nhl_club_schedule.json")
                 else -> throw IOException("down: $url")
@@ -82,7 +91,40 @@ class SportsDataTest {
             assertEquals("Liverpool" to "0", results.first().home.name to results.first().homeScore)
             assertEquals("1", results.first().awayScore)
             assertEquals("soccer/eng.league_cup", results[1].competition.id)
-            assertEquals(listOf("fixture=false"), calls.filter { "soccer/all/teams/359" in it }.map { it.substringAfter('?') })
+            // The played games, and the coming games for their competitions.
+            assertEquals(
+                listOf("fixture=false", "fixture=true"),
+                calls.filter { "soccer/all/teams/359" in it }.map { it.substringAfter('?') }.sorted(),
+            )
+        }
+
+    private val madagascar = SportsTeam(SportsSource.ESPN, "soccer/5533", "Madagascar", sport = "soccer")
+    private val germany = SportsTeam(SportsSource.ESPN, "soccer/481", "Germany", sport = "soccer")
+
+    @Test
+    fun `a game that has just ended comes from its competition's list before ESPN adds it to every competition's`() =
+        runBlocking<Unit> {
+            // ESPN's played games of every competition end on 12 Nov; AFCON Qualifying's list has 17 Nov.
+            val results = data("2026-11-17T19:00:00Z").teamResults(madagascar)
+            assertEquals(listOf("2026-11-17", "2026-11-12"), results.map { utcDay(it.startEpochSec) })
+            assertEquals(listOf("2", "0"), listOf(results.first().homeScore, results.first().awayScore))
+            assertEquals(1, calls.count { "soccer/caf.nations_qual/teams/5533" in it })
+        }
+
+    @Test
+    fun `a competition of the coming games is read when the played games can't be`() =
+        runBlocking<Unit> {
+            resultsDown = true
+            val results = data("2026-11-17T19:00:00Z").teamResults(madagascar)
+            assertEquals("2026-11-17", utcDay(results.first().startEpochSec))
+        }
+
+    @Test
+    fun `the competition of the newest played game is read when no game is coming`() =
+        runBlocking<Unit> {
+            val results = data("2026-11-17T19:00:00Z").teamResults(germany)
+            assertEquals(listOf("2026-11-16", "2026-11-13"), results.take(2).map { utcDay(it.startEpochSec) })
+            assertEquals(listOf("Germany", "Netherlands"), listOf(results.first().home.name, results.first().away?.name))
         }
 
     @Test

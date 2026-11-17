@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Results that come at once:** a football team's Last 30 Days shows a game as soon as it ends. Before, a result could be missing for up to a day (Madagascar's and Germany's this week): ESPN adds it late to the team's list of every competition, so the page now also reads the list of each competition the team plays in. TV and phone.
+
 ## Version: 0.9.20261117170534
 
 - **Sports pages stay up to date:** the Sports section and the team and league pages read their games again while they are open: when the games are 15 minutes old or from an earlier day, and every 2 minutes while a game is on, so its score and clock move. A game that has ended no longer stays in the list until the next visit. TV and phone.

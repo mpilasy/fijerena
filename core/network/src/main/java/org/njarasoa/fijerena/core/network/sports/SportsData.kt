@@ -151,16 +151,51 @@ class SportsData(
         }
     }
 
-    /** A soccer team's played games of every competition (each game names its own). */
+    /**
+     * A soccer team's played games of every competition (each game names its own), and of each
+     * competition of its coming games and of its newest played game: ESPN adds a game to the list
+     * of every competition up to a day after it ends, but to the competition's own list at once.
+     */
     private suspend fun espnSoccerResults(team: SportsTeam): List<SportsGame> {
         val espnId = EspnParser.espnTeamId(team.id)
-        // At most an hour old, so a game that has just ended comes (the answer had no sign of it).
-        return cache.get(
-            "results_espn_soccer_$espnId",
-            { EspnParser.schedule(it, EspnParser.SOCCER, null) },
-            { minOf(SportsCache.scheduleMaxAgeMs(it, now()), SportsCache.SCHEDULE_SOON_MAX_AGE_MS) },
-        ) { api.espnSoccerTeamResults(espnId) }
+        val played =
+            attempt(mutableListOf(), "ESPN results") {
+                resultsFromCache("results_espn_soccer_$espnId", null) { api.espnSoccerTeamResults(espnId) }
+            }
+        val coming = attempt(mutableListOf(), "ESPN schedule") { espnTeamSchedule(team) }
+        val newest = played.filter { it.state == GameState.FINISHED }.maxByOrNull { it.startEpochSec }
+        val leagues =
+            (coming.map { it.competition.id } + listOfNotNull(newest?.competition?.id))
+                .mapNotNull { EspnParser.splitLeague(it)?.second }
+                .distinct()
+        val ofLeagues =
+            coroutineScope {
+                leagues
+                    .map { league ->
+                        async {
+                            attempt(mutableListOf(), "ESPN results $league") {
+                                resultsFromCache("results_espn_soccer_${espnId}_$league", league) {
+                                    api.espnSoccerTeamLeagueSchedule(league, espnId)
+                                }
+                            }
+                        }
+                    }.awaitAll()
+            }
+        return played + ofLeagues.flatten()
     }
+
+    // At most an hour old, so a game that has just ended comes (the answer had no sign of it).
+    private suspend fun resultsFromCache(
+        key: String,
+        league: String?,
+        fetch: suspend () -> String,
+    ): List<SportsGame> =
+        cache.get(
+            key,
+            { EspnParser.schedule(it, EspnParser.SOCCER, league) },
+            { minOf(SportsCache.scheduleMaxAgeMs(it, now()), SportsCache.SCHEDULE_SOON_MAX_AGE_MS) },
+            fetch,
+        )
 
     private suspend fun espnLeagueGames(
         league: SportsLeague,

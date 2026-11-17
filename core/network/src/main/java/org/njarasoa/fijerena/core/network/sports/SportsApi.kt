@@ -113,6 +113,15 @@ class SportsApi(
         call(SportsSource.ESPN, url("$ESPN_SITE/sports/soccer/all/teams/$espnTeamId/schedule", "fixture" to "false"))
 
     /**
+     * A soccer team's games of one competition [league], played ones with their scores. ESPN adds a
+     * game to the `all` list of played games up to a day after it ends, but to this list at once.
+     */
+    suspend fun espnSoccerTeamLeagueSchedule(
+        league: String,
+        espnTeamId: String,
+    ): String = call(SportsSource.ESPN, "$ESPN_SITE/sports/soccer/$league/teams/$espnTeamId/schedule")
+
+    /**
      * A league's games of one [day]. The range form (`dates=YYYYMMDD-YYYYMMDD`) answers HTTP 400
      * ("Failed to get events endpoint"), so a range is read day by day.
      */
