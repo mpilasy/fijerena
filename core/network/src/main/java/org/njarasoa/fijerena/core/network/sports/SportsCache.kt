@@ -32,6 +32,9 @@ class SportsCache(
     private val json = Json { ignoreUnknownKeys = true }
 
     // One lock per request, so two screens asking the same thing make one call.
+
+    // An answer stored before this time is out of date, whatever its age ([expireAll]).
+    @Volatile private var expiredBeforeMs = 0L
     private val locks = ConcurrentHashMap<String, Mutex>()
 
     /**
@@ -47,7 +50,11 @@ class SportsCache(
         locks.getOrPut(key) { Mutex() }.withLock {
             val stored = read(key)
             val storedValue = stored?.let { parseOrNull(key, it.body, parse) }
-            if (stored != null && storedValue != null && now() - stored.fetchedAtMs in 0 until maxAgeMs(storedValue)) {
+            if (stored != null &&
+                storedValue != null &&
+                stored.fetchedAtMs > expiredBeforeMs &&
+                now() - stored.fetchedAtMs in 0 until maxAgeMs(storedValue)
+            ) {
                 return@withLock storedValue
             }
             try {
@@ -63,6 +70,14 @@ class SportsCache(
                 storedValue
             }
         }
+
+    /**
+     * Makes every stored answer out of date: the next [get] of each calls again. A stored answer
+     * is still used when that call fails.
+     */
+    fun expireAll() {
+        expiredBeforeMs = now()
+    }
 
     /** Forgets every stored answer. */
     suspend fun clear() {

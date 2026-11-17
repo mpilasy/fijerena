@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
+import org.njarasoa.fijerena.core.ui.sports.KeepGamesFresh
 import org.njarasoa.fijerena.core.ui.sports.SportsSectionViewModel
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
 import org.njarasoa.fijerena.core.ui.sports.key
@@ -52,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.DateText
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaPullToRefresh
 import org.njarasoa.fijerena.ui.components.MobileDayHeading
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.MobileErrorState
@@ -81,10 +83,13 @@ fun MobileSportsSectionScreen(
     val resources = LocalResources.current
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    KeepGamesFresh(viewModel)
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val bells = rememberGameBells()
-    val nowSec = remember { System.currentTimeMillis() / 1000 }
-    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val loaded = games as? GamesState.Loaded
+    // Again at each read: the page stays while the app is open.
+    val nowSec = remember(loaded?.games) { System.currentTimeMillis() / 1000 }
+    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
     val cardColors = sportsCardColors()
     val followedSorted =
@@ -123,73 +128,85 @@ fun MobileSportsSectionScreen(
             else -> {
                 val listState = rememberLazyListState()
                 val pinnedDay = rememberPinnedDayKey(listState)
-                LazyColumn(
-                    state = listState,
+                CinemaPullToRefresh(
+                    isRefreshing = refreshing,
+                    onRefresh = viewModel::refresh,
                     modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
-                    contentPadding =
-                        PaddingValues(start = Spacing.md, end = Spacing.md, top = Spacing.sm, bottom = Spacing.md + LocalDockInset.current),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    item(key = "followed_heading") { MobileSportsHeading(stringResource(R.string.sports_following_heading)) }
-                    item(key = "followed") {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                            items(followedSorted, key = { it.key }) { item ->
-                                FollowedCard(item.name, item.logoUrl, item.onClick)
-                            }
-                        }
-                    }
-                    item(key = "games_heading") {
-                        MobileSportsHeading(
-                            stringResource(R.string.sports_next_games_heading),
-                            modifier = Modifier.padding(top = Spacing.sm),
-                        )
-                    }
-                    when (val state = games) {
-                        GamesState.Loading -> {
-                            item(key = "loading") {
-                                Box(modifier = Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
-                                    CinemaSpinner()
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding =
+                            PaddingValues(
+                                start = Spacing.md,
+                                end = Spacing.md,
+                                top = Spacing.sm,
+                                bottom =
+                                    Spacing.md + LocalDockInset.current,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        item(key = "followed_heading") { MobileSportsHeading(stringResource(R.string.sports_following_heading)) }
+                        item(key = "followed") {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                items(followedSorted, key = { it.key }) { item ->
+                                    FollowedCard(item.name, item.logoUrl, item.onClick)
                                 }
                             }
                         }
+                        item(key = "games_heading") {
+                            MobileSportsHeading(
+                                stringResource(R.string.sports_next_games_heading),
+                                modifier = Modifier.padding(top = Spacing.sm),
+                            )
+                        }
+                        when (val state = games) {
+                            GamesState.Loading -> {
+                                item(key = "loading") {
+                                    Box(modifier = Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
+                                        CinemaSpinner()
+                                    }
+                                }
+                            }
 
-                        is GamesState.Failed -> {
-                            item(key = "failed") {
-                                MobileErrorState(
-                                    title = stringResource(R.string.sports_load_error),
-                                    message = state.raw?.let { "[dev] $it" }.orEmpty(),
-                                    onRetry = viewModel::retry,
-                                )
+                            is GamesState.Failed -> {
+                                item(key = "failed") {
+                                    MobileErrorState(
+                                        title = stringResource(R.string.sports_load_error),
+                                        message = state.raw?.let { "[dev] $it" }.orEmpty(),
+                                        onRetry = viewModel::retry,
+                                    )
+                                }
                             }
-                        }
 
-                        is GamesState.Loaded -> {
-                            if (state.games.isEmpty()) {
-                                item(key = "no_games") {
-                                    MobileEmptyState(
-                                        message = stringResource(R.string.sports_no_games),
-                                        icon = CinemaIcons.DateRange,
-                                    )
+                            is GamesState.Loaded -> {
+                                if (state.games.isEmpty()) {
+                                    item(key = "no_games") {
+                                        MobileEmptyState(
+                                            message = stringResource(R.string.sports_no_games),
+                                            icon = CinemaIcons.DateRange,
+                                        )
+                                    }
                                 }
-                            }
-                            for (day in days) {
-                                stickyHeader(
-                                    key = "day:${day.date}",
-                                    contentType = DAY_HEADING,
-                                ) {
-                                    MobileDayHeading(
-                                        DateText.dayLabel(resources, day.date),
-                                        pinned = pinnedDay == "day:${day.date}",
-                                    )
-                                }
-                                items(day.games, key = { "game:${it.key}" }) { game ->
-                                    MobileGameCard(
-                                        game = game,
-                                        channels = state.channelsOf(game),
-                                        cardColors = cardColors,
-                                        onClick = { openGame = game.key },
-                                        trailing = { MobileGameBell(game, bells, nowSec) },
-                                    )
+                                for (day in days) {
+                                    stickyHeader(
+                                        key = "day:${day.date}",
+                                        contentType = DAY_HEADING,
+                                    ) {
+                                        MobileDayHeading(
+                                            DateText.dayLabel(resources, day.date),
+                                            pinned = pinnedDay == "day:${day.date}",
+                                        )
+                                    }
+                                    items(day.games, key = { "game:${it.key}" }) { game ->
+                                        MobileGameCard(
+                                            game = game,
+                                            channels = state.channelsOf(game),
+                                            cardColors = cardColors,
+                                            onClick = { openGame = game.key },
+                                            trailing = { MobileGameBell(game, bells, nowSec) },
+                                        )
+                                    }
                                 }
                             }
                         }

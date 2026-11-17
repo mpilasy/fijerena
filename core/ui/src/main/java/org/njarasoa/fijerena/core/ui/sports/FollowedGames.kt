@@ -104,7 +104,7 @@ private const val TAG = "FollowedGames"
 class SportsSectionViewModel(
     data: SportsPageData,
     private val now: () -> Long = System::currentTimeMillis,
-) : SportsGamesViewModel(data) {
+) : SportsGamesViewModel(data, now) {
     private val _followed = MutableStateFlow<FollowedSports.Followed?>(null)
     val followed: StateFlow<FollowedSports.Followed?> = _followed.asStateFlow()
 

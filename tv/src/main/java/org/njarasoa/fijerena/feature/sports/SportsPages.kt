@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sports.AFTER_DAYS
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
+import org.njarasoa.fijerena.core.ui.sports.KeepGamesFresh
 import org.njarasoa.fijerena.core.ui.sports.SportsLeagueViewModel
 import org.njarasoa.fijerena.core.ui.sports.SportsTeamViewModel
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
@@ -112,6 +113,7 @@ fun SportsTeamScreen(
     val shown by viewModel.team.collectAsStateWithLifecycle()
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    KeepGamesFresh(viewModel)
     val results by viewModel.results.collectAsStateWithLifecycle()
     TvSportsPage(
         title = shown.name,
@@ -159,6 +161,7 @@ fun SportsLeagueScreen(
     val resources = LocalResources.current
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    KeepGamesFresh(viewModel)
     val teams by viewModel.teams.collectAsStateWithLifecycle()
     val firstTeamFocus = remember { FocusRequester() }
     TvSportsPage(
@@ -233,7 +236,9 @@ private fun TvSportsPage(
 ) {
     val resources = LocalResources.current
     val bells = rememberGameBells()
-    val nowSec = remember { System.currentTimeMillis() / 1000 }
+    val loaded = games as? GamesState.Loaded
+    // Again at each read: the page reads its games again while it is open.
+    val nowSec = remember(loaded?.games) { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     val pinnedDay = rememberPinnedDayKey(listState)
     val endedDay = rememberEndedDayKey(listState)
@@ -243,7 +248,6 @@ private fun TvSportsPage(
     var followHasFocus by remember { mutableStateOf(false) }
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     var closedGame by remember { mutableStateOf<String?>(null) }
-    val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
     val currentSecond by rememberUpdatedState(secondFocus)
 

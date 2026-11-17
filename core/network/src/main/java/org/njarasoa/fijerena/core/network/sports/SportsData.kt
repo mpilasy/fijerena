@@ -134,6 +134,9 @@ class SportsData(
         }
     }
 
+    /** Makes every stored sports answer out of date (a pull to refresh); see [SportsCache.expireAll]. */
+    fun expireAll() = cache.expireAll()
+
     /** Forgets every stored sports answer. */
     suspend fun clear() = cache.clear()
 

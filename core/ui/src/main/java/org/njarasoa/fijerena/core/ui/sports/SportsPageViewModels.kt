@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +27,7 @@ import org.njarasoa.fijerena.core.network.sports.EpgGuideLookup
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelMatcher
+import org.njarasoa.fijerena.core.network.sports.GameState
 import org.njarasoa.fijerena.core.network.sports.ReminderChannelFinder
 import org.njarasoa.fijerena.core.network.sports.SportsChannels
 import org.njarasoa.fijerena.core.network.sports.SportsData
@@ -35,6 +37,9 @@ import org.njarasoa.fijerena.core.network.sports.SportsSource
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 /** Finds the ways to watch a game on the profile's channels (`GameChannelMatcher`), best first. */
 fun interface GameMatcher {
@@ -82,6 +87,9 @@ interface SportsPageData {
 
     /** A matcher on the profile's live channels and guide, read once per page. */
     suspend fun matcher(): GameMatcher
+
+    /** Makes the stored sports answers out of date, so the next reads call the sources (a pull to refresh). */
+    fun expireGames() = Unit
 }
 
 /** A page's games: loading, failed (with Retry), or the games with the channels found so far. */
@@ -114,6 +122,9 @@ sealed interface GamesState {
  * the first read takes more than one game's limit. A failed read sets [GamesState.Failed] ([rawOf]: its raw
  * text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets the games before
  * their channels. Shared by the team and league pages and the Teams search's best team.
+ *
+ * [quiet]: a read again of a page that shows its games. A failure keeps the games shown, and each
+ * game keeps the channels found before until its new match ends.
  */
 internal suspend fun readGamesAndChannels(
     state: MutableStateFlow<GamesState>,
@@ -123,7 +134,9 @@ internal suspend fun readGamesAndChannels(
     onGames: (List<SportsGame>) -> Unit = {},
     matchTimeoutMs: Long = MATCH_TIMEOUT_MS,
     channelsTimeoutMs: Long = CHANNELS_TIMEOUT_MS,
+    quiet: Boolean = false,
 ) {
+    val shown = (state.value as? GamesState.Loaded).takeIf { quiet }
     val games =
         try {
             loadGames()
@@ -132,12 +145,13 @@ internal suspend fun readGamesAndChannels(
         } catch (e: Exception) {
             // No network or a source error: an expected failure, not one for the crash log.
             android.util.Log.w(GAMES_TAG, "Games failed: ${e.javaClass.simpleName}")
-            state.value = GamesState.Failed(rawOf(e))
+            if (shown == null) state.value = GamesState.Failed(rawOf(e))
             null
         }
     if (games != null) {
         onGames(games)
-        state.value = GamesState.Loaded(games)
+        val keys = games.mapTo(HashSet()) { it.key }
+        state.value = GamesState.Loaded(games, shown?.channels.orEmpty().filterKeys { it in keys })
         if (games.isNotEmpty()) matchChannels(state, games, matcher, matchTimeoutMs, channelsTimeoutMs)
     }
 }
@@ -215,17 +229,30 @@ fun teamFromGames(
 }
 
 /**
- * A page of games (the team page, the league page; the sports teams plan → Screens): the games
- * once, then each game's channels as the matcher finds them, in the games' order, so the first
- * rows fill first. The page is not kept up to date (SP-D10): Retry or a new visit reads again.
+ * A page of games (the team page, the league page, the Sports section; the sports teams plan →
+ * Screens): the games, then each game's channels as the matcher finds them, in the games' order, so
+ * the first rows fill first. While the page is on screen ([keepFresh]) it reads the games again
+ * when they are old or one is on, and hides the games that are over; [refresh] reads them now.
  */
 abstract class SportsGamesViewModel(
     protected val data: SportsPageData,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val _games = MutableStateFlow<GamesState>(GamesState.Loading)
     val games: StateFlow<GamesState> = _games.asStateFlow()
 
+    private val _refreshing = MutableStateFlow(false)
+
+    /** Whether a [refresh] (a pull) is reading the games. */
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
     private var job: Job? = null
+
+    // When the games shown were read.
+    @Volatile private var readAtMs = 0L
+
+    // The reads again started ([readAgain]).
+    @Volatile private var reads = 0
 
     protected abstract suspend fun loadGames(): List<SportsGame>
 
@@ -244,15 +271,89 @@ abstract class SportsGamesViewModel(
                 Dispatchers.IO,
                 onError = { e -> _games.value = GamesState.Failed(rawOf(e)) },
             ) {
-                readGamesAndChannels(_games, ::loadGames, data::matcher, ::rawOf, ::onGames)
+                readGamesAndChannels(_games, ::readGames, data::matcher, ::rawOf, ::onGames)
             }
     }
+
+    /**
+     * Reads the games and their channels again now, not from the stored sports answers (a pull to
+     * refresh). The games stay on screen while they are read, and when the read fails.
+     */
+    fun refresh() {
+        if (_games.value !is GamesState.Loaded) return retry()
+        data.expireGames()
+        _refreshing.value = true
+        readAgain(force = true)
+    }
+
+    /**
+     * While the page is on screen: call it while the screen is resumed; it returns only when
+     * cancelled. Every [CHECK_MS] it hides the games that started more than 3 hours ago and are not
+     * on, and reads the games again ([readAgain]) when they were read [STALE_MS] ago or on an
+     * earlier day, or [LIVE_REFRESH_MS] ago while one of them is on.
+     */
+    suspend fun keepFresh() {
+        while (true) {
+            val nowMs = clock()
+            (_games.value as? GamesState.Loaded)?.let { loaded ->
+                val nowSec = nowMs / 1000
+                val left = loaded.games.filter { it.state == GameState.LIVE || it.startEpochSec >= nowSec - GAME_ON_SEC }
+                if (left.size != loaded.games.size) _games.update { (it as? GamesState.Loaded)?.copy(games = left) ?: it }
+                val age = nowMs - readAtMs
+                val old = age >= STALE_MS || localDay(readAtMs) != localDay(nowMs)
+                if (old || (age >= LIVE_REFRESH_MS && left.any { isOn(it, nowSec) })) readAgain(force = false)
+            }
+            delay(CHECK_MS)
+        }
+    }
+
+    // A read again that keeps the games on screen; one at a time, unless [force]d (a pull).
+    private fun readAgain(force: Boolean) {
+        if (!force && job?.isActive == true) return
+        job?.cancel()
+        val read = ++reads
+        job =
+            viewModelScope.launchGuarded("${javaClass.simpleName}.readAgain", Dispatchers.IO) {
+                try {
+                    readGamesAndChannels(_games, ::readGames, data::matcher, ::rawOf, ::onGames, quiet = true)
+                } finally {
+                    // Not when a later read (a pull) took over: it ends the pull.
+                    if (read == reads) _refreshing.value = false
+                }
+            }
+    }
+
+    private suspend fun readGames(): List<SportsGame> = loadGames().also { readAtMs = clock() }
 
     protected fun launchFollow(block: suspend () -> Unit) {
         viewModelScope.launchGuarded("${javaClass.simpleName}.follow", Dispatchers.IO) { block() }
     }
 
     private fun rawOf(e: Throwable): String? = if (data.nerd) Redact.text(e.message ?: e.javaClass.simpleName) else null
+
+    private fun localDay(ms: Long): LocalDate = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate()
+
+    internal companion object {
+        /** How often [keepFresh] looks at the games. */
+        const val CHECK_MS = 30_000L
+
+        /** The age at which the games are read again. */
+        const val STALE_MS = 15 * 60_000L
+
+        /** The age at which the games are read again while one is on (the sports cache keeps such a schedule as long). */
+        const val LIVE_REFRESH_MS = 2 * 60_000L
+
+        /** A game that started up to 3 hours ago, not ended, may still be on. */
+        const val GAME_ON_SEC = 3 * 60 * 60L
+
+        /** Whether [game] is on: ESPN says so, or it started less than 3 hours ago and has not ended. */
+        fun isOn(
+            game: SportsGame,
+            nowSec: Long,
+        ): Boolean =
+            game.state == GameState.LIVE ||
+                (game.state == GameState.SCHEDULED && game.startEpochSec <= nowSec && game.startEpochSec > nowSec - GAME_ON_SEC)
+    }
 }
 
 /**
@@ -264,7 +365,8 @@ abstract class SportsGamesViewModel(
 class SportsTeamViewModel(
     data: SportsPageData,
     team: SportsTeam,
-) : SportsGamesViewModel(data) {
+    clock: () -> Long = System::currentTimeMillis,
+) : SportsGamesViewModel(data, clock) {
     private val _team = MutableStateFlow(team)
     val team: StateFlow<SportsTeam> = _team.asStateFlow()
 
@@ -293,13 +395,13 @@ class SportsTeamViewModel(
         loadResults()
     }
 
-    // After the coming games, which a soccer team's results need (their competitions), and once:
-    // Retry reads them again only when none came.
+    // After each read of the coming games, so a game that has ended comes. The results shown stay
+    // when none come (a failed read gives none).
     private fun loadResults() {
-        if (resultsJob?.isActive == true || _results.value.isNotEmpty()) return
+        if (resultsJob?.isActive == true) return
         resultsJob =
             viewModelScope.launchGuarded("SportsTeamViewModel.results", Dispatchers.IO) {
-                _results.value = data.teamResults(_team.value)
+                data.teamResults(_team.value).takeIf { it.isNotEmpty() }?.let { _results.value = it }
             }
     }
 
@@ -451,6 +553,8 @@ class AppSportsPageData(
     override suspend fun follow(league: SportsLeague) = follows.follow(profileId, league)
 
     override suspend fun unfollow(league: SportsLeague) = follows.unfollow(profileId, league)
+
+    override fun expireGames() = sports.expireAll()
 
     override suspend fun matcher(): GameMatcher =
         withContext(Dispatchers.IO) {

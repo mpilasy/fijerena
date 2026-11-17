@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.sports.DAY_HEADING
 import org.njarasoa.fijerena.core.ui.sports.GamesState
+import org.njarasoa.fijerena.core.ui.sports.KeepGamesFresh
 import org.njarasoa.fijerena.core.ui.sports.SportsSectionViewModel
 import org.njarasoa.fijerena.core.ui.sports.dayHeadingBand
 import org.njarasoa.fijerena.core.ui.sports.gamesByDay
@@ -118,8 +119,11 @@ fun SportsSectionScreen(
     val resources = LocalResources.current
     val followed by viewModel.followed.collectAsStateWithLifecycle()
     val games by viewModel.games.collectAsStateWithLifecycle()
+    KeepGamesFresh(viewModel)
     val bells = rememberGameBells()
-    val nowSec = remember { System.currentTimeMillis() / 1000 }
+    val loaded = games as? GamesState.Loaded
+    // Again at each read: the page reads its games again while it is open.
+    val nowSec = remember(loaded?.games) { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
     val pinnedDay = rememberPinnedDayKey(listState)
     val returnFocus = rememberNavReturnFocus()
@@ -127,7 +131,6 @@ fun SportsSectionScreen(
     val findTeamsFocus = remember { FocusRequester() }
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     var closedGame by remember { mutableStateOf<String?>(null) }
-    val loaded = games as? GamesState.Loaded
     val days = remember(loaded?.games) { loaded?.games?.let { gamesByDay(it) }.orEmpty() }
     val items =
         remember(followed) {

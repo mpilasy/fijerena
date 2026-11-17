@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -52,6 +53,12 @@ class SportsPageViewModelTest {
         val follows = MutableStateFlow(FollowedSports.Followed())
         var reads = 0
         var resultReads = 0
+        var expired = 0
+        var games = GAMES
+
+        override fun expireGames() {
+            expired++
+        }
 
         override suspend fun teamResults(team: SportsTeam): List<SportsGame> {
             resultReads++
@@ -62,7 +69,7 @@ class SportsPageViewModelTest {
         override suspend fun teamGames(team: SportsTeam): List<SportsGame> {
             reads++
             failure?.let { throw it }
-            return GAMES
+            return games
         }
 
         override suspend fun leagueGames(league: SportsLeague): List<SportsGame> {
@@ -117,7 +124,16 @@ class SportsPageViewModelTest {
     private fun teamPage(
         data: FakeData,
         route: SportsTeam = ROUTE_TEAM,
-    ) = SportsTeamViewModel(data, route).also { created += it }
+        clock: () -> Long = System::currentTimeMillis,
+    ) = SportsTeamViewModel(data, route, clock).also { created += it }
+
+    // Runs keepFresh (its first look is at once) until [done], then stops it.
+    private fun SportsGamesViewModel.keepFreshUntil(done: () -> Boolean) =
+        runBlocking {
+            val fresh = launch { keepFresh() }
+            withTimeout(TIMEOUT_MS) { while (!done()) delay(10) }
+            fresh.cancel()
+        }
 
     private fun leaguePage(data: FakeData) = SportsLeagueViewModel(data, LEAGUE).also { created += it }
 
@@ -259,6 +275,58 @@ class SportsPageViewModelTest {
         val loaded = state.value as GamesState.Loaded
         assertEquals(listOf(channel), loaded.channelsOf(GAMES[0]))
         assertEquals(listOf(channel), loaded.channelsOf(GAMES[1]))
+    }
+
+    @Test
+    fun `the page reads its games again once they are 15 minutes old, and keeps them shown`() {
+        var clock = GAMES[0].startEpochSec * 1000 - 24 * 3_600_000L
+        val data = FakeData()
+        val vm = teamPage(data, clock = { clock })
+        vm.awaitMatched()
+
+        vm.keepFreshUntil { true }
+        assertEquals(1, data.reads)
+
+        clock += SportsGamesViewModel.STALE_MS
+        vm.keepFreshUntil { data.reads == 2 }
+        assertEquals(GAMES, vm.awaitMatched().games)
+    }
+
+    @Test
+    fun `while a game is on, the page reads its games again every 2 minutes`() {
+        var clock = (GAMES[0].startEpochSec + 600) * 1000
+        val data = FakeData().apply { games = listOf(GAMES[0].copy(state = GameState.LIVE), GAMES[1]) }
+        val vm = teamPage(data, clock = { clock })
+        vm.awaitMatched()
+
+        clock += SportsGamesViewModel.LIVE_REFRESH_MS
+        vm.keepFreshUntil { data.reads == 2 }
+    }
+
+    @Test
+    fun `a game that started more than 3 hours ago and is not on is hidden`() {
+        // Read a minute before the game's 3 hours end; looked at 90 seconds later, before any read again.
+        var clock = (GAMES[0].startEpochSec + SportsGamesViewModel.GAME_ON_SEC - 60) * 1000
+        val data = FakeData()
+        val vm = teamPage(data, clock = { clock })
+        vm.awaitMatched()
+
+        clock += 90_000
+        vm.keepFreshUntil { (vm.games.value as GamesState.Loaded).games == listOf(GAMES[1]) }
+    }
+
+    @Test
+    fun `a pull reads past the stored answers, and a failure keeps the games shown`() {
+        val data = FakeData()
+        val vm = teamPage(data)
+        vm.awaitMatched()
+
+        data.failure = java.io.IOException("offline")
+        vm.refresh()
+        vm.refreshing.await { !it }
+        assertEquals(1, data.expired)
+        assertEquals(2, data.reads)
+        assertEquals(GAMES, (vm.games.value as GamesState.Loaded).games)
     }
 
     @Test

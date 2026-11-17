@@ -17,6 +17,21 @@ class SportsCacheTest {
     private suspend fun read(fetch: suspend () -> String): String = cache.get("key", { it }, { 1000L }, fetch)
 
     @Test
+    fun `an expired answer is read again, and still used when that call fails`() =
+        runTest {
+            assertEquals("a", read { "a" })
+            clock += 10
+            cache.expireAll()
+            clock += 10
+            assertEquals("b", read { "b" })
+            assertEquals("b", read { "c" })
+            clock += 10
+            cache.expireAll()
+            clock += 10
+            assertEquals("b", read { throw java.io.IOException("offline") })
+        }
+
+    @Test
     fun `a fresh answer is used without a call, an old one is read again`() =
         runTest {
             var calls = 0

@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased
+
+- **Sports pages stay up to date:** the Sports section and the team and league pages read their games again while they are open: when the games are 15 minutes old or from an earlier day, and every 2 minutes while a game is on, so its score and clock move. A game that has ended no longer stays in the list until the next visit. TV and phone.
+- **Pull to refresh in Sports:** on the phone, pull the Sports section or a team or league page down to read the games and find their channels again at once.
+
 ## Version: 0.9.20261116200546
 
 - **Refused Jellyfin password:** when a Jellyfin server refuses the saved password, a pop-up says so over any screen. For an Admin, Enter Password opens the source's Edit Source on an empty password field (after the Admin PIN, if the profile has one); live sync then gives the new password to the other devices. Anyone else is told to ask an admin. Not Now hides it for that source until it signs in again or the app restarts. A device that is still signed in does not use the password, so a wrong one could reach the sync group without anyone seeing it. TV and phone.
