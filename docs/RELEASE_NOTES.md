@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Easier to read docs:** the README is now for users, with download buttons for GitHub and Obtainium (phone app and TV app). A new User Guide (docs/USER_GUIDE.md) shows how to use the apps. Privacy and Terms of Use start with a short summary in plain words. The developer part moved to docs/DEVELOPING.md.
+
 ## Version: 0.9.20261117194826
 
 - **Results that come at once:** a football team's Last 30 Days shows a game as soon as it ends. Before, a result could be missing for up to a day (Madagascar's and Germany's this week): ESPN adds it late to the team's list of every competition, so the page now also reads the list of each competition the team plays in. TV and phone.

@@ -6,13 +6,19 @@ says what the app stores, what it sends and to whom.
 
 ## In Short
 
-- No accounts with us, no analytics, no ads, no crash reporting, no telemetry. The app has no
-  server of its own. Apart from the addresses you give it, it contacts only TMDB (when you enter
-  your own TMDB key), the sports services ESPN, NHL and MLB (while Sports is on), and YouTube
-  (when you play a YouTube trailer).
-- Your logins stay on your device, in encrypted storage.
-- Live sync, if you turn it on, goes to a sync server you choose, and everything it stores is
-  end-to-end encrypted.
+**Fijerena does not collect anything about you.** There is no account with us, no analytics, no
+ads, no crash reporting and no tracking. The app has no server of its own.
+
+| Who | What they get | When |
+|---|---|---|
+| **Nobody** | Your logins and passwords stay on your device, encrypted | Always |
+| **Your sources** | What they need to play: your login, and the films and channels you open | When you use them |
+| **TMDB** | Your TMDB key and the titles you open or search | Only if you enter your own TMDB key |
+| **ESPN, NHL, MLB** | The teams and leagues you follow | Only while Sports is on |
+| **YouTube** | The trailer you play | Only when you play a trailer |
+| **Your sync server** | Encrypted data that only your devices can read | Only if you set up live sync |
+
+The rest of this page gives the details.
 
 ## What Stays on Your Device
 

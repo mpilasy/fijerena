@@ -2,250 +2,136 @@
 
 <div align="center">
 
-<img src="core/ui/src/main/res/drawable-xxxhdpi/app_logo.png" alt="App Icon" width="192">
+<img src="core/ui/src/main/res/drawable-xxxhdpi/app_logo.png" alt="Fijerena logo" width="160">
 
-**A media player for Android TV and Android phones: IPTV (Xtream Codes, M3U) and Jellyfin**
+**Watch Live TV, films and TV shows from your own sources, on your Android TV and your phone.**
+
+Free and open source. No ads, no tracking, no account.
+
+<a href="https://github.com/mpilasy/fijerena/releases/latest"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub" height="80"></a>
+
+<table>
+  <tr>
+    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22org.njarasoa.fijerena.mobile%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fmpilasy%2Ffijerena%22%2C%22author%22%3A%22mpilasy%22%2C%22name%22%3A%22Fijerena%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22fijerena-phone%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22appName%5C%22%3A%5C%22Fijerena%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/298b48a0c6088abbee3c0f0db2ede755fbeef9e6/assets/graphics/badge_obtainium.png" alt="Get the phone app with Obtainium" height="80"></a><br><b>Phone app</b></td>
+    <td align="center"><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22org.njarasoa.fijerena%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fmpilasy%2Ffijerena%22%2C%22author%22%3A%22mpilasy%22%2C%22name%22%3A%22Fijerena%20TV%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22fijerena-tv%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22appName%5C%22%3A%5C%22Fijerena%20TV%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/298b48a0c6088abbee3c0f0db2ede755fbeef9e6/assets/graphics/badge_obtainium.png" alt="Get the TV app with Obtainium" height="80"></a><br><b>TV app</b></td>
+  </tr>
+</table>
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Android](https://img.shields.io/badge/Android-11+-green.svg)](#requirements)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-blue.svg)](https://kotlinlang.org)
+[![Android 11+](https://img.shields.io/badge/Android-11+-green.svg)](#will-it-run-on-my-device)
+[![Latest release](https://img.shields.io/github/v/release/mpilasy/fijerena)](https://github.com/mpilasy/fijerena/releases/latest)
 
 </div>
 
 ---
 
-## What It Is
+## What You Get
 
-Fijerena is a free and open-source media player. One codebase builds two apps: a 10-foot app for
-Android TV driven by the remote's D-pad, and a touch app for phones. Both play Live TV, films and TV
-shows from the sources **you** add, with a TV guide, profiles, and optional live sync between your
-own devices.
+- **Live TV with a guide.** Browse channels while one plays beside the list. See what is on now and
+  next, and search the guide.
+- **Films and TV shows.** Resume where you stopped, Continue Watching, Up Next, and posters and
+  details from TMDB (with your own free TMDB key).
+- **A TV app made for the remote** and **a phone app made for touch.** Both come from the same
+  project and work the same way.
+- **Profiles for the whole household,** each with its own favourites, history and filters, and an
+  optional PIN.
+- **Sports.** Follow teams and leagues, see their next games and results, find the channels that
+  show them, and get a reminder before a game starts.
+- **Your devices in step.** Optional live sync keeps profiles, favourites and progress the same on
+  all your devices. It is end-to-end encrypted, through a sync server that you host yourself.
+- **Send to TV.** Pick a film, an episode or a channel on your phone and play it on your TV.
+- **English, French and Malagasy,** colour themes and looks for each profile.
 
-## What It Isn't
+## Before You Start: Bring Your Own Source
 
-**Fijerena does not provide or host any content.** It ships with no channels, playlists, films or
-subscriptions, and it doesn't recommend any. You need your own source: a Jellyfin server, an IPTV
-subscription you are entitled to use (Xtream Codes login or M3U playlist link), or a playlist you
-made yourself.
+**Fijerena does not provide or host any content.** It comes with no channels, playlists, films or
+subscriptions, and it does not recommend any. You need one of these:
 
-## Requirements
+- A **Jellyfin** server (films and TV shows).
+- An **IPTV service** that you have the right to use, with an **Xtream Codes** login (Live TV,
+  films, TV shows and the guide) or an **M3U playlist** link.
 
-- **Android 11 or later** (API 30), on both TV and phone. Many devices fall short of that: most
-  inexpensive Android TV boxes still on Android 9 or 10, and Amazon Fire TV devices on Fire OS 7
-  or older, can't install it. Fire TV devices on Vega OS (the Fire TV Stick 4K Select, and the Fire
-  TV Stick HD and 4K of 2026) are not Android and can't install it either.
-- **Memory:** 1.5 GB at least (the Chromecast with Google TV HD), 3 GB or more recommended. With
-  less than 3 GB the app runs, but Android stops it in the background sooner and a large guide
-  syncs more slowly.
-- **Storage:** 1.5 GB free at least, 3 GB or more recommended. The app is about 100 MB; the
-  catalogue and the guide take from a few hundred MB (one small source) to over 1 GB (several large
-  sources with a long guide).
-- **Network:** Wi-Fi 5 for HD. Ethernet or Wi-Fi 6 for 4K.
-- Tested on Android phones, NVIDIA Shield (Shield TV and Shield TV Pro), Chromecast with Google TV HD,
-  and Sony Bravia Android TVs.
-- An ARM device (arm64-v8a or armeabi-v7a), as almost every TV and phone is.
+You alone are responsible for the sources you add (see [Terms of Use](#terms-of-use)).
 
 ## Install
 
-Signed APKs are on this repository's [GitHub Releases](https://github.com/mpilasy/fijerena/releases)
-page; F-Droid is planned from version 1.0. Or build it from source (see [Building](#building)).
+There are two apps. Install the **TV app** on a TV or TV box, and the **phone app** on a phone.
 
-The TV app and the phone app are separate APKs: install the TV one on a TV and the phone one on a
-phone.
+### With Obtainium (recommended: it keeps the app up to date)
 
-## Features
+[Obtainium](https://github.com/ImranR98/Obtainium) installs apps from their GitHub releases and
+tells you when there is an update.
 
-The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the short version.
+- **On a phone:** install Obtainium, then tap the **Phone app** button above.
+- **On a TV:** install Obtainium on the TV, then add the app by hand: **Add App**, the address
+  `https://github.com/mpilasy/fijerena`, and in **APK filter** type `fijerena-tv`.
+  (On a phone, the **TV app** button does the same.)
 
-- **Sources:** Xtream Codes (Live TV, Movies, TV Shows, guide), Jellyfin (Movies, TV Shows, progress
-  sync, Quick Connect), and Remote M3U playlists (Live TV and the playlist's video entries). Several
-  sources can be configured; logins are stored encrypted on the device.
-- **Live TV:** a channel plays beside the list while you browse; a channel panel (category, Recent,
-  Favourites) in the preview and over the video in full screen; channel switching with Up/Down; a TV
-  Guide grid and guide search over XMLTV guides, refreshed in the background.
-- **Movies and TV Shows:** details screens, resume, Continue Watching and Up next, mark
-  watched/unwatched, and extra details from TMDB with your own free TMDB key, entered in Settings.
-- **Player:** Media3 (HLS, DASH, MPEG-TS) with the FFmpeg decoder extension; audio, subtitle and quality
-  selection remembered per item and per series, Stats for Nerds, network-aware buffering.
-- **Profiles and live sync:** a "Who's watching?" picker with per-profile favourites, history and
-  filters; profiles, favourites, progress and settings kept in step across your devices, end-to-end
-  encrypted, through a sync server you host yourself ([server/](server/README.md)); TVs join by QR
-  code from a phone.
-- **Sports:** follow teams and leagues; see their games with the channels of your sources that
-  show them, and set reminders (data from ESPN, the NHL and MLB; an admin can turn Sports off).
-- **More:** a Wishlist, New Episodes, catch-up (Xtream), Send to TV from a phone, and parental
-  controls.
-- **Settings:** colour themes and looks per profile, an optional profile PIN, English, French and
-  Malagasy, UI scale on TV, backup and restore to a file.
+### From GitHub
+
+1. Open the [latest release](https://github.com/mpilasy/fijerena/releases/latest).
+2. Download `fijerena-phone-….apk` for a phone, or `fijerena-tv-….apk` for a TV.
+3. Open the file and allow your browser or file manager to install apps when Android asks.
+
+On a TV, the easiest way is often a downloader app on the TV, or a file manager that opens the APK
+from a USB stick or a network folder.
+
+F-Droid is planned from version 1.0.
+
+## Getting Started
+
+1. Open Fijerena. The first time, it opens **Add Source**.
+2. Choose the type (**Xtream IPTV**, **Jellyfin** or **Remote M3U**) and enter the address and the
+   login from your provider. The app checks the login before it saves the source.
+3. Wait a moment while the app loads your channels, films and shows. A large guide can take a few
+   minutes the first time.
+4. Watch. On TV, use the arrow keys and OK. On the phone, tap.
+
+The **[User Guide](docs/USER_GUIDE.md)** shows the rest: profiles, the guide, sports, live sync,
+Send to TV and backups.
+
+## Will It Run on My Device?
+
+| | Minimum | Recommended |
+|---|---|---|
+| **Android** | 11 (TV and phone) | |
+| **Memory** | 1.5 GB | 3 GB or more |
+| **Free storage** | 1.5 GB | 3 GB or more |
+| **Network** | Wi-Fi 5 for HD | Ethernet or Wi-Fi 6 for 4K |
+
+- **Tested on:** Android phones, NVIDIA Shield TV and Shield TV Pro, Chromecast with Google TV HD,
+  and Sony Bravia Android TVs.
+- **Will not install on:** many low-cost TV boxes that still run Android 9 or 10, Amazon Fire TV
+  devices on Fire OS 7 or older, and Fire TV devices on Vega OS (they are not Android).
+- With less than 3 GB of memory the app works, but a large guide loads more slowly, and Android
+  closes the app in the background sooner.
+- The app is about 100 MB. Your catalogue and guide need from a few hundred MB to more than 1 GB.
 
 ## Privacy
 
-No analytics, no ads, no crash upload. Logins stay on the device, encrypted. The app talks only to
-the sources and guide links you add (and the stream and image addresses they list), to TMDB if you
-configure a key, to the ESPN, NHL and MLB sports services while Sports is on, to YouTube when you
-play a trailer, and to a sync server if you set one up. Sync data is end-to-end encrypted before it
-leaves the device. The camera is used only to scan a pairing QR code on the phone. Android backup
-and device transfer are off. To move to a new device, use Back Up to a File and Restore from a File
-(Settings → Sync & Backup), or live sync. The details are in [PRIVACY.md](PRIVACY.md).
+No analytics, no ads, no crash upload, and no account with us. Your logins stay on your device,
+encrypted. The app talks only to the sources you add, and to TMDB, the sports services or YouTube
+when you use those features. Live sync is end-to-end encrypted. The details are in
+[PRIVACY.md](PRIVACY.md).
 
 ## Terms of Use
 
 Fijerena provides no content and comes with no sources. You alone are responsible for the sources
 you add and for making sure that your use of them is legal where you are. The full terms are in
-[TERMS.md](TERMS.md) and in the app, Settings → About → About Fijerena → Terms of Use.
+[TERMS.md](TERMS.md), and in the app: Settings → About → About Fijerena → Terms of Use.
 
----
+## Help and More
+
+- **[User Guide](docs/USER_GUIDE.md):** how to use the apps.
+- **[Release notes](docs/RELEASE_NOTES.md):** what changed in each version.
+- **[Feature reference](docs/FEATURES.md):** every feature in full detail.
+- **[Sync server](server/README.md):** how to host your own live sync server.
+- **Found a problem or have an idea?** [Open an issue](https://github.com/mpilasy/fijerena/issues).
 
 ## For Developers
 
-### Building
-
-Prerequisites: **JDK 21**, the **Android SDK** (API level 37), and optionally Android Studio (a
-release that supports AGP 9.4).
-
-```bash
-git clone https://github.com/mpilasy/fijerena.git
-cd fijerena
-./gradlew assembleDebug            # both apps
-./gradlew :tv:assembleDebug        # TV only   (or scripts/build-tv.sh)
-./gradlew :mobile:assembleDebug    # phone only (or scripts/build-mobile.sh)
-```
-
-Outputs: `tv/build/outputs/apk/debug/tv-debug.apk` and
-`mobile/build/outputs/apk/debug/mobile-debug.apk`. Debug builds also include x86 and x86_64 so
-emulators run natively.
-
-Nothing is required to build. No release build carries a TMDB key. A debug build takes the key in
-`TMDB_API_KEY` in your `local.properties`, if you set one (see
-[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → Prerequisites). Otherwise, for TMDB details, enter your own
-key (v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
-Settings → Sources & Guide → Film and Show Details (TMDB). Without a key, nothing is sent to TMDB.
-
-`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs, signed when the
-`FIJERENA_*` signing variables or a `keystore.properties` provide a key, unsigned otherwise (see
-[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → Releasing).
-
-### Installing a Development Build
-
-The deploy scripts build the right APK and install it as an update:
-
-```bash
-scripts/deploy-tv-emulator.sh [serial]       # TV emulator
-scripts/deploy-mobile-emulator.sh [serial]   # phone emulator
-scripts/deploy-tv-ip.sh <ip>[:port] ...      # network TVs
-scripts/deploy-mobile-usb.sh [--debug] [serial]   # phone over USB
-```
-
-The TV app is `org.njarasoa.fijerena` and the phone app `org.njarasoa.fijerena.mobile`, so one
-APK never replaces the other. `adb install -r` can wipe the app's data without warning, so the
-real-device scripts back up user data first (`scripts/backup-app-data.sh`, which needs `sqlite3` on
-the host). `deploy-mobile-usb.sh` installs the non-debuggable `localRelease` build by default, which
-cannot be backed up; it gives a warning and installs. With `--debug` it installs the debug build, and
-backs up first while the installed build is debuggable.
-Device discovery, backup/restore, logs and debugging are in
-**[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
-
-### Checks
-
-```bash
-./gradlew ktlintCheck          # code style (ktlintFormat fixes it)
-./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
-./gradlew testDebugUnitTest    # unit tests
-scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
-scripts/check-init-order.py
-scripts/check-design-system.sh
-scripts/check-fixture-privacy.sh
-```
-
-GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml`
-(tests, lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests,
-when `server/` changes). `instrumented-tests.yml` runs nightly and by hand (the phone instrumented
-tests and the TV focus walk). `release.yml` builds and publishes the signed APKs when a
-`v<version>` tag is pushed.
-
-```bash
-# Instrumentation tests (requires a connected device/emulator).
-# WARNING: this uninstalls the app and wipes its data on EVERY connected device;
-# disconnect real devices first, or target one emulator with ANDROID_SERIAL.
-./gradlew connectedAndroidTest
-```
-
-### Tech Stack
-
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Language | Kotlin | 2.4.21 |
-| Build System | Gradle | 9.8.2 |
-| Build System | Android Gradle Plugin (AGP) | 9.4.1 |
-| UI Framework | Jetpack Compose | 2026.09.00 BOM (ui/foundation/runtime/animation 1.12.1) |
-| Material Design | Material 3 | 1.4.0 (`strictly`) |
-| TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.1.0 |
-| Video Player | Media3 (ExoPlayer), Jellyfin FFmpeg decoder | 1.9.0 |
-| Trailer Player | android-youtube-player (YouTube's embedded player in the system WebView, MIT) | 13.0.0 |
-| Networking | Ktor (OkHttp engine) | 3.6.0 |
-| Serialization | kotlinx.serialization | 1.12.0 |
-| Database | Room (FTS4) | 2.8.5 |
-| SQLite | Bundled requery build (FTS5 capable) | 3.49.0 |
-| Background Work | WorkManager | 2.12.0 |
-| Paging | androidx.paging | 3.5.3 |
-| Image Loading | Coil | 3.6.3 |
-| Navigation | Navigation Compose | 2.10.2 |
-| Coroutines | kotlinx.coroutines | 1.11.0 |
-| SMB Client | smbj (Hierynomus) | 0.15.0 |
-| Sync server | TypeScript on Cloudflare Workers / workerd | see `server/package.json` |
-
-`gradle/libs.versions.toml` is authoritative. Minimum SDK 30 (Android 11), target SDK 35, compile
-SDK 37; release ABIs arm64-v8a and armeabi-v7a.
-
-Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider types mapped to shared
-domain models, one `MediaRepository` per source, manual DI through `AppContainer`. See
-[docs/design.md](docs/design.md).
-
-### Project Structure
-
-```
-fijerena/
-├── mobile/                    # Phone app (touch UI)
-├── tv/                        # Android TV app (10-foot UI)
-├── core/
-│   ├── player/               # Media3 player, playback service, domain models, diagnostics (CrashLog, SafeMode, AppScopes)
-│   ├── network/              # Source implementations, API clients, Room databases, EPG pipeline, live sync client
-│   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings, AppContainer
-│   └── navigation/           # Type-safe Screen definitions
-├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
-├── scripts/                  # Build, deploy, backup/restore, CI checks, TV focus walks
-├── tools/                    # Development only: jellyfin-xtream and fake-xtream test panels
-├── docs/                     # Technical documentation
-├── gradle/                   # Version catalogue (libs.versions.toml)
-├── licenses/fonts/           # Licences of the bundled fonts
-└── CONTRIBUTING.md           # Coding rules and conventions
-```
-
-### Documentation
-
-- **[docs/FEATURES.md](docs/FEATURES.md)** - Feature reference, settings, themes
-- **[docs/design.md](docs/design.md)** - System design and architecture
-- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - Screens, navigation flow, TV focus handling
-- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Room databases and SharedPreferences
-- **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
-- **[docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
-- **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)** - Build, install, deploy, backup/restore, debugging, focus walks
-- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Changelog
-- **[server/README.md](server/README.md)** - Live sync server: develop, deploy, self-host, API
-
-### Contributing
-
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the coding rules (design tokens, TV focus, strings in English,
-   French and Malagasy, database migrations).
-2. Work on a branch.
-3. Keep TV screens D-pad navigable and inside the safe margins; use the design tokens.
-4. Make ktlint, Android Lint, the unit tests and the `scripts/check-*.sh` gates pass.
-5. Test on both TV and phone; include screenshots or recordings for UI changes.
-6. Write commit messages that say why, not only what.
-
-7. Sign off each commit (`git commit -s`) to certify the [Developer Certificate of Origin](DCO).
-
-By contributing you agree that your contribution is licensed under the project's licence (below).
+To build the apps, run the checks or contribute, see **[docs/DEVELOPING.md](docs/DEVELOPING.md)**
+and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

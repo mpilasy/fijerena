@@ -21,7 +21,7 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 ## Tech Stack
 
-`gradle/libs.versions.toml` is authoritative, and `README.md` → "Tech Stack" has the version table. This section gives only what the versions mean for the code:
+`gradle/libs.versions.toml` is authoritative, and `docs/DEVELOPING.md` → "Tech Stack" has the version table. This section gives only what the versions mean for the code:
 
 - Sources compile to Java 21.
 - Robolectric Compose tests use the v2 `createComposeRule` (`androidx.compose.ui.test.junit4.v2`): with the old rule and a dispatcher of its own, focus retries no longer run.
@@ -35,7 +35,7 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 ## Module Architecture
 
-The module tree is in `README.md` → "Project Structure".
+The module tree is in `docs/DEVELOPING.md` → "Project Structure".
 
 ### Critical Architectural Constraints
 
