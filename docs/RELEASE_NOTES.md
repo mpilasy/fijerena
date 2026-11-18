@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261118022450
 
 - **Custom User-Agent:** for an admin who is a Nerd, Settings → This Device has Use Default User-Agent. Turn it off and type a User-Agent: every call of the device sends it (streams, sources, images, guides, live sync, sports and trailers). On, every call sends the app's own. TV and phone.
 - **The app's own User-Agent:** every call (streams, sources, TMDB, images, guides, live sync and sports) now says `Fijerena/<version> (Android)` with the installed version, in place of `MediaPlayer/1.0` on streams and the network libraries' names elsewhere. If a provider refuses it, a Nerd can set another one in This Device. Jellyfin now gets the real version, not 1.0.0.
