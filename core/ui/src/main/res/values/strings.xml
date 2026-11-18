@@ -321,12 +321,12 @@
     <string name="watched_mark_many_failed">Couldn\'t update the watched marks</string>
 
     <!-- Login -->
-    <string name="login_app_name">fijerena</string>
+    <string name="login_app_name">fijerena™</string>
     <string name="browse_sign_in_ask_admin">This source isn\'t signed in yet. Ask an admin to sign it in.</string>
     <!-- A source's server refused the saved password: the pop-up over any screen. %1$s: the source's name. -->
     <string name="login_refused_title">%1$s Refused the Password</string>
-    <string name="login_refused_text">Fijerena can\'t sign in to %1$s with the saved password. Enter the password again. Devices that sync with this one get the new password too.</string>
-    <string name="login_refused_ask_admin">Fijerena can\'t sign in to %1$s with the saved password. Ask an admin to enter the password again.</string>
+    <string name="login_refused_text">Fijerena™ can\'t sign in to %1$s with the saved password. Enter the password again. Devices that sync with this one get the new password too.</string>
+    <string name="login_refused_ask_admin">Fijerena™ can\'t sign in to %1$s with the saved password. Ask an admin to enter the password again.</string>
     <string name="login_refused_enter_password">Enter Password</string>
     <string name="login_refused_not_now">Not Now</string>
     <string name="login_server_url_label">Server URL</string>
@@ -726,10 +726,10 @@
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">About</string>
     <!-- The no-content disclaimer: About now, the first-run welcome screen later (plan R4). -->
-    <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
+    <string name="app_disclaimer_no_content">Fijerena™ does not provide or host any content. It plays the sources you add.</string>
     <string name="app_copyright">© 2026 Orinasa Njarasoa</string>
     <string name="app_license_notice">Free software under the GNU General Public License, version 3 or later, with no warranty. Source code: github.com/mpilasy/fijerena</string>
-    <string name="about_title">About Fijerena</string>
+    <string name="about_title">About Fijerena™</string>
     <string name="about_desc">Version, source code, licences and credits</string>
     <string name="about_links_title">Links</string>
     <string name="about_source_code">Source Code</string>
@@ -755,16 +755,16 @@
     <string name="about_legal_title">Legal</string>
     <string name="about_credits_title">Credits</string>
     <string name="sports_attribution_title">Sports Data</string>
-    <string name="sports_attribution">Sports data comes from ESPN, NHL and MLB. Fijerena is not connected with them or endorsed by them.</string>
+    <string name="sports_attribution">Sports data comes from ESPN, NHL and MLB. Fijerena™ is not connected with them or endorsed by them.</string>
     <string name="terms_title">Terms of Use</string>
     <string name="terms_desc">Who is responsible for the sources you add</string>
     <string name="terms_updated">Last changed on 21 October 2026.</string>
-    <string name="terms_s1_title">What Fijerena Is</string>
-    <string name="terms_s1_body">Fijerena is a media player. It does not provide, host, sell or recommend any content, and it comes with no sources. It only plays the sources that you add: servers, playlists and guides from third parties.</string>
+    <string name="terms_s1_title">What Fijerena™ Is</string>
+    <string name="terms_s1_body">Fijerena™ is a media player. It does not provide, host, sell or recommend any content, and it comes with no sources. It only plays the sources that you add: servers, playlists and guides from third parties.</string>
     <string name="terms_s2_title">Your Sources Are Your Responsibility</string>
     <string name="terms_s2_body">You alone choose the sources that you add and the content that you play. You alone are responsible for making sure that each source, and your use of it, is legal where you are. This includes having the rights or licences for the content, and obeying copyright law, the terms of each provider, and every other law and rule that applies to you.</string>
     <string name="terms_s3_title">No Checks on Sources</string>
-    <string name="terms_s3_body">The developers and contributors of Fijerena do not check, monitor, approve, control or support any source or content. When a source works with the app, this does not mean that they approve it.</string>
+    <string name="terms_s3_body">The developers and contributors of Fijerena™ do not check, monitor, approve, control or support any source or content. When a source works with the app, this does not mean that they approve it.</string>
     <string name="terms_s4_title">No Warranty</string>
     <string name="terms_s4_body">The app is provided as is, with no warranty of any kind, as the GNU General Public License says.</string>
     <string name="terms_s5_title">No Liability</string>
@@ -775,7 +775,7 @@
     <string name="terms_s7_body">These terms do not limit the rights that the GNU General Public License gives you to use, study, share and change the app.</string>
     <string name="terms_s8_title">Changes</string>
     <string name="terms_s8_body">These terms can change. The version in the app that you use is the one that applies. If a translation is different from the English text, the English text applies.</string>
-    <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → About Fijerena → Terms of Use.</string>
+    <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → About Fijerena™ → Terms of Use.</string>
     <string name="settings_admin_title">Admin</string>
     <string name="settings_admin_desc">Lets this profile change sources, profiles, parental controls and backups</string>
     <string name="profile_nerd_title">Nerd</string>
@@ -791,7 +791,7 @@
     <string name="settings_diagnostics_show_details">Show details</string>
     <string name="settings_diagnostics_hide_details">Hide details</string>
     <string name="settings_diagnostics_copy">Copy</string>
-    <string name="settings_diagnostics_share_subject">Fijerena logs</string>
+    <string name="settings_diagnostics_share_subject">Fijerena™ logs</string>
     <string name="settings_diagnostics_share_no_app">No app on this device can share the log</string>
     <string name="settings_diagnostics_share_failed">Could not prepare the log to share</string>
     <!-- Device info (the device info screen plan) -->
@@ -940,7 +940,7 @@
     <string name="player_back_to_categories">Back to categories</string>
 
     <!-- TV Settings: About Card -->
-    <string name="settings_about_version_format">Fijerena v%1$s</string>
+    <string name="settings_about_version_format">Fijerena™ v%1$s</string>
 
     <!-- TV Settings: Export/Import Card -->
     <string name="settings_export_button">Back Up to a File</string>
@@ -1176,11 +1176,11 @@
     <string name="live_sync_joined">Joined the sync group</string>
     <string name="live_sync_handed_over">Sent. The other device joins in a moment.</string>
     <string name="sync_error_unreachable">Couldn\'t reach the sync server. Check the address and your connection.</string>
-    <string name="sync_error_not_a_server">That address isn\'t a Fijerena sync server.</string>
+    <string name="sync_error_not_a_server">That address isn\'t a Fijerena™ sync server.</string>
     <string name="sync_error_setup_secret">The setup secret is wrong.</string>
     <string name="sync_error_revoked">This device was removed from the sync group.</string>
     <string name="sync_error_code_expired">The code expired or was already used. Show a new one.</string>
-    <string name="sync_error_not_a_code">That isn\'t a Fijerena pairing code.</string>
+    <string name="sync_error_not_a_code">That isn\'t a Fijerena™ pairing code.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Play Next Episode Automatically</string>
     <string name="settings_autoplay_next_episode_desc">Near the end of an episode, the next one is offered and starts when it ends.</string>
@@ -1193,7 +1193,7 @@
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->
     <string name="safe_mode_title">Safe Mode</string>
-    <string name="safe_mode_message">Fijerena closed unexpectedly several times in a row, so it started in safe mode: live sync, guide updates and other startup work are paused. Your sources, favourites and watch history are untouched.</string>
+    <string name="safe_mode_message">Fijerena™ closed unexpectedly several times in a row, so it started in safe mode: live sync, guide updates and other startup work are paused. Your sources, favourites and watch history are untouched.</string>
     <string name="safe_mode_hint">Choose Continue to start normally. If it keeps closing, clear caches first.</string>
     <string name="safe_mode_continue">Continue</string>
     <string name="safe_mode_clear_caches">Clear caches</string>
@@ -1209,7 +1209,7 @@
     <string name="safe_mode_logs_sent">Logs sent to your sync group.</string>
     <string name="safe_mode_logs_send_failed">Couldn\'t send the logs.</string>
     <string name="newer_data_title">Data from a Newer Version</string>
-    <string name="newer_data_message">Your sources on this device were saved by a newer version of Fijerena (data version %1$d; this version reads up to %2$d). Install the newer version to keep using them.</string>
+    <string name="newer_data_message">Your sources on this device were saved by a newer version of Fijerena™ (data version %1$d; this version reads up to %2$d). Install the newer version to keep using them.</string>
     <string name="newer_data_hint">Or reset sources to use this version now: the sources and their settings are set aside as a backup and you start with none. Favourites and watch history stay on the device.</string>
     <string name="newer_data_reset">Reset sources</string>
     <string name="newer_data_reset_confirm_title">Reset Sources?</string>
@@ -1633,7 +1633,7 @@
     <string name="pin_enter_admin">Enter the PIN of an admin profile</string>
     <string name="pin_use_phone">Use my phone</string>
     <string name="pin_use_tv">Use the TV</string>
-    <string name="pin_phone_instructions">Open Fijerena on your phone and enter the PIN there.</string>
+    <string name="pin_phone_instructions">Open Fijerena™ on your phone and enter the PIN there.</string>
     <string name="pin_phone_waiting">Waiting for the phone</string>
     <string name="pin_phone_cancelled">Cancelled on the phone.</string>
     <string name="pin_phone_no_answer">No answer from the phone.</string>
@@ -1833,7 +1833,7 @@
     <string name="send_to_tv_action">Send to TV</string>
     <string name="send_to_tv_open">Open</string>
     <string name="send_to_tv_not_open">Not open</string>
-    <string name="send_to_tv_open_the_app">Open Fijerena on the TV</string>
+    <string name="send_to_tv_open_the_app">Open Fijerena™ on the TV</string>
     <string name="send_to_tv_needs_update">Needs an update</string>
     <string name="send_to_tv_no_tvs">No TV in this sync group</string>
     <string name="send_to_tv_sending">Sent to %1$s…</string>

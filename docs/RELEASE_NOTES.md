@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased
+
+- **Fijerena™:** the app's name shows with the trademark sign everywhere in the app (the launcher label, About, messages), in English, French and Malagasy. In Malagasy, About Fijerena is now "Mombamomba ny Fijerena™". TV and phone.
+- **Privacy policy and live sync:** PRIVACY.md now says clearly that live sync needs a sync server that you set up yourself, that the Fijerena project runs no sync server and never gets your sync data, and that sync data is encrypted end to end and cannot be tied to you.
+
 ## Version: 0.9.20261118004847
 
 - **Get the App in About:** Settings → About → About Fijerena has "Get it on" badges for Obtainium (the phone app and the TV app) and GitHub, as in the README. On the phone, an Obtainium badge shows its QR code and the GitHub badge opens the release page; on TV, each badge is a row that shows its QR code, for a phone to scan. Latest Release moved there from Links. TV and phone.

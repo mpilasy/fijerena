@@ -71,15 +71,17 @@ DOWN	About
 # Down at the end of the rail stays put.
 DOWN	About
 # About: About Fijerena, Device Info, Logs. OK on About Fijerena opens its page: the version row,
-# the licence notice, the four links, Terms of Use, Open-Source Licences and the two credits; Back
-# returns to its row.
+# the licence notice, the three links, the three Get the App badges, Terms of Use, Open-Source
+# Licences and the two credits; Back returns to its row.
 RIGHT	About Fijerena
-CENTER	Fijerena v
+CENTER	Fijerena™ v
 DOWN	© 2026
 DOWN	Source Code
-DOWN	Latest Release
 DOWN	Privacy Policy
 DOWN	Report a Problem
+DOWN	Phone App with Obtainium
+DOWN	TV App with Obtainium
+DOWN	Latest Release
 DOWN	Terms of Use
 DOWN	Open-Source Licences
 DOWN	Film and Show Data

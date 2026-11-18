@@ -27,7 +27,7 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
         walk.run(
             *toAdminSection("Sync & Backup"),
             down("About"),
-            right("About Fijerena / Version, source code, licences and credits"),
+            right("About Fijerena™ / Version, source code, licences and credits"),
             down("Device Info / This app and device"),
             down(logs),
             // The end of About: Down stays put.
