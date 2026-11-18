@@ -40,7 +40,7 @@ fun UserAgentSettingsRows(
         modifier = Modifier.padding(horizontal = Spacing.md),
         supportingText =
             if (useDefault) {
-                stringResource(R.string.settings_user_agent_default_desc_on, CustomUserAgent.STREAM, CustomUserAgent.app)
+                stringResource(R.string.settings_user_agent_default_desc_on, CustomUserAgent.app)
             } else {
                 stringResource(R.string.settings_user_agent_default_desc_off)
             },

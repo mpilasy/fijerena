@@ -43,8 +43,8 @@ class CustomUserAgentTest {
     }
 
     @Test
-    fun `without a custom User-Agent streams keep the player's and every other call sends the app's`() {
-        assertEquals(CustomUserAgent.STREAM, sentUserAgent(CustomUserAgent.STREAM))
+    fun `without a custom User-Agent every call sends the app's`() {
+        assertEquals(CustomUserAgent.app, sentUserAgent("MediaPlayer/1.0 (Linux; Android)"))
         assertEquals(CustomUserAgent.app, sentUserAgent("ktor-client"))
         assertEquals(CustomUserAgent.app, sentUserAgent(null))
     }

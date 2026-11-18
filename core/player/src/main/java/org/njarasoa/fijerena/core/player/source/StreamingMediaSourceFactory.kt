@@ -10,6 +10,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.network.CustomUserAgent
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
@@ -22,8 +23,6 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 class StreamingMediaSourceFactory(
     private val context: Context,
 ) {
-    private val userAgent = org.njarasoa.fijerena.core.player.network.CustomUserAgent.STREAM
-
     private val mediaSourceFactory = DefaultMediaSourceFactory(context)
 
     @Synchronized
@@ -44,7 +43,7 @@ class StreamingMediaSourceFactory(
 
         val allHeaders =
             buildMap {
-                put("User-Agent", userAgent)
+                put(CustomUserAgent.HEADER, CustomUserAgent.current)
                 putAll(headers)
             }
 
@@ -52,7 +51,7 @@ class StreamingMediaSourceFactory(
         val httpDataSourceFactory =
             OkHttpDataSource
                 .Factory(callFactory)
-                .setUserAgent(userAgent)
+                .setUserAgent(CustomUserAgent.current)
                 .setDefaultRequestProperties(allHeaders)
                 .setTransferListener(transferListener)
 

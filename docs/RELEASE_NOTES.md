@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- **Custom User-Agent:** for an admin who is a Nerd, Settings → This Device has Use Default User-Agent. Turn it off and type a User-Agent: every call of the device sends it (streams, sources, images, guides, live sync, sports and trailers). On, streams send the player's User-Agent and every other call sends the app's own. TV and phone.
-- **The app's own User-Agent:** calls to sources, TMDB, images, guides, live sync and sports now say `Fijerena/<version> (Android)` with the installed version, in place of the network libraries' names. Streams keep the player's. Jellyfin now gets the real version, not 1.0.0.
+- **Custom User-Agent:** for an admin who is a Nerd, Settings → This Device has Use Default User-Agent. Turn it off and type a User-Agent: every call of the device sends it (streams, sources, images, guides, live sync, sports and trailers). On, every call sends the app's own. TV and phone.
+- **The app's own User-Agent:** every call (streams, sources, TMDB, images, guides, live sync and sports) now says `Fijerena/<version> (Android)` with the installed version, in place of `MediaPlayer/1.0` on streams and the network libraries' names elsewhere. If a provider refuses it, a Nerd can set another one in This Device. Jellyfin now gets the real version, not 1.0.0.
 - **Fijerena™:** the app's name shows with the trademark sign everywhere in the app (the launcher label, About, messages), in English, French and Malagasy. In Malagasy, About Fijerena is now "Mombamomba ny Fijerena™". TV and phone.
 - **Privacy policy and live sync:** PRIVACY.md now says clearly that live sync needs a sync server that you set up yourself, that the Fijerena project runs no sync server and never gets your sync data, and that sync data is encrypted end to end and cannot be tied to you.
 

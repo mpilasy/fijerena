@@ -47,13 +47,17 @@ object NetworkModule {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
-            // Every call's User-Agent (CustomUserAgent): the app's, the streams' or a Nerd's own. Every
-            // client is built from this one, so streams, the Ktor clients, images, guides, sync and
-            // sports all get it.
+            // Every call's User-Agent (CustomUserAgent): the app's or a Nerd's own. Every client is
+            // built from this one, so streams, the Ktor clients, images, guides, sync and sports
+            // all get it.
             .addInterceptor { chain ->
-                val request = chain.request()
-                val agent = CustomUserAgent.forRequest(request.header(CustomUserAgent.HEADER))
-                chain.proceed(request.newBuilder().header(CustomUserAgent.HEADER, agent).build())
+                chain.proceed(
+                    chain
+                        .request()
+                        .newBuilder()
+                        .header(CustomUserAgent.HEADER, CustomUserAgent.current)
+                        .build(),
+                )
             }.build()
     }
 

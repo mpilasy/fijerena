@@ -4,17 +4,13 @@ import android.content.Context
 import java.net.URLConnection
 
 /**
- * The User-Agent of every call. By default the app's own, `Fijerena/<version> (Android)` ([app]),
- * except the player's streams, which keep [STREAM]: some IPTV servers and CDNs play only for a
- * known player. A Nerd can set one [value] for every call, streams included (Settings → This
- * Device). Every OkHttp client (through [NetworkModule.okHttpClient]'s interceptor) and every
- * `HttpURLConnection` ([apply]) send [forRequest]'s choice; the trailer's WebView sends [value]
- * only, else its own. `AppSettings` sets [value] at start and when the setting changes.
+ * The User-Agent of every call, streams included: the app's own, `Fijerena/<version> (Android)`
+ * ([app]), or the one a Nerd set ([value], Settings → This Device). Every OkHttp client (through
+ * [NetworkModule.okHttpClient]'s interceptor) and every `HttpURLConnection` ([apply]) send
+ * [current]; the trailer's WebView sends [value] only, else its own (YouTube's embedded player
+ * expects a browser). `AppSettings` sets [value] at start and when the setting changes.
  */
 object CustomUserAgent {
-    /** The streams' User-Agent while no custom one is set. */
-    const val STREAM = "MediaPlayer/1.0 (Linux; Android)"
-
     const val HEADER = "User-Agent"
     const val MAX_LENGTH = 300
 
@@ -40,12 +36,12 @@ object CustomUserAgent {
         value = text?.let(::clean)?.takeIf { it.isNotEmpty() }
     }
 
-    /** What a call sends, given the User-Agent it set itself ([own]): the custom one, the stream's, or the app's. */
-    fun forRequest(own: String?): String = value ?: if (own == STREAM) STREAM else app
+    /** What every call sends: the custom one, else the app's. */
+    val current: String get() = value ?: app
 
     /** Puts the User-Agent on [connection]: the custom one, else the app's. */
     fun apply(connection: URLConnection) {
-        connection.setRequestProperty(HEADER, value ?: app)
+        connection.setRequestProperty(HEADER, current)
     }
 
     /**

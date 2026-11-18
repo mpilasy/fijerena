@@ -1197,7 +1197,7 @@
     <string name="settings_show_clock_title">Afficher l’heure</string>
     <string name="settings_show_clock_desc">L’heure en haut à droite de chaque écran. Le lecteur l’affiche toujours.</string>
     <string name="settings_user_agent_default_title">Utiliser le User-Agent par défaut</string>
-    <string name="settings_user_agent_default_desc_on">Les flux envoient %1$s ; les autres appels envoient %2$s</string>
+    <string name="settings_user_agent_default_desc_on">Chaque appel envoie %1$s</string>
     <string name="settings_user_agent_default_desc_off">Chaque appel envoie le User-Agent personnalisé ci-dessous</string>
     <string name="settings_user_agent_custom_title">User-Agent personnalisé</string>
     <string name="settings_user_agent_custom_empty">Non défini : chaque appel envoie son User-Agent habituel</string>
