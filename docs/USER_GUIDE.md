@@ -160,7 +160,8 @@ Guide.
 
 Live sync keeps your profiles, sources, favourites and progress the same on all your devices. It
 is optional, and it needs a sync server that you host yourself (see [server/README.md](../server/README.md)).
-Everything is encrypted on your device before it is sent. The server cannot read it.
+The Fijerena project does not run a sync server and never gets your sync data. Everything is
+encrypted on your device before it is sent. The server cannot read it or tell who it belongs to.
 
 1. On one device: **Settings → Sync & Backup → Live Sync**, enter your server's address.
 2. To add a phone: scan the invitation QR code that a device of the group shows.

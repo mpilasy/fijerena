@@ -113,8 +113,9 @@ Send to TV and backups.
 
 No analytics, no ads, no crash upload, and no account with us. Your logins stay on your device,
 encrypted. The app talks only to the sources you add, and to TMDB, the sports services or YouTube
-when you use those features. Live sync is end-to-end encrypted. The details are in
-[PRIVACY.md](PRIVACY.md).
+when you use those features. Live sync is optional and uses a sync server that you set up
+yourself: the Fijerena project runs no sync server and never gets your sync data, which is
+encrypted end to end. The details are in [PRIVACY.md](PRIVACY.md).
 
 ## Terms of Use
 

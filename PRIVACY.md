@@ -16,7 +16,12 @@ ads, no crash reporting and no tracking. The app has no server of its own.
 | **TMDB** | Your TMDB key and the titles you open or search | Only if you enter your own TMDB key |
 | **ESPN, NHL, MLB** | The teams and leagues you follow | Only while Sports is on |
 | **YouTube** | The trailer you play | Only when you play a trailer |
-| **Your sync server** | Encrypted data that only your devices can read | Only if you set up live sync |
+| **Your own sync server** | Encrypted data that only your devices can read, with nothing that names you | Only if you set up live sync |
+
+**Live sync is optional, and the server is yours.** To use live sync, you set up your own sync
+server (see [server/README.md](server/README.md)). The Fijerena project does not run a sync server,
+does not offer one, and never gets your sync data. Everything is encrypted end to end on your
+devices before it is sent, and the server cannot read it or tell who it belongs to.
 
 The rest of this page gives the details.
 
@@ -65,14 +70,28 @@ The rest of this page gives the details.
   and the dates, and no key. Search's Teams type sends ESPN what you type (two characters or
   more). Team logos come from the addresses in those answers. A child profile never calls these
   services. Their own privacy policies apply to those requests.
-- **Live sync, only if you set it up.** Sources (logins included), guide sources, settings (the TMDB key included),
+- **Live sync, only if you set it up, to a server that you run.** Live sync is off until you
+  turn it on. It needs a sync server that you set up yourself (a Cloudflare Worker or a Docker
+  image, see [server/README.md](server/README.md)), or one that someone you trust runs for you.
+  The Fijerena project does not run a sync server, does not offer one, and has no access to any
+  sync server or to your sync data. We want nothing to do with it: the data goes only from your
+  devices to the server whose address you enter.
+
+  What is sent: sources (logins included), guide sources, settings (the TMDB key included),
   profiles, favourites, watch history, the Wishlist, the teams and leagues you follow, what each
-  device plays now, and what you send to a TV are sent to the sync server whose address you enter.
-  Every record is encrypted on the device with AES-256-GCM, with keys derived (HKDF-SHA256) from
-  an account key that only your devices hold; the server never sees it. The server sees what it
-  needs to work: your devices' names, when they connect, encrypted records, and when each record
-  changed or was deleted. Pairing a device passes the account key in a QR code shown on one of
-  your devices, or (for a TV) sealed to a one-time key, so the server can't read it.
+  device plays now, and what you send to a TV.
+
+  How it is protected: every record is encrypted on the device with AES-256-GCM, with keys
+  derived (HKDF-SHA256) from an account key that only your devices hold. The server never has
+  that key, so it cannot read any record. Record names, and the tags that group the records of
+  one source or one profile, are keyed hashes (HMAC), so the server cannot tell what a record is. There is no account with a name, an email
+  address or a password: a sync group is a random id. The server sees only what it needs to work:
+  random ids, each device's model name ("SHIELD Android TV"; the names you give your devices are
+  encrypted), when devices connect, and when each encrypted record changed or was deleted. As with
+  any server, it also sees the network address that each device connects from. Pairing a device
+  passes the account key in a QR code shown on one of your devices, or (for a TV) sealed to a
+  one-time key, so the server can't read it.
+
 - **Trailers, when you play one.** A YouTube trailer plays in the app, in YouTube's embedded player
   (Android's WebView), so YouTube receives the request. The app also asks YouTube's public oEmbed
   address for the video's title. A trailer link that is not on YouTube opens in the app that
