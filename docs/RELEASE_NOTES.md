@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261118032216
 
 - **GitHub badge in About:** on the phone, the GitHub badge now shows its QR code and link, as the Obtainium badges do, in place of opening the release page at once.
 
