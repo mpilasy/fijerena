@@ -21,6 +21,9 @@ object FieldKeyboards {
     /** Names of things (profile, source, device, guide): each word capitalised. */
     val Name = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
 
+    /** Free text kept exactly as typed, like a User-Agent: the text layout (with a space bar), no corrections. */
+    val Verbatim = KeyboardOptions(autoCorrectEnabled = false)
+
     /** Short codes shown in capitals, like a source's short name. */
     val Code = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false)
 

@@ -2,7 +2,9 @@ package org.njarasoa.fijerena.core.ui.trailer
 
 import android.content.res.Configuration
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebView
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +52,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.njarasoa.fijerena.core.player.network.CustomUserAgent
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -146,6 +149,7 @@ private suspend fun fetchYouTubeTitle(videoId: String): String? =
             try {
                 connection.connectTimeout = OEMBED_TIMEOUT_MS
                 connection.readTimeout = OEMBED_TIMEOUT_MS
+                CustomUserAgent.apply(connection)
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) return@runCatching null
                 oEmbedTitle(connection.inputStream.bufferedReader().use { it.readText() })
             } finally {
@@ -366,6 +370,8 @@ private fun TrailerDialog(
                         enableAutomaticInitialization = false
                         isFocusable = false
                         descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                        // A Nerd's custom User-Agent on the embedded player's calls too, before it loads.
+                        CustomUserAgent.value?.let { agent -> webViewsIn(this).forEach { it.settings.userAgentString = agent } }
                         lifecycle.addObserver(this)
                         val listener =
                             object : AbstractYouTubePlayerListener() {
@@ -458,3 +464,11 @@ private fun TrailerDialog(
         }
     }
 }
+
+/** Every WebView under [view]: the YouTube player keeps its own inside its view. */
+private fun webViewsIn(view: View): List<WebView> =
+    when (view) {
+        is WebView -> listOf(view)
+        is ViewGroup -> (0 until view.childCount).flatMap { webViewsIn(view.getChildAt(it)) }
+        else -> emptyList()
+    }

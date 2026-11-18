@@ -519,6 +519,8 @@ class ProviderViewModel(
                         connection.readTimeout = 15_000
                         connection.instanceFollowRedirects = true
                         connection.setRequestProperty("Accept-Encoding", "identity")
+                        org.njarasoa.fijerena.core.player.network.CustomUserAgent
+                            .apply(connection)
                         try {
                             val statusCode = connection.responseCode
                             if (statusCode !in 200..299) {

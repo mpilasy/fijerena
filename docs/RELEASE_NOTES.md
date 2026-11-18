@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Custom User-Agent:** for an admin who is a Nerd, Settings → This Device has Use Default User-Agent. Turn it off and type a User-Agent: every call of the device sends it (streams, sources, images, guides, live sync, sports and trailers). On, each call sends its usual one. TV and phone.
 - **Fijerena™:** the app's name shows with the trademark sign everywhere in the app (the launcher label, About, messages), in English, French and Malagasy. In Malagasy, About Fijerena is now "Mombamomba ny Fijerena™". TV and phone.
 - **Privacy policy and live sync:** PRIVACY.md now says clearly that live sync needs a sync server that you set up yourself, that the Fijerena project runs no sync server and never gets your sync data, and that sync data is encrypted end to end and cannot be tied to you.
 

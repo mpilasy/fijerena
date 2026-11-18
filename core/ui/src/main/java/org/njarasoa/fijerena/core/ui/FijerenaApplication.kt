@@ -121,6 +121,9 @@ class FijerenaApplication :
         }
         // Initialize network module for robust DNS resolution
         NetworkModule.init(this)
+        // A Nerd's custom User-Agent (This Device), before the first call: background work and
+        // the first screen may call at once.
+        AppSettings(this).applyUserAgent()
         // A remote Stop no player screen took (playback with nothing on screen to obey it).
         RemoteStopFallback.start(this)
         // Safe mode (the last launches kept crashing): none of the startup work below, any of which

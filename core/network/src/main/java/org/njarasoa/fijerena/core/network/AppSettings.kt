@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
 import org.njarasoa.fijerena.core.player.audio.NightAudioSetting
 import org.njarasoa.fijerena.core.player.domain.TrackLanguagePreference
+import org.njarasoa.fijerena.core.player.network.CustomUserAgent
 
 class AppSettings(
     private val context: Context,
@@ -97,6 +98,8 @@ class AppSettings(
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
+        private const val KEY_USE_DEFAULT_USER_AGENT = "use_default_user_agent"
+        private const val KEY_CUSTOM_USER_AGENT = "custom_user_agent"
         private const val KEY_MATCH_FRAME_RATE = "match_frame_rate"
         private const val KEY_KEY_INPUT_UNTIL = "key_input_until"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
@@ -1266,6 +1269,29 @@ class AppSettings(
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, false)
         set(value) = prefs.edit { putBoolean(KEY_SHOW_CLOCK, value) }
+
+    /**
+     * Use Default User-Agent (a Nerd's row in Admin → This Device): on, each call sends its own
+     * User-Agent; off, every call sends [customUserAgent] (when it is not blank). This device's:
+     * not per profile, not synced, not exported. Each change goes to [CustomUserAgent] at once.
+     */
+    var useDefaultUserAgent: Boolean
+        get() = prefs.getBoolean(KEY_USE_DEFAULT_USER_AGENT, true)
+        set(value) {
+            prefs.edit { putBoolean(KEY_USE_DEFAULT_USER_AGENT, value) }
+            applyUserAgent()
+        }
+
+    /** The User-Agent that every call sends while [useDefaultUserAgent] is off; kept when it is turned back on. */
+    var customUserAgent: String
+        get() = prefs.getString(KEY_CUSTOM_USER_AGENT, null).orEmpty()
+        set(value) {
+            prefs.edit { putString(KEY_CUSTOM_USER_AGENT, CustomUserAgent.clean(value)) }
+            applyUserAgent()
+        }
+
+    /** Hands the User-Agent setting to every call ([CustomUserAgent]): at start and on each change. */
+    fun applyUserAgent() = CustomUserAgent.set(customUserAgent.takeUnless { useDefaultUserAgent })
 
     /**
      * When Show Key Input ends (TV, Admin → This Device), in ms since the epoch; 0 or a time past:

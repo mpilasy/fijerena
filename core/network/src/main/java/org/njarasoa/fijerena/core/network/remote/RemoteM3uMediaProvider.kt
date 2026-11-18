@@ -115,6 +115,8 @@ class RemoteM3uMediaProvider(
                         readTimeout = READ_TIMEOUT_MS
                         instanceFollowRedirects = true
                         setRequestProperty("Accept-Encoding", "identity")
+                        org.njarasoa.fijerena.core.player.network.CustomUserAgent
+                            .apply(this)
                     }
 
                 val statusCode = connection.responseCode

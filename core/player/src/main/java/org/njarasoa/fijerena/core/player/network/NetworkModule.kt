@@ -46,7 +46,13 @@ object NetworkModule {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
-            .build()
+            // A Nerd's custom User-Agent on every call; every client is built from this one, so
+            // streams, the Ktor clients, images, guides and sync all get it.
+            .addInterceptor { chain ->
+                val custom = CustomUserAgent.value
+                val request = chain.request()
+                chain.proceed(if (custom == null) request else request.newBuilder().header(CustomUserAgent.HEADER, custom).build())
+            }.build()
     }
 
     /**

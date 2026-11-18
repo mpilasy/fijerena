@@ -47,6 +47,8 @@ data class SettingsUiState(
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val showClock: Boolean = false,
+    val useDefaultUserAgent: Boolean = true,
+    val customUserAgent: String = "",
     /** TV: the full-screen player asks for a display mode at the video's frame rate (the match frame rate plan). */
     val matchFrameRate: Boolean = false,
     /** Minutes before the start a reminder rings on this device (the Reminders page plan, RP-D11). */
@@ -86,6 +88,8 @@ class SettingsViewModel(
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 showClock = appSettings.showClock,
+                useDefaultUserAgent = appSettings.useDefaultUserAgent,
+                customUserAgent = appSettings.customUserAgent,
                 matchFrameRate = appSettings.matchFrameRate,
                 reminderLeadMinutes = appSettings.reminderLeadMinutes,
                 showTmdbCharts = appSettings.showTmdbCharts,
@@ -196,6 +200,20 @@ class SettingsViewModel(
         if (!appSettings.isAdmin) return
         appSettings.showClock = show
         _uiState.value = _uiState.value.copy(showClock = show)
+    }
+
+    /** Use Default User-Agent (a Nerd's row in This Device): on, each call's own; off, [updateCustomUserAgent]'s on every call. */
+    fun updateUseDefaultUserAgent(useDefault: Boolean) {
+        if (!appSettings.isAdmin || !appSettings.isNerdMode) return
+        appSettings.useDefaultUserAgent = useDefault
+        _uiState.value = _uiState.value.copy(useDefaultUserAgent = useDefault)
+    }
+
+    /** The User-Agent that every call sends while Use Default User-Agent is off; kept cleaned (printable ASCII). */
+    fun updateCustomUserAgent(text: String) {
+        if (!appSettings.isAdmin || !appSettings.isNerdMode) return
+        appSettings.customUserAgent = text
+        _uiState.value = _uiState.value.copy(customUserAgent = appSettings.customUserAgent)
     }
 
     fun updateMatchFrameRate(on: Boolean) {

@@ -1235,6 +1235,12 @@
     <string name="settings_watch_delay_row_title">Add a Channel to Recent After</string>
     <string name="settings_show_clock_title">Show Clock</string>
     <string name="settings_show_clock_desc">The time at the top right of every screen. The player always shows it.</string>
+    <string name="settings_user_agent_default_title">Use Default User-Agent</string>
+    <string name="settings_user_agent_default_desc_on">Each call sends its usual User-Agent: the player’s for streams, the network library’s for the rest</string>
+    <string name="settings_user_agent_default_desc_off">Every call sends the custom User-Agent below</string>
+    <string name="settings_user_agent_custom_title">Custom User-Agent</string>
+    <string name="settings_user_agent_custom_empty">Not set: each call sends its usual User-Agent</string>
+    <string name="settings_user_agent_custom_hint">Sent on every call: streams, sources, images, guides, sync, sports and trailers. Letters, digits and ASCII signs only.</string>
     <string name="settings_match_frame_rate_title">Match Frame Rate</string>
     <string name="settings_match_frame_rate_desc">The screen changes to the frame rate of the video. It goes black for a few seconds while it changes.</string>
     <string name="settings_key_input_title">Show Key Input</string>

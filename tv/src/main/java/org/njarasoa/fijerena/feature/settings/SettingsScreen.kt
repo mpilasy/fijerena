@@ -76,6 +76,7 @@ import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.feature.settings.components.ReminderTimePickerPane
 import org.njarasoa.fijerena.feature.settings.components.ReminderTimeSettingsRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
+import org.njarasoa.fijerena.feature.settings.components.UserAgentSettingsRows
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
@@ -768,6 +769,15 @@ fun SettingsScreen(
                                                                                     SettingPicker.KEY_INPUT.returnKey,
                                                                                 ),
                                                                         )
+                                                                        // A Nerd's only: what every call sends as its User-Agent.
+                                                                        if (uiState.isNerdMode) {
+                                                                            UserAgentSettingsRows(
+                                                                                useDefault = uiState.useDefaultUserAgent,
+                                                                                custom = uiState.customUserAgent,
+                                                                                onUseDefault = viewModel::updateUseDefaultUserAgent,
+                                                                                onCustom = viewModel::updateCustomUserAgent,
+                                                                            )
+                                                                        }
                                                                     }
                                                                 }
 

@@ -1196,6 +1196,12 @@
     <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Récents après</string>
     <string name="settings_show_clock_title">Afficher l’heure</string>
     <string name="settings_show_clock_desc">L’heure en haut à droite de chaque écran. Le lecteur l’affiche toujours.</string>
+    <string name="settings_user_agent_default_title">Utiliser le User-Agent par défaut</string>
+    <string name="settings_user_agent_default_desc_on">Chaque appel envoie son User-Agent habituel : celui du lecteur pour les flux, celui de la bibliothèque réseau pour le reste</string>
+    <string name="settings_user_agent_default_desc_off">Chaque appel envoie le User-Agent personnalisé ci-dessous</string>
+    <string name="settings_user_agent_custom_title">User-Agent personnalisé</string>
+    <string name="settings_user_agent_custom_empty">Non défini : chaque appel envoie son User-Agent habituel</string>
+    <string name="settings_user_agent_custom_hint">Envoyé à chaque appel : flux, sources, images, guides, synchronisation, sports et bandes-annonces. Lettres, chiffres et signes ASCII uniquement.</string>
     <string name="settings_match_frame_rate_title">Adapter la fréquence d’images</string>
     <string name="settings_match_frame_rate_desc">L’écran passe à la fréquence d’images de la vidéo. Il devient noir quelques secondes pendant le changement.</string>
     <string name="settings_key_input_title">Afficher les touches</string>

@@ -78,6 +78,7 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
+import org.njarasoa.fijerena.feature.settings.components.UserAgentSettingsRows
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.CinemaSwitchRow
@@ -469,6 +470,15 @@ fun MobileSettingsScreen(
                                 modifier = Modifier.padding(horizontal = Spacing.md),
                                 supportingText = nightAudioDescription(),
                             )
+                            // A Nerd's only: what every call sends as its User-Agent.
+                            if (uiState.isNerdMode) {
+                                UserAgentSettingsRows(
+                                    useDefault = uiState.useDefaultUserAgent,
+                                    custom = uiState.customUserAgent,
+                                    onUseDefault = viewModel::updateUseDefaultUserAgent,
+                                    onCustom = viewModel::updateCustomUserAgent,
+                                )
+                            }
                         }
                     }
 
