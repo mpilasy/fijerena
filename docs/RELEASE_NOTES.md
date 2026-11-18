@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261118035523
 
 - **Fijerena™ only where the name is the brand:** the trademark sign stays on the About title, the version line and the TV's brand title, and leaves the launcher label, messages and the terms. TV and phone.
 
