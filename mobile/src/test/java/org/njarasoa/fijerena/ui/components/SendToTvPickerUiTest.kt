@@ -42,7 +42,7 @@ class SendToTvPickerUiTest {
 
         rule.onNodeWithText("Living Room").assertExists()
         rule.onNodeWithText("Open · Malcolm X").assertExists()
-        rule.onNodeWithText("Not open · Open Fijerena™ on the TV").assertExists()
+        rule.onNodeWithText("Not open · Open Fijerena on the TV").assertExists()
 
         rule.onNodeWithText("Living Room").performClick()
         assertEquals(listOf(open), picked)

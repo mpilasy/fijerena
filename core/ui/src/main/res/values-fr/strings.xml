@@ -324,8 +324,8 @@
     <string name="login_app_name">fijerena™</string>
     <string name="browse_sign_in_ask_admin">Cette source n’est pas encore connectée. Demandez à un admin de la connecter.</string>
     <string name="login_refused_title">%1$s a refusé le mot de passe</string>
-    <string name="login_refused_text">Fijerena™ ne peut pas se connecter à %1$s avec le mot de passe enregistré. Saisissez à nouveau le mot de passe. Les appareils synchronisés avec celui-ci reçoivent aussi le nouveau mot de passe.</string>
-    <string name="login_refused_ask_admin">Fijerena™ ne peut pas se connecter à %1$s avec le mot de passe enregistré. Demandez à un admin de saisir à nouveau le mot de passe.</string>
+    <string name="login_refused_text">Fijerena ne peut pas se connecter à %1$s avec le mot de passe enregistré. Saisissez à nouveau le mot de passe. Les appareils synchronisés avec celui-ci reçoivent aussi le nouveau mot de passe.</string>
+    <string name="login_refused_ask_admin">Fijerena ne peut pas se connecter à %1$s avec le mot de passe enregistré. Demandez à un admin de saisir à nouveau le mot de passe.</string>
     <string name="login_refused_enter_password">Saisir le mot de passe</string>
     <string name="login_refused_not_now">Plus tard</string>
     <string name="login_server_url_label">URL du serveur</string>
@@ -703,7 +703,7 @@
 
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">À propos</string>
-    <string name="app_disclaimer_no_content">Fijerena™ ne fournit ni n’héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
+    <string name="app_disclaimer_no_content">Fijerena ne fournit ni n’héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
     <string name="app_copyright">© 2026 Orinasa Njarasoa</string>
     <string name="app_license_notice">Logiciel libre sous licence publique générale GNU, version 3 ou ultérieure, sans garantie. Code source : github.com/mpilasy/fijerena</string>
     <string name="about_title">À propos de Fijerena™</string>
@@ -732,16 +732,16 @@
     <string name="about_legal_title">Mentions légales</string>
     <string name="about_credits_title">Crédits</string>
     <string name="sports_attribution_title">Données sportives</string>
-    <string name="sports_attribution">Les données sportives viennent d’ESPN, de la NHL et de la MLB. Fijerena™ n’a aucun lien avec eux et n’est pas approuvé par eux.</string>
+    <string name="sports_attribution">Les données sportives viennent d’ESPN, de la NHL et de la MLB. Fijerena n’a aucun lien avec eux et n’est pas approuvé par eux.</string>
     <string name="terms_title">Conditions d’utilisation</string>
     <string name="terms_desc">Qui est responsable des sources que vous ajoutez</string>
     <string name="terms_updated">Dernière modification le 21 octobre 2026.</string>
-    <string name="terms_s1_title">Ce qu’est Fijerena™</string>
-    <string name="terms_s1_body">Fijerena™ est un lecteur multimédia. Il ne fournit, n’héberge, ne vend ni ne recommande aucun contenu, et il est livré sans aucune source. Il lit seulement les sources que vous ajoutez : serveurs, listes de lecture et guides de tiers.</string>
+    <string name="terms_s1_title">Ce qu’est Fijerena</string>
+    <string name="terms_s1_body">Fijerena est un lecteur multimédia. Il ne fournit, n’héberge, ne vend ni ne recommande aucun contenu, et il est livré sans aucune source. Il lit seulement les sources que vous ajoutez : serveurs, listes de lecture et guides de tiers.</string>
     <string name="terms_s2_title">Vos sources relèvent de votre responsabilité</string>
     <string name="terms_s2_body">Vous seul choisissez les sources que vous ajoutez et les contenus que vous lisez. Vous seul êtes responsable de vous assurer que chaque source, et l’usage que vous en faites, est légal là où vous êtes. Cela comprend le fait de détenir les droits ou licences pour les contenus, et de respecter le droit d’auteur, les conditions de chaque fournisseur et toute autre loi et règle qui s’applique à vous.</string>
     <string name="terms_s3_title">Aucun contrôle des sources</string>
-    <string name="terms_s3_body">Les développeurs et contributeurs de Fijerena™ ne vérifient, ne surveillent, n’approuvent, ne contrôlent ni ne prennent en charge aucune source ni aucun contenu. Qu’une source fonctionne avec l’application ne signifie pas qu’ils l’approuvent.</string>
+    <string name="terms_s3_body">Les développeurs et contributeurs de Fijerena ne vérifient, ne surveillent, n’approuvent, ne contrôlent ni ne prennent en charge aucune source ni aucun contenu. Qu’une source fonctionne avec l’application ne signifie pas qu’ils l’approuvent.</string>
     <string name="terms_s4_title">Aucune garantie</string>
     <string name="terms_s4_body">L’application est fournie telle quelle, sans aucune garantie, comme le prévoit la licence publique générale GNU.</string>
     <string name="terms_s5_title">Aucune responsabilité</string>
@@ -768,7 +768,7 @@
     <string name="settings_diagnostics_show_details">Afficher les détails</string>
     <string name="settings_diagnostics_hide_details">Masquer les détails</string>
     <string name="settings_diagnostics_copy">Copier</string>
-    <string name="settings_diagnostics_share_subject">Journaux de Fijerena™</string>
+    <string name="settings_diagnostics_share_subject">Journaux de Fijerena</string>
     <string name="settings_diagnostics_share_no_app">Aucune application de cet appareil ne peut partager le journal</string>
     <string name="settings_diagnostics_share_failed">Impossible de préparer le journal à partager</string>
     <!-- Device info (the device info screen plan) -->
@@ -1137,11 +1137,11 @@
     <string name="live_sync_joined">Groupe de synchronisation rejoint</string>
     <string name="live_sync_handed_over">Envoyé. L’autre appareil rejoint le groupe dans un instant.</string>
     <string name="sync_error_unreachable">Impossible de joindre le serveur de synchronisation. Vérifiez l’adresse et votre connexion.</string>
-    <string name="sync_error_not_a_server">Cette adresse n’est pas un serveur de synchronisation Fijerena™.</string>
+    <string name="sync_error_not_a_server">Cette adresse n’est pas un serveur de synchronisation Fijerena.</string>
     <string name="sync_error_setup_secret">Le secret de configuration est incorrect.</string>
     <string name="sync_error_revoked">Cet appareil a été retiré du groupe de synchronisation.</string>
     <string name="sync_error_code_expired">Le code a expiré ou a déjà été utilisé. Affichez-en un nouveau.</string>
-    <string name="sync_error_not_a_code">Ce n’est pas un code d’appairage Fijerena™.</string>
+    <string name="sync_error_not_a_code">Ce n’est pas un code d’appairage Fijerena.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Lire l’épisode suivant automatiquement</string>
     <string name="settings_autoplay_next_episode_desc">Vers la fin d’un épisode, le suivant est proposé et démarre quand il se termine.</string>
@@ -1154,7 +1154,7 @@
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->
     <string name="safe_mode_title">Mode sans échec</string>
-    <string name="safe_mode_message">Fijerena™ s’est fermée de manière inattendue plusieurs fois de suite et a donc démarré en mode sans échec : la synchronisation en direct, les mises à jour du guide et les autres tâches de démarrage sont en pause. Vos sources, vos favoris et votre historique de visionnage sont intacts.</string>
+    <string name="safe_mode_message">Fijerena s’est fermée de manière inattendue plusieurs fois de suite et a donc démarré en mode sans échec : la synchronisation en direct, les mises à jour du guide et les autres tâches de démarrage sont en pause. Vos sources, vos favoris et votre historique de visionnage sont intacts.</string>
     <string name="safe_mode_hint">Choisissez Continuer pour démarrer normalement. Si l’application se ferme encore, videz d’abord les caches.</string>
     <string name="safe_mode_continue">Continuer</string>
     <string name="safe_mode_clear_caches">Vider les caches</string>
@@ -1170,7 +1170,7 @@
     <string name="safe_mode_logs_sent">Journaux envoyés à votre groupe de synchronisation.</string>
     <string name="safe_mode_logs_send_failed">Impossible d’envoyer les journaux.</string>
     <string name="newer_data_title">Données d’une version plus récente</string>
-    <string name="newer_data_message">Vos sources sur cet appareil ont été enregistrées par une version plus récente de Fijerena™ (version des données %1$d ; cette version lit jusqu’à %2$d). Installez la version plus récente pour continuer à les utiliser.</string>
+    <string name="newer_data_message">Vos sources sur cet appareil ont été enregistrées par une version plus récente de Fijerena (version des données %1$d ; cette version lit jusqu’à %2$d). Installez la version plus récente pour continuer à les utiliser.</string>
     <string name="newer_data_hint">Ou réinitialisez les sources pour utiliser cette version maintenant : les sources et leurs réglages sont mis de côté en sauvegarde et vous repartez sans aucune. Les favoris et l’historique de visionnage restent sur l’appareil.</string>
     <string name="newer_data_reset">Réinitialiser les sources</string>
     <string name="newer_data_reset_confirm_title">Réinitialiser les sources ?</string>
@@ -1642,7 +1642,7 @@
     <string name="pin_enter_admin">Saisissez le code PIN d’un profil admin</string>
     <string name="pin_use_phone">Utiliser mon téléphone</string>
     <string name="pin_use_tv">Utiliser la télé</string>
-    <string name="pin_phone_instructions">Ouvrez Fijerena™ sur votre téléphone et saisissez-y le code PIN.</string>
+    <string name="pin_phone_instructions">Ouvrez Fijerena sur votre téléphone et saisissez-y le code PIN.</string>
     <string name="pin_phone_waiting">En attente du téléphone</string>
     <string name="pin_phone_cancelled">Annulé sur le téléphone.</string>
     <string name="pin_phone_no_answer">Pas de réponse du téléphone.</string>
@@ -1845,7 +1845,7 @@
     <string name="send_to_tv_action">Envoyer à la TV</string>
     <string name="send_to_tv_open">Ouverte</string>
     <string name="send_to_tv_not_open">Fermée</string>
-    <string name="send_to_tv_open_the_app">Ouvrez Fijerena™ sur la TV</string>
+    <string name="send_to_tv_open_the_app">Ouvrez Fijerena sur la TV</string>
     <string name="send_to_tv_needs_update">Mise à jour nécessaire</string>
     <string name="send_to_tv_no_tvs">Aucune TV dans ce groupe de synchronisation</string>
     <string name="send_to_tv_sending">Envoyé à %1$s…</string>

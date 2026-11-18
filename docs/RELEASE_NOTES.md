@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Fijerena™ only where the name is the brand:** the trademark sign stays on the About title, the version line and the TV's brand title, and leaves the launcher label, messages and the terms. TV and phone.
+
 ## Version: 0.9.20261118032216
 
 - **GitHub badge in About:** on the phone, the GitHub badge now shows its QR code and link, as the Obtainium badges do, in place of opening the release page at once.

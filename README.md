@@ -1,4 +1,4 @@
-# Fijerena
+# Fijerena™
 
 <div align="center">
 

@@ -2,22 +2,22 @@
 
 Last changed on 21 October 2026.
 
-The app shows these terms in Settings → About → About Fijerena™ → Terms of Use, in English, French and Malagasy
+The app shows these terms in Settings → About → About Fijerena → Terms of Use, in English, French and Malagasy
 (`core/ui/src/main/res/values*/strings.xml`, `terms_*`). Change both together.
 
 ## In Plain Words
 
 This short summary is not part of the terms. The terms below apply.
 
-- Fijerena™ is a player. It comes with no content and no sources.
+- Fijerena is a player. It comes with no content and no sources.
 - You choose your sources. Make sure you have the right to use them where you live.
 - We do not check, approve or support any source.
 - The app comes as it is, with no warranty.
 - The GPL licence still gives you the right to use, study, share and change the app.
 
-## What Fijerena™ Is
+## What Fijerena Is
 
-Fijerena™ is a media player. It does not provide, host, sell or recommend any content, and it comes
+Fijerena is a media player. It does not provide, host, sell or recommend any content, and it comes
 with no sources. It only plays the sources that you add: servers, playlists and guides from third
 parties.
 
@@ -30,7 +30,7 @@ every other law and rule that applies to you.
 
 ## No Checks on Sources
 
-The developers and contributors of Fijerena™ do not check, monitor, approve, control or support any
+The developers and contributors of Fijerena do not check, monitor, approve, control or support any
 source or content. When a source works with the app, this does not mean that they approve it.
 
 ## No Warranty
