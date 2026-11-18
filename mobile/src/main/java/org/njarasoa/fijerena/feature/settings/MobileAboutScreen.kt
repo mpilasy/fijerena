@@ -55,7 +55,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * Settings → About → About Fijerena on the phone: the version (7 taps turn Admin on), the
  * no-content notice, the copyright and licence notice and the build; the project's links, each
  * opening its QR code and an Open in Browser button; Get the App: the Obtainium badges of the phone
- * and TV apps (their QR code) and the GitHub badge (the release page at once); Terms of Use and
+ * and TV apps and the GitHub badge, each opening its QR code and link the same way; Terms of Use and
  * Open-Source Licences; the TMDB and sports data credits.
  */
 @Composable
@@ -110,16 +110,14 @@ fun MobileAboutScreen(
             }
             item {
                 SettingsGroupHeader(stringResource(R.string.about_get_app_title))
-                // The badges, as in the README: Obtainium shows its QR code, for another phone to
-                // scan; GitHub opens the release page.
+                // The badges, as in the README: each shows its QR code, for another phone to scan,
+                // and its link (Open in Browser).
                 Row(
                     modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                 ) {
                     AppDownload.entries.forEach { download ->
-                        AppBadge(download) {
-                            if (download == AppDownload.GITHUB) openExternalUrl(context, download.url) else shownLink = download
-                        }
+                        AppBadge(download) { shownLink = download }
                     }
                 }
             }

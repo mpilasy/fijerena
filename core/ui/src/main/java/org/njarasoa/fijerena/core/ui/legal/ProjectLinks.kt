@@ -35,8 +35,7 @@ enum class ProjectLink(
 /**
  * Settings → About → About Fijerena → Get the App: the "Get it on" badges, to pass the apps to
  * another person, as in the README. An Obtainium badge adds the phone app or the TV app with an
- * APK filter, since each release has both APKs. The phone opens GitHub's page at once; every other
- * badge shows its QR code first.
+ * APK filter, since each release has both APKs. Every badge shows its QR code and its link.
  */
 enum class AppDownload(
     @DrawableRes val badge: Int,

@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **GitHub badge in About:** on the phone, the GitHub badge now shows its QR code and link, as the Obtainium badges do, in place of opening the release page at once.
+
 ## Version: 0.9.20261118022450
 
 - **Custom User-Agent:** for an admin who is a Nerd, Settings → This Device has Use Default User-Agent. Turn it off and type a User-Agent: every call of the device sends it (streams, sources, images, guides, live sync, sports and trailers). On, every call sends the app's own. TV and phone.
