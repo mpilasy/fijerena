@@ -901,7 +901,7 @@
     <string name="settings_show_clock_title">Asehoy ny famataranandro</string>
     <string name="settings_show_clock_desc">Ny ora eo ambony ankavanan\'ny efijery rehetra. Asehon\'ny mpamaky foana izany.</string>
     <string name="settings_user_agent_default_title">Ampiasao ny User-Agent mahazatra</string>
-    <string name="settings_user_agent_default_desc_on">Samy mandefa ny User-Agent mahazatra azy ny fangatahana tsirairay: an\'ny mpamaky ho an\'ny fandefasana, an\'ny tranomboky tambajotra ho an\'ny sisa</string>
+    <string name="settings_user_agent_default_desc_on">Mandefa %1$s ny fandefasana; mandefa %2$s ny fangatahana hafa rehetra</string>
     <string name="settings_user_agent_default_desc_off">Mandefa ny User-Agent manokana etsy ambany ny fangatahana rehetra</string>
     <string name="settings_user_agent_custom_title">User-Agent manokana</string>
     <string name="settings_user_agent_custom_empty">Tsy voafaritra: samy mandefa ny User-Agent mahazatra azy ny fangatahana tsirairay</string>

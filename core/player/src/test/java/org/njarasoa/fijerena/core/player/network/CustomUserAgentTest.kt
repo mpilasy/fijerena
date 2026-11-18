@@ -43,9 +43,16 @@ class CustomUserAgentTest {
     }
 
     @Test
-    fun `without a custom User-Agent each call keeps its own`() {
-        assertEquals("MediaPlayer/1.0 (Linux; Android)", sentUserAgent("MediaPlayer/1.0 (Linux; Android)"))
-        assertNull(sentUserAgent(null))
+    fun `without a custom User-Agent streams keep the player's and every other call sends the app's`() {
+        assertEquals(CustomUserAgent.STREAM, sentUserAgent(CustomUserAgent.STREAM))
+        assertEquals(CustomUserAgent.app, sentUserAgent("ktor-client"))
+        assertEquals(CustomUserAgent.app, sentUserAgent(null))
+    }
+
+    @Test
+    fun `the app's User-Agent names the installed version`() {
+        assertEquals("Fijerena/0.9.20261118004847 (Android)", CustomUserAgent.appUserAgent("0.9.20261118004847"))
+        assertEquals("Fijerena (Android)", CustomUserAgent.appUserAgent(null))
     }
 
     @Test
@@ -56,11 +63,14 @@ class CustomUserAgentTest {
     }
 
     @Test
-    fun `a URL connection gets it too`() {
+    fun `a URL connection sends the app's, or the custom one`() {
+        val plain = URL("http://192.0.2.1/").openConnection()
+        CustomUserAgent.apply(plain)
+        assertEquals(CustomUserAgent.app, plain.getRequestProperty("User-Agent"))
         CustomUserAgent.set("MyPlayer/2.0")
-        val connection = URL("http://192.0.2.1/").openConnection()
-        CustomUserAgent.apply(connection)
-        assertEquals("MyPlayer/2.0", connection.getRequestProperty("User-Agent"))
+        val custom = URL("http://192.0.2.1/").openConnection()
+        CustomUserAgent.apply(custom)
+        assertEquals("MyPlayer/2.0", custom.getRequestProperty("User-Agent"))
     }
 
     @Test

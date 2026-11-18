@@ -4,11 +4,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.compression.ContentEncoding
-import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import org.njarasoa.fijerena.core.player.diagnostics.recordFailedCalls
 import java.io.IOException
@@ -23,7 +20,7 @@ fun interface SportsTransport {
 /**
  * The HTTP client of the sports sources (the sports teams plan → Gate): Ktor on
  * `NetworkModule.okHttpClient` as `TmdbApiService`, its own dispatcher and connection pool, a
- * deadline per call, gzip, and an app User-Agent. None of the sources needs a key. A non-2xx
+ * deadline per call and gzip; the app's User-Agent comes from `CustomUserAgent`. None of the sources needs a key. A non-2xx
  * answer throws.
  */
 class KtorSportsTransport : SportsTransport {
@@ -44,7 +41,6 @@ class KtorSportsTransport : SportsTransport {
                 gzip()
                 deflate()
             }
-            defaultRequest { header(HttpHeaders.UserAgent, USER_AGENT) }
         }
     }
 
@@ -57,7 +53,6 @@ class KtorSportsTransport : SportsTransport {
     companion object {
         // The largest answers (an NHL season) are about 1 MB.
         private const val REQUEST_TIMEOUT_MS = 30_000L
-        private const val USER_AGENT = "Fijerena (Android)"
     }
 }
 

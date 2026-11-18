@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 class StreamingMediaSourceFactory(
     private val context: Context,
 ) {
-    private val userAgent = "MediaPlayer/1.0 (Linux; Android)"
+    private val userAgent = org.njarasoa.fijerena.core.player.network.CustomUserAgent.STREAM
 
     private val mediaSourceFactory = DefaultMediaSourceFactory(context)
 

@@ -53,7 +53,7 @@ class JellyfinApiService(
                 append("Client=\"Fijerena\", ")
                 append("Device=\"Android\", ")
                 append("DeviceId=\"$deviceId\", ")
-                append("Version=\"1.0.0\"")
+                append("Version=\"${org.njarasoa.fijerena.core.player.network.CustomUserAgent.appVersion}\"")
                 accessToken?.let { append(", Token=\"$it\"") }
             }
 

@@ -1236,7 +1236,7 @@
     <string name="settings_show_clock_title">Show Clock</string>
     <string name="settings_show_clock_desc">The time at the top right of every screen. The player always shows it.</string>
     <string name="settings_user_agent_default_title">Use Default User-Agent</string>
-    <string name="settings_user_agent_default_desc_on">Each call sends its usual User-Agent: the player’s for streams, the network library’s for the rest</string>
+    <string name="settings_user_agent_default_desc_on">Streams send %1$s; every other call sends %2$s</string>
     <string name="settings_user_agent_default_desc_off">Every call sends the custom User-Agent below</string>
     <string name="settings_user_agent_custom_title">Custom User-Agent</string>
     <string name="settings_user_agent_custom_empty">Not set: each call sends its usual User-Agent</string>

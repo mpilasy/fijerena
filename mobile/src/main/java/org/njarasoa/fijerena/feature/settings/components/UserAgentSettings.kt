@@ -39,9 +39,11 @@ fun UserAgentSettingsRows(
         label = stringResource(R.string.settings_user_agent_default_title),
         modifier = Modifier.padding(horizontal = Spacing.md),
         supportingText =
-            stringResource(
-                if (useDefault) R.string.settings_user_agent_default_desc_on else R.string.settings_user_agent_default_desc_off,
-            ),
+            if (useDefault) {
+                stringResource(R.string.settings_user_agent_default_desc_on, CustomUserAgent.STREAM, CustomUserAgent.app)
+            } else {
+                stringResource(R.string.settings_user_agent_default_desc_off)
+            },
     )
     if (!useDefault) {
         SettingsListRow(
