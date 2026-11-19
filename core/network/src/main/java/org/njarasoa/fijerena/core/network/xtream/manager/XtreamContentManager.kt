@@ -1371,12 +1371,12 @@ class XtreamContentManager(
         val words =
             query
                 .trim()
-                .split("\\s+".toRegex())
+                .split(WHITESPACE)
                 .filter { it.isNotBlank() && !it.startsWith("-") }
         // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
         val ftsQuery =
             words
-                .map { it.replace(Regex("[*\"'()\\^]"), "") }
+                .map { it.replace(FTS_SYNTAX_CHARS, "") }
                 .filter { it.isNotBlank() }
                 .joinToString(" ") { "$it*" }
         return ftsQuery
@@ -1393,3 +1393,7 @@ class XtreamContentManager(
                 .mapKeys { (seriesId, _) -> seriesId.toString() }
         }
 }
+
+// Built once: formatFtsQuery runs on each search query.
+private val WHITESPACE = Regex("\\s+")
+private val FTS_SYNTAX_CHARS = Regex("[*\"'()\\^]")
