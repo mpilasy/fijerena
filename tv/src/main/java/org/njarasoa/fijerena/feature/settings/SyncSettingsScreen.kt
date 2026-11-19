@@ -149,6 +149,15 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             moveFocus.requestFocusWithRetry()
         }
     }
+    // The Move dialog started a move: focus goes back to Move to another server (see MoveStartFocusEffect).
+    var moveStartedHere by remember { mutableStateOf(false) }
+    MoveStartFocusEffect(
+        dialogOpen = moveDialog,
+        move = moveUi.move,
+        startedHere = moveStartedHere,
+        moveFocus = moveFocus,
+        onEnded = { moveStartedHere = false },
+    )
     // Cancel move goes when Cancel Move starts: focus on it moves to Move to another server.
     val showCancelNow by rememberUpdatedState(moveUi.showCancel)
     var cancelFocused by remember { mutableStateOf(false) }
@@ -330,6 +339,7 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             onCheck = viewModel::checkMoveTarget,
             onMove = { secret ->
                 viewModel.startMove(secret)
+                moveStartedHere = true
                 moveDialog = false
             },
             onDismiss = {
@@ -665,6 +675,28 @@ internal fun oldServerAction(moveUi: SyncSettingsViewModel.MoveUi): OldServerAct
         moveUi.oldServerState is OldServerState.Unreachable || moveUi.oldServerState == OldServerState.NoPurge -> OldServerAction.FORGET
         else -> OldServerAction.NONE
     }
+
+/**
+ * After the Move dialog started a move ([startedHere]): focus goes to Move to another server when
+ * the dialog closes, and again when the move ends, because the Old Server row then comes in above
+ * it. Before, focus stayed on nothing after a move and the next Down went to Leave. [onEnded] runs
+ * when the move is done or stopped.
+ */
+@Composable
+internal fun MoveStartFocusEffect(
+    dialogOpen: Boolean,
+    move: MoveState,
+    startedHere: Boolean,
+    moveFocus: FocusRequester,
+    onEnded: () -> Unit,
+) {
+    val ended = move is MoveState.Done || move is MoveState.Failed
+    LaunchedEffect(dialogOpen, move::class, startedHere) {
+        if (dialogOpen || !startedHere) return@LaunchedEffect
+        moveFocus.requestFocusWithRetry()
+        if (ended) onEnded()
+    }
+}
 
 /**
  * Move to another server, with Cancel move to its right while a move runs or stopped, and under them

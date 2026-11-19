@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -661,7 +663,9 @@ internal fun OldServerPanel(
 
 /**
  * Move to Another Server: the new address, checked first; then the setup secret when that server
- * asks for one, and Move. The move then shows its progress under the button on the screen.
+ * asks for one, and Move. The move then shows its progress under the button on the screen. The
+ * keyboard's Go key on the address does Check server; the body scrolls when the keyboard leaves
+ * little room.
  */
 @Composable
 private fun MoveDialog(
@@ -672,11 +676,15 @@ private fun MoveDialog(
     onDismiss: () -> Unit,
 ) {
     var setupSecret by remember { mutableStateOf("") }
+    val canCheck = moveUi.targetUrl.isNotBlank() && !moveUi.checking
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.live_sync_move_title),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody),
+            ) {
                 CinemaText(stringResource(R.string.live_sync_move_desc), tone = TextTone.Secondary)
                 CinemaTextField(
                     value = moveUi.targetUrl,
@@ -684,7 +692,8 @@ private fun MoveDialog(
                     label = stringResource(R.string.live_sync_move_server_label),
                     placeholder = stringResource(R.string.live_sync_server_hint),
                     singleLine = true,
-                    keyboardOptions = FieldKeyboards.Url,
+                    keyboardOptions = FieldKeyboards.Url.copy(imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = { if (!moveUi.targetChecked && canCheck) onCheck() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (moveUi.targetChecked) {
@@ -714,7 +723,7 @@ private fun MoveDialog(
             } else {
                 DialogAction(
                     stringResource(R.string.live_sync_check_server),
-                    enabled = moveUi.targetUrl.isNotBlank() && !moveUi.checking,
+                    enabled = canCheck,
                     onClick = onCheck,
                 )
             },

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.components
 
+import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -202,6 +203,7 @@ fun CinemaAlertDialog(
                     },
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
+                FitDialogAboveKeyboard()
                 RecordDialogKeys()
                 ProvideUiScaledDensity {
                     // A safe margin above and below: a tall dialog stops short of the screen edges
@@ -260,6 +262,7 @@ fun CinemaAlertDialog(
                     ),
             ) {
                 ApplyDialogScrim(tokens.scrimAlpha)
+                FitDialogAboveKeyboard()
                 RecordDialogKeys()
                 ProvideUiScaledDensity {
                     Surface(
@@ -434,6 +437,23 @@ private fun DialogActionArea(
                 }
             }
         }
+    }
+}
+
+/**
+ * Keeps a dialog with a text field above the soft keyboard: the dialog window resizes when the
+ * keyboard opens, so its buttons stay visible and a tap on them does not go to the keyboard. Before,
+ * the window only moved to show the field, and the buttons under it stayed behind the keyboard. The
+ * dialog window fits the system windows (`decorFitsSystemWindows`, the default), so the resize
+ * applies.
+ */
+@Composable
+private fun FitDialogAboveKeyboard() {
+    val view = LocalView.current
+    SideEffect {
+        // Deprecated for windows that draw behind the system bars; a dialog that fits them still uses it.
+        @Suppress("DEPRECATION")
+        (view.parent as? DialogWindowProvider)?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
 }
 
