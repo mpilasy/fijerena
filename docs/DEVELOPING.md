@@ -147,7 +147,9 @@ fijerena/
 3. Keep TV screens D-pad navigable and inside the safe margins; use the design tokens.
 4. Make ktlint, Android Lint, the unit tests and the `scripts/check-*.sh` gates pass.
 5. Test on both TV and phone; include screenshots or recordings for UI changes.
-6. Write commit messages that say why, not only what.
+6. Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+   format (`fix(epg): …`), with a body that says why, not only what. CONTRIBUTING.md → "Commit
+   messages" gives the types and scopes.
 7. Sign off each commit (`git commit -s`) to certify the [Developer Certificate of Origin](../DCO).
 
 By contributing you agree that your contribution is licensed under the project's licence (../below).

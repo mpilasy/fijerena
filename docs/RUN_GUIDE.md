@@ -344,7 +344,7 @@ still builds, unsigned (`*-release-unsigned.apk`).
    (`echo 0.9.$(date -u +%Y%m%d%H%M%S)`), for example `0.9.20261111170052`. The time only grows,
    so each release sorts after the last; raise the minor version for a larger change.
 2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
-3. Commit, push `main`, then tag and push the tag:
+3. Commit with the message `chore(release): <version>`, push `main`, then tag and push the tag:
    `git tag v<version> && git push origin v<version>`. Tag only code that Android Build has passed
    on: the Release workflow does not run the unit tests again.
 

@@ -17,6 +17,34 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 **Sign-off (DCO):** every commit from a contributor carries a `Signed-off-by: Name <email>` line (`git commit -s`), which certifies the [Developer Certificate of Origin 1.1](DCO): the contributor wrote the change, or has the right to submit it under the project's licence. The contribution is licensed under the licence of the part it changes (GPL-3.0-or-later for the apps, AGPL-3.0-or-later for `server/`). The DCO does not give the project the right to relicense contributions; that would need a CLA.
 
+**Commit messages:** use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```
+<type>(<scope>): <description>
+
+<body: why the change is necessary, and what it changes>
+
+Signed-off-by: Name <email>
+```
+
+- **Type**, one of:
+  - `feat`: a new feature, or a change that users see.
+  - `fix`: a bug fix.
+  - `perf`: faster, or uses less memory or battery.
+  - `refactor`: a code change that changes no behaviour.
+  - `test`: tests only.
+  - `docs`: documentation only.
+  - `build`: Gradle, dependencies or signing.
+  - `ci`: GitHub workflows and `scripts/check-*.sh` gates.
+  - `chore`: other work, such as a release.
+- **Scope** (optional): the module (`tv`, `mobile`, `player`, `network`, `ui`, `navigation`, `server`) or the feature area (`epg`, `sync`, `sports`, `settings`, `search`, `i18n`). Leave it out when a change covers many areas.
+- **Description:** start with a lowercase verb in the imperative mood ("add", not "added"). Use no full stop at the end, and keep the first line to 72 characters or fewer.
+- **Breaking change:** put `!` after the type or scope, and a `BREAKING CHANGE:` footer that says what breaks. Examples are a backup file that older versions cannot read, or a sync message that older apps cannot read.
+- **Release commit:** `chore(release): <version>`, for example `chore(release): 0.9.20261119120000`.
+
+Examples: `fix(sports): show a game's result as soon as its competition has it`,
+`feat(settings): let a Nerd set a custom User-Agent`, `docs: add a User Guide`.
+
 ---
 
 ## Tech Stack
