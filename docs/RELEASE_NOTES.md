@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261119171145
 
 - **Less work in the background:** the source badges, the New Episodes marks, the look (theme and style), the source short names and the sports watch question stop following their data while the app is hidden, and catch up when it comes back. Search builds its text patterns once, not on each query. TV and phone.
 
