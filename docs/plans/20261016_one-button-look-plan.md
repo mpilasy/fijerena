@@ -1,6 +1,6 @@
 # One button look across the app
 
-**Status:** Built 2026-10-16 (Phases 1–3; Phase 4 partly: the profile page and its dialog seen on both emulators). The TV look is not settled — the user does not like it yet; it is changed in `TvButtonStyle` alone.
+**Status:** Built 2026-10-16 (Phases 1–3; Phase 4 partly: the profile page and its dialog seen on both emulators). TV look settled 2026-11-19: at rest every kind is quiet (the same faint fill and outline, a danger label in the danger colour), and only focus is a strong colour (`TvButtonStyle`).
 
 ## Goal
 
@@ -63,4 +63,4 @@ The buttons grew one component at a time, with no shared rule:
 | 1 | `ButtonStyle` base and `TvButtonStyle`; TV text and icon buttons built on them, labels centred, `CinemaButtonArea`; TV dialogs use the TV buttons | Done 2026-10-16 |
 | 2 | `PhoneButtonStyle`; the phone button (`CinemaDialogActionButton`, moved from core) and the `CinemaButton` family and icon buttons on it; raw M3 buttons moved to the components | Done 2026-10-16 |
 | 3 | The call sites with their own colours or border mapped onto a kind; the API dropped `colors` / `border` | Done 2026-10-16 |
-| 4 | Walk both emulators (no playback): Settings, Edit Source, dialogs, error screens; Display styles Standard and Sharp; docs (FEATURES, RELEASE_NOTES, CONTRIBUTING rule) | Partly: profile page and delete dialog seen on both; docs and CONTRIBUTING rule done; the rest not walked; TV look to settle |
+| 4 | Walk both emulators (no playback): Settings, Edit Source, dialogs, error screens; Display styles Standard and Sharp; docs (FEATURES, RELEASE_NOTES, CONTRIBUTING rule) | Partly: profile page and delete dialog seen on both; docs and CONTRIBUTING rule done; the rest not walked; TV look settled 2026-11-19 |
