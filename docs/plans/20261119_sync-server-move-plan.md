@@ -1,6 +1,6 @@
 # Move live sync to another server
 
-**Status:** Planned 2026-11-19; not started. Open questions SM-Q1 to SM-Q6.
+**Status:** Planned 2026-11-19; not started. SM-Q7 decided (block); SM-Q1 to SM-Q6 open.
 
 ## Goal
 
@@ -68,6 +68,11 @@ Cloudflare), because the data goes through the device, not from server to server
 
 ### The move, on the device that starts it
 
+0. **Check every device can move** (SM-Q7): each device of the group that the old server lists as
+   not revoked must report the `server_move` feature in its device build record
+   (`DeviceBuild.features`, as `play_request` does for Send to TV). If one doesn't, or has
+   reported no build yet, the move does not start, and the dialog names the device: "Living Room
+   TV must be updated before the move." Remove a device you can't update from the group first.
 1. **Check the new server:** `GET /info` must list the `move` feature (see Server). If the new
    server needs a setup secret, the dialog asks for it.
 2. **Create the account on the new server:** `POST /accounts` with this device's name. Keep the
@@ -115,8 +120,8 @@ On a pull from the old server, a device that reads the move record:
    changes, so its changes that the old server never got reach the new one. It does not queue all
    local data again.
 
-A device on an app version from before the move skips the move record and stays on the old server
-until it is updated.
+Step 0 makes sure no device of the group is on an app version from before the move. Such a
+device would skip the move record and stay on the old server until it is updated.
 
 ### Dormant devices
 
@@ -181,7 +186,7 @@ Additive changes; `protocol` stays 1.
 | Phase | Work | Estimate |
 |---|---|---|
 | 1 | **Server:** move codes, `DELETE /account`, `/info` features. Tests in `server/test`, wire samples in `core/network/src/test/resources/fixtures/sync/` (`SyncWireSamplesTest`), API table in `server/README.md`. | ½ day |
-| 2 | **App, the starting device:** `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
+| 2 | **App, the starting device:** the `server_move` device feature and the step 0 check, `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: a device without `server_move` blocks the move, full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
 | 3 | **App, the other devices:** read the move record in `SyncEngine`, join, copy the records after the move record, remove itself, switch. Tests: two devices move, a device not in the record, a device whose pending changes reach the new server, a dormant device that holds an item deleted more than 90 days before the copy (it must not come back). | 1 day |
 | 4 | **Screens, TV and phone:** **Move to Another Server** (address, setup secret, progress, failure text with the raw error for a Nerd), the old server row on every admin device with the "not moved yet" list, **Purge Old Server** with its states and confirmation, **Forget Old Server**. Strings in en, fr and mg. Docs: FEATURES, USER_GUIDE, server README, RELEASE_NOTES. | 1 day |
 | 5 | **Emulator check:** both emulators on the local server (:8787); move to a second local server; check the TV moves when opened, the purge stays disabled until then, the phone can purge after the TV started the move, and the purge leaves the old server's data folder without the account. | ½ day |
@@ -219,6 +224,12 @@ Additive changes; `protocol` stays 1.
 - **SM-Q5, an old server that can't be reached:**
   - (a) Offer **Forget Old Server**, which drops the old link without a purge. Recommended.
   - (b) No such button; the purge row stays until the old server answers.
-- **SM-Q6, devices on an app version from before the move:**
+- **SM-Q6, devices on an app version from before the move** (rare after SM-Q7: only a device added
+  to the group on an old version after the move started):
   - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.
   - (b) Also show their app version in the list (from their device build record).
+- **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**.
+  - (a) Block: the move does not start until every device reports `server_move`, and the dialog
+    names the devices to update or remove.
+  - (b) Warn, and allow the move. The device stays on the old server until it is updated; its
+    deletions older than 90 days at its move are lost.
