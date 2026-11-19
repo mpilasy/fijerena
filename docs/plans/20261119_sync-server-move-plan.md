@@ -1,6 +1,6 @@
 # Move live sync to another server
 
-**Status:** Planned 2026-11-19; not started. SM-Q1 to SM-Q7 decided 2026-11-19 (see Open questions); waits for a go-ahead.
+**Status:** In progress since 2026-11-19 (go-ahead given 2026-11-19). SM-Q1 to SM-Q7 decided 2026-11-19 (see Open questions).
 
 ## Goal
 
@@ -189,6 +189,22 @@ Additive changes; `protocol` stays 1.
 - The old server needs nothing new for the move itself (pulls, the move record and revokes exist
   today). Only the purge needs a new old server; the new server needs `move`.
 
+### App interface
+
+The screens see the move only through `SyncManager` and the types in
+`core/network/.../sync/SyncMove.kt` (`MoveBlock`, `MoveState`, `OldServerState`):
+
+| `SyncManager` member | What it does |
+|---|---|
+| `move: StateFlow<MoveState>` | How far a move started on this device is. |
+| `suspend fun moveBlock(): MoveBlock?` | Step 0: why **Move to Another Server** is disabled; null when it is not. |
+| `suspend fun checkMoveTarget(url): SyncWire.Info` | Step 1: throws `SyncApiException` (`INCOMPATIBLE` when the server has no `move` feature); `setupSecretRequired` tells the dialog to ask for the secret. |
+| `fun startMove(url, setupSecret)` | Steps 1 to 8, or continues a move that stopped. |
+| `oldServer: StateFlow<String?>` | The old address while the new server holds the old-server record; null otherwise. |
+| `suspend fun oldServerState(): OldServerState` | Asks the old server (an open Live Sync screen only). |
+| `suspend fun purgeOldServer()` / `suspend fun forgetOldServer()` | Purge Old Server / Forget Old Server. |
+| `Status.movedAway: String?` | The group moved to this address, and this device is not in the move record. |
+
 ## Phases
 
 | Phase | Work | Estimate |
@@ -203,10 +219,10 @@ Additive changes; `protocol` stays 1.
 
 | Phase | Status |
 |---|---|
-| 1 | Not started |
-| 2 | Not started |
-| 3 | Not started |
-| 4 | Not started |
+| 1 | In progress |
+| 2 | In progress |
+| 3 | In progress |
+| 4 | In progress |
 | 5 | Not started |
 
 ## Open questions (all decided 2026-11-19)
