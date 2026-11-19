@@ -26,6 +26,7 @@ class SyncEngine(
     private val context: Context,
     private val api: SyncApi = SyncApi(),
     private val store: SyncAccountStore = SyncAccountStore(context),
+    private val mover: SyncServerMove = SyncServerMove(context, api, store),
 ) {
     /** What a pass changed that the UI layer must react to. */
     interface Listener {
@@ -62,8 +63,14 @@ class SyncEngine(
 
     val isLinked: Boolean get() = store.link != null
 
+    /**
+     * One pass. Null when this device is not linked, or while a move that this device started is
+     * not finished: no pass runs from the start of the move until the switch (the sync server move
+     * plan → No sync during the move).
+     */
     suspend fun syncNow(listener: Listener? = null): Outcome? =
         mutex.withLock {
+            if (store.moveProgress != null) return@withLock null
             val link = store.link ?: return@withLock null
             val crypto = AccountKeyCrypto(link.accountKey)
             val startedAt = System.currentTimeMillis()
@@ -106,6 +113,12 @@ class SyncEngine(
             val crypto = AccountKeyCrypto(link.accountKey)
             api.push(link.serverUrl, link.deviceToken, records.map { SyncCodec.encode(it, crypto) }).accepted
         }
+
+    /**
+     * Runs [block] while no pass runs, and starts no pass until it ends. For the move to another
+     * server (the sync server move plan → No sync during the move).
+     */
+    suspend fun <T> exclusive(block: suspend () -> T): T = mutex.withLock { block() }
 
     /** Full Resync: the next pass pulls everything from the server's first record again. */
     suspend fun startOver() =
@@ -183,7 +196,10 @@ class SyncEngine(
                 val pageCursor = page.records.lastOrNull()?.seq ?: store.cursor
                 if (page.more) next = async { api.pull(link.serverUrl, link.deviceToken, pageCursor) }
                 val decodeStart = System.currentTimeMillis()
-                val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
+                // The move records go to the mover, never to the applier or the app settings.
+                val (moveRecords, decodedPage) =
+                    page.records.mapNotNull { SyncCodec.decode(it, crypto) }.partition { SyncServerMove.isMoveKey(it.key) }
+                moveRecords.forEach(mover::take)
                 decodeMs += System.currentTimeMillis() - decodeStart
                 // Records waiting for a provider or profile get another go when a page brings one, and
                 // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and

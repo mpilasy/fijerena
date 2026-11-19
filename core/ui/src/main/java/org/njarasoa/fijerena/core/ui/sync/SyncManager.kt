@@ -27,12 +27,16 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.DeviceReport
 import org.njarasoa.fijerena.core.network.sync.DeviceReportBuilder
+import org.njarasoa.fijerena.core.network.sync.MoveBlock
+import org.njarasoa.fijerena.core.network.sync.MoveState
+import org.njarasoa.fijerena.core.network.sync.OldServerState
 import org.njarasoa.fijerena.core.network.sync.ServerClock
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncApi
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
 import org.njarasoa.fijerena.core.network.sync.SyncProgress
+import org.njarasoa.fijerena.core.network.sync.SyncServerMove
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -70,6 +74,7 @@ class SyncManager internal constructor(
     private val api: SyncApi = SyncApi(),
     private val nowPlaying: StateFlow<NowPlayingSnapshot?> = playerNowPlaying(),
     private val pendingPush: suspend () -> PendingPush = { pendingPushIn(app) },
+    private val mover: SyncServerMove = SyncServerMove(app, api, store),
 ) {
     /** What a push would send: nothing, only watch progress, or anything else (perhaps with progress). */
     internal enum class PendingPush { NONE, WATCH_ONLY, OTHER }
@@ -94,8 +99,21 @@ class SyncManager internal constructor(
     private val _status = MutableStateFlow(Status())
     val status: StateFlow<Status> = _status.asStateFlow()
 
+    private val _move = MutableStateFlow<MoveState>(MoveState.Idle)
+
+    /** How far a move started on this device is (the sync server move plan → App interface). */
+    val move: StateFlow<MoveState> = _move.asStateFlow()
+
+    private val _oldServer = MutableStateFlow<String?>(null)
+
+    /** The old address while the new server holds the old-server record; null otherwise. */
+    val oldServer: StateFlow<String?> = _oldServer.asStateFlow()
+
+    private var moveJob: Job? = null
+
     private fun refreshStatus(syncing: Boolean = false) {
         val link = store.link
+        _oldServer.value = store.previousServer?.serverUrl
         _status.update {
             it.copy(
                 linked = link != null,
@@ -206,6 +224,8 @@ class SyncManager internal constructor(
         scope.launch {
             refreshStatus()
             reportBuild()
+            // A move that stopped part way (the app was closed or crashed) continues on its own.
+            mover.unfinished?.let { startMove(it.serverUrl, null) }
         }
         app.registerActivityLifecycleCallbacks(
             object : Application.ActivityLifecycleCallbacks {
@@ -314,6 +334,70 @@ class SyncManager internal constructor(
         if (foreground && engine.isLinked) {
             openSocket()
             requestSync(0)
+        }
+    }
+
+    /**
+     * Step 0: why Move to Another Server is disabled; null when it is not. Throws
+     * [SyncApiException] when the server does not answer.
+     */
+    suspend fun moveBlock(): MoveBlock? = mover.moveBlock()
+
+    /**
+     * Step 1: asks [url] whether it can take the group. Throws [SyncApiException], with the status
+     * [SyncApiException.INCOMPATIBLE] when it is not a compatible server, has no `move` feature or
+     * is the server in use. [SyncWire.Info.setupSecretRequired] tells the dialog to ask for the
+     * setup secret.
+     */
+    suspend fun checkMoveTarget(url: String): SyncWire.Info = mover.checkTarget(url)
+
+    /**
+     * Moves the group to [url] (steps 1 to 8), and [move] shows how far it is. When a move started
+     * here stopped, this continues it, with its own address. No sync pass runs until the switch;
+     * then the socket connects to the new server and a pass runs. Does nothing while a move runs.
+     */
+    fun startMove(
+        url: String,
+        setupSecret: String?,
+    ) {
+        synchronized(this) {
+            if (moveJob?.isActive == true) return
+            moveJob =
+                scope.launch {
+                    closeSocket()
+                    try {
+                        engine.exclusive { mover.run(url, setupSecret) { _move.value = it } }
+                        ServerClock.forget()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Move to another server stopped: ${e.message}")
+                        CrashLog.note("live sync move stopped", "${e.javaClass.simpleName}: ${e.message}")
+                        _move.value = MoveState.Failed(Redact.text(e.message ?: e.javaClass.simpleName))
+                    }
+                    onLinkChanged()
+                }
+        }
+    }
+
+    /** Asks the old server how far the move is: for an open Live Sync screen only. */
+    suspend fun oldServerState(): OldServerState = mover.oldServerState()
+
+    /** Purge Old Server: deletes the group from the old server, then the old-server record. */
+    suspend fun purgeOldServer() {
+        try {
+            mover.purgeOldServer()
+        } finally {
+            refreshStatus()
+        }
+    }
+
+    /** Forget Old Server: deletes the old-server record and purges nothing. */
+    suspend fun forgetOldServer() {
+        try {
+            mover.forgetOldServer()
+        } finally {
+            refreshStatus()
         }
     }
 

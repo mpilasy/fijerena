@@ -112,6 +112,21 @@ the new address and credentials, the codes, the copy cursor and the step reached
 next open continues the move from that state. It does not create a second account on the new
 server.
 
+**As built (2026-11-19):**
+
+- `SyncServerMove` (core/network) does steps 0 to 8. The resume state (`SyncAccountStore.moveProgress`)
+  starts at step 2, when the account on the new server exists. A failure in step 0 or 1 leaves
+  nothing, and sync goes on as before. From step 2 on, no pass runs until the move is finished.
+- The copy also skips the `device_name:<deviceId>` records (the names the group gave its devices).
+  They are keyed by old server device ids, which point at nothing on the new server. Each device
+  joins the new server with its current name, so the names stay the same. The copy also skips the
+  two move records themselves, and records that this device can't open.
+- The two records are setting records with the shared profile. Their value is JSON text:
+  `sync_move` = `{"serverUrl", "codes": {<old device id>: <move code>}}`;
+  `sync_previous_server` = `{"serverUrl", "deviceId", "deviceToken"}`. The engine gives them to
+  `SyncServerMove` and never to the applier. The device keeps the old-server record (with its clock
+  value) in `SyncAccountStore`, and a newer record or a deletion replaces it.
+
 ### The move, on the other devices
 
 On a pull from the old server, a device that reads the move record:
@@ -220,7 +235,7 @@ The screens see the move only through `SyncManager` and the types in
 | Phase | Status |
 |---|---|
 | 1 | In progress |
-| 2 | In progress |
+| 2 | Done 2026-11-19: `SyncServerMove` (steps 0–8, resume, SM-Q3 filter, old-server watch and purge), `server_move` feature, `SyncApi.createMoveCode`/`deleteAccount`, `SyncAccountStore.switchServer`, `SyncManager` move API; tests against two fake servers. |
 | 3 | In progress |
 | 4 | In progress |
 | 5 | Not started |
