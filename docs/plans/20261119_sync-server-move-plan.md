@@ -143,6 +143,19 @@ On a pull from the old server, a device that reads the move record:
    changes, so its changes that the old server never got reach the new one. It does not queue all
    local data again.
 
+**As built (2026-11-19):**
+
+- `SyncEngine` gives the move record to `SyncServerMove`, which stores what the device needs to
+  follow (`SyncAccountStore.moveFollow`: the new address, its code, the move record's `seq`, then
+  the new credentials as soon as the pairing gives them, and the copy cursor). The pass that brings
+  the move record sends nothing to the old server. The engine then follows the move and does a pass
+  on the new server in the same call (`Outcome.serverSwitched`), and `SyncManager` connects the
+  socket to the new server. A follow that stopped continues at the start of the next pass.
+- The device's current name is the group's name for its old id, else its name on the old server.
+- A refused revoke (401 or 404: the device was removed already) counts as done.
+- A device that is not in the move record keeps syncing with the old server and shows
+  `Status.movedAway`. The state goes away when the device is linked again.
+
 Step 0 makes sure no device of the group is on an app version from before the move. Such a
 device would skip the move record and stay on the old server until it is updated.
 
@@ -236,7 +249,7 @@ The screens see the move only through `SyncManager` and the types in
 |---|---|
 | 1 | In progress |
 | 2 | Done 2026-11-19: `SyncServerMove` (steps 0–8, resume, SM-Q3 filter, old-server watch and purge), `server_move` feature, `SyncApi.createMoveCode`/`deleteAccount`, `SyncAccountStore.switchServer`, `SyncManager` move API; tests against two fake servers. |
-| 3 | In progress |
+| 3 | Done 2026-11-19: `SyncEngine` reads the move record and follows it (join, copy after the move record, revoke, switch, resume); `Status.movedAway`; tests: two devices move, a device not in the record, pending changes, dormant device, resume at each call. |
 | 4 | In progress |
 | 5 | Not started |
 

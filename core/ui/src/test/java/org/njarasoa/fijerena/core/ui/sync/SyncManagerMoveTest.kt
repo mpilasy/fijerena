@@ -48,6 +48,7 @@ class SyncManagerMoveTest {
     fun setup() {
         every { store.link } answers { SyncAccountStore.Link(serverUrl, "acc", "dev", "token", ByteArray(32)) }
         every { store.previousServer } returns null
+        every { store.movedAway } returns null
         every { store.cursor } returns 0
         every { engine.isLinked } returns true
         coEvery { engine.syncNow(any()) } answers {
@@ -115,6 +116,36 @@ class SyncManagerMoveTest {
         assertEquals("https://new.test", sockets.last().first)
         assertTrue(passesInExclusive.none { it })
         coVerify(exactly = 2) { engine.syncNow(any()) }
+    }
+
+    @Test
+    fun `a pass that followed a move connects to the new server`() {
+        var passes = 0
+        coEvery { engine.syncNow(any()) } answers {
+            if (++passes == 1) {
+                serverUrl = "https://new.test"
+                SyncEngine.Outcome(0, 0, 0, false, serverSwitched = true)
+            } else {
+                SyncEngine.Outcome(0, 0, 0, false)
+            }
+        }
+        every { store.movedAway } returns null
+        manager.onForeground()
+        scheduler.runCurrent()
+
+        assertEquals(listOf("https://old.test", "https://new.test"), sockets.map { it.first })
+        verify { sockets.first().second.close(any(), any()) }
+        assertEquals("https://new.test", manager.status.value.serverUrl)
+    }
+
+    @Test
+    fun `a device left out of the move shows where the group moved`() {
+        every { store.movedAway } returns "https://new.test"
+
+        manager.onForeground()
+        scheduler.runCurrent()
+
+        assertEquals("https://new.test", manager.status.value.movedAway)
     }
 
     @Test

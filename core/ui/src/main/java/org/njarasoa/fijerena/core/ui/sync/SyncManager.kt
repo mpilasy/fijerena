@@ -94,6 +94,8 @@ class SyncManager internal constructor(
         val connected: Boolean = false,
         /** While the socket is down in the foreground: when it tries again (wall clock); null otherwise. */
         val reconnectAt: Long? = null,
+        /** The group moved to this address, and this device is not in the move record; null otherwise. */
+        val movedAway: String? = null,
     )
 
     private val _status = MutableStateFlow(Status())
@@ -121,6 +123,7 @@ class SyncManager internal constructor(
                 syncing = syncing,
                 lastSyncAt = store.lastSyncAt,
                 lastError = store.lastError?.let(Redact::text),
+                movedAway = store.movedAway,
                 progress = if (syncing) it.progress else null,
             )
         }
@@ -471,6 +474,12 @@ class SyncManager internal constructor(
             readServerClock()
             val outcome = engine.syncNow(listener) ?: return
             retryDelayMs = INITIAL_RETRY_MS
+            if (outcome.serverSwitched) {
+                // The group moved and this device followed: connect to the new server.
+                Log.i(TAG, "Followed the sync group to ${store.link?.serverUrl}")
+                ServerClock.forget()
+                onLinkChanged()
+            }
             if (outcome.pulled + outcome.pushed >
                 0
             ) {

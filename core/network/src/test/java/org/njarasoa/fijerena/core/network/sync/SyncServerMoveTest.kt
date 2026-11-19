@@ -237,7 +237,6 @@ class SyncServerMoveTest {
                     if (++call == failAt) throw SyncApiException(0, "connection reset at $name")
                 }
 
-            // A failure that only loses the device name does not stop the move.
             val failed =
                 try {
                     runBlocking { device.mover(failing).run(newServer.url, null) {} }
@@ -268,7 +267,7 @@ class SyncServerMoveTest {
             assertEquals("call $failAt", 1, oldServer.records.count { kit.open(it)?.key?.itemId == SyncServerMove.KEY_MOVE })
             assertNotNull("call $failAt", kit.previousRecord(newServer))
         }
-        assertTrue(failures >= clean - 1)
+        assertEquals(clean, failures)
     }
 
     // --- The old server after the move ---

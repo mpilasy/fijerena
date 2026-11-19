@@ -72,7 +72,7 @@ class SyncAccountStore private constructor(
      * starts at the new server's first record. Unlike [saveLink], it keeps [seeded], [deferred],
      * [knownKinds] and the old-server record, and the pending local changes (in the databases) are
      * not touched: this device sends only those, never all its local data again. The state of the
-     * move ([moveProgress]) goes in the same commit.
+     * move ([moveProgress], [moveFollow], [movedAway]) goes in the same commit.
      */
     fun switchServer(
         serverUrl: String,
@@ -84,6 +84,8 @@ class SyncAccountStore private constructor(
         putString(KEY_TOKEN, credentials.deviceToken)
         putLong(KEY_CURSOR, 0)
         remove(KEY_MOVE_PROGRESS)
+        remove(KEY_MOVE_FOLLOW)
+        remove(KEY_MOVED_AWAY)
         remove(KEY_LAST_ERROR)
     }
 
@@ -140,6 +142,16 @@ class SyncAccountStore private constructor(
         get() = read(KEY_MOVE_PROGRESS, SyncServerMove.Progress.serializer())
         set(value) = write(KEY_MOVE_PROGRESS, value, SyncServerMove.Progress.serializer())
 
+    /** A move that another device started and that this device follows, not finished; null when there is none. */
+    var moveFollow: SyncServerMove.Follow?
+        get() = read(KEY_MOVE_FOLLOW, SyncServerMove.Follow.serializer())
+        set(value) = write(KEY_MOVE_FOLLOW, value, SyncServerMove.Follow.serializer())
+
+    /** The address that the group moved to when this device is not in the move record; null otherwise. */
+    var movedAway: String?
+        get() = prefs?.getString(KEY_MOVED_AWAY, null)
+        set(value) = prefs?.edit(commit = true) { if (value == null) remove(KEY_MOVED_AWAY) else putString(KEY_MOVED_AWAY, value) } ?: Unit
+
     /**
      * The last `sync_previous_server` record this device took, with its clock value. Its
      * [SyncServerMove.PreviousServerRecord.server] is null after a deletion.
@@ -180,6 +192,8 @@ class SyncAccountStore private constructor(
         const val KEY_LAST_SYNC = "last_sync_at"
         const val KEY_LAST_ERROR = "last_error"
         const val KEY_MOVE_PROGRESS = "move_progress"
+        const val KEY_MOVE_FOLLOW = "move_follow"
+        const val KEY_MOVED_AWAY = "moved_away"
         const val KEY_PREVIOUS_SERVER = "previous_server"
 
         val json = Json { ignoreUnknownKeys = true }

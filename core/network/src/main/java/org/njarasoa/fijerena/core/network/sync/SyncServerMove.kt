@@ -71,6 +71,23 @@ class SyncServerMove(
         val copyCursor: Long = 0,
     )
 
+    /**
+     * The state of a move that another device started and that this device follows (the sync
+     * server move plan → The move, on the other devices). [credentials] are stored as soon as the
+     * new server gives them, so that a stop never makes this device pair two times.
+     */
+    @Serializable
+    data class Follow(
+        val serverUrl: String,
+        val code: String,
+        /** The `seq` of the move record on the old server: the copy starts after it. */
+        val moveSeq: Long,
+        val credentials: SyncWire.DeviceCredentials? = null,
+        /** The `seq` of the last old-server record copied. */
+        val copyCursor: Long = moveSeq,
+        val copied: Boolean = false,
+    )
+
     private val settings by lazy { AppSettings(context) }
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -86,6 +103,7 @@ class SyncServerMove(
         val link = store.link ?: return null
         if (store.moveProgress != null) return null
         if (store.previousServer != null) return MoveBlock.OldServerLeft
+        if (store.moveFollow != null || store.movedAway != null) return MoveBlock.MoveInProgress
         val builds = settings.deviceBuilds()
         val behind =
             api
@@ -252,11 +270,32 @@ class SyncServerMove(
     }
 
     /**
-     * A move record that a pull brought ([isMoveKey]): the sync engine gives it here, never to the
-     * applier. A newer record replaces the one held; a deletion drops it.
+     * A move record that a pull brought ([isMoveKey]), with its `seq` on the server: the sync
+     * engine gives it here, never to the applier.
+     * - `sync_previous_server`: a newer record replaces the one held; a deletion drops it.
+     * - `sync_move`: this device follows the move when the record holds its device id
+     *   ([moveFollow]); otherwise it keeps the new address as [SyncAccountStore.movedAway].
      */
-    internal fun take(record: SyncRecord) {
+    internal fun take(
+        record: SyncRecord,
+        seq: Long?,
+    ) {
         when (record.key.itemId) {
+            KEY_MOVE -> {
+                if (record.deleted || store.moveFollow != null) return
+                val link = store.link ?: return
+                val move = decode(record, MoveRecord.serializer()) ?: return
+                if (normalise(move.serverUrl) == link.serverUrl) return
+                val code = move.codes[link.deviceId]
+                if (code == null) {
+                    Log.i(TAG, "The sync group moved to ${move.serverUrl} without this device")
+                    store.movedAway = move.serverUrl
+                } else {
+                    Log.i(TAG, "The sync group moved to ${move.serverUrl}: following it")
+                    store.moveFollow = Follow(normalise(move.serverUrl), code, moveSeq = seq ?: 0)
+                }
+            }
+
             KEY_PREVIOUS_SERVER -> {
                 val held = store.previousServerRecord
                 if (held != null && held.hlc >= record.hlc) return
@@ -264,6 +303,48 @@ class SyncServerMove(
                 store.previousServerRecord = PreviousServerRecord(record.hlc, server)
             }
         }
+    }
+
+    /**
+     * Follows the move that [take] found, or continues it after a stop: joins the new server with
+     * this device's move code and its current name, copies the old server's records after the
+     * move record to the new server (a copy that the new server has is refused as stale, which
+     * does no harm), removes this device from the old server, and switches to the new server.
+     * True when this device switched; false when there is no move to follow. The sync engine calls
+     * this inside its pass lock. Throws [SyncApiException] when a call fails; the next pass
+     * continues from the stored state.
+     */
+    internal suspend fun follow(): Boolean {
+        var follow = store.moveFollow ?: return false
+        val link = checkNotNull(store.link) { "This device is not linked" }
+        val crypto = AccountKeyCrypto(link.accountKey)
+
+        fun save(next: Follow) {
+            follow = next
+            store.moveFollow = next
+        }
+        val credentials =
+            follow.credentials ?: api.pair(follow.serverUrl, follow.code, deviceName(link)).also { save(follow.copy(credentials = it)) }
+        if (!follow.copied) {
+            val end =
+                copy(
+                    link,
+                    follow.serverUrl,
+                    credentials.deviceToken,
+                    follow.copyCursor,
+                    crypto,
+                ) { cursor, _, _ -> save(follow.copy(copyCursor = cursor)) }
+            save(follow.copy(copyCursor = end, copied = true))
+        }
+        try {
+            api.revoke(link.serverUrl, link.deviceToken, link.deviceId)
+        } catch (e: SyncApiException) {
+            // Refused: this device was removed already, by an earlier try or from another device.
+            if (e.status != 401 && e.status != 404) throw e
+        }
+        store.switchServer(follow.serverUrl, credentials)
+        Log.i(TAG, "Followed the sync group to ${follow.serverUrl}")
+        return true
     }
 
     /**
@@ -320,16 +401,13 @@ class SyncServerMove(
         }
     }
 
-    /** The name of this device for the new server: the group's name for it, else the old server's. */
+    /**
+     * The name of this device for the new server: the group's name for it, else the old server's.
+     * Throws [SyncApiException] when the old server does not answer: the move needs it anyway.
+     */
     private suspend fun deviceName(link: SyncAccountStore.Link): String {
         settings.deviceName(link.deviceId)?.let { return it }
-        val serverName =
-            try {
-                api.devices(link.serverUrl, link.deviceToken).firstOrNull { it.current }?.name
-            } catch (e: SyncApiException) {
-                Log.w(TAG, "Device name not read from the old server: ${e.message}")
-                null
-            }
+        val serverName = api.devices(link.serverUrl, link.deviceToken).firstOrNull { it.current }?.name
         return serverName?.takeIf { it.isNotBlank() } ?: Build.MODEL?.takeIf { it.isNotBlank() } ?: DEFAULT_NAME
     }
 
