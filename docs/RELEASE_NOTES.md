@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261119181925
 
 - **Calmer TV buttons:** on TV, a button that is not focused no longer has a coloured fill: Save, OK and Delete rest in the same quiet fill as the others, and Delete keeps a red label. The focused button is now the only strong colour on the screen, so it is clear where the remote is. The phone is unchanged.
 
