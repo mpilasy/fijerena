@@ -174,6 +174,9 @@ update the new server. Then, on one device, select **Move to another server** on
 page, type the new address, select **Check server**, then **Move**. Keep the device on until the
 copy ends. The other devices move by themselves the next time you open them. When all of them
 have moved, select **Purge old server** to delete the group's data from the old server.
+To stop a move that does not finish (for example, the new server stops), select **Cancel move**.
+The device then syncs with the old server again. You can cancel only before the other devices
+can see the move; after that, the move must finish.
 
 **Send to TV:** on the phone, select **Send to TV** on a film, an episode or a channel, and choose
 a TV of your sync group. The TV plays it. Fijerena must be open on the TV.

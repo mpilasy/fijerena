@@ -114,12 +114,15 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
     var moveDialog by remember { mutableStateOf(false) }
     var confirmPurge by remember { mutableStateOf(false) }
     var confirmForget by remember { mutableStateOf(false) }
+    var confirmCancelMove by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
-    // The move rows ask only while this screen is open: when it opens, when a move ends, and when
-    // the old server comes or goes (the sync server move plan).
-    val moveEnded = moveUi.move is MoveState.Done || moveUi.move is MoveState.Failed
+    // The move rows ask only while this screen is open: when it opens, when a move ends or is
+    // cancelled, and when the old server comes or goes (the sync server move plan).
+    val moveEnded = moveUi.move !is MoveState.Running
     LaunchedEffect(status.linked, moveEnded, moveUi.oldServer) { if (status.linked) viewModel.loadMove() }
+    // The move wrote its move record while the Cancel Move confirmation was open: the cancel is not allowed now.
+    LaunchedEffect(moveUi.canCancel) { if (!moveUi.canCancel) confirmCancelMove = false }
 
     // Entry focus on Sync now (Add a device while a sync runs, as Sync now is disabled then); else the
     // screen opened with nothing focused. Not on the way back from a device's Logs: the hand-back below
@@ -143,6 +146,15 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
     LaunchedEffect(oldServerAction) {
         if (focusedOldServerAction != null && focusedOldServerAction != oldServerAction) {
             focusedOldServerAction = null
+            moveFocus.requestFocusWithRetry()
+        }
+    }
+    // Cancel move goes when Cancel Move starts: focus on it moves to Move to another server.
+    val showCancelNow by rememberUpdatedState(moveUi.showCancel)
+    var cancelFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(moveUi.showCancel) {
+        if (!moveUi.showCancel && cancelFocused) {
+            cancelFocused = false
             moveFocus.requestFocusWithRetry()
         }
     }
@@ -259,8 +271,17 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             MovePanel(
                 moveUi = moveUi,
                 onMove = { moveDialog = true },
+                onCancel = { confirmCancelMove = true },
                 moveFocus = moveFocus,
                 upFocus = devicesUp.takeIf { oldServerAction == OldServerAction.NONE },
+                onCancelFocusChanged = { focused ->
+                    // Focus that leaves with the button stays noted: the effect above moves it.
+                    if (focused) {
+                        cancelFocused = true
+                    } else if (showCancelNow) {
+                        cancelFocused = false
+                    }
+                },
             )
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             CinemaText(
@@ -342,6 +363,21 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
                     confirmForget = false
                 },
                 onDismiss = { confirmForget = false },
+            )
+        }
+    }
+    if (confirmCancelMove) {
+        status.serverUrl?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_move_cancel_title),
+                message = stringResource(R.string.live_sync_move_cancel_message, address),
+                confirm = stringResource(R.string.live_sync_move_cancel),
+                dismiss = stringResource(R.string.common_back),
+                onConfirm = {
+                    viewModel.cancelMove()
+                    confirmCancelMove = false
+                },
+                onDismiss = { confirmCancelMove = false },
             )
         }
     }
@@ -631,30 +667,48 @@ internal fun oldServerAction(moveUi: SyncSettingsViewModel.MoveUi): OldServerAct
     }
 
 /**
- * Move to another server, and under it how far a move is or why the button is disabled (the sync
- * server move plan). Disabled, the button is still a focus stop, so its reason shows.
+ * Move to another server, with Cancel move to its right while a move runs or stopped, and under them
+ * how far a move is or why a button is disabled (the sync server move plan). Disabled, a button is
+ * still a focus stop, so its reason shows.
  */
 @Composable
 internal fun MovePanel(
     moveUi: SyncSettingsViewModel.MoveUi,
     onMove: () -> Unit,
+    onCancel: () -> Unit,
     moveFocus: FocusRequester,
     /** Where Up goes from the button; null for the nearest control above. */
     upFocus: FocusRequester?,
+    /** Cancel move got (true) or lost (false) focus. */
+    onCancelFocusChanged: (Boolean) -> Unit = {},
 ) {
     val scale = LocalUiScale.current
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-            CinemaSecondaryButton(
-                onClick = onMove,
-                text = stringResource(R.string.live_sync_move),
-                enabled = moveUi.canMove,
-                modifier =
-                    Modifier
-                        .focusRequester(moveFocus)
-                        .then(if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier)
-                        .leftToRail(),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                CinemaSecondaryButton(
+                    onClick = onMove,
+                    text = stringResource(R.string.live_sync_move),
+                    enabled = moveUi.canMove,
+                    modifier =
+                        Modifier
+                            .focusRequester(moveFocus)
+                            .then(if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier)
+                            .leftToRail(),
+                )
+                if (moveUi.showCancel) {
+                    CinemaSecondaryButton(
+                        onClick = onCancel,
+                        text = stringResource(R.string.live_sync_move_cancel),
+                        enabled = moveUi.canCancel,
+                        // Up goes where Up from Move goes, not to the nearest control above.
+                        modifier =
+                            Modifier
+                                .onFocusChanged { onCancelFocusChanged(it.isFocused) }
+                                .then(if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier),
+                    )
+                }
+            }
             LiveSyncMoveLines(moveUi.move, moveUi.block, moveUi.blockLoaded, moveUi.blockError)
         }
     }
@@ -805,12 +859,13 @@ private fun ConfirmDialog(
     confirm: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    dismiss: String = stringResource(R.string.common_cancel),
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = title,
         text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
         danger = DialogAction(confirm, onClick = onConfirm),
-        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
+        cancel = DialogAction(dismiss, onClick = onDismiss),
     )
 }

@@ -155,6 +155,57 @@ class SyncManagerMoveTest {
         manager.startMove("https://new.test", null)
         scheduler.runCurrent()
 
-        assertEquals(MoveState.Failed("Sync server new.test unreachable"), manager.move.value)
+        assertEquals(MoveState.Failed("Sync server new.test unreachable", canCancel = true), manager.move.value)
+    }
+
+    @Test
+    fun `Cancel Move stops a running move, drops it, and sync goes on with the old server`() {
+        coEvery { mover.run(any(), any(), any()) } coAnswers {
+            thirdArg<(MoveState) -> Unit>()(MoveState.Running(MoveState.Stage.COPYING, 10, 20, canCancel = true))
+            moveEnds.await()
+        }
+        coEvery { mover.cancel() } answers { assertTrue(inExclusive) }
+        manager.onForeground()
+        manager.startMove("https://new.test", null)
+        scheduler.runCurrent()
+        coVerify(exactly = 1) { engine.syncNow(any()) }
+
+        manager.cancelMove()
+        assertEquals(MoveState.Running(MoveState.Stage.CANCELLING), manager.move.value)
+        scheduler.runCurrent()
+
+        coVerify(exactly = 1) { mover.cancel() }
+        assertEquals(MoveState.Idle, manager.move.value)
+        assertEquals("https://old.test", sockets.last().first)
+        coVerify(exactly = 2) { engine.syncNow(any()) }
+    }
+
+    @Test
+    fun `Cancel Move does nothing once the move record is on the old server`() {
+        coEvery { mover.run(any(), any(), any()) } coAnswers {
+            thirdArg<(MoveState) -> Unit>()(MoveState.Running(MoveState.Stage.SWITCHING, canCancel = false))
+            moveEnds.await()
+        }
+        manager.startMove("https://new.test", null)
+        scheduler.runCurrent()
+
+        manager.cancelMove()
+        scheduler.runCurrent()
+
+        coVerify(exactly = 0) { mover.cancel() }
+        assertEquals(MoveState.Running(MoveState.Stage.SWITCHING, canCancel = false), manager.move.value)
+    }
+
+    @Test
+    fun `a cancel that the mover refuses leaves a stopped move that must finish`() {
+        coEvery { mover.run(any(), any(), any()) } throws SyncApiException(0, "Sync server new.test unreachable")
+        coEvery { mover.cancel() } throws IllegalStateException("Other devices can know the move: it must finish")
+        manager.startMove("https://new.test", null)
+        scheduler.runCurrent()
+
+        manager.cancelMove()
+        scheduler.runCurrent()
+
+        assertEquals(MoveState.Failed("Other devices can know the move: it must finish", canCancel = false), manager.move.value)
     }
 }

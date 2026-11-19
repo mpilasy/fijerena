@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Move live sync to another server:** Settings → Sync & Backup → Live Sync has **Move to another server**. Type the new address: the device copies the group's data there ("Copying 1,200 of 4,000") and switches to it, and the other devices switch by themselves the next time they open. No QR codes, no new setup. When every device has moved, **Purge old server** deletes the group's data from the old server. The button says what to do first when a device of the group needs an update. Update every device and the new server first. TV and phone.
+- **Move live sync to another server:** Settings → Sync & Backup → Live Sync has **Move to another server**. Type the new address: the device copies the group's data there ("Copying 1,200 of 4,000") and switches to it, and the other devices switch by themselves the next time they open. No QR codes, no new setup. When every device has moved, **Purge old server** deletes the group's data from the old server. The button says what to do first when a device of the group needs an update. **Cancel move** stops a move before the other devices can see it, and the device syncs with the old server again. Update every device and the new server first. TV and phone.
 
 ## Version: 0.9.20261119181925
 

@@ -69,7 +69,15 @@ class SyncServerMove(
         val codes: Map<String, String> = emptyMap(),
         /** The `seq` of the last old-server record copied. */
         val copyCursor: Long = 0,
-    )
+        /**
+         * Step 5 sent the move record at least once. The old server can have it, even when the push
+         * did not complete, so other devices can know the move.
+         */
+        val moveRecordSent: Boolean = false,
+    ) {
+        /** Cancel Move is allowed: the move record can not be on the old server yet (SM-Q8 (b)). */
+        val cancellable: Boolean get() = step < STEP_MOVE_RECORD && !moveRecordSent
+    }
 
     /**
      * The state of a move that another device started and that this device follows (the sync
@@ -154,18 +162,24 @@ class SyncServerMove(
     ) {
         val link = checkNotNull(store.link) { "This device is not linked" }
         val crypto = AccountKeyCrypto(link.accountKey)
-        var progress = store.moveProgress ?: start(link, serverUrl, setupSecret, onState)
+        // Each running state tells if Cancel Move is allowed. Before step 2 nothing is stored yet.
+        var cancellable = store.moveProgress?.cancellable ?: true
+        val report: (MoveState) -> Unit = { state ->
+            onState(if (state is MoveState.Running) state.copy(canCancel = cancellable) else state)
+        }
+        var progress = store.moveProgress ?: start(link, serverUrl, setupSecret, report)
         val newUrl = progress.serverUrl
         val newToken = progress.credentials.deviceToken
 
         fun save(next: Progress) {
             progress = next
             store.moveProgress = next
+            cancellable = next.cancellable
         }
 
         // Step 3: one move code per other device that is not revoked.
         if (progress.step < STEP_CODES) {
-            onState(MoveState.Running(MoveState.Stage.CREATING))
+            report(MoveState.Running(MoveState.Stage.CREATING))
             val others = api.devices(link.serverUrl, link.deviceToken).filter { !it.revoked && !it.current && it.id != link.deviceId }
             for (device in others.filter { it.id !in progress.codes }) {
                 val code = api.createMoveCode(newUrl, newToken).code
@@ -175,24 +189,27 @@ class SyncServerMove(
         }
         // Steps 4 and 6: the snapshot, then what came in until the move record was written.
         val copyStep: suspend (Int) -> Unit = { step ->
-            onState(MoveState.Running(MoveState.Stage.COPYING))
+            report(MoveState.Running(MoveState.Stage.COPYING))
             val head =
                 copy(link, newUrl, newToken, progress.copyCursor, crypto) { cursor, received, total ->
                     save(progress.copy(copyCursor = cursor))
-                    onState(MoveState.Running(MoveState.Stage.COPYING, received, total))
+                    report(MoveState.Running(MoveState.Stage.COPYING, received, total))
                 }
             save(progress.copy(step = step, copyCursor = head))
         }
         if (progress.step < STEP_SNAPSHOT) copyStep(STEP_SNAPSHOT)
         // Step 5: the move record on the old server.
         if (progress.step < STEP_MOVE_RECORD) {
+            // Noted before the push: from now on Cancel Move is refused, because the push can reach
+            // the old server even when its answer does not reach this device.
+            if (!progress.moveRecordSent) save(progress.copy(moveRecordSent = true))
             val move = MoveRecord(newUrl, progress.codes)
             pushOne(link.serverUrl, link.deviceToken, crypto, setting(KEY_MOVE, clock(), encode(MoveRecord.serializer(), move)))
             save(progress.copy(step = STEP_MOVE_RECORD))
         }
         if (progress.step < STEP_LATE_COPY) copyStep(STEP_LATE_COPY)
         // Step 7: the old-server record on the new server.
-        onState(MoveState.Running(MoveState.Stage.SWITCHING))
+        report(MoveState.Running(MoveState.Stage.SWITCHING))
         if (progress.step < STEP_PREVIOUS) {
             val old = PreviousServer(link.serverUrl, link.deviceId, link.deviceToken)
             val hlc = clock()
@@ -204,6 +221,30 @@ class SyncServerMove(
         store.switchServer(newUrl, progress.credentials)
         Log.i(TAG, "Moved the sync group to $newUrl")
         onState(MoveState.Done)
+    }
+
+    /**
+     * Cancel Move (SM-Q8 (b)): drops the move that this device started, while no other device can
+     * know it ([Progress.cancellable]). The device then syncs with the old server again: its link
+     * changes only at step 8. Then this tries to delete the account that the move made on the new
+     * server (this device is its only device). A failure of that deletion is only logged. Does
+     * nothing when there is no move to cancel.
+     *
+     * The caller makes sure that the move does not run. Throws [IllegalStateException] when the move
+     * record can be on the old server: then the move must finish.
+     */
+    suspend fun cancel() {
+        val progress = store.moveProgress ?: return
+        check(progress.cancellable) { "Other devices can know the move: it must finish" }
+        // Dropped first: if the app stops during the deletion, the move does not continue at the next start.
+        store.moveProgress = null
+        Log.i(TAG, "Cancelled the move to ${progress.serverUrl}")
+        try {
+            api.deleteAccount(progress.serverUrl, progress.credentials.deviceToken)
+            Log.i(TAG, "Deleted the copy on ${progress.serverUrl}")
+        } catch (e: SyncApiException) {
+            Log.w(TAG, "Couldn't delete the copy on ${progress.serverUrl}: ${e.message}")
+        }
     }
 
     /** Steps 0 to 2 of a new move: the checks, then the account on the new server. */

@@ -32,4 +32,23 @@ class SyncMoveUiTest {
         // A move that stopped continues when started again, even when its own move record blocks a new one.
         assertTrue(MoveUi(move = MoveState.Failed("timeout"), block = MoveBlock.MoveInProgress, blockLoaded = true).canMove)
     }
+
+    @Test
+    fun `Cancel Move shows while a move runs or stopped, enabled only before the move record`() {
+        assertFalse(checked.showCancel)
+        assertFalse(checked.copy(move = MoveState.Done).showCancel)
+
+        val copying = checked.copy(move = MoveState.Running(MoveState.Stage.COPYING, canCancel = true))
+        assertTrue(copying.showCancel)
+        assertTrue(copying.canCancel)
+        val switching = checked.copy(move = MoveState.Running(MoveState.Stage.SWITCHING, canCancel = false))
+        assertTrue(switching.showCancel)
+        assertFalse(switching.canCancel)
+        assertTrue(checked.copy(move = MoveState.Failed("timeout", canCancel = true)).canCancel)
+        assertFalse(checked.copy(move = MoveState.Failed("timeout", canCancel = false)).canCancel)
+        // Cancel Move runs: the button goes, and Move stays disabled.
+        val cancelling = checked.copy(move = MoveState.Running(MoveState.Stage.CANCELLING))
+        assertFalse(cancelling.showCancel)
+        assertFalse(cancelling.canMove)
+    }
 }

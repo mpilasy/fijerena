@@ -1361,6 +1361,11 @@
     <string name="live_sync_move_switching">Mifindra any amin\'ny mpizara vaovao…</string>
     <string name="live_sync_move_failed">Tsy nety ny famindrana. Ataovy indray izy mba hanohizana azy amin\'izay nijanonany.</string>
     <string name="live_sync_move_done">Nety ny famindrana. Mifindra any amin\'ny mpizara vaovao ny fitaovana hafa amin\'ny manaraka hanokafana azy.</string>
+    <string name="live_sync_move_cancel">Ajanony ny famindrana</string>
+    <string name="live_sync_move_cancel_title">Hajanona ve ny famindrana?</string>
+    <string name="live_sync_move_cancel_message">Hijanona ny famindrana. Hanohy hifanaraka amin\'ny %1$s ity fitaovana ity. Hofafana ny dika ao amin\'ny mpizara vaovao raha mamaly izy.</string>
+    <string name="live_sync_move_cancel_locked">Mety efa nifindra ny fitaovana hafa: tsy maintsy vita ny famindrana.</string>
+    <string name="live_sync_move_cancelling">Manajanona ny famindrana…</string>
     <string name="live_sync_move_same_server">Efa io mpizara io no ampiasain\'ny vondrona.</string>
     <string name="live_sync_move_no_move_feature">Tsy mahazo vondrona mifindra io mpizara io. Havaozy aloha izy.</string>
     <string name="live_sync_moved_away">Nifindra tany amin\'ny %1$s ity vondrona ity. Ampidiro avy amin\'ny fitaovana iray ao amin\'ny vondrona ity fitaovana ity.</string>

@@ -141,6 +141,14 @@ class SyncSettingsViewModel(
          */
         val canMove: Boolean
             get() = move is MoveState.Failed || (move == MoveState.Idle && blockLoaded && block == null && blockError == null)
+
+        /** Cancel Move shows: a move runs or stopped, and Cancel Move does not run yet. */
+        val showCancel: Boolean
+            get() = (move is MoveState.Running && move.stage != MoveState.Stage.CANCELLING) || move is MoveState.Failed
+
+        /** Cancel Move is enabled: the move record is not on the old server yet (SM-Q8 (b)). */
+        val canCancel: Boolean
+            get() = (move as? MoveState.Running)?.canCancel ?: (move as? MoveState.Failed)?.canCancel ?: false
     }
 
     private val moveLocal = MutableStateFlow(MoveUi())
@@ -209,6 +217,9 @@ class SyncSettingsViewModel(
         manager.startMove(normalizedUrl(moveLocal.value.targetUrl), setupSecret?.takeIf { it.isNotBlank() })
         moveLocal.update { it.copy(targetChecked = false, targetError = null) }
     }
+
+    /** Cancel Move: stops the move started here and drops it, while no other device knows it. */
+    fun cancelMove() = manager.cancelMove()
 
     /** The move dialog closed without a move: the typed address stays for the next time. */
     fun dismissMove() {

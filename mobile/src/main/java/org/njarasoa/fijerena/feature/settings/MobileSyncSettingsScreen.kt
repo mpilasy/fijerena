@@ -110,12 +110,15 @@ fun MobileSyncSettingsScreen(
     var moveDialog by remember { mutableStateOf(false) }
     var confirmPurge by remember { mutableStateOf(false) }
     var confirmForget by remember { mutableStateOf(false) }
+    var confirmCancelMove by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
-    // The move rows ask only while this screen is open: when it opens, when a move ends, and when
-    // the old server comes or goes (the sync server move plan).
-    val moveEnded = moveUi.move is MoveState.Done || moveUi.move is MoveState.Failed
+    // The move rows ask only while this screen is open: when it opens, when a move ends or is
+    // cancelled, and when the old server comes or goes (the sync server move plan).
+    val moveEnded = moveUi.move !is MoveState.Running
     LaunchedEffect(status.linked, moveEnded, moveUi.oldServer) { if (status.linked) viewModel.loadMove() }
+    // The move wrote its move record while the Cancel Move confirmation was open: the cancel is not allowed now.
+    LaunchedEffect(moveUi.canCancel) { if (!moveUi.canCancel) confirmCancelMove = false }
     LaunchedEffect(ui.scanDone) {
         val done = ui.scanDone ?: return@LaunchedEffect
         val message = if (done == SyncSettingsViewModel.ScanResult.JOINED) R.string.live_sync_joined else R.string.live_sync_handed_over
@@ -222,7 +225,7 @@ fun MobileSyncSettingsScreen(
                             onForget = { confirmForget = true },
                         )
                     }
-                    MovePanel(moveUi = moveUi, onMove = { moveDialog = true })
+                    MovePanel(moveUi = moveUi, onMove = { moveDialog = true }, onCancel = { confirmCancelMove = true })
                     CinemaButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
                         CinemaText(stringResource(R.string.live_sync_leave), role = TextRole.Label, tone = TextTone.Inherit)
                     }
@@ -311,6 +314,21 @@ fun MobileSyncSettingsScreen(
                     confirmForget = false
                 },
                 onDismiss = { confirmForget = false },
+            )
+        }
+    }
+    if (confirmCancelMove) {
+        status.serverUrl?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_move_cancel_title),
+                message = stringResource(R.string.live_sync_move_cancel_message, address),
+                confirm = stringResource(R.string.live_sync_move_cancel),
+                dismiss = stringResource(R.string.common_back),
+                onConfirm = {
+                    viewModel.cancelMove()
+                    confirmCancelMove = false
+                },
+                onDismiss = { confirmCancelMove = false },
             )
         }
     }
@@ -582,18 +600,24 @@ private fun ShareNowPlayingRow(
 }
 
 /**
- * Move to another server, and under it how far a move is or why the button is disabled (the sync
- * server move plan).
+ * Move to another server, with Cancel move under it while a move runs or stopped, and under them how
+ * far a move is or why a button is disabled (the sync server move plan).
  */
 @Composable
 internal fun MovePanel(
     moveUi: SyncSettingsViewModel.MoveUi,
     onMove: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
             CinemaButton(onClick = onMove, modifier = Modifier.fillMaxWidth(), enabled = moveUi.canMove, kind = ButtonKind.Other) {
                 CinemaText(stringResource(R.string.live_sync_move), role = TextRole.Label, tone = TextTone.Inherit)
+            }
+            if (moveUi.showCancel) {
+                CinemaButton(onClick = onCancel, modifier = Modifier.fillMaxWidth(), enabled = moveUi.canCancel, kind = ButtonKind.Other) {
+                    CinemaText(stringResource(R.string.live_sync_move_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                }
             }
             LiveSyncMoveLines(moveUi.move, moveUi.block, moveUi.blockLoaded, moveUi.blockError)
         }
@@ -731,12 +755,13 @@ private fun ConfirmDialog(
     confirm: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    dismiss: String = stringResource(R.string.common_cancel),
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = title,
         text = { CinemaText(message, tone = TextTone.Secondary) },
         danger = DialogAction(confirm, onClick = onConfirm),
-        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
+        cancel = DialogAction(dismiss, onClick = onDismiss),
     )
 }

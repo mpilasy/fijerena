@@ -1160,6 +1160,11 @@
     <string name="live_sync_move_switching">Passage au nouveau serveur…</string>
     <string name="live_sync_move_failed">Le changement s’est arrêté. Relancez-le pour reprendre là où il s’est arrêté.</string>
     <string name="live_sync_move_done">Changement fait. Les autres appareils passent au nouveau serveur la prochaine fois qu’ils s’ouvrent.</string>
+    <string name="live_sync_move_cancel">Annuler le changement</string>
+    <string name="live_sync_move_cancel_title">Annuler le changement ?</string>
+    <string name="live_sync_move_cancel_message">Le changement s’arrêtera. Cet appareil continuera de se synchroniser avec %1$s. La copie sur le nouveau serveur sera supprimée s’il répond.</string>
+    <string name="live_sync_move_cancel_locked">D’autres appareils sont peut-être déjà passés : le changement doit aller jusqu’au bout.</string>
+    <string name="live_sync_move_cancelling">Annulation du changement…</string>
     <string name="live_sync_move_same_server">Le groupe utilise déjà ce serveur.</string>
     <string name="live_sync_move_no_move_feature">Ce serveur ne peut pas recevoir un groupe qui change de serveur. Mettez-le d’abord à jour.</string>
     <string name="live_sync_moved_away">Ce groupe est passé à %1$s. Ajoutez cet appareil depuis un appareil du groupe.</string>
