@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.core.network.sync
 
 /*
  * The states of a move of the sync group to another server, as the Live Sync screens show them.
- * See docs/plans/20261119_sync-server-move-plan.md → App interface.
+ * See the sync server move plan → App interface.
  */
 
 /** Why Move to Another Server is disabled (step 0 and SM-Q7); null when it is not. */
