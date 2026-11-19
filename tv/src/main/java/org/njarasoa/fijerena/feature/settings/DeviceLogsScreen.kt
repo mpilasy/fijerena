@@ -57,39 +57,48 @@ internal fun DeviceLogsContent(state: DeviceLogsViewModel.State) {
     val headerFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { headerFocus.requestFocusWithRetry() }
     val report = state.report
-    LazyColumn(
+    // The header stays above the list: what scrolls up goes under the header, not under the clock.
+    Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        item {
-            TvScreenHeader(title = stringResource(R.string.device_logs_title), subtitle = state.name)
-        }
-        item {
-            // A card with nothing to do on OK: it takes focus so that Up/Down never skip it.
-            TvCard(
-                onClick = {},
-                look = TvCardLooks.infoBlock(),
-                modifier = Modifier.fillMaxWidth().focusRequester(headerFocus).leftToRail(),
-            ) {
-                Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    DeviceLogsHeaderLines(state.build, report)
+        TvScreenHeader(title = stringResource(R.string.device_logs_title), subtitle = state.name)
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+        ) {
+            item {
+                // A card with nothing to do on OK: it takes focus so that Up/Down never skip it.
+                TvCard(
+                    onClick = {},
+                    look = TvCardLooks.infoBlock(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(headerFocus).leftToRail(),
+                ) {
+                    Column(
+                        Modifier.padding(Spacing.md.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    ) {
+                        DeviceLogsHeaderLines(state.build, report)
+                    }
                 }
             }
-        }
-        if (report != null && report.isReported && report.entries.isEmpty()) {
-            item { TvEmptyState(message = stringResource(R.string.device_logs_empty), takeFocus = false) }
-        }
-        items(report?.entries.orEmpty()) { entry ->
-            TvCard(
-                onClick = {},
-                look = TvCardLooks.infoBlock(),
-                modifier = Modifier.fillMaxWidth().leftToRail(),
-            ) {
-                Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    DeviceLogsEntryLines(entry)
+            if (report != null && report.isReported && report.entries.isEmpty()) {
+                item { TvEmptyState(message = stringResource(R.string.device_logs_empty), takeFocus = false) }
+            }
+            items(report?.entries.orEmpty()) { entry ->
+                TvCard(
+                    onClick = {},
+                    look = TvCardLooks.infoBlock(),
+                    modifier = Modifier.fillMaxWidth().leftToRail(),
+                ) {
+                    Column(
+                        Modifier.padding(Spacing.md.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    ) {
+                        DeviceLogsEntryLines(entry)
+                    }
                 }
             }
         }

@@ -130,6 +130,7 @@ fun TvIconAction(
                         ),
                     ),
                 focusedBorder = Border.None,
+                focusedDisabledBorder = TvButtonStyle.focusedDisabledBorder(CinemaTheme.shapes.control),
             ),
     ) {
         // Full height, else the row sits at the top of the circle and CenterVertically centres the icon

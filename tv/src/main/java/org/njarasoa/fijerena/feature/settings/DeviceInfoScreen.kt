@@ -131,89 +131,92 @@ internal fun DeviceInfoContent(
         }
     }
 
-    LazyColumn(
+    // The header stays above the list: what scrolls up goes under the header, not under the clock.
+    Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        item {
-            TvScreenHeader(title = stringResource(R.string.device_info_title)) {
-                TvIconAction(
-                    onClick = onRefresh,
-                    icon = CinemaIcons.Refresh,
-                    label = stringResource(R.string.common_refresh),
-                    modifier = Modifier.focusRequester(refreshFocus),
-                )
-            }
-        }
-        item {
-            CinemaText(
-                stringResource(R.string.device_info_desc),
-                role = TextRole.Body,
-                tone = TextTone.Secondary,
+        TvScreenHeader(title = stringResource(R.string.device_info_title)) {
+            TvIconAction(
+                onClick = onRefresh,
+                icon = CinemaIcons.Refresh,
+                label = stringResource(R.string.common_refresh),
+                modifier = Modifier.focusRequester(refreshFocus),
             )
         }
-        if (failed) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+        ) {
             item {
                 CinemaText(
-                    stringResource(R.string.device_info_load_failed),
+                    stringResource(R.string.device_info_desc),
                     role = TextRole.Body,
-                    tone = TextTone.Danger,
+                    tone = TextTone.Secondary,
                 )
             }
-        }
-        itemsIndexed(sections.orEmpty()) { index, section ->
-            val action = section.rows.firstNotNullOfOrNull { it.action }
-            val firstFocus = if (index == 0) Modifier.focusRequester(firstSectionFocus) else Modifier
-            // A clickable card that does nothing, so each section takes D-pad focus (and the list scrolls to it).
-            // A section with an action gives its focus to the action instead.
-            TvCard(
-                onClick = {},
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(if (action != null) Modifier.focusProperties { canFocus = false } else firstFocus)
-                        .leftToRail(),
-                look = TvCardLooks.infoBlock(),
-            ) {
-                Column(
-                    Modifier.padding(Spacing.md.scaled(scale)),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+            if (failed) {
+                item {
+                    CinemaText(
+                        stringResource(R.string.device_info_load_failed),
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
+                    )
+                }
+            }
+            itemsIndexed(sections.orEmpty()) { index, section ->
+                val action = section.rows.firstNotNullOfOrNull { it.action }
+                val firstFocus = if (index == 0) Modifier.focusRequester(firstSectionFocus) else Modifier
+                // A clickable card that does nothing, so each section takes D-pad focus (and the list scrolls to it).
+                // A section with an action gives its focus to the action instead.
+                TvCard(
+                    onClick = {},
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (action != null) Modifier.focusProperties { canFocus = false } else firstFocus)
+                            .leftToRail(),
+                    look = TvCardLooks.infoBlock(),
                 ) {
-                    CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
-                    section.rows.forEach { row ->
-                        Box {
-                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
-                                CinemaText(
-                                    row.label.asString(),
-                                    modifier = Modifier.weight(LABEL_WEIGHT),
-                                    role = TextRole.Body,
-                                    tone = TextTone.Secondary,
-                                )
-                                CinemaText(
-                                    row.value.asString(),
-                                    modifier = Modifier.weight(VALUE_WEIGHT),
-                                    role = TextRole.Body,
-                                    tone = TextTone.Primary,
-                                )
-                            }
-                            row.action?.let { rowAction ->
-                                // Over the row's end, centred on its line, so the row keeps the size and
-                                // columns of the others. The focused label grows to the left, inside the card.
-                                Box(Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
-                                    TvIconAction(
-                                        onClick = { onAction(rowAction) },
-                                        icon = CinemaIcons.ClearData,
-                                        label = stringResource(actionLabel(rowAction)),
-                                        modifier =
-                                            Modifier
-                                                .wrapContentSize(Alignment.CenterEnd, unbounded = true)
-                                                .then(firstFocus)
-                                                .focusRequester(actionFocus)
-                                                .leftToRail(),
+                    Column(
+                        Modifier.padding(Spacing.md.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    ) {
+                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
+                        section.rows.forEach { row ->
+                            Box {
+                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
+                                    CinemaText(
+                                        row.label.asString(),
+                                        modifier = Modifier.weight(LABEL_WEIGHT),
+                                        role = TextRole.Body,
+                                        tone = TextTone.Secondary,
                                     )
+                                    CinemaText(
+                                        row.value.asString(),
+                                        modifier = Modifier.weight(VALUE_WEIGHT),
+                                        role = TextRole.Body,
+                                        tone = TextTone.Primary,
+                                    )
+                                }
+                                row.action?.let { rowAction ->
+                                    // Over the row's end, centred on its line, so the row keeps the size and
+                                    // columns of the others. The focused label grows to the left, inside the card.
+                                    Box(Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
+                                        TvIconAction(
+                                            onClick = { onAction(rowAction) },
+                                            icon = CinemaIcons.ClearData,
+                                            label = stringResource(actionLabel(rowAction)),
+                                            modifier =
+                                                Modifier
+                                                    .wrapContentSize(Alignment.CenterEnd, unbounded = true)
+                                                    .then(firstFocus)
+                                                    .focusRequester(actionFocus)
+                                                    .leftToRail(),
+                                        )
+                                    }
                                 }
                             }
                         }

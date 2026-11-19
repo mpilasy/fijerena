@@ -107,112 +107,118 @@ fun DiagnosticsScreen() {
         }
     }
 
-    LazyColumn(
+    // The header stays above the list: what scrolls up goes under the header, not under the clock.
+    Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        item {
-            TvScreenHeader(title = stringResource(R.string.settings_diagnostics_title)) {
-                TvIconAction(
-                    onClick = viewModel::reload,
-                    icon = CinemaIcons.Refresh,
-                    label = stringResource(R.string.common_refresh),
-                    modifier = Modifier.focusRequester(refreshFocus),
-                )
-                TvIconAction(
-                    onClick = { showClearConfirm = true },
-                    icon = CinemaIcons.Delete,
-                    label = stringResource(R.string.settings_diagnostics_clear),
-                    danger = true,
-                )
-            }
-        }
-        item {
-            CinemaText(
-                stringResource(R.string.settings_diagnostics_desc),
-                role = TextRole.Body,
-                tone = TextTone.Secondary,
+        TvScreenHeader(title = stringResource(R.string.settings_diagnostics_title)) {
+            TvIconAction(
+                onClick = viewModel::reload,
+                icon = CinemaIcons.Refresh,
+                label = stringResource(R.string.common_refresh),
+                modifier = Modifier.focusRequester(refreshFocus),
+            )
+            TvIconAction(
+                onClick = { showClearConfirm = true },
+                icon = CinemaIcons.Delete,
+                label = stringResource(R.string.settings_diagnostics_clear),
+                danger = true,
             )
         }
-        val loaded = entries
-        if (loaded != null && loaded.isEmpty()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+        ) {
             item {
-                TvEmptyState(message = stringResource(R.string.settings_diagnostics_empty))
-            }
-        }
-        if (!loaded.isNullOrEmpty()) {
-            item {
-                TvSearchField(
-                    query = query,
-                    onQueryChange = viewModel::updateQuery,
-                    onSearchSubmit = {},
-                    onClear = { viewModel.updateQuery("") },
-                    placeholder = stringResource(R.string.common_search),
-                    focusRequester = searchFocus,
-                    editing = editing,
-                    onEditingChange = { editing = it },
-                    modifier = if (visible.isNullOrEmpty()) Modifier else Modifier.focusProperties { down = firstEntryFocus },
-                    restingFieldModifier = Modifier.leftToRail(),
+                CinemaText(
+                    stringResource(R.string.settings_diagnostics_desc),
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             }
-            if (visible != null && visible.isEmpty()) {
+            val loaded = entries
+            if (loaded != null && loaded.isEmpty()) {
                 item {
-                    TvEmptyState(
-                        message = stringResource(R.string.search_no_results_query_format, query.trim()),
-                        icon = CinemaIcons.Search,
-                        takeFocus = false,
-                    )
+                    TvEmptyState(message = stringResource(R.string.settings_diagnostics_empty))
                 }
             }
-        }
-        itemsIndexed(visible.orEmpty()) { index, entry ->
-            val causes = entry.causes
-            // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
-            var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
-            // A clickable card, so each entry takes D-pad focus (and the list scrolls to it).
-            TvCard(
-                onClick = { if (causes != null) expanded = !expanded },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (index == 0) {
-                                Modifier.focusRequester(firstEntryFocus).focusProperties { up = searchFocus }
-                            } else {
-                                Modifier
-                            },
-                        ).leftToRail(),
-                look = TvCardLooks.infoBlock(),
-            ) {
-                Row(Modifier.padding(Spacing.md.scaled(scale)), horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
-                        // The detail is raw log text (stack traces).
-                        CinemaCodeText(
-                            text =
-                                when {
-                                    causes == null -> entry.detail
-                                    expanded -> causes.chain.joinToString("\n")
-                                    else -> causes.rootCause
-                                },
-                            role = TextRole.Body,
-                            maxLines = if (causes != null && !expanded) 1 else DETAIL_MAX_LINES,
+            if (!loaded.isNullOrEmpty()) {
+                item {
+                    TvSearchField(
+                        query = query,
+                        onQueryChange = viewModel::updateQuery,
+                        onSearchSubmit = {},
+                        onClear = { viewModel.updateQuery("") },
+                        placeholder = stringResource(R.string.common_search),
+                        focusRequester = searchFocus,
+                        editing = editing,
+                        onEditingChange = { editing = it },
+                        modifier = if (visible.isNullOrEmpty()) Modifier else Modifier.focusProperties { down = firstEntryFocus },
+                        restingFieldModifier = Modifier.leftToRail(),
+                    )
+                }
+                if (visible != null && visible.isEmpty()) {
+                    item {
+                        TvEmptyState(
+                            message = stringResource(R.string.search_no_results_query_format, query.trim()),
+                            icon = CinemaIcons.Search,
+                            takeFocus = false,
                         )
                     }
-                    if (causes != null) {
-                        TvIcon(
-                            imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
-                            contentDescription =
-                                if (expanded) {
-                                    stringResource(R.string.settings_diagnostics_hide_details)
+                }
+            }
+            itemsIndexed(visible.orEmpty()) { index, entry ->
+                val causes = entry.causes
+                // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
+                var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
+                // A clickable card, so each entry takes D-pad focus (and the list scrolls to it).
+                TvCard(
+                    onClick = { if (causes != null) expanded = !expanded },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (index == 0) {
+                                    Modifier.focusRequester(firstEntryFocus).focusProperties { up = searchFocus }
                                 } else {
-                                    stringResource(R.string.settings_diagnostics_show_details)
+                                    Modifier
                                 },
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
+                            ).leftToRail(),
+                    look = TvCardLooks.infoBlock(),
+                ) {
+                    Row(
+                        Modifier.padding(Spacing.md.scaled(scale)),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                            CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
+                            // The detail is raw log text (stack traces).
+                            CinemaCodeText(
+                                text =
+                                    when {
+                                        causes == null -> entry.detail
+                                        expanded -> causes.chain.joinToString("\n")
+                                        else -> causes.rootCause
+                                    },
+                                role = TextRole.Body,
+                                maxLines = if (causes != null && !expanded) 1 else DETAIL_MAX_LINES,
+                            )
+                        }
+                        if (causes != null) {
+                            TvIcon(
+                                imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
+                                contentDescription =
+                                    if (expanded) {
+                                        stringResource(R.string.settings_diagnostics_hide_details)
+                                    } else {
+                                        stringResource(R.string.settings_diagnostics_show_details)
+                                    },
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
                     }
                 }
             }

@@ -117,7 +117,7 @@ fun CinemaButton(
                 focusedBorder = Border.None,
                 pressedBorder = Border.None,
                 disabledBorder = Border.None,
-                focusedDisabledBorder = Border.None,
+                focusedDisabledBorder = TvButtonStyle.focusedDisabledBorder(shape),
             ),
     ) {
         // Dialog content is often phone Material's Text, which reads its own locals: the same
@@ -263,6 +263,7 @@ fun CinemaIconButton(
             androidx.tv.material3.ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), TvButtonStyle.iconOutline)),
                 focusedBorder = Border.None,
+                focusedDisabledBorder = TvButtonStyle.focusedDisabledBorder(CinemaTheme.shapes.control),
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(

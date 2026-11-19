@@ -4,8 +4,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.ButtonStyle
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -72,6 +74,14 @@ object TvButtonStyle : ButtonStyle() {
         } else {
             TvFocusTokens.onFocusFill
         }
+
+    /**
+     * A focused disabled button keeps its dim fill and label, with a ring in the focus colour
+     * around it: focus never goes out of sight, and the button still reads as disabled.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun focusedDisabledBorder(shape: Shape): Border = Border(BorderStroke(TvFocusTokens.focusBorderWidth, focusedContainer), shape = shape)
 
     // Icon buttons: a resting disc that turns white with a dark glyph when focused.
     override val iconContainer: Color

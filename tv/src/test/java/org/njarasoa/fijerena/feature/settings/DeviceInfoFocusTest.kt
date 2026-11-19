@@ -57,6 +57,10 @@ class DeviceInfoFocusTest {
         walk.run(
             down("Clear image cache"),
             down("Display"),
+        )
+        // A card's text end, read while Display is on screen: the list scrolls it away again below.
+        val textEnd = rule.onNodeWithText("1920×1080 @ 60 Hz", useUnmergedTree = true).getBoundsInRoot().right
+        walk.run(
             up("Clear image cache"),
             up("Memory"),
             down("Clear image cache"),
@@ -72,7 +76,6 @@ class DeviceInfoFocusTest {
         assertTrue("icon starts at ${icon.left}, past the label ${row.right}", icon.left > row.right)
 
         // The focused action stays inside the card: it ends where a card's text ends (Display has no action).
-        val textEnd = rule.onNodeWithText("1920×1080 @ 60 Hz", useUnmergedTree = true).getBoundsInRoot().right
         assertTrue("icon ends at ${icon.right}, past the cards' text end $textEnd", icon.right <= textEnd + 1.dp)
     }
 

@@ -175,15 +175,14 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
         }
     }
 
+    val qr = ui.handoffQr ?: ui.inviteQr
+    // The header stays above the scrolling page: what scrolls up goes under the header, not under the clock.
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
-                .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {
-        val qr = ui.handoffQr ?: ui.inviteQr
         // Add a device is an icon action in the header, as Add is on every Settings page.
         TvScreenHeader(title = stringResource(R.string.live_sync_title)) {
             if (qr == null && status.linked) {
@@ -196,125 +195,130 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
                 )
             }
         }
-        CinemaText(stringResource(R.string.live_sync_desc), role = TextRole.Body, tone = TextTone.Secondary)
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+        ) {
+            CinemaText(stringResource(R.string.live_sync_desc), role = TextRole.Body, tone = TextTone.Secondary)
 
-        if (qr != null) {
-            PairingPanel(
-                qr = qr,
-                instructions =
-                    stringResource(
-                        if (ui.handoffQr !=
-                            null
-                        ) {
-                            R.string.live_sync_handoff_instructions
-                        } else {
-                            R.string.live_sync_invite_instructions
-                        },
-                    ),
-                onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
-            )
-        } else if (status.linked) {
-            // The group moved to a server without this device: say where, above everything else.
-            moveUi.movedAway?.let { address ->
-                TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    CinemaText(
-                        stringResource(R.string.live_sync_moved_away, address),
-                        role = TextRole.Body,
-                        tone = TextTone.Warning,
-                        modifier = Modifier.padding(Spacing.md.scaled(scale)),
+            if (qr != null) {
+                PairingPanel(
+                    qr = qr,
+                    instructions =
+                        stringResource(
+                            if (ui.handoffQr !=
+                                null
+                            ) {
+                                R.string.live_sync_handoff_instructions
+                            } else {
+                                R.string.live_sync_invite_instructions
+                            },
+                        ),
+                    onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
+                )
+            } else if (status.linked) {
+                // The group moved to a server without this device: say where, above everything else.
+                moveUi.movedAway?.let { address ->
+                    TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
+                        CinemaText(
+                            stringResource(R.string.live_sync_moved_away, address),
+                            role = TextRole.Body,
+                            tone = TextTone.Warning,
+                            modifier = Modifier.padding(Spacing.md.scaled(scale)),
+                        )
+                    }
+                }
+                // T-14 order: status + Sync now → share switch → devices → old server → move → danger zone; Add a
+                // device in the header.
+                LinkedPanel(
+                    status = status,
+                    onSyncNow = viewModel::syncNow,
+                    onResyncAll = viewModel::resyncAll,
+                    onReconnect = viewModel::reconnectNow,
+                    syncNowFocus = syncNowFocus,
+                )
+                TvSwitchRow(
+                    checked = shareNowPlaying,
+                    onCheckedChange = viewModel::setShareNowPlaying,
+                    label = stringResource(R.string.live_sync_share_playing),
+                    description = stringResource(R.string.live_sync_share_playing_desc),
+                    modifier = Modifier.leftToRail(),
+                )
+                TvSwitchRow(
+                    checked = shareLogs,
+                    onCheckedChange = viewModel::setShareLogs,
+                    label = stringResource(R.string.live_sync_share_logs),
+                    description = stringResource(R.string.live_sync_share_logs_desc),
+                    modifier = Modifier.leftToRail(),
+                )
+                // Up from the first left-aligned button under the devices goes to the last Remove: it is at the far right
+                // of its row, outside that button's beam, so plain focus search went to the share switch.
+                val lastActionFocus = remember { FocusRequester() }
+                val hasDevices = ui.devices.orEmpty().any { !it.revoked }
+                DevicesPanel(
+                    devices = ui.devices,
+                    nowPlaying = nowPlaying,
+                    builds = deviceBuilds,
+                    reports = if (LocalNerd.current) deviceReports else null,
+                    lastActionFocus = lastActionFocus,
+                    returnFocus = returnFocus,
+                    onRename = { renaming = it },
+                    onLogs = { onDeviceLogs(it.id, it.name) },
+                    onRemove = { confirmRemove = it },
+                )
+                // That button is Old Server's button when it shows, else Move to another server. Leave's Up goes to Move.
+                val devicesUp = if (hasDevices) lastActionFocus else null
+                moveUi.oldServer?.let { address ->
+                    OldServerPanel(
+                        address = address,
+                        moveUi = moveUi,
+                        action = oldServerAction,
+                        onPurge = { confirmPurge = true },
+                        onForget = { confirmForget = true },
+                        upFocus = devicesUp,
+                        modifier =
+                            Modifier.onFocusChanged { focus ->
+                                // Focus that leaves with the button (it changed or went) stays noted: the effect above moves it.
+                                if (focus.hasFocus) {
+                                    focusedOldServerAction = oldServerActionNow
+                                } else if (oldServerActionNow == focusedOldServerAction) {
+                                    focusedOldServerAction = null
+                                }
+                            },
                     )
                 }
-            }
-            // T-14 order: status + Sync now → share switch → devices → old server → move → danger zone; Add a
-            // device in the header.
-            LinkedPanel(
-                status = status,
-                onSyncNow = viewModel::syncNow,
-                onResyncAll = viewModel::resyncAll,
-                onReconnect = viewModel::reconnectNow,
-                syncNowFocus = syncNowFocus,
-            )
-            TvSwitchRow(
-                checked = shareNowPlaying,
-                onCheckedChange = viewModel::setShareNowPlaying,
-                label = stringResource(R.string.live_sync_share_playing),
-                description = stringResource(R.string.live_sync_share_playing_desc),
-                modifier = Modifier.leftToRail(),
-            )
-            TvSwitchRow(
-                checked = shareLogs,
-                onCheckedChange = viewModel::setShareLogs,
-                label = stringResource(R.string.live_sync_share_logs),
-                description = stringResource(R.string.live_sync_share_logs_desc),
-                modifier = Modifier.leftToRail(),
-            )
-            // Up from the first left-aligned button under the devices goes to the last Remove: it is at the far right
-            // of its row, outside that button's beam, so plain focus search went to the share switch.
-            val lastActionFocus = remember { FocusRequester() }
-            val hasDevices = ui.devices.orEmpty().any { !it.revoked }
-            DevicesPanel(
-                devices = ui.devices,
-                nowPlaying = nowPlaying,
-                builds = deviceBuilds,
-                reports = if (LocalNerd.current) deviceReports else null,
-                lastActionFocus = lastActionFocus,
-                returnFocus = returnFocus,
-                onRename = { renaming = it },
-                onLogs = { onDeviceLogs(it.id, it.name) },
-                onRemove = { confirmRemove = it },
-            )
-            // That button is Old Server's button when it shows, else Move to another server. Leave's Up goes to Move.
-            val devicesUp = if (hasDevices) lastActionFocus else null
-            moveUi.oldServer?.let { address ->
-                OldServerPanel(
-                    address = address,
+                MovePanel(
                     moveUi = moveUi,
-                    action = oldServerAction,
-                    onPurge = { confirmPurge = true },
-                    onForget = { confirmForget = true },
-                    upFocus = devicesUp,
-                    modifier =
-                        Modifier.onFocusChanged { focus ->
-                            // Focus that leaves with the button (it changed or went) stays noted: the effect above moves it.
-                            if (focus.hasFocus) {
-                                focusedOldServerAction = oldServerActionNow
-                            } else if (oldServerActionNow == focusedOldServerAction) {
-                                focusedOldServerAction = null
-                            }
-                        },
+                    onMove = { moveDialog = true },
+                    onCancel = { confirmCancelMove = true },
+                    moveFocus = moveFocus,
+                    upFocus = devicesUp.takeIf { oldServerAction == OldServerAction.NONE },
+                    onCancelFocusChanged = { focused ->
+                        // Focus that leaves with the button stays noted: the effect above moves it.
+                        if (focused) {
+                            cancelFocused = true
+                        } else if (showCancelNow) {
+                            cancelFocused = false
+                        }
+                    },
                 )
+                // Rare and drastic: last, under its own heading, outlined in the error colour.
+                CinemaText(
+                    stringResource(R.string.provider_section_danger_zone),
+                    role = TextRole.Heading,
+                    tone = TextTone.Danger,
+                )
+                ProviderDangerButton(
+                    onClick = { confirmLeave = true },
+                    text = stringResource(R.string.live_sync_leave),
+                    modifier = Modifier.focusProperties { up = moveFocus }.leftToRail(),
+                )
+            } else {
+                SetupPanel(ui, viewModel)
             }
-            MovePanel(
-                moveUi = moveUi,
-                onMove = { moveDialog = true },
-                onCancel = { confirmCancelMove = true },
-                moveFocus = moveFocus,
-                upFocus = devicesUp.takeIf { oldServerAction == OldServerAction.NONE },
-                onCancelFocusChanged = { focused ->
-                    // Focus that leaves with the button stays noted: the effect above moves it.
-                    if (focused) {
-                        cancelFocused = true
-                    } else if (showCancelNow) {
-                        cancelFocused = false
-                    }
-                },
-            )
-            // Rare and drastic: last, under its own heading, outlined in the error colour.
-            CinemaText(
-                stringResource(R.string.provider_section_danger_zone),
-                role = TextRole.Heading,
-                tone = TextTone.Danger,
-            )
-            ProviderDangerButton(
-                onClick = { confirmLeave = true },
-                text = stringResource(R.string.live_sync_leave),
-                modifier = Modifier.focusProperties { up = moveFocus }.leftToRail(),
-            )
-        } else {
-            SetupPanel(ui, viewModel)
-        }
 
-        ui.error?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Danger) }
+            ui.error?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Danger) }
+        }
     }
 
     confirmRemove?.let { device ->
