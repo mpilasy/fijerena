@@ -1,6 +1,6 @@
 # Move live sync to another server
 
-**Status:** Planned 2026-11-19; not started. SM-Q7 decided (block); SM-Q1 to SM-Q6 open.
+**Status:** Planned 2026-11-19; not started. SM-Q1 to SM-Q7 decided 2026-11-19 (see Open questions); waits for a go-ahead.
 
 ## Goal
 
@@ -209,34 +209,34 @@ Additive changes; `protocol` stays 1.
 | 4 | Not started |
 | 5 | Not started |
 
-## Open questions
+## Open questions (all decided 2026-11-19)
 
 - **SM-Q1, what carries the move record (on the old server) and the old-server record (on the new
-  server):**
+  server):** **decided 2026-11-19: (a)**.
   - (a) Two shared setting keys, `sync_move` and `sync_previous_server`, handled by `SyncEngine`.
     Older builds skip them, and nobody has to pull everything again. Recommended.
   - (b) A new kept kind. Every device pulls everything once after the update.
-- **SM-Q2, how long a move code lives:**
+- **SM-Q2, how long a move code lives:** **decided 2026-11-19: (c)**.
   - (a) 30 days. A device closed for longer must be added again by hand.
   - (b) 7 days.
   - (c) Until it is used or the purge deletes the old account. Recommended: the purge already
     waits for every device, so a time limit only strands dormant devices. The code is sealed in the
     move record, works once, and the server keeps only its hash.
-- **SM-Q3, which records the copy skips:**
+- **SM-Q3, which records the copy skips:** **decided 2026-11-19: (a)**.
   - (a) The volatile kinds, and the records keyed by an old server device id (device builds,
     device reports). Devices report these again on the new server. Recommended.
   - (b) Copy everything.
-- **SM-Q4, who can start a move:**
+- **SM-Q4, who can start a move:** **decided 2026-11-19: (a)**.
   - (a) Any admin device of the group, TV or phone. Recommended.
   - (b) The phone only.
-- **SM-Q5, an old server that can't be reached:**
+- **SM-Q5, an old server that can't be reached:** **decided 2026-11-19: (a)**.
   - (a) Offer **Forget Old Server**, which drops the old link without a purge. Recommended.
   - (b) No such button; the purge row stays until the old server answers.
 - **SM-Q6, devices on an app version from before the move** (rare after SM-Q7: only a device added
   to the group on an old version after the move started):
   - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.
   - (b) Also show their app version in the list (from their device build record).
-- **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**.
+- **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**. **decided 2026-11-19: (a)**.
   - (a) Block: **Move to Another Server** shows disabled until every device reports
     `server_move`, with a line under it that names the devices to update or remove ("Update
     first: Living Room TV"). The user chose disabled with a reason over hiding the button or
