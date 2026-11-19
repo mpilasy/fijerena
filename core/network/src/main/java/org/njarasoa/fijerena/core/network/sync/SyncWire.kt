@@ -16,6 +16,22 @@ object SyncWire {
         val service: String,
         val protocol: Int,
         val setupSecretRequired: Boolean = false,
+        /** What the server can do beyond protocol 1; an older server sends none. */
+        val features: List<String> = emptyList(),
+    ) {
+        companion object {
+            /** Takes a moved group: move codes (the sync server move plan). */
+            const val FEATURE_MOVE = "move"
+
+            /** Deletes an account (`DELETE /account`). */
+            const val FEATURE_PURGE = "purge"
+        }
+    }
+
+    /** The answer to `DELETE /account`. */
+    @Serializable
+    data class AccountDeleted(
+        val deleted: Boolean = true,
     )
 
     @Serializable
@@ -28,7 +44,8 @@ object SyncWire {
     @Serializable
     data class Pairing(
         val code: String,
-        val expiresAt: Long,
+        /** Null for a move code, which has no time limit. */
+        val expiresAt: Long? = null,
     )
 
     @Serializable
