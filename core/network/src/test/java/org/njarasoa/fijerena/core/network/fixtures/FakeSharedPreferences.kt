@@ -60,7 +60,7 @@ class FakeSharedPreferences : SharedPreferences {
         override fun putStringSet(
             key: String,
             values: MutableSet<String>?,
-        ) = apply { puts[key] = values }
+        ) = apply { puts[key] = values?.toMutableSet() }
 
         override fun putInt(
             key: String,

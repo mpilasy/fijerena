@@ -61,6 +61,25 @@ class SyncApi(
         token: String,
     ): SyncWire.Pairing = call(serverUrl, "POST", "/pairings", token = token, body = "{}")
 
+    /**
+     * Makes a move code on the new server for one device of a group that moves (the sync server
+     * move plan, step 3). A move code has no time limit and works one time. [token] is a device
+     * token of the new account.
+     */
+    suspend fun createMoveCode(
+        serverUrl: String,
+        token: String,
+    ): SyncWire.Pairing = call(serverUrl, "POST", "/pairings", token = token, body = """{"purpose":"move"}""")
+
+    /**
+     * Deletes the whole account of [token] on [serverUrl] (Purge Old Server). The server answers
+     * 409, as a [SyncApiException], while a device other than the caller is not revoked.
+     */
+    suspend fun deleteAccount(
+        serverUrl: String,
+        token: String,
+    ): SyncWire.AccountDeleted = call(serverUrl, "DELETE", "/account", token = token)
+
     suspend fun pair(
         serverUrl: String,
         code: String,

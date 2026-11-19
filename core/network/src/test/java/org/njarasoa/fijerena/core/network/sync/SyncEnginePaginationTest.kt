@@ -65,6 +65,8 @@ class SyncEnginePaginationTest {
         every { XtreamDatabase.getInstance(any()) } returns mockk(relaxed = true)
         every { store.link } returns SyncAccountStore.Link("https://sync.test", "acc", "dev", "token", accountKey)
         every { store.seeded } returns true
+        every { store.moveProgress } returns null
+        every { store.moveFollow } returns null
         every { store.cursor } answers { cursor }
         every { store.deferred } answers { deferred }
         every { store.cursor = any() } answers { cursor = firstArg() }

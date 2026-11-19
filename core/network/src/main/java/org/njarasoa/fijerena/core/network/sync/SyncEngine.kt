@@ -26,6 +26,7 @@ class SyncEngine(
     private val context: Context,
     private val api: SyncApi = SyncApi(),
     private val store: SyncAccountStore = SyncAccountStore(context),
+    private val mover: SyncServerMove = SyncServerMove(context, api, store),
 ) {
     /** What a pass changed that the UI layer must react to. */
     interface Listener {
@@ -55,6 +56,8 @@ class SyncEngine(
         val pushed: Int,
         val deferred: Int,
         val activeProfileDeleted: Boolean,
+        /** This pass followed a move of the group: this device is on another server now (reconnect the socket). */
+        val serverSwitched: Boolean = false,
     )
 
     private val mutex = Mutex()
@@ -62,36 +65,60 @@ class SyncEngine(
 
     val isLinked: Boolean get() = store.link != null
 
+    /**
+     * One pass. Null when this device is not linked, or while a move that this device started is
+     * not finished: no pass runs from the start of the move until the switch (the sync server move
+     * plan → No sync during the move).
+     *
+     * A pull that brings a move record with this device in it sends nothing to the old server: the
+     * device follows the move ([SyncServerMove.follow]), then does a pass on the new server, which
+     * pushes its pending changes there. A move followed part way continues before anything else.
+     */
     suspend fun syncNow(listener: Listener? = null): Outcome? =
         mutex.withLock {
-            val link = store.link ?: return@withLock null
-            val crypto = AccountKeyCrypto(link.accountKey)
-            val startedAt = System.currentTimeMillis()
-            val fullPull = store.cursor == 0L || store.knownKinds?.containsAll(SyncKind.KEPT) != true
-            if (store.knownKinds?.containsAll(SyncKind.KEPT) != true) {
-                // An older build skipped the kinds it didn't know and moved past them: get them now.
-                // Everything is applied against local versions, so only real changes land.
-                Log.i(TAG, "This build keeps kinds the last full pull didn't know; pulling everything")
-                store.startOver(SyncKind.KEPT)
-            }
+            if (store.moveProgress != null || store.link == null) return@withLock null
             try {
-                val pull = pull(link, crypto, listener)
-                if (!store.seeded) {
-                    LocalRecords(context).seedEverything()
-                    store.seeded = true
+                var switched = mover.follow()
+                var outcome = pass(checkNotNull(store.link), listener)
+                if (store.moveFollow != null) {
+                    switched = mover.follow()
+                    outcome = pass(checkNotNull(store.link), listener)
                 }
-                val pullDoneAt = System.currentTimeMillis()
-                val pushed = push(link, crypto, listener)
-                store.lastSyncAt = System.currentTimeMillis()
-                store.lastError = null
-                logPass(startedAt, pullDoneAt, fullPull, pull, pushed)
-                Outcome(pull.applied, pushed, pull.deferred, pull.activeProfileDeleted)
+                outcome.copy(serverSwitched = switched)
             } catch (e: SyncApiException) {
                 store.lastError = e.message?.let(Redact::text)
                 if (e.status == 401) Log.w(TAG, "Device token refused — revoked from another device?")
                 throw e
             }
         }
+
+    private suspend fun pass(
+        link: SyncAccountStore.Link,
+        listener: Listener?,
+    ): Outcome {
+        val crypto = AccountKeyCrypto(link.accountKey)
+        val startedAt = System.currentTimeMillis()
+        val fullPull = store.cursor == 0L || store.knownKinds?.containsAll(SyncKind.KEPT) != true
+        if (store.knownKinds?.containsAll(SyncKind.KEPT) != true) {
+            // An older build skipped the kinds it didn't know and moved past them: get them now.
+            // Everything is applied against local versions, so only real changes land.
+            Log.i(TAG, "This build keeps kinds the last full pull didn't know; pulling everything")
+            store.startOver(SyncKind.KEPT)
+        }
+        val pull = pull(link, crypto, listener)
+        // The group moved: nothing goes to the old server; the pending changes go to the new one.
+        if (store.moveFollow != null) return Outcome(pull.applied, 0, pull.deferred, pull.activeProfileDeleted)
+        if (!store.seeded) {
+            LocalRecords(context).seedEverything()
+            store.seeded = true
+        }
+        val pullDoneAt = System.currentTimeMillis()
+        val pushed = push(link, crypto, listener)
+        store.lastSyncAt = System.currentTimeMillis()
+        store.lastError = null
+        logPass(startedAt, pullDoneAt, fullPull, pull, pushed)
+        return Outcome(pull.applied, pushed, pull.deferred, pull.activeProfileDeleted)
+    }
 
     /**
      * Pushes [records] and does nothing else: no pull, no apply, no seed, no cursor, no socket. For
@@ -106,6 +133,12 @@ class SyncEngine(
             val crypto = AccountKeyCrypto(link.accountKey)
             api.push(link.serverUrl, link.deviceToken, records.map { SyncCodec.encode(it, crypto) }).accepted
         }
+
+    /**
+     * Runs [block] while no pass runs, and starts no pass until it ends. For the move to another
+     * server (the sync server move plan → No sync during the move).
+     */
+    suspend fun <T> exclusive(block: suspend () -> T): T = mutex.withLock { block() }
 
     /** Full Resync: the next pass pulls everything from the server's first record again. */
     suspend fun startOver() =
@@ -183,7 +216,13 @@ class SyncEngine(
                 val pageCursor = page.records.lastOrNull()?.seq ?: store.cursor
                 if (page.more) next = async { api.pull(link.serverUrl, link.deviceToken, pageCursor) }
                 val decodeStart = System.currentTimeMillis()
-                val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
+                // The move records go to the mover, never to the applier or the app settings.
+                val (moveRecords, opened) =
+                    page.records
+                        .mapNotNull { wire -> SyncCodec.decode(wire, crypto)?.let { wire to it } }
+                        .partition { SyncServerMove.isMoveKey(it.second.key) }
+                moveRecords.forEach { (wire, record) -> mover.take(record, wire.seq) }
+                val decodedPage = opened.map { it.second }
                 decodeMs += System.currentTimeMillis() - decodeStart
                 // Records waiting for a provider or profile get another go when a page brings one, and
                 // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and

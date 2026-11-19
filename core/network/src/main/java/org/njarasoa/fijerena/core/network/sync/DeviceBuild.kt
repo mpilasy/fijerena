@@ -28,9 +28,15 @@ data class DeviceBuild(
     /** A TV of this build takes a film, an episode or a channel from a phone (the send to TV plan). */
     val takesPlayRequests: Boolean get() = FEATURE_PLAY_REQUEST in features
 
+    /** A device of this build follows its group to another server (the sync server move plan, SM-Q7). */
+    val canMoveServer: Boolean get() = FEATURE_SERVER_MOVE in features
+
     companion object {
         const val META_BUILD_TYPE = "fijerena.buildType"
         const val FEATURE_PLAY_REQUEST = "play_request"
+
+        /** The device reads the move record and follows its group to the new server (the sync server move plan). */
+        const val FEATURE_SERVER_MOVE = "server_move"
 
         /** This device's build, from its package and the system. */
         fun current(context: Context): DeviceBuild {
@@ -50,7 +56,7 @@ data class DeviceBuild(
                 model = Build.MODEL.orEmpty(),
                 androidRelease = Build.VERSION.RELEASE.orEmpty(),
                 sdkInt = Build.VERSION.SDK_INT,
-                features = listOf(FEATURE_PLAY_REQUEST),
+                features = listOf(FEATURE_PLAY_REQUEST, FEATURE_SERVER_MOVE),
             )
         }
     }
