@@ -23,22 +23,31 @@ sealed interface MoveBlock {
 sealed interface MoveState {
     data object Idle : MoveState
 
-    /** [copied] and [total] count records while [stage] is [Stage.COPYING]; [total] is null until known. */
+    /**
+     * [copied] and [total] count records while [stage] is [Stage.COPYING]; [total] is null until known.
+     * [canCancel]: Cancel Move is allowed, because the move record is not on the old server yet (SM-Q8).
+     */
     data class Running(
         val stage: Stage,
         val copied: Int = 0,
         val total: Int? = null,
+        val canCancel: Boolean = false,
     ) : MoveState
 
-    /** The move stopped; [message] is the raw error. The move continues from where it stopped when started again. */
+    /**
+     * The move stopped; [message] is the raw error. The move continues from where it stopped when
+     * started again. [canCancel] as for [Running].
+     */
     data class Failed(
         val message: String,
+        val canCancel: Boolean = false,
     ) : MoveState
 
     /** This device is on the new server. */
     data object Done : MoveState
 
-    enum class Stage { CHECKING, CREATING, COPYING, SWITCHING }
+    /** [CANCELLING]: Cancel Move stops the move and deletes the copy on the new server. */
+    enum class Stage { CHECKING, CREATING, COPYING, SWITCHING, CANCELLING }
 }
 
 /** The old server after a move, as an open Live Sync screen finds it. */

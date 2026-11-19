@@ -19,7 +19,8 @@ import java.text.NumberFormat
 
 /**
  * The lines under Move to Another Server: how far the move is, how it ended, or else why the button
- * is disabled. A Nerd also sees the raw error of a move that stopped.
+ * is disabled. A Nerd also sees the raw error of a move that stopped. While Cancel Move shows but is
+ * disabled (after step 5), the last line tells why.
  */
 @Composable
 fun LiveSyncMoveLines(
@@ -36,11 +37,13 @@ fun LiveSyncMoveLines(
                     (move.copied.toFloat() / total).coerceIn(0f, 1f)
                 }
             CinemaProgressBar(progress = fraction?.let { f -> { f } }, modifier = Modifier.fillMaxWidth())
+            if (move.stage != MoveState.Stage.CANCELLING && !move.canCancel) CancelLockedLine()
         }
 
         is MoveState.Failed -> {
             CinemaText(stringResource(R.string.live_sync_move_failed), role = TextRole.Body, tone = TextTone.Danger)
             NerdRawLine(move.message)
+            if (!move.canCancel) CancelLockedLine()
         }
 
         MoveState.Done -> {
@@ -51,6 +54,12 @@ fun LiveSyncMoveLines(
             MoveBlockLines(block, blockLoaded, blockError)
         }
     }
+}
+
+/** Why Cancel Move is disabled: the move record is on the old server (SM-Q8 (b)). */
+@Composable
+private fun CancelLockedLine() {
+    CinemaText(stringResource(R.string.live_sync_move_cancel_locked), role = TextRole.BodySmall, tone = TextTone.Secondary)
 }
 
 @Composable
@@ -107,6 +116,10 @@ fun liveSyncMoveStageText(move: MoveState.Running): String {
 
         MoveState.Stage.SWITCHING -> {
             stringResource(R.string.live_sync_move_switching)
+        }
+
+        MoveState.Stage.CANCELLING -> {
+            stringResource(R.string.live_sync_move_cancelling)
         }
     }
 }

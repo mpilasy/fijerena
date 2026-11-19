@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -57,8 +58,10 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * A text field shown as a row (label, then the value and a pencil), like a Settings row. OK on the
- * row opens an editable text field; Enter confirms, Escape/Back cancels, back to the row. On TV this
- * stops focus alone from opening the keyboard.
+ * row opens an editable text field; Enter confirms, Escape/Back cancels, back to the row. Focus that
+ * leaves the open field (Tab, or the D-pad after the keyboard closes) also confirms the text, so a
+ * button that reads the value sees what the field shows. On TV this stops focus alone from opening
+ * the keyboard.
  */
 @Composable
 fun ReadOnlyFieldWithEdit(
@@ -105,7 +108,11 @@ fun ReadOnlyFieldWithEdit(
                 modifier
                     .fillMaxWidth()
                     .focusRequester(editFocusRequester)
-                    .onKeyEvent { event ->
+                    .onFocusChanged { focus ->
+                        // The field stays open, so focus is not pulled back to the row. Enter and
+                        // Escape/Back close the field before it loses focus, so they never come here.
+                        if (!focus.isFocused && isEditing && editValue != value) onValueChange(editValue)
+                    }.onKeyEvent { event ->
                         if (event.type == KeyEventType.KeyDown) {
                             when (event.key) {
                                 Key.Escape, Key.Back -> {

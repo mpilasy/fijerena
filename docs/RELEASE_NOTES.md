@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- **Move live sync to another server:** Settings → Sync & Backup → Live Sync has **Move to another server**. Type the new address: the device copies the group's data there ("Copying 1,200 of 4,000") and switches to it, and the other devices switch by themselves the next time they open. No QR codes, no new setup. When every device has moved, **Purge old server** deletes the group's data from the old server. The button says what to do first when a device of the group needs an update. Update every device and the new server first. TV and phone.
+- **Text fields keep what you typed:** on TV, a text field gives its text when focus leaves it, not only on Enter. Before, a button such as Check server stayed disabled after you typed an address and moved down. On the phone, a dialog with a text field moves above the keyboard, so its buttons stay visible and a tap on them no longer goes to the keyboard. In Move to Another Server, the keyboard's Go key does Check server. TV and phone.
+- **Move live sync to another server:** Settings → Sync & Backup → Live Sync has **Move to another server**. Type the new address: the device copies the group's data there ("Copying 1,200 of 4,000") and switches to it, and the other devices switch by themselves the next time they open. No QR codes, no new setup. When every device has moved, **Purge old server** deletes the group's data from the old server. The button says what to do first when a device of the group needs an update. **Cancel move** stops a move before the other devices can see it, and the device syncs with the old server again. Update every device and the new server first. TV and phone.
 
 ## Version: 0.9.20261119181925
 

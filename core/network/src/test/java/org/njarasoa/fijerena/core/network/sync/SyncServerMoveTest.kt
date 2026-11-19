@@ -211,8 +211,8 @@ class SyncServerMoveTest {
         // The stages, and the copy's counts against the old server's total.
         assertEquals(MoveState.Done, states.last())
         val stages = states.filterIsInstance<MoveState.Running>().map { it.stage }.distinct()
-        assertEquals(MoveState.Stage.entries, stages)
-        assertTrue(states.contains(MoveState.Running(MoveState.Stage.COPYING, 1_000, snapshotSize)))
+        assertEquals(MoveState.Stage.entries - MoveState.Stage.CANCELLING, stages)
+        assertTrue(states.contains(MoveState.Running(MoveState.Stage.COPYING, 1_000, snapshotSize, canCancel = true)))
     }
 
     @Test
@@ -269,6 +269,160 @@ class SyncServerMoveTest {
         }
         assertEquals(clean, failures)
     }
+
+    // --- Cancel Move (SM-Q8 (b)) ---
+
+    @Test
+    fun `a move stopped before the move record is cancelled at each call, and a later move starts fresh`() {
+        var calls = 0
+        seedOldServer(count = 1_100)
+        val seed = old.records
+        move(FakeSyncServer.api(old, new) { _, _ -> calls++ })
+        val clean = calls
+        val cancelledAt = mutableSetOf<Int>()
+        var refused = 0
+
+        for (failAt in 1..clean) {
+            val oldServer = FakeSyncServer(old.url)
+            val newServer = FakeSyncServer(new.url)
+            val device = kit.Device(oldServer, "Phone")
+            val others = listOf(oldServer.addDevice("bravia"), oldServer.addDevice("shield"))
+            others.forEach { device.knowsBuild(it.deviceId, DeviceBuild.FEATURE_SERVER_MOVE) }
+            seed.forEach { oldServer.put(it.copy(seq = null)) }
+            var call = 0
+            val failing =
+                FakeSyncServer.api(oldServer, newServer) { name, _ ->
+                    if (++call == failAt) throw SyncApiException(0, "connection reset at $name")
+                }
+            try {
+                runBlocking { device.mover(failing).run(newServer.url, null) {} }
+            } catch (e: SyncApiException) {
+                // expected for most calls
+            }
+            val progress = device.store.moveProgress ?: continue
+            val api = FakeSyncServer.api(oldServer, newServer)
+
+            if (progress.cancellable) {
+                runBlocking { device.mover(api).cancel() }
+
+                cancelledAt += progress.step
+                assertNull("call $failAt", device.store.moveProgress)
+                assertTrue("call $failAt", newServer.deleted)
+                assertNull("call $failAt", kit.moveRecord(oldServer))
+                // Sync goes on with the old server.
+                assertEquals("call $failAt", oldServer.url, device.store.link?.serverUrl)
+                assertNotNull("call $failAt", runBlocking { device.engine(api).syncNow() })
+                // A later move makes a new account.
+                runBlocking { device.mover(api).run(newServer.url, null) {} }
+                assertEquals("call $failAt", 2, newServer.accountsCreated)
+                assertEquals("call $failAt", newServer.url, device.store.link?.serverUrl)
+            } else {
+                refused++
+                try {
+                    runBlocking { device.mover(api).cancel() }
+                    fail("call $failAt: a cancel after the move record must be refused")
+                } catch (e: IllegalStateException) {
+                    // expected
+                }
+                assertEquals("call $failAt", progress, device.store.moveProgress)
+                assertFalse("call $failAt", newServer.deleted)
+            }
+        }
+        // Stopped after step 2 (the account), step 3 (the codes) and part way into step 4 (the copy).
+        assertEquals(setOf(SyncServerMove.STEP_ACCOUNT, SyncServerMove.STEP_CODES), cancelledAt)
+        assertTrue(refused > 0)
+    }
+
+    @Test
+    fun `a move stopped in the copy can be cancelled, and not once the move record push started`() {
+        seedOldServer(count = 1_100)
+        // Stops in the copy (the second page push to the new server).
+        var newPushes = 0
+        val stopInCopy =
+            FakeSyncServer.api(old, new) { call, url ->
+                if (call == "push" && url == new.url && ++newPushes == 2) throw SyncApiException(0, "connection reset")
+            }
+        try {
+            move(stopInCopy)
+            fail("the move must stop")
+        } catch (e: SyncApiException) {
+            // expected
+        }
+        val progress = a.store.moveProgress!!
+        assertEquals(SyncServerMove.STEP_CODES, progress.step)
+        assertTrue(progress.copyCursor > 0)
+        assertTrue(progress.cancellable)
+
+        // The move record push fails without an answer: the old server can have it, so no cancel.
+        val stopAtMoveRecord =
+            FakeSyncServer.api(old, new) { call, url ->
+                if (call == "push" && url == old.url) throw SyncApiException(0, "connection reset")
+            }
+        try {
+            move(stopAtMoveRecord)
+            fail("the move must stop")
+        } catch (e: SyncApiException) {
+            // expected
+        }
+        assertTrue(a.store.moveProgress!!.moveRecordSent)
+        assertFalse(a.store.moveProgress!!.cancellable)
+        try {
+            runBlocking { a.mover(FakeSyncServer.api(old, new)).cancel() }
+            fail("a cancel after the move record push must be refused")
+        } catch (e: IllegalStateException) {
+            // expected
+        }
+        assertFalse(new.deleted)
+
+        // The move then finishes as usual.
+        move()
+        assertEquals(new.url, a.store.link?.serverUrl)
+    }
+
+    @Test
+    fun `the running states tell when Cancel Move is allowed`() {
+        val states = mutableListOf<MoveState>()
+        move(states = states)
+
+        val running = states.filterIsInstance<MoveState.Running>()
+        val flags = running.map { it.canCancel }
+        // Allowed from the start, then refused from step 5 on: the late copy (step 6) and the switch.
+        assertEquals(flags.sortedDescending(), flags)
+        assertTrue(running.first().canCancel)
+        assertEquals(MoveState.Stage.COPYING, running.first { !it.canCancel }.stage)
+        assertTrue(running.filter { it.stage == MoveState.Stage.SWITCHING }.none { it.canCancel })
+    }
+
+    @Test
+    fun `a cancel ignores a new server that does not answer`() {
+        val api =
+            FakeSyncServer.api(old, new) { call, url ->
+                if (call == "pull" && url == old.url) throw SyncApiException(0, "connection reset")
+            }
+        try {
+            move(api)
+            fail("the move must stop")
+        } catch (e: SyncApiException) {
+            // expected
+        }
+        assertNotNull(a.store.moveProgress)
+        new.reachable = false
+
+        runBlocking { a.mover(FakeSyncServer.api(old, new)).cancel() }
+
+        assertNull(a.store.moveProgress)
+        assertFalse(new.deleted)
+        assertEquals(old.url, a.store.link?.serverUrl)
+    }
+
+    @Test
+    fun `a cancel without a move does nothing`() =
+        runBlocking {
+            a.mover(FakeSyncServer.api(old, new)).cancel()
+
+            assertEquals(old.url, a.store.link?.serverUrl)
+            assertFalse(new.deleted)
+        }
 
     // --- The old server after the move ---
 

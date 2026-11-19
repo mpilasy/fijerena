@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -369,14 +370,49 @@ class SyncManager internal constructor(
                 scope.launch {
                     closeSocket()
                     try {
-                        engine.exclusive { mover.run(url, setupSecret) { _move.value = it } }
+                        // A move that Cancel Move stopped shows no more states: Cancel Move shows its own.
+                        engine.exclusive { mover.run(url, setupSecret) { if (isActive) _move.value = it } }
                         ServerClock.forget()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // A call that ends after Cancel Move stopped the move: Cancel Move continues.
+                        ensureActive()
                         Log.w(TAG, "Move to another server stopped: ${e.message}")
                         CrashLog.note("live sync move stopped", "${e.javaClass.simpleName}: ${e.message}")
-                        _move.value = MoveState.Failed(Redact.text(e.message ?: e.javaClass.simpleName))
+                        val canCancel = mover.unfinished?.cancellable ?: true
+                        _move.value = MoveState.Failed(Redact.text(e.message ?: e.javaClass.simpleName), canCancel)
+                    }
+                    onLinkChanged()
+                }
+        }
+    }
+
+    /**
+     * Cancel Move (SM-Q8 (b)): stops the move started here, running or stopped, and drops it
+     * ([SyncServerMove.cancel]). Allowed only while [move] says `canCancel`: before step 5 writes the
+     * move record, so no other device knows the move; otherwise this does nothing. [move] shows
+     * [MoveState.Stage.CANCELLING], then [MoveState.Idle], and sync goes on with the old server. A
+     * call that is in progress stops when it ends (at most the HTTP call timeout).
+     */
+    fun cancelMove() {
+        synchronized(this) {
+            val state = _move.value
+            val allowed = (state is MoveState.Running && state.canCancel) || (state is MoveState.Failed && state.canCancel)
+            if (!allowed) return
+            // Stopped at once, so that the move shows no more states after this one.
+            val running = moveJob?.also { it.cancel() }
+            _move.value = MoveState.Running(MoveState.Stage.CANCELLING)
+            moveJob =
+                scope.launch {
+                    running?.join()
+                    try {
+                        engine.exclusive { mover.cancel() }
+                        _move.value = MoveState.Idle
+                    } catch (e: IllegalStateException) {
+                        // The move reached step 5 before it stopped: it must finish. Move continues it.
+                        Log.w(TAG, "Cancel move refused: ${e.message}")
+                        _move.value = MoveState.Failed(Redact.text(e.message.orEmpty()), canCancel = false)
                     }
                     onLinkChanged()
                 }

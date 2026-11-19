@@ -1199,6 +1199,11 @@
     <string name="live_sync_move_switching">Switching to the new server…</string>
     <string name="live_sync_move_failed">The move stopped. Move again to continue from where it stopped.</string>
     <string name="live_sync_move_done">Moved. The other devices switch to the new server the next time they open.</string>
+    <string name="live_sync_move_cancel">Cancel move</string>
+    <string name="live_sync_move_cancel_title">Cancel Move?</string>
+    <string name="live_sync_move_cancel_message">The move stops. This device keeps syncing with %1$s. The new server\'s copy is deleted if it answers.</string>
+    <string name="live_sync_move_cancel_locked">Other devices may have moved already: the move must finish.</string>
+    <string name="live_sync_move_cancelling">Cancelling the move…</string>
     <string name="live_sync_move_same_server">The group already uses this server.</string>
     <string name="live_sync_move_no_move_feature">This server can\'t take a group that moves. Update it first.</string>
     <string name="live_sync_moved_away">This group moved to %1$s. Add this device from a device of the group.</string>

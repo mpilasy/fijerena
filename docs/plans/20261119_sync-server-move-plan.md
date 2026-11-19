@@ -112,6 +112,13 @@ the new address and credentials, the codes, the copy cursor and the step reached
 next open continues the move from that state. It does not create a second account on the new
 server.
 
+**Cancel Move** (SM-Q8 (b)): on the device that started the move, while it runs or after it
+stopped, until step 5 writes the move record. Before step 5 no other device knows the move. The
+device stops the move, drops its move state, and syncs with the old server again (its link changes
+only at step 8). Then it tries `DELETE /account` on the new server with the new credentials (it is
+that account's only device); a failure is only logged. A later move starts again from step 0 with a
+new account. From step 5 on, **Cancel move** shows disabled with its reason.
+
 **As built (2026-11-19):**
 
 - `SyncServerMove` (core/network) does steps 0 to 8. The resume state (`SyncAccountStore.moveProgress`)
@@ -126,6 +133,12 @@ server.
   `sync_previous_server` = `{"serverUrl", "deviceId", "deviceToken"}`. The engine gives them to
   `SyncServerMove` and never to the applier. The device keeps the old-server record (with its clock
   value) in `SyncAccountStore`, and a newer record or a deletion replaces it.
+- Cancel Move (2026-11-19): `Progress.moveRecordSent` is saved before the push of step 5, so a push
+  that reached the old server without an answer also blocks the cancel (`Progress.cancellable`).
+  A running move is stopped by cancelling its job; a call in progress ends at most at the HTTP call
+  timeout (60 s), and "Cancelling the move…" shows until then. The cancel drops the move state
+  first, then deletes the account on the new server, so a stop during the deletion does not
+  continue the move at the next start.
 
 ### The move, on the other devices
 
@@ -230,6 +243,8 @@ The screens see the move only through `SyncManager` and the types in
 | `suspend fun moveBlock(): MoveBlock?` | Step 0: why **Move to Another Server** is disabled; null when it is not. |
 | `suspend fun checkMoveTarget(url): SyncWire.Info` | Step 1: throws `SyncApiException` (`INCOMPATIBLE` when the server has no `move` feature); `setupSecretRequired` tells the dialog to ask for the secret. |
 | `fun startMove(url, setupSecret)` | Steps 1 to 8, or continues a move that stopped. |
+| `fun cancelMove()` | Cancel Move (SM-Q8 (b)): stops the move (running or stopped), drops it, deletes the account on the new server (best effort). Does nothing unless `move` says `canCancel`. `move` shows `Running(Stage.CANCELLING)`, then `Idle`. |
+| `MoveState.Running.canCancel` / `MoveState.Failed.canCancel` | Cancel Move is allowed: the move record is not on the old server yet. False from step 5 on. |
 | `oldServer: StateFlow<String?>` | The old address while the new server holds the old-server record; null otherwise. |
 | `suspend fun oldServerState(): OldServerState` | Asks the old server (an open Live Sync screen only). |
 | `suspend fun purgeOldServer()` / `suspend fun forgetOldServer()` | Purge Old Server / Forget Old Server. |
@@ -252,7 +267,7 @@ The screens see the move only through `SyncManager` and the types in
 | 1 | Done 2026-11-19: move codes without a time limit, `DELETE /account`, `/info` features, with server tests and wire samples. |
 | 2 | Done 2026-11-19: `SyncServerMove` (steps 0–8, resume, SM-Q3 filter, old-server watch and purge), `server_move` feature, `SyncApi.createMoveCode`/`deleteAccount`, `SyncAccountStore.switchServer`, `SyncManager` move API; tests against two fake servers. |
 | 3 | Done 2026-11-19: `SyncEngine` reads the move record and follows it (join, copy after the move record, revoke, switch, resume); `Status.movedAway`; tests: two devices move, a device not in the record, pending changes, dormant device, resume at each call. |
-| 4 | Done 2026-11-19: **Move to Another Server** (reason line, address and setup secret, progress, failure), the Old Server row (not moved yet, Purge, Forget, the no-purge hint), the moved-away notice; TV and phone; en, fr, mg; FEATURES, USER_GUIDE, RELEASE_NOTES. |
+| 4 | Done 2026-11-19: **Move to Another Server** (reason line, address and setup secret, progress, failure), the Old Server row (not moved yet, Purge, Forget, the no-purge hint), the moved-away notice; TV and phone; en, fr, mg; FEATURES, USER_GUIDE, RELEASE_NOTES. **Cancel Move** (SM-Q8 (b)) added 2026-11-19: `SyncServerMove.cancel`, `SyncManager.cancelMove`, `canCancel` on the running and stopped states, the button with its confirmation and its disabled reason on TV and phone; tests at each step before the move record. Fixes from the first emulator walk (2026-11-19): TV focus goes back to **Move to another server** when a move started from the dialog ends (it stayed on nothing); a TV text field gives its text when focus leaves it (Check server looked disabled after Tab out); phone dialogs resize above the keyboard, and the address field's Go key does Check server. |
 | 5 | Not started |
 
 ## Open questions (all decided 2026-11-19)
