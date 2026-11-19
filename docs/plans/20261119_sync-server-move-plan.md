@@ -73,6 +73,10 @@ Cloudflare), because the data goes through the device, not from server to server
    (`DeviceBuild.features`, as `play_request` does for Send to TV). If one doesn't, or has
    reported no build yet, the move does not start, and the dialog names the device: "Living Room
    TV must be updated before the move." Remove a device you can't update from the group first.
+   The move also does not start while the group has a move record on the current server (another
+   admin device started a move), or an old-server record (an earlier move not yet purged or
+   forgotten). Otherwise two moves could split the group, or the first old server would be
+   forgotten with the group's data on it. The new address must differ from the current one.
 1. **Check the new server:** `GET /info` must list the `move` feature (see Server). If the new
    server needs a setup secret, the dialog asks for it.
 2. **Create the account on the new server:** `POST /accounts` with this device's name. Keep the
@@ -98,6 +102,10 @@ Cloudflare), because the data goes through the device, not from server to server
    local changes (`SyncAccountStore.switchServer`, new; `saveLink` would clear them). Then pull and
    push as usual. The device does not queue all local data again: the copy already holds it, and
    a full re-send could bring back items deleted long ago (see Dormant devices).
+
+**No sync during the move:** `SyncManager` runs no pass from step 1 until the switch, so this
+device writes nothing to the old server while it copies. Its changes stay pending and go to the new
+server after the switch.
 
 **Resume after a failure:** the device writes the move's state to `SyncAccountStore` as it goes:
 the new address and credentials, the codes, the copy cursor and the step reached. If the app stops part way, the
@@ -186,7 +194,7 @@ Additive changes; `protocol` stays 1.
 | Phase | Work | Estimate |
 |---|---|---|
 | 1 | **Server:** move codes, `DELETE /account`, `/info` features. Tests in `server/test`, wire samples in `core/network/src/test/resources/fixtures/sync/` (`SyncWireSamplesTest`), API table in `server/README.md`. | ½ day |
-| 2 | **App, the starting device:** the `server_move` device feature and the step 0 check, `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: a device without `server_move` blocks the move, full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
+| 2 | **App, the starting device:** the `server_move` device feature and the step 0 check, `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: a device without `server_move` blocks the move, a move record or old-server record blocks it, full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
 | 3 | **App, the other devices:** read the move record in `SyncEngine`, join, copy the records after the move record, remove itself, switch. Tests: two devices move, a device not in the record, a device whose pending changes reach the new server, a dormant device that holds an item deleted more than 90 days before the copy (it must not come back). | 1 day |
 | 4 | **Screens, TV and phone:** **Move to Another Server** (address, setup secret, progress, failure text with the raw error for a Nerd), the old server row on every admin device with the "not moved yet" list, **Purge Old Server** with its states and confirmation, **Forget Old Server**. Strings in en, fr and mg. Docs: FEATURES, USER_GUIDE, server README, RELEASE_NOTES. | 1 day |
 | 5 | **Emulator check:** both emulators on the local server (:8787); move to a second local server; check the TV moves when opened, the purge stays disabled until then, the phone can purge after the TV started the move, and the purge leaves the old server's data folder without the account. | ½ day |
