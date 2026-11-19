@@ -290,3 +290,13 @@ The screens see the move only through `SyncManager` and the types in
     blocking only when pressed.
   - (b) Warn, and allow the move. The device stays on the old server until it is updated; its
     deletions older than 90 days at its move are lost.
+- **SM-Q8, cancelling a move:** **decided 2026-11-19: (b)**.
+  - (a) No cancel. A move that keeps failing pauses sync on that device until it finishes; the
+    way out is to leave the group and pair again.
+  - (b) **Cancel Move** on the starting device until step 5 writes the move record. Before
+    step 5 no other device knows the move. The device drops its move state and syncs with the old
+    server again, and it tries to delete the half-made account on the new server (`DELETE
+    /account`; it is that account's only device). After step 5 the button shows disabled with its
+    reason. Recommended.
+  - (c) Cancel at any time. Devices that already moved would need a reverse move, or the group
+    splits across two servers.
