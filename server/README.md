@@ -68,9 +68,9 @@ account (pairing) never needs it.
 
 | Endpoint | Auth | Purpose |
 |---|---|---|
-| `GET /info` | — | `{service, protocol, setupSecretRequired}` — validates a server URL |
+| `GET /info` | — | `{service, protocol, setupSecretRequired, features}` — validates a server URL; `features` is `["move", "purge"]` (an older server sends none) |
 | `POST /accounts` `{deviceName}` | setup secret, if set | new account and its first device → `{accountId, deviceId, deviceToken}` |
-| `POST /pairings` | device | one-time pairing code, valid 10 minutes → `{code, expiresAt}` |
+| `POST /pairings` `{purpose?}` | device | one-time pairing code, valid 10 minutes → `{code, expiresAt}`; with `{"purpose": "move"}` a move code without a time limit → `{code, expiresAt: null}` |
 | `POST /pair` `{code, deviceName}` | — | adds a device with a pairing code → `{accountId, deviceId, deviceToken}` |
 | `POST /changes` `{records}` | device | up to 500 records → `{head, accepted, rejected}` |
 | `GET /changes?since=&limit=` | device | records after `since`, in `seq` order → `{records, head, more}`, or `410 {resync: true}` |
@@ -80,6 +80,7 @@ account (pairing) never needs it.
 | `GET /handoffs/:id` | — | `{ready: false}`, or once only `{ready: true, sealed, senderKey}` |
 | `GET /devices` | device | the account's devices |
 | `DELETE /devices/:id` | device | revokes a device and closes its socket |
+| `DELETE /account` | device | deletes the whole account (records, devices, pairing codes) and closes every socket → `{deleted: true}`; `409` while another device is not revoked |
 
 Devices authenticate with `Authorization: Bearer <deviceToken>`. A record is
 `{key, providerTag?, profileTag?, updatedAt, deleted, payload, cascade?}`. The payload is required on
@@ -92,6 +93,11 @@ ahead of the server's clock) is rejected on its own as
 500 records) gets `400`. A deletion with `cascade: "provider"` or `"profile"` also drops every other record with the
 same tag. Tombstones are purged after 90 days; a device whose `since` falls before the purge gets
 `410` and must pull again from 0.
+
+A pairing code works once. An ordinary code expires after 10 minutes. A move code is for a device
+that moves to this server with its sync group (the sync server move plan): the device can stay
+closed for weeks, so the code has no time limit. It stays until a device uses it or
+`DELETE /account` deletes it with the rest of the account.
 
 ## License
 

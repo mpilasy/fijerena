@@ -35,6 +35,18 @@ describe("sync server and the shared samples", () => {
     ws.close();
   });
 
+  it("gives a move code as the sample, and deletes an account as the sample", async () => {
+    const { deviceToken } = await server.createAccount("tv");
+    const move = await server.request("POST", "/pairings", { token: deviceToken, body: { purpose: "move" } });
+    // The code is random: only its form is the same as the sample's.
+    const moveSample = sample("var-move-pairing-sample.json");
+    expect(move.body).toEqual({ ...moveSample, code: expect.stringMatching(/^[0-9a-f]{32}\..+$/) });
+    expect(moveSample.code).toMatch(/^[0-9a-f]{32}\..+$/);
+
+    const deleted = await server.request("DELETE", "/account", { token: deviceToken });
+    expect(deleted.body).toEqual(sample("var-account-deleted-sample.json"));
+  });
+
   it("hands over a filled handoff as the sample", async () => {
     const { deviceToken } = await server.createAccount("phone");
     const { handoffId } = (await server.request("POST", "/handoffs", { body: {} })).body;

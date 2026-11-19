@@ -1,6 +1,12 @@
 /** Protocol version reported by GET /info; bump on any incompatible change. */
 export const PROTOCOL_VERSION = 1;
 
+/**
+ * What this server can do beyond protocol 1, reported by GET /info. An older server sends no
+ * `features`. `move`: move codes; `purge`: `DELETE /account` (the sync server move plan).
+ */
+export const FEATURES = ["move", "purge"];
+
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,

@@ -1,8 +1,9 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
 
@@ -91,6 +92,20 @@ export class Server extends ServerBase {
     await this.waitUntilUp();
   }
 
+  /**
+   * The SQLite file on disk of the account that holds device [deviceId], read while the server
+   * runs. Tests use it for what the API can't show (a stored expiry, deleted rows).
+   */
+  accountFile(deviceId: string): string {
+    const dir = join(this.dataDir, "fijerena-sync-account");
+    const files = readdirSync(dir)
+      .filter((name) => name.endsWith(".sqlite") && name !== "metadata.sqlite")
+      .map((name) => join(dir, name));
+    const file = files.find((f) => storedRows(f, "SELECT id FROM devices WHERE id = ?", deviceId).length > 0);
+    if (!file) throw new Error(`no account file holds device ${deviceId}`);
+    return file;
+  }
+
   async stop(): Promise<void> {
     if (!this.process) return;
     const exited = new Promise((r) => this.process!.once("exit", r));
@@ -143,6 +158,20 @@ export class DockerServer extends ServerBase {
 
 function docker(...args: string[]): string {
   return execFileSync("docker", args, { encoding: "utf8" }).trim();
+}
+
+/** The rows of [sql] in the SQLite file [file]; none when the file or its table is gone. */
+export function storedRows(file: string, sql: string, ...params: (string | number)[]): Record<string, unknown>[] {
+  if (!existsSync(file)) return [];
+  const db = new DatabaseSync(file, { readOnly: true });
+  try {
+    return db.prepare(sql).all(...params) as Record<string, unknown>[];
+  } catch (e) {
+    if (String(e).includes("no such table")) return [];
+    throw e;
+  } finally {
+    db.close();
+  }
 }
 
 export function record(key: string, updatedAt: number, extra: Record<string, unknown> = {}) {

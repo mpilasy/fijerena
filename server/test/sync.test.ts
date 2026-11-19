@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Server, nextMessage, record } from "./harness";
+import { Server, nextMessage, record, storedRows } from "./harness";
 
 /**
  * The sync server end to end, over HTTP and WebSocket, as self-hosting runs it (workerd, Durable
@@ -14,6 +14,7 @@ describe("sync server", () => {
     const { status, body } = await server.request("GET", "/info");
     expect(status).toBe(200);
     expect(body).toMatchObject({ service: "fijerena-sync", protocol: 1, setupSecretRequired: false });
+    expect(body.features).toEqual(["move", "purge"]);
   });
 
   it("refuses requests without a valid device token", async () => {
@@ -168,6 +169,68 @@ describe("sync server", () => {
 
     expect((await server.request("POST", "/pair", { body: { code: pairing.code, deviceName: "again" } })).status).toBe(403);
     expect((await server.request("POST", "/pair", { body: { code: "nonsense" } })).status).toBe(400);
+  });
+
+  it("gives an ordinary pairing code 10 minutes, with or without a body", async () => {
+    const tv = await server.createAccount("tv");
+    for (const body of [undefined, {}, { purpose: "something else" }]) {
+      const before = Date.now();
+      const { status, body: pairing } = await server.request("POST", "/pairings", { token: tv.deviceToken, body });
+      expect(status).toBe(201);
+      expect(pairing.expiresAt).toBeGreaterThanOrEqual(before + 10 * 60 * 1000);
+      expect(pairing.expiresAt).toBeLessThanOrEqual(Date.now() + 10 * 60 * 1000);
+    }
+  });
+
+  it("gives a move code without a time limit, which works once", async () => {
+    const tv = await server.createAccount("tv");
+    const { status, body: move } = await server.request("POST", "/pairings", { token: tv.deviceToken, body: { purpose: "move" } });
+    expect(status).toBe(201);
+    expect(move.code.startsWith(`${tv.accountId}.`)).toBe(true);
+    expect(move.expiresAt).toBeNull();
+    // The API can't wait 10 minutes: the stored expiry shows the code never expires.
+    const expiries = storedRows(server.accountFile(tv.deviceId), "SELECT expires_at FROM pairings").map((r) => Number(r.expires_at));
+    expect(expiries).toEqual([Number.MAX_SAFE_INTEGER]);
+
+    // Making an ordinary code removes the expired codes, but not the move code.
+    await server.request("POST", "/pairings", { token: tv.deviceToken, body: {} });
+    const { status: joined, body: phone } = await server.request("POST", "/pair", { body: { code: move.code, deviceName: "phone" } });
+    expect(joined).toBe(201);
+    expect(phone.accountId).toBe(tv.accountId);
+    expect((await server.request("POST", "/pair", { body: { code: move.code, deviceName: "again" } })).status).toBe(403);
+  });
+
+  it("deletes an account only when every other device is revoked", async () => {
+    const tv = await server.createAccount("tv");
+    const { body: pairing } = await server.request("POST", "/pairings", { token: tv.deviceToken });
+    const { body: phone } = await server.request("POST", "/pair", { body: { code: pairing.code, deviceName: "phone" } });
+    await server.request("POST", "/changes", { token: tv.deviceToken, body: { records: [record("a", 1), record("b", 2)] } });
+    const { body: unused } = await server.request("POST", "/pairings", { token: tv.deviceToken, body: { purpose: "move" } });
+    const file = server.accountFile(tv.deviceId);
+
+    const refused = await server.request("DELETE", "/account", { token: tv.deviceToken });
+    expect(refused.status).toBe(409);
+    expect(typeof refused.body.error).toBe("string");
+    expect((await server.request("GET", "/changes?since=0", { token: tv.deviceToken })).body.records).toHaveLength(2);
+
+    await server.request("DELETE", `/devices/${phone.deviceId}`, { token: tv.deviceToken });
+    const ws = server.socket(tv.deviceToken);
+    await nextMessage(ws); // the current head, on connect
+    const closed = new Promise<number>((r) => ws.once("close", (code) => r(code)));
+    const deleted = await server.request("DELETE", "/account", { token: tv.deviceToken });
+    expect(deleted).toEqual({ status: 200, body: { deleted: true } });
+    expect(await closed).toBe(4001);
+
+    // Nothing of the account is left, and the object still answers.
+    for (const table of ["records", "devices", "pairings"]) {
+      expect(storedRows(file, `SELECT * FROM ${table}`)).toEqual([]);
+    }
+    expect((await server.request("GET", "/changes?since=0", { token: tv.deviceToken })).status).toBe(401);
+    expect((await server.request("GET", "/devices", { token: tv.deviceToken })).status).toBe(401);
+    expect((await server.request("DELETE", "/account", { token: tv.deviceToken })).status).toBe(401);
+    expect((await server.request("POST", "/pair", { body: { code: unused.code, deviceName: "late" } })).status).toBe(403);
+    expect(storedRows(file, "SELECT * FROM devices")).toEqual([]);
+    await expect(server.createAccount()).resolves.toHaveProperty("deviceToken");
   });
 
   it("lists devices and revokes one, closing its socket", async () => {

@@ -219,7 +219,7 @@ The screens see the move only through `SyncManager` and the types in
 
 | Phase | Status |
 |---|---|
-| 1 | In progress |
+| 1 | Done 2026-11-19: move codes without a time limit, `DELETE /account`, `/info` features, with server tests and wire samples. |
 | 2 | In progress |
 | 3 | In progress |
 | 4 | In progress |

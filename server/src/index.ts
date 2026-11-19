@@ -7,7 +7,7 @@
  */
 import { Account } from "./account";
 import { Handoff } from "./handoff";
-import { PROTOCOL_VERSION, error, json, randomId, safeEqual, splitCredential } from "./util";
+import { FEATURES, PROTOCOL_VERSION, error, json, randomId, safeEqual, splitCredential } from "./util";
 
 export { Account, Handoff };
 
@@ -26,7 +26,12 @@ export default {
     const route = `${request.method} ${url.pathname}`;
 
     if (route === "GET /info") {
-      return json({ service: "fijerena-sync", protocol: PROTOCOL_VERSION, setupSecretRequired: Boolean(env.SETUP_SECRET) });
+      return json({
+        service: "fijerena-sync",
+        protocol: PROTOCOL_VERSION,
+        setupSecretRequired: Boolean(env.SETUP_SECRET),
+        features: FEATURES,
+      });
     }
 
     if (route === "POST /accounts") {

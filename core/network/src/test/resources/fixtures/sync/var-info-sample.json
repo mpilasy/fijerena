@@ -1,5 +1,6 @@
 {
   "service": "fijerena-sync",
   "protocol": 1,
-  "setupSecretRequired": false
+  "setupSecretRequired": false,
+  "features": ["move", "purge"]
 }

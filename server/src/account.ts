@@ -5,6 +5,11 @@ import { error, json, randomId, randomSecret, sha256, splitCredential } from "./
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_RETENTION_MS = 90 * DAY_MS;
 const PAIRING_TTL_MS = 10 * 60 * 1000;
+/**
+ * The `expires_at` of a move code: it has no time limit. It works once, and `DELETE /account`
+ * deletes it with the rest (the sync server move plan, SM-Q2).
+ */
+const NO_EXPIRY = Number.MAX_SAFE_INTEGER;
 const MAX_BATCH = 500;
 const MAX_PAGE = 1000;
 const MAX_PAYLOAD = 64 * 1024;
@@ -59,6 +64,12 @@ export class Account extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this.createSchema();
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+  }
+
+  /** Also after `DELETE /account`, which deletes the tables: later calls then find no device. */
+  private createSchema(): void {
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS records (
         key TEXT PRIMARY KEY,
@@ -91,7 +102,6 @@ export class Account extends DurableObject<Env> {
         v INTEGER NOT NULL
       );
     `);
-    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -113,7 +123,8 @@ export class Account extends DurableObject<Env> {
     if (route === "POST /changes") return this.push(request);
     if (route === "GET /changes") return this.pull(url);
     if (route === "GET /ws") return this.openSocket(request, device);
-    if (route === "POST /pairings") return this.createPairing(accountId);
+    if (route === "POST /pairings") return this.createPairing(request, accountId);
+    if (route === "DELETE /account") return this.deleteAccount(device);
     if (route === "GET /devices") return this.listDevices(device);
     const handoff = url.pathname.match(/^\/handoffs\/([0-9a-f]{32})$/);
     if (request.method === "POST" && handoff) {
@@ -150,13 +161,41 @@ export class Account extends DurableObject<Env> {
     return json({ accountId: code.accountId, deviceId, deviceToken: token }, 201);
   }
 
-  private async createPairing(accountId: string): Promise<Response> {
+  /**
+   * An ordinary code works for 10 minutes. A move code (`{"purpose": "move"}`) has no time limit,
+   * because a device can stay closed for weeks before it moves (the sync server move plan).
+   */
+  private async createPairing(request: Request, accountId: string): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { purpose?: string } | null;
+    const move = body?.purpose === "move";
     const secret = randomSecret();
-    const expiresAt = Date.now() + PAIRING_TTL_MS;
-    // Codes nobody used: otherwise they only went when some other code was used.
+    const expiresAt = move ? NO_EXPIRY : Date.now() + PAIRING_TTL_MS;
+    // Codes nobody used: otherwise they only went when some other code was used. Move codes stay.
     this.sql.exec("DELETE FROM pairings WHERE expires_at < ?", Date.now());
     this.sql.exec("INSERT INTO pairings (code_hash, expires_at) VALUES (?, ?)", await sha256(secret), expiresAt);
-    return json({ code: `${accountId}.${secret}`, expiresAt }, 201);
+    return json({ code: `${accountId}.${secret}`, expiresAt: move ? null : expiresAt }, 201);
+  }
+
+  /**
+   * Deletes the whole account: records, devices, pairing codes and bookkeeping. Only the last
+   * device that is not revoked can do it, so no device of the group loses its server by surprise
+   * (the sync server move plan → Purge Old Server).
+   */
+  private async deleteAccount(caller: Device): Promise<Response> {
+    const others = this.sql
+      .exec<{ n: number }>("SELECT COUNT(*) AS n FROM devices WHERE revoked = 0 AND id != ?", caller.id)
+      .one().n;
+    if (others > 0) return error(409, "other devices of this account are not revoked");
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.close(4001, "account deleted");
+      } catch {
+        // already closed
+      }
+    }
+    await this.ctx.storage.deleteAll();
+    this.createSchema();
+    return json({ deleted: true });
   }
 
   /**

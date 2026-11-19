@@ -61,6 +61,23 @@ class SyncWireSamplesTest {
         assertEquals("fijerena-sync", info.service)
         assertEquals(SyncWire.PROTOCOL, info.protocol)
         assertFalse(info.setupSecretRequired)
+        assertEquals(listOf(SyncWire.Info.FEATURE_MOVE, SyncWire.Info.FEATURE_PURGE), info.features)
+    }
+
+    @Test
+    fun `a move code reads without a time limit`() {
+        val pairing = Json.decodeFromString<SyncWire.Pairing>(sample("var-move-pairing-sample.json"))
+
+        assertEquals("0123456789abcdef0123456789abcdef.move-code-secret", pairing.code)
+        assertNull(pairing.expiresAt)
+    }
+
+    @Test
+    fun `an account deletion reads`() {
+        assertEquals(
+            SyncWire.AccountDeleted(deleted = true),
+            Json.decodeFromString<SyncWire.AccountDeleted>(sample("var-account-deleted-sample.json")),
+        )
     }
 
     @Test
