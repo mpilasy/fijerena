@@ -127,9 +127,12 @@ class SportsPageViewModelTest {
         clock: () -> Long = System::currentTimeMillis,
     ) = SportsTeamViewModel(data, route, clock).also { created += it }
 
-    // Runs keepFresh (its first look is at once) until [done], then stops it.
+    // Runs keepFresh (its first look is at once) until [done], then stops it. It starts only when
+    // the first load has ended: a first look while that job still runs reads nothing, and the next
+    // look is CHECK_MS (30 s) later.
     private fun SportsGamesViewModel.keepFreshUntil(done: () -> Boolean) =
         runBlocking {
+            withTimeout(TIMEOUT_MS) { while (reading) delay(10) }
             val fresh = launch { keepFresh() }
             withTimeout(TIMEOUT_MS) { while (!done()) delay(10) }
             fresh.cancel()

@@ -248,6 +248,9 @@ abstract class SportsGamesViewModel(
 
     private var job: Job? = null
 
+    /** Whether a read of the games (the first load, a read again or a pull) is still running. For tests. */
+    internal val reading: Boolean get() = job?.isActive == true
+
     // When the games shown were read.
     @Volatile private var readAtMs = 0L
 
