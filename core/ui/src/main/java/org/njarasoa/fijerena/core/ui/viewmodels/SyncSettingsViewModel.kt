@@ -6,13 +6,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -155,8 +158,17 @@ class SyncSettingsViewModel(
     private var moveLoadJob: Job? = null
 
     val moveUi: StateFlow<MoveUi> =
-        combine(moveLocal, manager.move, manager.oldServer, manager.status) { local, move, old, status ->
-            local.copy(move = move, oldServer = old, movedAway = status.movedAway)
+        channelFlow {
+            // The Old Server row follows the other devices while the screen shows it: the old
+            // server is asked again after each sync pass and on a slow ticker. Only while the
+            // screen collects this: no device watches the old server in the background.
+            launch {
+                oldServerRefreshes(manager.oldServer, manager.status.map { it.lastSyncAt }, ticker(OLD_SERVER_REFRESH_MS))
+                    .collect { if (!moveLocal.value.oldServerBusy) refreshOldServerState() }
+            }
+            combine(moveLocal, manager.move, manager.oldServer, manager.status) { local, move, old, status ->
+                local.copy(move = move, oldServer = old, movedAway = status.movedAway)
+            }.collect { send(it) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MoveUi())
 
     /**
@@ -175,18 +187,24 @@ class SyncSettingsViewModel(
                 } catch (e: Exception) {
                     moveLocal.update { it.copy(block = null, blockLoaded = false, blockError = friendly(e)) }
                 }
-                // The last answer stays while the old server is asked again, so its button does not go
-                // away under focus.
-                val state =
-                    try {
-                        if (manager.oldServer.value != null) manager.oldServerState() else null
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        OldServerState.Unreachable(e.message.orEmpty())
-                    }
-                moveLocal.update { it.copy(oldServerState = state) }
+                refreshOldServerState()
             }
+    }
+
+    /**
+     * Asks the old server how it is (when there is one). The last answer stays while the old server
+     * is asked again, so its button does not go away under focus.
+     */
+    private suspend fun refreshOldServerState() {
+        val state =
+            try {
+                if (manager.oldServer.value != null) manager.oldServerState() else null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                OldServerState.Unreachable(e.message.orEmpty())
+            }
+        moveLocal.update { it.copy(oldServerState = state) }
     }
 
     fun onMoveUrlChanged(url: String) {
@@ -221,9 +239,9 @@ class SyncSettingsViewModel(
     /** Cancel Move: stops the move started here and drops it, while no other device knows it. */
     fun cancelMove() = manager.cancelMove()
 
-    /** The move dialog closed without a move: the typed address stays for the next time. */
+    /** The move dialog closed without a move: the typed address goes too. */
     fun dismissMove() {
-        moveLocal.update { it.copy(targetChecked = false, checking = false, targetError = null) }
+        moveLocal.update { it.copy(targetUrl = "", targetChecked = false, checking = false, targetError = null) }
     }
 
     fun purgeOldServer() = oldServerAction("purgeOldServer") { manager.purgeOldServer() }
@@ -553,6 +571,9 @@ class SyncSettingsViewModel(
         const val INVITE_POLL_MS = 3_000L
         const val STALENESS_CHECK_MS = 30_000L
         const val DEVICES_REFRESH_MS = 30_000L
+
+        /** How often an open Live Sync screen asks the old server again, between sync passes. */
+        const val OLD_SERVER_REFRESH_MS = 30_000L
         const val STOP_CHECK_MS = 5_000L
 
         /** How long a remote Stop may go unanswered before the row says the device couldn't be reached. */
@@ -620,3 +641,13 @@ class SyncSettingsViewModel(
         return if (AppSettings(app).isNerdMode && !raw.isNullOrBlank() && raw != message) "$message\n\n[dev] $raw" else message
     }
 }
+
+/**
+ * When an open Live Sync screen asks the old server again: at once, after each finished sync pass
+ * ([lastSyncAt] changes) and at each of [ticks]. Nothing while there is no old server.
+ */
+internal fun oldServerRefreshes(
+    oldServer: Flow<String?>,
+    lastSyncAt: Flow<Long>,
+    ticks: Flow<Long>,
+): Flow<String> = combine(oldServer, lastSyncAt.distinctUntilChanged(), ticks) { old, _, _ -> old }.filterNotNull()

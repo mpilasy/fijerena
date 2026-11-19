@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.feature.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.LaunchedEffect
@@ -13,7 +16,10 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
@@ -239,7 +245,54 @@ class LiveSyncMoveFocusTest {
         rule.runOnIdle { assertFalse(startedHere) }
     }
 
+    @Test
+    fun `when a move ends and the Old Server row comes in above, the focused Move stays on screen`() {
+        var moveUi by mutableStateOf(MoveUi(move = MoveState.Running(MoveState.Stage.COPYING, canCancel = true), blockLoaded = true))
+        rule.setContent {
+            FirstVideoPlayerTheme {
+                val moveFocus = remember { FocusRequester() }
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    // The rows above the move rows (status, switches, devices).
+                    Spacer(Modifier.height(ROWS_ABOVE))
+                    moveUi.oldServer?.let { address ->
+                        // A tall Old Server row: many devices not moved yet.
+                        Spacer(Modifier.height(ROWS_ABOVE))
+                        OldServerPanel(
+                            address = address,
+                            moveUi = moveUi,
+                            action = oldServerAction(moveUi),
+                            onPurge = {},
+                            onForget = {},
+                            upFocus = null,
+                        )
+                    }
+                    MovePanel(moveUi = moveUi, onMove = {}, onCancel = {}, moveFocus = moveFocus, upFocus = null)
+                    CinemaDangerButton(onClick = {}, text = "Leave the sync group", modifier = Modifier.focusProperties { up = moveFocus })
+                }
+                LaunchedEffect(Unit) { moveFocus.requestFocusWithRetry() }
+            }
+        }
+        walk.awaitFocused("Move to another server")
+        rule.onNodeWithText("Move to another server").assertIsDisplayed()
+
+        // In one frame: Done, Move disabled by the old server's block, and the Old Server row above.
+        moveUi =
+            MoveUi(
+                move = MoveState.Done,
+                block = MoveBlock.OldServerLeft,
+                blockLoaded = true,
+                oldServer = "https://old.example.com",
+                oldServerState = OldServerState.NotMoved(listOf("Living Room TV")),
+            )
+
+        walk.assertFocused("Move to another server")
+        rule.onNodeWithText("Move to another server").assertIsDisplayed()
+        walk.run(down("Leave the sync group"), up("Move to another server"))
+    }
+
     private companion object {
+        val ROWS_ABOVE = 400.dp
+
         const val NOW = 1_800_000_000_000L
 
         val DEVICES =

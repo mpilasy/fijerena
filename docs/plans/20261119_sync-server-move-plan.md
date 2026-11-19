@@ -198,8 +198,9 @@ moves (step 3), so a late writer loses nothing either.
   All devices get that record by normal sync, so the device that started the move does not need to
   be the one that cleans up. It can even be lost or reset.
 - **No device watches the old server in the background.** Only an open Live Sync screen calls the
-  old server (`GET /info`, `GET /devices`), with the token from the old-server record. A device
-  that has moved needs only the new server.
+  old server (`GET /info`, `GET /devices`), with the token from the old-server record: when it
+  opens, after each sync pass and every 30 s while it is open. A device that has moved needs only
+  the new server.
 - **Shown only when** the old server's `/info` lists the `purge` feature. Otherwise a hint shows
   instead: update the old server, or delete its data yourself (the Docker `data` folder, or the
   Durable Object on Cloudflare), then select **Forget Old Server**. **Forget Old Server** shows
@@ -267,7 +268,7 @@ The screens see the move only through `SyncManager` and the types in
 | 1 | Done 2026-11-19: move codes without a time limit, `DELETE /account`, `/info` features, with server tests and wire samples. |
 | 2 | Done 2026-11-19: `SyncServerMove` (steps 0–8, resume, SM-Q3 filter, old-server watch and purge), `server_move` feature, `SyncApi.createMoveCode`/`deleteAccount`, `SyncAccountStore.switchServer`, `SyncManager` move API; tests against two fake servers. |
 | 3 | Done 2026-11-19: `SyncEngine` reads the move record and follows it (join, copy after the move record, revoke, switch, resume); `Status.movedAway`; tests: two devices move, a device not in the record, pending changes, dormant device, resume at each call. |
-| 4 | Done 2026-11-19: **Move to Another Server** (reason line, address and setup secret, progress, failure), the Old Server row (not moved yet, Purge, Forget, the no-purge hint), the moved-away notice; TV and phone; en, fr, mg; FEATURES, USER_GUIDE, RELEASE_NOTES. **Cancel Move** (SM-Q8 (b)) added 2026-11-19: `SyncServerMove.cancel`, `SyncManager.cancelMove`, `canCancel` on the running and stopped states, the button with its confirmation and its disabled reason on TV and phone; tests at each step before the move record. Fixes from the first emulator walk (2026-11-19): TV focus goes back to **Move to another server** when a move started from the dialog ends (it stayed on nothing); a TV text field gives its text when focus leaves it (Check server looked disabled after Tab out); phone dialogs resize above the keyboard, and the address field's Go key does Check server. |
+| 4 | Done 2026-11-19: **Move to Another Server** (reason line, address and setup secret, progress, failure), the Old Server row (not moved yet, Purge, Forget, the no-purge hint), the moved-away notice; TV and phone; en, fr, mg; FEATURES, USER_GUIDE, RELEASE_NOTES. **Cancel Move** (SM-Q8 (b)) added 2026-11-19: `SyncServerMove.cancel`, `SyncManager.cancelMove`, `canCancel` on the running and stopped states, the button with its confirmation and its disabled reason on TV and phone; tests at each step before the move record. Fixes from the first emulator walk (2026-11-19): TV focus goes back to **Move to another server** when a move started from the dialog ends (it stayed on nothing); a TV text field gives its text when focus leaves it (Check server looked disabled after Tab out); phone dialogs resize above the keyboard, and the address field's Go key does Check server. Second walk (2026-11-19): on TV the focused **Move to another server** was pushed below the screen when the Old Server row came in above it (focus was there but out of sight, so Down went to Leave): the move panel now scrolls back into view when it moves while it holds focus; the Old Server row asks the old server again after each sync pass and every 30 s while the page is open; "Moved." shows the reason under the disabled button; Cancel in the move dialog clears the typed address. |
 | 5 | Not started |
 
 ## Open questions (all decided 2026-11-19)

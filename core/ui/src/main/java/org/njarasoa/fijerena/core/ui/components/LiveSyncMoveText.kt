@@ -48,6 +48,8 @@ fun LiveSyncMoveLines(
 
         MoveState.Done -> {
             CinemaText(stringResource(R.string.live_sync_move_done), role = TextRole.Body, tone = TextTone.Success)
+            // The button is disabled now (the old server is left): say why, as after a reopen.
+            if (blockLoaded || blockError != null) MoveBlockLines(block, blockLoaded, blockError)
         }
 
         MoveState.Idle -> {

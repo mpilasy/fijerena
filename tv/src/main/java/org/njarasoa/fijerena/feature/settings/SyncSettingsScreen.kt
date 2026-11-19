@@ -10,13 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -25,6 +29,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.DeviceReport
@@ -702,6 +709,11 @@ internal fun MoveStartFocusEffect(
  * Move to another server, with Cancel move to its right while a move runs or stopped, and under them
  * how far a move is or why a button is disabled (the sync server move plan). Disabled, a button is
  * still a focus stop, so its reason shows.
+ *
+ * The panel stays on screen while it holds focus. When a move ends, the Old Server row comes in
+ * above it. Compose keeps focus on the button, but does not scroll: the row pushed the focused
+ * button below the bottom of the screen, so nothing focused was in sight, and the next Down went to
+ * Leave. So when the panel moves in the column while it holds focus, it is scrolled back into view.
  */
 @Composable
 internal fun MovePanel(
@@ -715,7 +727,24 @@ internal fun MovePanel(
     onCancelFocusChanged: (Boolean) -> Unit = {},
 ) {
     val scale = LocalUiScale.current
-    TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
+    val bringIntoView = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    var hasFocus by remember { mutableStateOf(false) }
+    // The panel's top in the column: it changes only when a row above comes, goes or changes height.
+    var placedAt by remember { mutableFloatStateOf(Float.NaN) }
+    TvGlassPanel(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .bringIntoViewRequester(bringIntoView)
+                .onFocusChanged { hasFocus = it.hasFocus }
+                .onPlaced { coordinates ->
+                    val top = coordinates.positionInParent().y
+                    val moved = !placedAt.isNaN() && placedAt != top
+                    placedAt = top
+                    if (moved && hasFocus) scope.launch { bringIntoView.bringIntoView() }
+                },
+    ) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 CinemaSecondaryButton(
