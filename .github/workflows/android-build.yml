@@ -38,6 +38,19 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      # Robolectric downloads its Android jars (android-all-instrumented) from Maven Central into
+      # ~/.m2 at the first test, and that download sometimes failed the build. The cache keeps the
+      # jars between builds. The key changes with the Robolectric version and the test SDK levels.
+      - name: Read the Robolectric version
+        id: robolectric
+        run: echo "version=$(sed -n 's/^robolectric = "\(.*\)"$/\1/p' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Robolectric Android jars
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ steps.robolectric.outputs.version }}-${{ hashFiles('**/src/test/resources/robolectric.properties') }}
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
