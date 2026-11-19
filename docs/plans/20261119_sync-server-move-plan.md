@@ -1,0 +1,194 @@
+# Move live sync to another server
+
+**Status:** Planned 2026-11-19; not started. Open questions SM-Q1 to SM-Q6.
+
+## Goal
+
+From Live Sync settings, an admin moves the sync group to a new server address in one step:
+
+1. The device copies the group's data from the current server to the new one and switches to it.
+2. Each other device of the group switches by itself the next time it opens. There is no QR code
+   and no new setup.
+3. When every other device has moved or was removed from the group, a **Purge Old Server** button
+   deletes the group's data from the old server.
+
+The move works between any two servers (Docker to Docker, Cloudflare to Docker, Docker to
+Cloudflare), because the data goes through the device, not from server to server.
+
+## What exists (survey 2026-11-19)
+
+- **The device's link** (`SyncAccountStore`, encrypted prefs `sync_account`):
+  - `Link(serverUrl, accountId, deviceId, deviceToken, accountKey)`, plus `cursor`, `seeded`,
+    `deferred` and `knownKinds`.
+  - `saveLink` clears everything first. So a new link pulls everything from 0 and then queues all
+    local data for upload (`seeded` false → `LocalRecords.seedEverything`).
+  - A device has no way to change its server address in place.
+- **Keys and payloads do not depend on the server:**
+  - Record keys are HMACs made with the account key.
+  - A payload is sealed with the record key as AAD (`SyncCodec`).
+  - `accountId` does not enter the crypto.
+  - So a record copied as it is from one server to another opens on every device of the group.
+- **The server keeps one row per key** (the newest write wins). `GET /changes?since=0` therefore
+  returns the group's current state: every live record and every tombstone younger than 90 days.
+  - A pull does not return `cascade`. The cascaded rows are already gone, so a copy of the current
+    state needs no `cascade`.
+  - On an empty server every copied record is accepted: `updatedAt` is not newer than nothing, and
+    it is not more than a day ahead. Copied tombstones get a new `stored_at`, so they live
+    90 more days there.
+  - The limits are 500 records per batch and a 64 KiB sealed payload per record (`server/src/account.ts`).
+- **Pairing** (`server/src/account.ts`, `createPairing` / `pair`):
+  - A code is `<accountId>.<random secret>`. The server keeps only its hash, and a code works once.
+  - Codes expire after 10 minutes (`PAIRING_TTL_MS`). Codes are high-entropy, so a longer life is
+    safe.
+- **Removing a device:** `DELETE /devices/:id` with a device token sets `revoked = 1`.
+  `SyncAccountManager.leave` already removes the device itself this way. `GET /devices` lists every
+  device with its `revoked` flag.
+- **Nothing deletes an account on the server.** A revoke only sets the flag.
+- **`GET /info`** answers `{service, protocol, setupSecretRequired}`; `protocol` is 1.
+- **Record kinds** (`SyncKind`):
+  - **Volatile kinds:** `now_playing`, `remote_command`, `pin_*`, `play_*`.
+  - **Records keyed by a server device id:** these volatile kinds, the `device_build:<deviceId>`
+    setting, and the device reports (the device diagnostics plan).
+  - **A new kept kind** makes every device pull everything once after the update. On a large
+    account a TV needs minutes for this.
+  - **A setting key that an older build doesn't know** is skipped (`applyRemoteSetting`), and so is
+    a record kind it doesn't know (`SyncApplier`: "a kind from a newer app version").
+- **Screens:**
+  - TV: `tv/.../settings/SyncSettingsScreen.kt` with `LiveSyncSettingsCard.kt`.
+  - Phone: `mobile/.../settings/MobileSyncSettingsScreen.kt`.
+  - Both use `core/ui/.../viewmodels/SyncSettingsViewModel.kt`, and `SyncManager` runs the engine.
+  - Live Sync is admin-only, behind the PIN.
+- **Test servers:** a local `workerd` on host :8787 (memory: local sync server). A second instance on
+  another port can be the "new" server.
+
+## Design
+
+### The move, on the device that starts it
+
+1. **Check the new server:** `GET /info` must list the `move` feature (see Server). If the new
+   server needs a setup secret, the dialog asks for it.
+2. **Create the account on the new server:** `POST /accounts` with this device's name. Keep the
+   same account key.
+3. **Make one move code per device:** for each other device that the old server lists as not
+   revoked, `POST /pairings {"purpose": "move"}` on the new server. A move code lives 30 days
+   (SM-Q2) and works once.
+4. **Copy the snapshot:** page through `GET /changes?since=0` on the old server and send each page
+   to `POST /changes` on the new one, 500 records at a time. Records stay as they came: still
+   sealed, with the same key and clock value. Skip the records that SM-Q3 leaves out; the device
+   opens a record only to read its kind, and never seals it again. Show the progress:
+   "Copying 1,200 of 4,000".
+5. **Write the move record on the old server** (SM-Q1): the new address, and for each old device
+   id its move code. The record is sealed like any other, so the old server can't read the address
+   or the codes.
+6. **Copy what came in during the copy:** records with a `seq` after the snapshot's head, but
+   not the move record itself.
+7. **Write the old-server record on the new server:** the old address, plus this device's old
+   device id and token (SM-Q1 carries it, like the move record). The record is sealed, so the new
+   server can't read it. This device does not remove itself from the old server: its token there
+   is what every admin device uses to watch and purge the old server (see Purge Old Server).
+8. **Switch:** save the new link, then pull and catch up as usual.
+
+**Resume after a failure:** the device writes the move's state to `SyncAccountStore` as it goes:
+the new address and credentials, the codes, the copy cursor and the step reached. If the app stops part way, the
+next open continues the move from that state. It does not create a second account on the new
+server.
+
+### The move, on the other devices
+
+On a pull from the old server, a device that reads the move record:
+
+1. Finds its own old device id in it. If its id isn't there (it joined after the move started),
+   it shows: "This group moved to `<address>`. Add this device from a device of the group."
+2. Joins the new server with its code (`POST /pair`, with the device's current name).
+3. Copies the old server's records that came after the move record to the new server. These are
+   writes from devices that hadn't moved yet. If several devices copy the same record, the new
+   server rejects the second copy as `stale`, which does no harm.
+4. Removes itself from the old server (`DELETE /devices/<own id>`).
+5. Saves the new link. As with any new link, it pulls everything, then queues all local data, so
+   its own changes that the old server never got also reach the new one.
+
+A device on an app version from before the move skips the move record and stays on the old server
+until it is updated.
+
+### Purge Old Server
+
+- **Where:** on any admin device of the group, while the new server holds the old-server record.
+  All devices get that record by normal sync, so the device that started the move does not need to
+  be the one that cleans up. It can even be lost or reset.
+- **No device watches the old server in the background.** Only an open Live Sync screen calls the
+  old server (`GET /info`, `GET /devices`), with the token from the old-server record. A device
+  that has moved needs only the new server.
+- **Shown only when** the old server's `/info` lists the `purge` feature. Otherwise a hint shows
+  instead: update the old server, or delete its data yourself (the Docker `data` folder, or the
+  Durable Object on Cloudflare).
+- **Disabled** while `GET /devices` on the old server lists another device that is not revoked.
+  The row names those devices: "Not moved yet: Living Room TV, Bedroom TV". To unblock a device
+  you can't open (lost, sold or reset), remove it from the group as you can today.
+  The list leaves out the device whose token the record holds: it is the device that started the
+  move, and it is already on the new server.
+- **When pressed:** a confirmation, then `DELETE /account` on the old server, then a deletion of the
+  old-server record on the new server. The row goes away on every device.
+- **Old server unreachable:** the row says so and offers **Forget Old Server**, which deletes the
+  old-server record and purges nothing (SM-Q5).
+- **The token in the record:** it lets the holder read the device list and delete the account on
+  the old server, and nothing on the new server. It is sealed with the account key, which already
+  opens all the group's data, so it adds no new risk inside the group.
+
+### Server
+
+Additive changes; `protocol` stays 1.
+
+- `POST /pairings` accepts `{"purpose": "move"}`. The code then lives 30 days instead of 10 minutes.
+  It still works once.
+- `DELETE /account` (device token): answers `409` while a device other than the caller is not
+  revoked. Otherwise it deletes the account's whole storage (records, devices, pairing codes; the
+  Durable Object's `deleteAll`) and answers `200`.
+- `GET /info` adds `features: ["move", "purge"]`. An older server has no `features` field, and the
+  app reads that as "neither".
+- The old server needs nothing new for the move itself (pulls, the move record and revokes exist
+  today). Only the purge needs a new old server; the new server needs `move`.
+
+## Phases
+
+| Phase | Work | Estimate |
+|---|---|---|
+| 1 | **Server:** move codes, `DELETE /account`, `/info` features. Tests in `server/test`, wire samples in `core/network/src/test/resources/fixtures/sync/` (`SyncWireSamplesTest`), API table in `server/README.md`. | ½ day |
+| 2 | **App, the starting device:** `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
+| 3 | **App, the other devices:** read the move record in `SyncEngine`, join, copy the records after the move record, remove itself, switch. Tests: two devices move, a device not in the record, a device whose pending changes reach the new server. | 1 day |
+| 4 | **Screens, TV and phone:** **Move to Another Server** (address, setup secret, progress, failure text with the raw error for a Nerd), the old server row on every admin device with the "not moved yet" list, **Purge Old Server** with its states and confirmation, **Forget Old Server**. Strings in en, fr and mg. Docs: FEATURES, USER_GUIDE, server README, RELEASE_NOTES. | 1 day |
+| 5 | **Emulator check:** both emulators on the local server (:8787); move to a second local server; check the TV moves when opened, the purge stays disabled until then, the phone can purge after the TV started the move, and the purge leaves the old server's data folder without the account. | ½ day |
+
+## Progress
+
+| Phase | Status |
+|---|---|
+| 1 | Not started |
+| 2 | Not started |
+| 3 | Not started |
+| 4 | Not started |
+| 5 | Not started |
+
+## Open questions
+
+- **SM-Q1, what carries the move record (on the old server) and the old-server record (on the new
+  server):**
+  - (a) Two shared setting keys, `sync_move` and `sync_previous_server`, handled by `SyncEngine`.
+    Older builds skip them, and nobody has to pull everything again. Recommended.
+  - (b) A new kept kind. Every device pulls everything once after the update.
+- **SM-Q2, how long a move code lives:**
+  - (a) 30 days. Recommended.
+  - (b) 7 days.
+  - (c) Until the purge, with no time limit.
+- **SM-Q3, which records the copy skips:**
+  - (a) The volatile kinds, and the records keyed by an old server device id (device builds,
+    device reports). Devices report these again on the new server. Recommended.
+  - (b) Copy everything.
+- **SM-Q4, who can start a move:**
+  - (a) Any admin device of the group, TV or phone. Recommended.
+  - (b) The phone only.
+- **SM-Q5, an old server that can't be reached:**
+  - (a) Offer **Forget Old Server**, which drops the old link without a purge. Recommended.
+  - (b) No such button; the purge row stays until the old server answers.
+- **SM-Q6, devices on an app version from before the move:**
+  - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.
+  - (b) Also show their app version in the list (from their device build record).
