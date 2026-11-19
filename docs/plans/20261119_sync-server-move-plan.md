@@ -70,8 +70,8 @@ Cloudflare), because the data goes through the device, not from server to server
 2. **Create the account on the new server:** `POST /accounts` with this device's name. Keep the
    same account key.
 3. **Make one move code per device:** for each other device that the old server lists as not
-   revoked, `POST /pairings {"purpose": "move"}` on the new server. A move code lives 30 days
-   (SM-Q2) and works once.
+   revoked, `POST /pairings {"purpose": "move"}` on the new server. A move code lives until it is
+   used or the purge (SM-Q2) and works once.
 4. **Copy the snapshot:** page through `GET /changes?since=0` on the old server and send each page
    to `POST /changes` on the new one, 500 records at a time. Records stay as they came: still
    sealed, with the same key and clock value. Skip the records that SM-Q3 leaves out; the device
@@ -86,7 +86,10 @@ Cloudflare), because the data goes through the device, not from server to server
    device id and token (SM-Q1 carries it, like the move record). The record is sealed, so the new
    server can't read it. This device does not remove itself from the old server: its token there
    is what every admin device uses to watch and purge the old server (see Purge Old Server).
-8. **Switch:** save the new link, then pull and catch up as usual.
+8. **Switch:** save the new link with a cursor of 0, but keep `seeded`, `deferred` and the pending
+   local changes (`SyncAccountStore.switchServer`, new; `saveLink` would clear them). Then pull and
+   push as usual. The device does not queue all local data again: the copy already holds it, and
+   a full re-send could bring back items deleted long ago (see Dormant devices).
 
 **Resume after a failure:** the device writes the move's state to `SyncAccountStore` as it goes:
 the new address and credentials, the codes, the copy cursor and the step reached. If the app stops part way, the
@@ -104,11 +107,33 @@ On a pull from the old server, a device that reads the move record:
    writes from devices that hadn't moved yet. If several devices copy the same record, the new
    server rejects the second copy as `stale`, which does no harm.
 4. Removes itself from the old server (`DELETE /devices/<own id>`).
-5. Saves the new link. As with any new link, it pulls everything, then queues all local data, so
-   its own changes that the old server never got also reach the new one.
+5. Switches like the starting device (step 8): cursor 0, but `seeded`, `deferred` and its pending
+   local changes are kept. It pulls everything from the new server, then pushes its pending
+   changes, so its changes that the old server never got reach the new one. It does not queue all
+   local data again.
 
 A device on an app version from before the move skips the move record and stays on the old server
 until it is updated.
+
+### Dormant devices
+
+A device (C) that stays closed for weeks moves correctly when it opens, if three things hold:
+
+- **The old server still runs.** C learns the new address only from it. The purge stays disabled
+  while C has not moved, so the old server can't be purged by mistake. Only removing C from the
+  group unblocks the purge, and then C must be added again by hand (as today for a removed device).
+- **C's move code still works.** A code that expires (SM-Q2 (a) or (b)) strands C. With SM-Q2 (c),
+  the code lives until it is used or the purge deletes the account, so the purge rule is the only
+  limit.
+- **C does not send all its local data again.** C may still hold items that other devices deleted
+  more than 90 days before the copy: the old server has purged those tombstones, so the new server
+  has no tombstone to reject them. A full re-send would bring them back on every device. So C
+  keeps `seeded` and pushes only its pending changes. A deletion younger than 90 days is in the
+  copy as a tombstone, and C applies it on its first pull.
+
+What C changed while it was closed is in its pending changes, so it reaches the new server.
+Records that devices write to the old server after the move record are copied by each device that
+moves (step 3), so a late writer loses nothing either.
 
 ### Purge Old Server
 
@@ -138,8 +163,8 @@ until it is updated.
 
 Additive changes; `protocol` stays 1.
 
-- `POST /pairings` accepts `{"purpose": "move"}`. The code then lives 30 days instead of 10 minutes.
-  It still works once.
+- `POST /pairings` accepts `{"purpose": "move"}`. The code then has no time limit (SM-Q2) instead
+  of 10 minutes. It still works once, and `DELETE /account` deletes it with the rest.
 - `DELETE /account` (device token): answers `409` while a device other than the caller is not
   revoked. Otherwise it deletes the account's whole storage (records, devices, pairing codes; the
   Durable Object's `deleteAll`) and answers `200`.
@@ -154,7 +179,7 @@ Additive changes; `protocol` stays 1.
 |---|---|---|
 | 1 | **Server:** move codes, `DELETE /account`, `/info` features. Tests in `server/test`, wire samples in `core/network/src/test/resources/fixtures/sync/` (`SyncWireSamplesTest`), API table in `server/README.md`. | ½ day |
 | 2 | **App, the starting device:** `SyncApi` calls, a `SyncMover` (steps 1–8, resume), the move state in `SyncAccountStore`, the old-server record, record filter for SM-Q3. Unit tests against a fake server: full copy, resume after each step, setup secret, a new server without `move`. | 1–1½ days |
-| 3 | **App, the other devices:** read the move record in `SyncEngine`, join, copy the records after the move record, remove itself, switch. Tests: two devices move, a device not in the record, a device whose pending changes reach the new server. | 1 day |
+| 3 | **App, the other devices:** read the move record in `SyncEngine`, join, copy the records after the move record, remove itself, switch. Tests: two devices move, a device not in the record, a device whose pending changes reach the new server, a dormant device that holds an item deleted more than 90 days before the copy (it must not come back). | 1 day |
 | 4 | **Screens, TV and phone:** **Move to Another Server** (address, setup secret, progress, failure text with the raw error for a Nerd), the old server row on every admin device with the "not moved yet" list, **Purge Old Server** with its states and confirmation, **Forget Old Server**. Strings in en, fr and mg. Docs: FEATURES, USER_GUIDE, server README, RELEASE_NOTES. | 1 day |
 | 5 | **Emulator check:** both emulators on the local server (:8787); move to a second local server; check the TV moves when opened, the purge stays disabled until then, the phone can purge after the TV started the move, and the purge leaves the old server's data folder without the account. | ½ day |
 
@@ -176,9 +201,11 @@ Additive changes; `protocol` stays 1.
     Older builds skip them, and nobody has to pull everything again. Recommended.
   - (b) A new kept kind. Every device pulls everything once after the update.
 - **SM-Q2, how long a move code lives:**
-  - (a) 30 days. Recommended.
+  - (a) 30 days. A device closed for longer must be added again by hand.
   - (b) 7 days.
-  - (c) Until the purge, with no time limit.
+  - (c) Until it is used or the purge deletes the old account. Recommended: the purge already
+    waits for every device, so a time limit only strands dormant devices. The code is sealed in the
+    move record, works once, and the server keeps only its hash.
 - **SM-Q3, which records the copy skips:**
   - (a) The volatile kinds, and the records keyed by an old server device id (device builds,
     device reports). Devices report these again on the new server. Recommended.
