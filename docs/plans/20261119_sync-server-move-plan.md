@@ -71,9 +71,9 @@ Cloudflare), because the data goes through the device, not from server to server
 0. **Check every device can move** (SM-Q7): each device of the group that the old server lists as
    not revoked must report the `server_move` feature in its device build record
    (`DeviceBuild.features`, as `play_request` does for Send to TV). If one doesn't, or has
-   reported no build yet, the move does not start, and the dialog names the device: "Living Room
-   TV must be updated before the move." Remove a device you can't update from the group first.
-   The move also does not start while the group has a move record on the current server (another
+   reported no build yet, **Move to Another Server** shows disabled, with the reason under it:
+   "Update first: Living Room TV". Remove a device you can't update from the group first.
+   The button is also disabled, with its reason, while the group has a move record on the current server (another
    admin device started a move), or an old-server record (an earlier move not yet purged or
    forgotten). Otherwise two moves could split the group, or the first old server would be
    forgotten with the group's data on it. The new address must differ from the current one.
@@ -237,7 +237,9 @@ Additive changes; `protocol` stays 1.
   - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.
   - (b) Also show their app version in the list (from their device build record).
 - **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**.
-  - (a) Block: the move does not start until every device reports `server_move`, and the dialog
-    names the devices to update or remove.
+  - (a) Block: **Move to Another Server** shows disabled until every device reports
+    `server_move`, with a line under it that names the devices to update or remove ("Update
+    first: Living Room TV"). The user chose disabled with a reason over hiding the button or
+    blocking only when pressed.
   - (b) Warn, and allow the move. The device stays on the old server until it is updated; its
     deletions older than 90 days at its move are lost.
