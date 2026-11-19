@@ -37,10 +37,13 @@ Signed-off-by: Name <email>
   - `build`: Gradle, dependencies or signing.
   - `ci`: GitHub workflows and `scripts/check-*.sh` gates.
   - `chore`: other work, such as a release.
+  - `revert`: undoes an earlier commit (`revert: <its description>`, with its hash in the body).
 - **Scope** (optional): the module (`tv`, `mobile`, `player`, `network`, `ui`, `navigation`, `server`) or the feature area (`epg`, `sync`, `sports`, `settings`, `search`, `i18n`). Leave it out when a change covers many areas.
 - **Description:** start with a lowercase verb in the imperative mood ("add", not "added"). Use no full stop at the end, and keep the first line to 72 characters or fewer.
 - **Breaking change:** put `!` after the type or scope, and a `BREAKING CHANGE:` footer that says what breaks. Examples are a backup file that older versions cannot read, or a sync message that older apps cannot read.
 - **Release commit:** `chore(release): <version>`, for example `chore(release): 0.9.20261119120000`.
+
+The Static checks workflow checks the first line of every pushed commit (`scripts/check-commit-messages.sh`; run it before you push).
 
 Examples: `fix(sports): show a game's result as soon as its competition has it`,
 `feat(settings): let a Nerd set a custom User-Agent`, `docs: add a User Guide`.
@@ -314,6 +317,7 @@ scripts/check-init-order.py
 scripts/check-focus-retry.sh
 scripts/check-design-system.sh
 scripts/check-fixture-privacy.sh
+scripts/check-commit-messages.sh        # commits not yet on origin/main
 scripts/deploy-tv-emulator.sh           # Build + install on the TV emulator
 scripts/deploy-mobile-emulator.sh       # Build + install on the phone emulator
 scripts/deploy-tv-ip.sh <ip> [<ip>...]  # Build + install on network TVs (playback check, backup)

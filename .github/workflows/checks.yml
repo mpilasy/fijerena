@@ -17,6 +17,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # CONTRIBUTING.md → "Commit messages". A new branch or a forced push has no usable
+      # "before" commit, so only the pushed head is checked.
+      - name: Commit messages are Conventional Commits
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ -n "$BEFORE" ]] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            scripts/check-commit-messages.sh "$BEFORE..HEAD"
+          else
+            scripts/check-commit-messages.sh "HEAD^!"
+          fi
 
       # the rock solid stability resilience plan → F-20, F-33.
       - name: User-data databases have no blanket destructive fallback
