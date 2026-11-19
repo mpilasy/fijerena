@@ -17,6 +17,9 @@ Cloudflare), because the data goes through the device, not from server to server
 
 ## What exists (survey 2026-11-19)
 
+- **Words:** the server and the code say **account** for what the app calls a **sync group**: the
+  devices that share one account key and one log of records. This plan uses both words for the same
+  thing.
 - **The device's link** (`SyncAccountStore`, encrypted prefs `sync_account`):
   - `Link(serverUrl, accountId, deviceId, deviceToken, accountKey)`, plus `cursor`, `seeded`,
     `deferred` and `knownKinds`.
