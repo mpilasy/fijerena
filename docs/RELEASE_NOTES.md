@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Calmer TV buttons:** on TV, a button that is not focused no longer has a coloured fill: Save, OK and Delete rest in the same quiet fill as the others, and Delete keeps a red label. The focused button is now the only strong colour on the screen, so it is clear where the remote is. The phone is unchanged.
+
 ## Version: 0.9.20261119171145
 
 - **Less work in the background:** the source badges, the New Episodes marks, the look (theme and style), the source short names and the sports watch question stop following their data while the app is hidden, and catch up when it comes back. Search builds its text patterns once, not on each query. TV and phone.

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.ui.components.buttons
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,26 @@ object TvButtonStyle : ButtonStyle() {
      * against its right edge. Every button in it is as wide as the widest label, centred in it.
      */
     const val AREA_WIDTH_FRACTION = 0.5f
+
+    /**
+     * At rest every text button is quiet, whatever its kind: the same faint fill and outline, so the
+     * focused button is the only strong colour on the screen. The main action is the one focus
+     * starts on, not a coloured fill. A deleting button keeps its warning in a danger-coloured label.
+     * The phone keeps [ButtonStyle]'s coloured fills: with no focus, the fill shows the main action.
+     */
+    @Composable
+    @ReadOnlyComposable
+    override fun container(kind: ButtonKind): Color = super.container(ButtonKind.Other)
+
+    @Composable
+    @ReadOnlyComposable
+    override fun content(kind: ButtonKind): Color =
+        if (kind == ButtonKind.Danger) CinemaTheme.colors.danger else CinemaTheme.colors.textPrimary
+
+    // The faint outline on every kind, so a button never reads as a settings row.
+    @Composable
+    @ReadOnlyComposable
+    override fun outline(kind: ButtonKind): BorderStroke? = super.outline(ButtonKind.Other)
 
     /**
      * Focus (TV visual refresh): every focused button turns solid [TvFocusTokens.focusFill] (white
