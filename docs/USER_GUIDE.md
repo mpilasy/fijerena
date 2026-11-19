@@ -169,6 +169,12 @@ encrypted on your device before it is sent. The server cannot read it or tell wh
 
 Changes reach the other open devices in a few seconds. A closed app catches up when you open it.
 
+**Move to another server:** to change servers, update the app on every device of the group and
+update the new server. Then, on one device, select **Move to another server** on the Live Sync
+page, type the new address, select **Check server**, then **Move**. Keep the device on until the
+copy ends. The other devices move by themselves the next time you open them. When all of them
+have moved, select **Purge old server** to delete the group's data from the old server.
+
 **Send to TV:** on the phone, select **Send to TV** on a film, an episode or a channel, and choose
 a TV of your sync group. The TV plays it. Fijerena must be open on the TV.
 

@@ -189,7 +189,9 @@ moves (step 3), so a late writer loses nothing either.
   that has moved needs only the new server.
 - **Shown only when** the old server's `/info` lists the `purge` feature. Otherwise a hint shows
   instead: update the old server, or delete its data yourself (the Docker `data` folder, or the
-  Durable Object on Cloudflare).
+  Durable Object on Cloudflare), then select **Forget Old Server**. **Forget Old Server** shows
+  there too, with the same confirmation: without it, the row and the `OldServerLeft` block would
+  stay for good.
 - **Disabled** while `GET /devices` on the old server lists another device that is not revoked.
   The row names those devices: "Not moved yet: Living Room TV, Bedroom TV". To unblock a device
   you can't open (lost, sold or reset), remove it from the group as you can today.
@@ -250,7 +252,7 @@ The screens see the move only through `SyncManager` and the types in
 | 1 | Done 2026-11-19: move codes without a time limit, `DELETE /account`, `/info` features, with server tests and wire samples. |
 | 2 | Done 2026-11-19: `SyncServerMove` (steps 0–8, resume, SM-Q3 filter, old-server watch and purge), `server_move` feature, `SyncApi.createMoveCode`/`deleteAccount`, `SyncAccountStore.switchServer`, `SyncManager` move API; tests against two fake servers. |
 | 3 | Done 2026-11-19: `SyncEngine` reads the move record and follows it (join, copy after the move record, revoke, switch, resume); `Status.movedAway`; tests: two devices move, a device not in the record, pending changes, dormant device, resume at each call. |
-| 4 | In progress |
+| 4 | Done 2026-11-19: **Move to Another Server** (reason line, address and setup secret, progress, failure), the Old Server row (not moved yet, Purge, Forget, the no-purge hint), the moved-away notice; TV and phone; en, fr, mg; FEATURES, USER_GUIDE, RELEASE_NOTES. |
 | 5 | Not started |
 
 ## Open questions (all decided 2026-11-19)
@@ -276,6 +278,7 @@ The screens see the move only through `SyncManager` and the types in
 - **SM-Q5, an old server that can't be reached:** **decided 2026-11-19: (a)**.
   - (a) Offer **Forget Old Server**, which drops the old link without a purge. Recommended.
   - (b) No such button; the purge row stays until the old server answers.
+  - Forget also offered when the old server has no purge (2026-11-19).
 - **SM-Q6, devices on an app version from before the move** (rare after SM-Q7: only a device added
   to the group on an old version after the move started): **decided 2026-11-19: (a)**.
   - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.

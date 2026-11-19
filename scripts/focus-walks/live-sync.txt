@@ -15,6 +15,10 @@
 # the share switch. Edited by hand, not re-recorded yet. Walked as a profile that is not a Nerd:
 # a Nerd also has a Logs action between Rename and Remove on the rows of the other devices (Phase 3;
 # DeviceLogsFocusTest in tv/src/test covers it and Back from Device Logs).
+# 2026-11-19 (sync server move plan, Phase 4): Move to another server between the devices and Leave
+# (a focus stop also while disabled); Up from Leave lands on it, and Up from it on the last Remove.
+# While an old server is left, its Purge old server or Forget old server sits between the devices and
+# Move. LiveSyncMoveFocusTest (tv/src/test) covers both orders. Edited by hand, not re-recorded yet.
 @start Sync now
 UP	Add a device
 DOWN	Sync now
@@ -23,7 +27,9 @@ DOWN	Share Logs with My Sync Group
 DOWN	Rename
 DOWN	Rename
 DOWN	Rename
+DOWN	Move to another server
 DOWN	Leave the sync group
+UP	Move to another server
 UP	Remove
 UP	Rename
 UP	Rename

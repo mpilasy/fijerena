@@ -21,7 +21,10 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.DeviceReport
+import org.njarasoa.fijerena.core.network.sync.MoveBlock
+import org.njarasoa.fijerena.core.network.sync.MoveState
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
+import org.njarasoa.fijerena.core.network.sync.OldServerState
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.PinRequests
 import org.njarasoa.fijerena.core.network.sync.PlayRequests
@@ -36,6 +39,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
  * Settings → Sync on both platforms: linking this device to a sync account and managing it. See
@@ -102,6 +106,144 @@ class SyncSettingsViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), manager.status.value to ui.value)
 
     val currentUi: StateFlow<Ui> = ui.asStateFlow()
+
+    /** What the move rows of the screen show (the sync server move plan → App interface). */
+    data class MoveUi(
+        /** How far a move started on this device is. */
+        val move: MoveState = MoveState.Idle,
+        /** Why Move to Another Server is disabled; null when it is not, or before [blockLoaded]. */
+        val block: MoveBlock? = null,
+        /** [block] is known: until then the button stays disabled. */
+        val blockLoaded: Boolean = false,
+        /** Friendly error when the devices of the group could not be checked (raw detail added for a Nerd). */
+        val blockError: String? = null,
+        /** The new server address typed in the move dialog, and what checking it found. */
+        val targetUrl: String = "",
+        val targetChecked: Boolean = false,
+        val targetSecretRequired: Boolean = false,
+        val checking: Boolean = false,
+        /** Friendly error of the move dialog (raw detail added for a Nerd). */
+        val targetError: String? = null,
+        /** The old address after a move; null when there is no old server. */
+        val oldServer: String? = null,
+        /** What the old server answered; null until it first answers. */
+        val oldServerState: OldServerState? = null,
+        /** Purge Old Server or Forget Old Server runs. */
+        val oldServerBusy: Boolean = false,
+        /** Friendly error of Purge Old Server or Forget Old Server (raw detail added for a Nerd). */
+        val oldServerError: String? = null,
+        /** The group moved to this address, and this device is not in the move. */
+        val movedAway: String? = null,
+    ) {
+        /**
+         * Move to Another Server is enabled: no move runs, and the check found no block. A move that
+         * stopped can always start again: it continues from where it stopped.
+         */
+        val canMove: Boolean
+            get() = move is MoveState.Failed || (move == MoveState.Idle && blockLoaded && block == null && blockError == null)
+    }
+
+    private val moveLocal = MutableStateFlow(MoveUi())
+    private var moveLoadJob: Job? = null
+
+    val moveUi: StateFlow<MoveUi> =
+        combine(moveLocal, manager.move, manager.oldServer, manager.status) { local, move, old, status ->
+            local.copy(move = move, oldServer = old, movedAway = status.movedAway)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MoveUi())
+
+    /**
+     * Asks why Move to Another Server is disabled, and asks the old server how it is (when there is
+     * one). Only while the Live Sync screen is open: when it opens, and after a move or a purge.
+     */
+    fun loadMove() {
+        moveLoadJob?.cancel()
+        moveLoadJob =
+            viewModelScope.launchGuarded("loadMove") {
+                try {
+                    val block = manager.moveBlock()
+                    moveLocal.update { it.copy(block = block, blockLoaded = true, blockError = null) }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    moveLocal.update { it.copy(block = null, blockLoaded = false, blockError = friendly(e)) }
+                }
+                // The last answer stays while the old server is asked again, so its button does not go
+                // away under focus.
+                val state =
+                    try {
+                        if (manager.oldServer.value != null) manager.oldServerState() else null
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        OldServerState.Unreachable(e.message.orEmpty())
+                    }
+                moveLocal.update { it.copy(oldServerState = state) }
+            }
+    }
+
+    fun onMoveUrlChanged(url: String) {
+        moveLocal.update { it.copy(targetUrl = url.trim(), targetChecked = false, targetError = null) }
+    }
+
+    /** Step 1 of the move: the new server must take a moved group, and may ask for a setup secret. */
+    fun checkMoveTarget() {
+        val url = normalizedUrl(moveLocal.value.targetUrl)
+        if (url ==
+            manager.status.value.serverUrl
+                ?.trimEnd('/')
+        ) {
+            moveLocal.update { it.copy(targetError = app.getString(R.string.live_sync_move_same_server)) }
+            return
+        }
+        moveLocal.update { it.copy(checking = true, targetError = null) }
+        viewModelScope.launchGuarded("checkMoveTarget", onError = { e ->
+            moveLocal.update { it.copy(checking = false, targetError = moveFriendly(e)) }
+        }) {
+            val info = manager.checkMoveTarget(url)
+            moveLocal.update { it.copy(checking = false, targetChecked = true, targetSecretRequired = info.setupSecretRequired) }
+        }
+    }
+
+    /** Steps 1 to 8 of the move, or continues a move that stopped. [moveUi] then shows how far it is. */
+    fun startMove(setupSecret: String?) {
+        manager.startMove(normalizedUrl(moveLocal.value.targetUrl), setupSecret?.takeIf { it.isNotBlank() })
+        moveLocal.update { it.copy(targetChecked = false, targetError = null) }
+    }
+
+    /** The move dialog closed without a move: the typed address stays for the next time. */
+    fun dismissMove() {
+        moveLocal.update { it.copy(targetChecked = false, checking = false, targetError = null) }
+    }
+
+    fun purgeOldServer() = oldServerAction("purgeOldServer") { manager.purgeOldServer() }
+
+    fun forgetOldServer() = oldServerAction("forgetOldServer") { manager.forgetOldServer() }
+
+    private fun oldServerAction(
+        name: String,
+        block: suspend () -> Unit,
+    ) {
+        moveLocal.update { it.copy(oldServerBusy = true, oldServerError = null) }
+        viewModelScope.launchGuarded(
+            name,
+            onError = { e ->
+                moveLocal.update { it.copy(oldServerBusy = false, oldServerError = friendly(e)) }
+                loadMove()
+            },
+        ) {
+            block()
+            moveLocal.update { it.copy(oldServerBusy = false) }
+            loadMove()
+        }
+    }
+
+    /** As [friendly], but a server without the `move` feature gets its own words. */
+    private fun moveFriendly(e: Throwable): String =
+        if (e is SyncApiException && e.status == SyncApiException.INCOMPATIBLE) {
+            withRaw(app.getString(R.string.live_sync_move_no_move_feature), e)
+        } else {
+            friendly(e)
+        }
 
     /** Names [deviceId] for the whole group (a synced setting); blank goes back to its server name, its model. */
     fun rename(
@@ -372,9 +514,9 @@ class SyncSettingsViewModel(
         ui.value = ui.value.copy(devices = accounts.devices())
     }
 
-    private fun normalizedUrl(): String {
+    private fun normalizedUrl(typed: String = ui.value.serverUrl): String {
         val url =
-            ui.value.serverUrl
+            typed
                 .trim()
                 .trimEnd('/')
         return if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
@@ -442,7 +584,7 @@ class SyncSettingsViewModel(
                 }.toMap()
     }
 
-    private fun friendly(e: Exception): String {
+    private fun friendly(e: Throwable): String {
         val message =
             when {
                 e is SyncApiException && e.status == SyncApiException.INCOMPATIBLE -> app.getString(R.string.sync_error_not_a_server)
@@ -454,6 +596,14 @@ class SyncSettingsViewModel(
                 e is SyncApiException && (e.status == 403 || e.status == 410) -> app.getString(R.string.sync_error_code_expired)
                 else -> app.getString(org.njarasoa.fijerena.core.network.R.string.error_generic)
             }
+        return withRaw(message, e)
+    }
+
+    /** [message], and for a Nerd the raw error under it. */
+    private fun withRaw(
+        message: String,
+        e: Throwable,
+    ): String {
         // Masked: a raw message can hold the server URL with a secret.
         val raw = e.message?.let(Redact::text)
         return if (AppSettings(app).isNerdMode && !raw.isNullOrBlank() && raw != message) "$message\n\n[dev] $raw" else message
