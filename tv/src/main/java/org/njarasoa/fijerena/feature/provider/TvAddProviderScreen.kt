@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -212,7 +211,7 @@ fun TvAddProviderScreen(
 
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     // The badge short names, the automatic one shown while this source has none of its own.
-    val shortNames by remember { providerRepo.sourceShortNames() }.collectAsState(initial = emptyMap())
+    val shortNames by remember { providerRepo.sourceShortNames() }.collectAsStateWithLifecycle(initialValue = emptyMap())
     var shortNameTaken by remember { mutableStateOf<String?>(null) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }

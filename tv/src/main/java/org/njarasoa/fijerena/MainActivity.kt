@@ -5,13 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
         var uiScale by mutableStateOf(appSettings.uiScaleChoice ?: autoUiScale(this))
 
         setContent {
-            val (themeId, uiStyleId, posterBackdrop) = look.collectAsState(initial = initialLook).value
+            val (themeId, uiStyleId, posterBackdrop) = look.collectAsStateWithLifecycle(initialValue = initialLook).value
             val currentDensity = LocalDensity.current
             // Scale the base density by the user's choice, so every dp and sp scales. Not fontScale: that would
             // scale text twice.

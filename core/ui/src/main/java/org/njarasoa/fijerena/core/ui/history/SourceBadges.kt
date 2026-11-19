@@ -2,12 +2,12 @@ package org.njarasoa.fijerena.core.ui.history
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.combine
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
@@ -41,7 +41,7 @@ val LocalSourceShortNames = compositionLocalOf { SourceShortNameMap() }
 @Composable
 fun ProvideSourceBadges(content: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
-    val nerd by remember(context) { AppSettings(context).observeNerdMode() }.collectAsState(initial = false)
+    val nerd by remember(context) { AppSettings(context).observeNerdMode() }.collectAsStateWithLifecycle(initialValue = false)
     val shortNames by remember(context) {
         val repository = AppContainer.getInstance(context).providerRepository
         combine(repository.getAllProviders(), repository.sourceShortNames()) { sources, byId ->
@@ -55,8 +55,8 @@ fun ProvideSourceBadges(content: @Composable () -> Unit) {
                         .toMap(),
             )
         }
-    }.collectAsState(initial = SourceShortNameMap())
-    val newEpisodes by remember(context) { NewEpisodesStore.getInstance(context).state }.collectAsState()
+    }.collectAsStateWithLifecycle(initialValue = SourceShortNameMap())
+    val newEpisodes by remember(context) { NewEpisodesStore.getInstance(context).state }.collectAsStateWithLifecycle()
     CompositionLocalProvider(
         LocalNerd provides nerd,
         LocalSourceShortNames provides shortNames,

@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Less work in the background:** the source badges, the New Episodes marks, the look (theme and style), the source short names and the sports watch question stop following their data while the app is hidden, and catch up when it comes back. Search builds its text patterns once, not on each query. TV and phone.
+
 ## Version: 0.9.20261118035523
 
 - **Fijerena™ only where the name is the brand:** the trademark sign stays on the About title, the version line and the TV's brand title, and leaves the launcher label, messages and the terms. TV and phone.

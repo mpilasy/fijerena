@@ -7,9 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.GameReminderAlerts
 import org.njarasoa.fijerena.core.network.sports.GameReminderNotifications
@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
         val initialLook = appSettings.look(appSettings.activeProfileId)
 
         setContent {
-            val (themeId, uiStyleId, posterBackdrop) = look.collectAsState(initial = initialLook).value
+            val (themeId, uiStyleId, posterBackdrop) = look.collectAsStateWithLifecycle(initialValue = initialLook).value
             // The first composition is close enough to the first draw: the nav host shows
             // AppLoadingScreen at once, so the splash never lifts onto an empty window.
             LaunchedEffect(Unit) { contentReady = true }

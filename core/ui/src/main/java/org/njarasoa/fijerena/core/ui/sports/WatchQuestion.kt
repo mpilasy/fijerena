@@ -2,13 +2,13 @@ package org.njarasoa.fijerena.core.ui.sports
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -40,7 +40,7 @@ fun WatchQuestionBody(
 ) {
     val context = LocalContext.current.applicationContext
     val sources by remember(context) { AppContainer.getInstance(context).providerRepository.getAllProviders() }
-        .collectAsState(initial = emptyList())
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val sourceName = rememberSourceName(providerId)
     Column {
         CinemaText(
