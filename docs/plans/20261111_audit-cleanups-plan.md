@@ -1,6 +1,6 @@
 # Audit cleanups
 
-**Status:** Planned 2026-11-11. AC-2 and AC-5 done 2026-11-11; AC-1, AC-3 and AC-4 not started. No open questions.
+**Status:** Done 2026-11-19. AC-2 and AC-5 done 2026-11-11; AC-3 and AC-4 done 2026-11-19; AC-1 dropped 2026-11-19 (no leak, see Work). No open questions.
 
 ## Goal
 
@@ -28,10 +28,10 @@ The audit listed 15 findings. Five are real and listed under Work. The others we
 
 | # | Change | Where |
 |---|---|---|
-| AC-1 | Look up the source before `MediaRepository` is made. When the source is gone (deleted meanwhile), make no repository: today one is made and never closed, and its `writeScope` stays open. | `core/ui/.../di/AppContainer.kt`, `cachedOrNewRepository` |
+| AC-1 | Look up the source before `MediaRepository` is made. When the source is gone (deleted meanwhile), make no repository: today one is made and never closed, and its `writeScope` stays open. | `core/ui/.../di/AppContainer.kt`, `cachedOrNewRepository` (**Dropped 2026-11-19:** no leak. `MediaRepository.close` does nothing on purpose (F-15), so a cached repository is never closed either. `AppScopes.create` keeps no list of scopes, and the repository that isn't cached has no one holding it, so it is garbage-collected with its idle scope. Callers (47) need a repository back, so making none would change every caller for no gain.) |
 | AC-2 | Move the 13 mobile tests on the old `createComposeRule` to `androidx.compose.ui.test.junit4.v2.createComposeRule`. CONTRIBUTING → Tech Stack: with the old rule, focus retries do not run. | `mobile/src/test/` (**Done 2026-11-11:** import change only; all 134 mobile tests pass on v2, no test or app code needed a fix) |
-| AC-3 | Use `collectAsStateWithLifecycle()` in place of `collectAsState()`, so collection stops while the activity is stopped. | `SourceBadges.kt` (2 sites), both `MainActivity.kt`, `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `WatchQuestion.kt` |
-| AC-4 | Make the two regexes in `formatFtsQuery` top-level `private val`s. It runs on each search query. | `core/network/.../xtream/manager/XtreamContentManager.kt` |
+| AC-3 | Use `collectAsStateWithLifecycle()` in place of `collectAsState()`, so collection stops while the activity is stopped. | `SourceBadges.kt` (2 sites), both `MainActivity.kt`, `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `WatchQuestion.kt` (**Done 2026-11-19:** all 8 calls; SourceBadges has 3, with the New Episodes state. `EmbeddedPlayerSurface`'s `publishCount` stays as it is: not in the audit, and the player surface must follow the playback service at once) |
+| AC-4 | Make the two regexes in `formatFtsQuery` top-level `private val`s. It runs on each search query. | `core/network/.../xtream/manager/XtreamContentManager.kt` (**Done 2026-11-19:** `WHITESPACE`, `FTS_SYNTAX_CHARS`) |
 | AC-5 | Parse 12-digit XMLTV timestamps (`YYYYMMDDhhmm`, seconds optional per XMLTV DTD) and timestamps without a space before `+HHMM`/`-HHMM`. Feeds without seconds currently fail `SimpleDateFormat` and drop all programmes; feeds without a space drop the timezone and shift air times. | `core/network/.../xmltv/XmltvParser.kt`, `parseTimestamp` (**Done 2026-11-11:** `splitTimestamp`, also used by `EpgIndexer` for the file's zone; checked on the TV emulator with a guide in both formats) |
 
 ## Checks
