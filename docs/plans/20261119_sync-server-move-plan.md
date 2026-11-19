@@ -233,10 +233,10 @@ Additive changes; `protocol` stays 1.
   - (a) Offer **Forget Old Server**, which drops the old link without a purge. Recommended.
   - (b) No such button; the purge row stays until the old server answers.
 - **SM-Q6, devices on an app version from before the move** (rare after SM-Q7: only a device added
-  to the group on an old version after the move started):
+  to the group on an old version after the move started): **decided 2026-11-19: (a)**.
   - (a) List them as "not moved yet", with a hint to update the app. Nothing else. Recommended.
   - (b) Also show their app version in the list (from their device build record).
-- **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**. **decided 2026-11-19: (a)**.
+- **SM-Q7, a device of the group on an app version that can't move:** **decided 2026-11-19: (a)**.
   - (a) Block: **Move to Another Server** shows disabled until every device reports
     `server_move`, with a line under it that names the devices to update or remove ("Update
     first: Living Room TV"). The user chose disabled with a reason over hiding the button or
