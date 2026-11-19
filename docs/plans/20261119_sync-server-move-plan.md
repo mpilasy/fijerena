@@ -222,7 +222,7 @@ The screens see the move only through `SyncManager` and the types in
 | 1 | In progress |
 | 2 | In progress |
 | 3 | In progress |
-| 4 | In progress |
+| 4 | In progress — screens built, waiting for the SyncManager members (the screens call a temporary `SyncMoveGateway` in core/ui until then) |
 | 5 | Not started |
 
 ## Open questions (all decided 2026-11-19)

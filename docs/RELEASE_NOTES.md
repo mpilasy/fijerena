@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Move live sync to another server:** Settings → Sync & Backup → Live Sync has **Move to another server**. Type the new address: the device copies the group's data there ("Copying 1,200 of 4,000") and switches to it, and the other devices switch by themselves the next time they open. No QR codes, no new setup. When every device has moved, **Purge old server** deletes the group's data from the old server. The button says what to do first when a device of the group needs an update. Update every device and the new server first. TV and phone.
+
 ## Version: 0.9.20261119181925
 
 - **Calmer TV buttons:** on TV, a button that is not focused no longer has a coloured fill: Save, OK and Delete rest in the same quiet fill as the others, and Delete keeps a red label. The focused button is now the only strong colour on the screen, so it is clear where the remote is. The phone is unchanged.

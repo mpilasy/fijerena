@@ -35,6 +35,8 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.DeviceReport
+import org.njarasoa.fijerena.core.network.sync.MoveState
+import org.njarasoa.fijerena.core.network.sync.OldServerState
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -42,6 +44,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
+import org.njarasoa.fijerena.core.ui.components.LiveSyncMoveLines
+import org.njarasoa.fijerena.core.ui.components.LiveSyncOldServerLines
 import org.njarasoa.fijerena.core.ui.components.LiveSyncProgressBar
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -58,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -105,8 +110,16 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
     var renaming by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
+    val moveUi by viewModel.moveUi.collectAsStateWithLifecycle()
+    var moveDialog by remember { mutableStateOf(false) }
+    var confirmPurge by remember { mutableStateOf(false) }
+    var confirmForget by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
+    // The move rows ask only while this screen is open: when it opens, when a move ends, and when
+    // the old server comes or goes (the sync server move plan).
+    val moveEnded = moveUi.move is MoveState.Done || moveUi.move is MoveState.Failed
+    LaunchedEffect(status.linked, moveEnded, moveUi.oldServer) { if (status.linked) viewModel.loadMove() }
 
     // Entry focus on Sync now (Add a device while a sync runs, as Sync now is disabled then); else the
     // screen opened with nothing focused. Not on the way back from a device's Logs: the hand-back below
@@ -118,6 +131,21 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
         if (status.linked && !pairing && returnFocus.key == null) syncNowFocus.requestFocusWithRetry(fallback = addDeviceFocus)
     }
     NavReturnFocusEffect(returnFocus, fallback = syncNowFocus)
+
+    // Move to another server is always there while linked (disabled with its reason when it can't
+    // run): Leave's Up and the Old Server row's lost focus go to it.
+    val moveFocus = remember { FocusRequester() }
+    // The Old Server row's button changes with what the old server answers, and the row goes after a
+    // purge. When the focused button goes, focus moves to Move to another server, never to nothing.
+    val oldServerAction = oldServerAction(moveUi)
+    val oldServerActionNow by rememberUpdatedState(oldServerAction)
+    var focusedOldServerAction by remember { mutableStateOf<OldServerAction?>(null) }
+    LaunchedEffect(oldServerAction) {
+        if (focusedOldServerAction != null && focusedOldServerAction != oldServerAction) {
+            focusedOldServerAction = null
+            moveFocus.requestFocusWithRetry()
+        }
+    }
 
     Column(
         modifier =
@@ -158,7 +186,19 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
                 onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
             )
         } else if (status.linked) {
-            // T-14 order: status + Sync now → share switch → devices → danger zone; Add a device in the header.
+            // The group moved to a server without this device: say where, above everything else.
+            moveUi.movedAway?.let { address ->
+                TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
+                    CinemaText(
+                        stringResource(R.string.live_sync_moved_away, address),
+                        role = TextRole.Body,
+                        tone = TextTone.Warning,
+                        modifier = Modifier.padding(Spacing.md.scaled(scale)),
+                    )
+                }
+            }
+            // T-14 order: status + Sync now → share switch → devices → old server → move → danger zone; Add a
+            // device in the header.
             LinkedPanel(
                 status = status,
                 onSyncNow = viewModel::syncNow,
@@ -180,8 +220,8 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
                 description = stringResource(R.string.live_sync_share_logs_desc),
                 modifier = Modifier.leftToRail(),
             )
-            // Up from Leave goes to the last Remove: it is at the far right of its row, outside the left-aligned
-            // Leave button's beam, so plain focus search went to the share switch.
+            // Up from the first left-aligned button under the devices goes to the last Remove: it is at the far right
+            // of its row, outside that button's beam, so plain focus search went to the share switch.
             val lastActionFocus = remember { FocusRequester() }
             val hasDevices = ui.devices.orEmpty().any { !it.revoked }
             DevicesPanel(
@@ -195,6 +235,33 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
                 onLogs = { onDeviceLogs(it.id, it.name) },
                 onRemove = { confirmRemove = it },
             )
+            // That button is Old Server's button when it shows, else Move to another server. Leave's Up goes to Move.
+            val devicesUp = if (hasDevices) lastActionFocus else null
+            moveUi.oldServer?.let { address ->
+                OldServerPanel(
+                    address = address,
+                    moveUi = moveUi,
+                    action = oldServerAction,
+                    onPurge = { confirmPurge = true },
+                    onForget = { confirmForget = true },
+                    upFocus = devicesUp,
+                    modifier =
+                        Modifier.onFocusChanged { focus ->
+                            // Focus that leaves with the button (it changed or went) stays noted: the effect above moves it.
+                            if (focus.hasFocus) {
+                                focusedOldServerAction = oldServerActionNow
+                            } else if (oldServerActionNow == focusedOldServerAction) {
+                                focusedOldServerAction = null
+                            }
+                        },
+                )
+            }
+            MovePanel(
+                moveUi = moveUi,
+                onMove = { moveDialog = true },
+                moveFocus = moveFocus,
+                upFocus = devicesUp.takeIf { oldServerAction == OldServerAction.NONE },
+            )
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             CinemaText(
                 stringResource(R.string.provider_section_danger_zone),
@@ -204,7 +271,7 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             ProviderDangerButton(
                 onClick = { confirmLeave = true },
                 text = stringResource(R.string.live_sync_leave),
-                modifier = (if (hasDevices) Modifier.focusProperties { up = lastActionFocus } else Modifier).leftToRail(),
+                modifier = Modifier.focusProperties { up = moveFocus }.leftToRail(),
             )
         } else {
             SetupPanel(ui, viewModel)
@@ -234,6 +301,49 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             },
             onDismiss = { renaming = null },
         )
+    }
+    if (moveDialog) {
+        MoveDialog(
+            moveUi = moveUi,
+            onUrlChanged = viewModel::onMoveUrlChanged,
+            onCheck = viewModel::checkMoveTarget,
+            onMove = { secret ->
+                viewModel.startMove(secret)
+                moveDialog = false
+            },
+            onDismiss = {
+                viewModel.dismissMove()
+                moveDialog = false
+            },
+        )
+    }
+    if (confirmPurge) {
+        moveUi.oldServer?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_old_server_purge_title),
+                message = stringResource(R.string.live_sync_old_server_purge_message, address),
+                confirm = stringResource(R.string.live_sync_old_server_purge),
+                onConfirm = {
+                    viewModel.purgeOldServer()
+                    confirmPurge = false
+                },
+                onDismiss = { confirmPurge = false },
+            )
+        }
+    }
+    if (confirmForget) {
+        moveUi.oldServer?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_old_server_forget_title),
+                message = stringResource(R.string.live_sync_old_server_forget_message, address),
+                confirm = stringResource(R.string.live_sync_old_server_forget),
+                onConfirm = {
+                    viewModel.forgetOldServer()
+                    confirmForget = false
+                },
+                onDismiss = { confirmForget = false },
+            )
+        }
     }
     if (confirmLeave) {
         ConfirmDialog(
@@ -507,6 +617,157 @@ internal fun DevicesPanel(
             }
         }
     }
+}
+
+/** The button the Old Server row shows for what the old server answered. */
+internal enum class OldServerAction { NONE, PURGE, FORGET }
+
+internal fun oldServerAction(moveUi: SyncSettingsViewModel.MoveUi): OldServerAction =
+    when {
+        moveUi.oldServer == null -> OldServerAction.NONE
+        moveUi.oldServerState is OldServerState.NotMoved || moveUi.oldServerState == OldServerState.Ready -> OldServerAction.PURGE
+        moveUi.oldServerState is OldServerState.Unreachable -> OldServerAction.FORGET
+        else -> OldServerAction.NONE
+    }
+
+/**
+ * Move to another server, and under it how far a move is or why the button is disabled (the sync
+ * server move plan). Disabled, the button is still a focus stop, so its reason shows.
+ */
+@Composable
+internal fun MovePanel(
+    moveUi: SyncSettingsViewModel.MoveUi,
+    onMove: () -> Unit,
+    moveFocus: FocusRequester,
+    /** Where Up goes from the button; null for the nearest control above. */
+    upFocus: FocusRequester?,
+) {
+    val scale = LocalUiScale.current
+    TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+            CinemaSecondaryButton(
+                onClick = onMove,
+                text = stringResource(R.string.live_sync_move),
+                enabled = moveUi.canMove,
+                modifier =
+                    Modifier
+                        .focusRequester(moveFocus)
+                        .then(if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier)
+                        .leftToRail(),
+            )
+            LiveSyncMoveLines(moveUi.move, moveUi.block, moveUi.blockLoaded, moveUi.blockError)
+        }
+    }
+}
+
+/**
+ * The old server after a move: its address, what it answered, and Purge old server (disabled while
+ * devices have not moved) or Forget old server (when it did not answer).
+ */
+@Composable
+internal fun OldServerPanel(
+    address: String,
+    moveUi: SyncSettingsViewModel.MoveUi,
+    action: OldServerAction,
+    onPurge: () -> Unit,
+    onForget: () -> Unit,
+    /** Where Up goes from the button; null for the nearest control above. */
+    upFocus: FocusRequester?,
+    modifier: Modifier = Modifier,
+) {
+    val scale = LocalUiScale.current
+    val buttonModifier = (if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier).leftToRail()
+    TvGlassPanel(modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+            LiveSyncOldServerLines(address, moveUi.oldServerState, moveUi.oldServerError)
+            when (action) {
+                OldServerAction.PURGE -> {
+                    CinemaDangerButton(
+                        onClick = onPurge,
+                        text = stringResource(R.string.live_sync_old_server_purge),
+                        enabled = moveUi.oldServerState == OldServerState.Ready && !moveUi.oldServerBusy,
+                        modifier = buttonModifier,
+                    )
+                }
+
+                OldServerAction.FORGET -> {
+                    CinemaSecondaryButton(
+                        onClick = onForget,
+                        text = stringResource(R.string.live_sync_old_server_forget),
+                        enabled = !moveUi.oldServerBusy,
+                        modifier = buttonModifier,
+                    )
+                }
+
+                OldServerAction.NONE -> {
+                    Unit
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Move to Another Server: the new address, checked first; then the setup secret when that server
+ * asks for one, and Move. The move then shows its progress under the button on the screen.
+ */
+@Composable
+private fun MoveDialog(
+    moveUi: SyncSettingsViewModel.MoveUi,
+    onUrlChanged: (String) -> Unit,
+    onCheck: () -> Unit,
+    onMove: (setupSecret: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var setupSecret by remember { mutableStateOf("") }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.live_sync_move_title),
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody)) {
+                CinemaText(stringResource(R.string.live_sync_move_desc), role = TextRole.Body, tone = TextTone.Secondary)
+                // The form's first field: the dialog opens on it.
+                ReadOnlyFieldWithEdit(
+                    value = moveUi.targetUrl,
+                    onValueChange = onUrlChanged,
+                    label = stringResource(R.string.live_sync_move_server_label),
+                    placeholder = stringResource(R.string.live_sync_server_hint),
+                    keyboardOptions = FieldKeyboards.Url,
+                )
+                if (moveUi.targetChecked) {
+                    CinemaText(stringResource(R.string.live_sync_server_found), role = TextRole.Body, tone = TextTone.Success)
+                    if (moveUi.targetSecretRequired) {
+                        ReadOnlyFieldWithEdit(
+                            value = setupSecret,
+                            onValueChange = { setupSecret = it },
+                            label = stringResource(R.string.live_sync_setup_secret_label),
+                            keyboardOptions = FieldKeyboards.Password,
+                            visualTransformation =
+                                androidx.compose.ui.text.input
+                                    .PasswordVisualTransformation(),
+                            displayText = "•".repeat(setupSecret.length),
+                        )
+                    }
+                    CinemaText(stringResource(R.string.live_sync_move_confirm), role = TextRole.Body, tone = TextTone.Secondary)
+                }
+                moveUi.targetError?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Danger) }
+            }
+        },
+        main =
+            if (moveUi.targetChecked) {
+                DialogAction(
+                    stringResource(R.string.live_sync_move_start),
+                    enabled = !moveUi.targetSecretRequired || setupSecret.isNotBlank(),
+                ) { onMove(setupSecret) }
+            } else {
+                DialogAction(
+                    stringResource(R.string.live_sync_check_server),
+                    enabled = moveUi.targetUrl.isNotBlank() && !moveUi.checking,
+                    onClick = onCheck,
+                )
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
+    )
 }
 
 /** Names a device for the whole group; empty goes back to its model's name. */

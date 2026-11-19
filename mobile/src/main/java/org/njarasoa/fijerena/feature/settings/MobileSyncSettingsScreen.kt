@@ -34,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.DeviceBuild
 import org.njarasoa.fijerena.core.network.sync.DeviceReport
+import org.njarasoa.fijerena.core.network.sync.MoveState
+import org.njarasoa.fijerena.core.network.sync.OldServerState
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -44,6 +46,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.DialogAction
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.LiveSyncMoveLines
+import org.njarasoa.fijerena.core.ui.components.LiveSyncOldServerLines
 import org.njarasoa.fijerena.core.ui.components.LiveSyncProgressBar
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -102,8 +106,16 @@ fun MobileSyncSettingsScreen(
     var confirmStop by remember { mutableStateOf<SyncWire.Device?>(null) }
     var renaming by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
+    val moveUi by viewModel.moveUi.collectAsStateWithLifecycle()
+    var moveDialog by remember { mutableStateOf(false) }
+    var confirmPurge by remember { mutableStateOf(false) }
+    var confirmForget by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
+    // The move rows ask only while this screen is open: when it opens, when a move ends, and when
+    // the old server comes or goes (the sync server move plan).
+    val moveEnded = moveUi.move is MoveState.Done || moveUi.move is MoveState.Failed
+    LaunchedEffect(status.linked, moveEnded, moveUi.oldServer) { if (status.linked) viewModel.loadMove() }
     LaunchedEffect(ui.scanDone) {
         val done = ui.scanDone ?: return@LaunchedEffect
         val message = if (done == SyncSettingsViewModel.ScanResult.JOINED) R.string.live_sync_joined else R.string.live_sync_handed_over
@@ -165,6 +177,16 @@ fun MobileSyncSettingsScreen(
                 }
 
                 status.linked -> {
+                    // The group moved to a server without this device: say where, above everything else.
+                    moveUi.movedAway?.let { address ->
+                        GlassPanel(modifier = Modifier.fillMaxWidth()) {
+                            CinemaText(
+                                stringResource(R.string.live_sync_moved_away, address),
+                                modifier = Modifier.padding(CinemaSpacing.md),
+                                tone = TextTone.Warning,
+                            )
+                        }
+                    }
                     LinkedPanel(
                         status = status,
                         busy = ui.busy,
@@ -192,6 +214,15 @@ fun MobileSyncSettingsScreen(
                         onLogs = { onDeviceLogs(it.id, it.name) },
                         onRemove = { confirmRemove = it },
                     )
+                    moveUi.oldServer?.let { address ->
+                        OldServerPanel(
+                            address = address,
+                            moveUi = moveUi,
+                            onPurge = { confirmPurge = true },
+                            onForget = { confirmForget = true },
+                        )
+                    }
+                    MovePanel(moveUi = moveUi, onMove = { moveDialog = true })
                     CinemaButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
                         CinemaText(stringResource(R.string.live_sync_leave), role = TextRole.Label, tone = TextTone.Inherit)
                     }
@@ -239,6 +270,49 @@ fun MobileSyncSettingsScreen(
             },
             onDismiss = { confirmStop = null },
         )
+    }
+    if (moveDialog) {
+        MoveDialog(
+            moveUi = moveUi,
+            onUrlChanged = viewModel::onMoveUrlChanged,
+            onCheck = viewModel::checkMoveTarget,
+            onMove = { secret ->
+                viewModel.startMove(secret)
+                moveDialog = false
+            },
+            onDismiss = {
+                viewModel.dismissMove()
+                moveDialog = false
+            },
+        )
+    }
+    if (confirmPurge) {
+        moveUi.oldServer?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_old_server_purge_title),
+                message = stringResource(R.string.live_sync_old_server_purge_message, address),
+                confirm = stringResource(R.string.live_sync_old_server_purge),
+                onConfirm = {
+                    viewModel.purgeOldServer()
+                    confirmPurge = false
+                },
+                onDismiss = { confirmPurge = false },
+            )
+        }
+    }
+    if (confirmForget) {
+        moveUi.oldServer?.let { address ->
+            ConfirmDialog(
+                title = stringResource(R.string.live_sync_old_server_forget_title),
+                message = stringResource(R.string.live_sync_old_server_forget_message, address),
+                confirm = stringResource(R.string.live_sync_old_server_forget),
+                onConfirm = {
+                    viewModel.forgetOldServer()
+                    confirmForget = false
+                },
+                onDismiss = { confirmForget = false },
+            )
+        }
     }
     if (confirmLeave) {
         ConfirmDialog(
@@ -504,6 +578,123 @@ private fun ShareNowPlayingRow(
         onCheckedChange = onCheckedChange,
         label = stringResource(R.string.live_sync_share_playing),
         supportingText = stringResource(R.string.live_sync_share_playing_desc),
+    )
+}
+
+/**
+ * Move to another server, and under it how far a move is or why the button is disabled (the sync
+ * server move plan).
+ */
+@Composable
+internal fun MovePanel(
+    moveUi: SyncSettingsViewModel.MoveUi,
+    onMove: () -> Unit,
+) {
+    GlassPanel(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+            CinemaButton(onClick = onMove, modifier = Modifier.fillMaxWidth(), enabled = moveUi.canMove, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.live_sync_move), role = TextRole.Label, tone = TextTone.Inherit)
+            }
+            LiveSyncMoveLines(moveUi.move, moveUi.block, moveUi.blockLoaded, moveUi.blockError)
+        }
+    }
+}
+
+/**
+ * The old server after a move: its address, what it answered, and Purge old server (disabled while
+ * devices have not moved) or Forget old server (when it did not answer).
+ */
+@Composable
+internal fun OldServerPanel(
+    address: String,
+    moveUi: SyncSettingsViewModel.MoveUi,
+    onPurge: () -> Unit,
+    onForget: () -> Unit,
+) {
+    val state = moveUi.oldServerState
+    GlassPanel(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+            LiveSyncOldServerLines(address, state, moveUi.oldServerError)
+            if (state is OldServerState.NotMoved || state == OldServerState.Ready) {
+                CinemaButton(
+                    onClick = onPurge,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state == OldServerState.Ready && !moveUi.oldServerBusy,
+                    kind = ButtonKind.Danger,
+                ) { CinemaText(stringResource(R.string.live_sync_old_server_purge), role = TextRole.Label, tone = TextTone.Inherit) }
+            }
+            if (state is OldServerState.Unreachable) {
+                CinemaButton(
+                    onClick = onForget,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !moveUi.oldServerBusy,
+                    kind = ButtonKind.Other,
+                ) { CinemaText(stringResource(R.string.live_sync_old_server_forget), role = TextRole.Label, tone = TextTone.Inherit) }
+            }
+        }
+    }
+}
+
+/**
+ * Move to Another Server: the new address, checked first; then the setup secret when that server
+ * asks for one, and Move. The move then shows its progress under the button on the screen.
+ */
+@Composable
+private fun MoveDialog(
+    moveUi: SyncSettingsViewModel.MoveUi,
+    onUrlChanged: (String) -> Unit,
+    onCheck: () -> Unit,
+    onMove: (setupSecret: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var setupSecret by remember { mutableStateOf("") }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.live_sync_move_title),
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.dialogBody)) {
+                CinemaText(stringResource(R.string.live_sync_move_desc), tone = TextTone.Secondary)
+                CinemaTextField(
+                    value = moveUi.targetUrl,
+                    onValueChange = onUrlChanged,
+                    label = stringResource(R.string.live_sync_move_server_label),
+                    placeholder = stringResource(R.string.live_sync_server_hint),
+                    singleLine = true,
+                    keyboardOptions = FieldKeyboards.Url,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (moveUi.targetChecked) {
+                    CinemaText(stringResource(R.string.live_sync_server_found), tone = TextTone.Success)
+                    if (moveUi.targetSecretRequired) {
+                        CinemaTextField(
+                            value = setupSecret,
+                            onValueChange = { setupSecret = it },
+                            label = stringResource(R.string.live_sync_setup_secret_label),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = FieldKeyboards.Password,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    CinemaText(stringResource(R.string.live_sync_move_confirm), tone = TextTone.Secondary)
+                }
+                moveUi.targetError?.let { CinemaText(it, tone = TextTone.Danger) }
+            }
+        },
+        main =
+            if (moveUi.targetChecked) {
+                DialogAction(
+                    stringResource(R.string.live_sync_move_start),
+                    enabled = !moveUi.targetSecretRequired || setupSecret.isNotBlank(),
+                ) { onMove(setupSecret) }
+            } else {
+                DialogAction(
+                    stringResource(R.string.live_sync_check_server),
+                    enabled = moveUi.targetUrl.isNotBlank() && !moveUi.checking,
+                    onClick = onCheck,
+                )
+            },
+        cancel = DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
     )
 }
 
