@@ -1172,7 +1172,7 @@
     <string name="live_sync_old_server_unreachable">Impossible de joindre l’ancien serveur.</string>
     <string name="live_sync_old_server_purge">Purger l’ancien serveur</string>
     <string name="live_sync_old_server_purge_title">Purger l’ancien serveur ?</string>
-    <string name="live_sync_old_server_purge_message">Les données du groupe sont supprimées de %1$s. Le nouveau serveur et les appareils les gardent toutes.</string>
+    <string name="live_sync_old_server_purge_message">Cette action supprime les données du groupe de %1$s. Le nouveau serveur et les appareils les gardent toutes.</string>
     <string name="live_sync_old_server_forget">Oublier l’ancien serveur</string>
     <string name="live_sync_old_server_forget_title">Oublier l’ancien serveur ?</string>
     <string name="live_sync_old_server_forget_message">L’application cesse d’afficher %1$s. Rien n’y est supprimé : s’il garde encore les données du groupe, supprimez-les vous-même.</string>

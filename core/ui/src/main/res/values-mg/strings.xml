@@ -1373,7 +1373,7 @@
     <string name="live_sync_old_server_unreachable">Tsy tratra ny mpizara taloha.</string>
     <string name="live_sync_old_server_purge">Fafao ny mpizara taloha</string>
     <string name="live_sync_old_server_purge_title">Hofafana ve ny mpizara taloha?</string>
-    <string name="live_sync_old_server_purge_message">Voafafa ao amin\'ny %1$s ny angon\'ny vondrona. Mitazona azy rehetra ny mpizara vaovao sy ny fitaovana.</string>
+    <string name="live_sync_old_server_purge_message">Hofafana ao amin\'ny %1$s ny angon\'ny vondrona. Mitazona azy rehetra ny mpizara vaovao sy ny fitaovana.</string>
     <string name="live_sync_old_server_forget">Hadino ny mpizara taloha</string>
     <string name="live_sync_old_server_forget_title">Hadinoina ve ny mpizara taloha?</string>
     <string name="live_sync_old_server_forget_message">Tsy asehon\'ny rindranasa intsony ny %1$s. Tsy misy voafafa ao: raha mbola mitazona ny angon\'ny vondrona izy, fafao ianao.</string>
