@@ -1369,14 +1369,14 @@
     <string name="live_sync_old_server_not_moved">Mbola tsy nifindra: %1$s</string>
     <string name="live_sync_old_server_not_moved_hint">Sokafy ireo fitaovana ireo mba hifindrany, na esory ao amin\'ny vondrona izy ireo.</string>
     <string name="live_sync_old_server_ready">Nifindra avokoa ny fitaovana rehetra. Azonao fafana ao amin\'ny mpizara taloha ny angon\'ny vondrona.</string>
-    <string name="live_sync_old_server_no_purge">Tsy mahafafa ny angon\'ny vondrona io mpizara io. Havaozy ny mpizara taloha, na fafao ianao ny angony: ny lahatahiry data amin\'ny Docker, na ny Durable Object amin\'ny Cloudflare.</string>
+    <string name="live_sync_old_server_no_purge">Tsy mahafafa ny angon\'ny vondrona io mpizara io. Havaozy izy, na fafao ianao ny angony (ny lahatahiry data amin\'ny Docker, na ny Durable Object amin\'ny Cloudflare), dia safidio ny Hadino ny mpizara taloha.</string>
     <string name="live_sync_old_server_unreachable">Tsy tratra ny mpizara taloha.</string>
     <string name="live_sync_old_server_purge">Fafao ny mpizara taloha</string>
     <string name="live_sync_old_server_purge_title">Hofafana ve ny mpizara taloha?</string>
     <string name="live_sync_old_server_purge_message">Voafafa ao amin\'ny %1$s ny angon\'ny vondrona. Mitazona azy rehetra ny mpizara vaovao sy ny fitaovana.</string>
     <string name="live_sync_old_server_forget">Hadino ny mpizara taloha</string>
     <string name="live_sync_old_server_forget_title">Hadinoina ve ny mpizara taloha?</string>
-    <string name="live_sync_old_server_forget_message">Tsy asehon\'ny rindranasa intsony ny %1$s. Tsy misy voafafa ao: raha miverina izy, fafao ianao ny angony.</string>
+    <string name="live_sync_old_server_forget_message">Tsy asehon\'ny rindranasa intsony ny %1$s. Tsy misy voafafa ao: raha mbola mitazona ny angon\'ny vondrona izy, fafao ianao.</string>
     <!-- Phase 6 -->
     <string name="details_action_more">Hafa</string>
     <string name="series_play_next_format">Alefa: %1$s</string>

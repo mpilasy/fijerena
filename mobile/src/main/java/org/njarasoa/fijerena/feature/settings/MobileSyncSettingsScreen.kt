@@ -602,7 +602,7 @@ internal fun MovePanel(
 
 /**
  * The old server after a move: its address, what it answered, and Purge old server (disabled while
- * devices have not moved) or Forget old server (when it did not answer).
+ * devices have not moved) or Forget old server (when it did not answer, or can't delete data).
  */
 @Composable
 internal fun OldServerPanel(
@@ -623,7 +623,7 @@ internal fun OldServerPanel(
                     kind = ButtonKind.Danger,
                 ) { CinemaText(stringResource(R.string.live_sync_old_server_purge), role = TextRole.Label, tone = TextTone.Inherit) }
             }
-            if (state is OldServerState.Unreachable) {
+            if (state is OldServerState.Unreachable || state == OldServerState.NoPurge) {
                 CinemaButton(
                     onClick = onForget,
                     modifier = Modifier.fillMaxWidth(),

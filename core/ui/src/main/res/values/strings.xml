@@ -1207,14 +1207,14 @@
     <string name="live_sync_old_server_not_moved">Not moved yet: %1$s</string>
     <string name="live_sync_old_server_not_moved_hint">Open these devices so they move, or remove them from the group.</string>
     <string name="live_sync_old_server_ready">All the devices moved. You can delete the group\'s data from the old server.</string>
-    <string name="live_sync_old_server_no_purge">This server can\'t delete the group\'s data. Update the old server, or delete its data yourself: the data folder on Docker, or the Durable Object on Cloudflare.</string>
+    <string name="live_sync_old_server_no_purge">This server can\'t delete the group\'s data. Update it, or delete its data yourself (the data folder on Docker, or the Durable Object on Cloudflare), then select Forget old server.</string>
     <string name="live_sync_old_server_unreachable">Couldn\'t reach the old server.</string>
     <string name="live_sync_old_server_purge">Purge old server</string>
     <string name="live_sync_old_server_purge_title">Purge Old Server?</string>
     <string name="live_sync_old_server_purge_message">This deletes the group\'s data from %1$s. The new server and the devices keep all of it.</string>
     <string name="live_sync_old_server_forget">Forget old server</string>
     <string name="live_sync_old_server_forget_title">Forget Old Server?</string>
-    <string name="live_sync_old_server_forget_message">The app stops showing %1$s. Nothing is deleted from it: if it comes back, delete its data yourself.</string>
+    <string name="live_sync_old_server_forget_message">The app stops showing %1$s. Nothing is deleted from it: if it still holds the group\'s data, delete it yourself.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Play Next Episode Automatically</string>
     <string name="settings_autoplay_next_episode_desc">Near the end of an episode, the next one is offered and starts when it ends.</string>

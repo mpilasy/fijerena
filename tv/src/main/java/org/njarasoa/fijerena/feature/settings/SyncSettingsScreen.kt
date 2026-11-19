@@ -626,7 +626,7 @@ internal fun oldServerAction(moveUi: SyncSettingsViewModel.MoveUi): OldServerAct
     when {
         moveUi.oldServer == null -> OldServerAction.NONE
         moveUi.oldServerState is OldServerState.NotMoved || moveUi.oldServerState == OldServerState.Ready -> OldServerAction.PURGE
-        moveUi.oldServerState is OldServerState.Unreachable -> OldServerAction.FORGET
+        moveUi.oldServerState is OldServerState.Unreachable || moveUi.oldServerState == OldServerState.NoPurge -> OldServerAction.FORGET
         else -> OldServerAction.NONE
     }
 
@@ -662,7 +662,7 @@ internal fun MovePanel(
 
 /**
  * The old server after a move: its address, what it answered, and Purge old server (disabled while
- * devices have not moved) or Forget old server (when it did not answer).
+ * devices have not moved) or Forget old server (when it did not answer, or can't delete data).
  */
 @Composable
 internal fun OldServerPanel(

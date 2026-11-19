@@ -1168,14 +1168,14 @@
     <string name="live_sync_old_server_not_moved">Pas encore passés : %1$s</string>
     <string name="live_sync_old_server_not_moved_hint">Ouvrez ces appareils pour qu’ils passent au nouveau serveur, ou retirez-les du groupe.</string>
     <string name="live_sync_old_server_ready">Tous les appareils sont passés. Vous pouvez supprimer les données du groupe de l’ancien serveur.</string>
-    <string name="live_sync_old_server_no_purge">Ce serveur ne peut pas supprimer les données du groupe. Mettez à jour l’ancien serveur, ou supprimez ses données vous-même : le dossier data sous Docker, ou le Durable Object sur Cloudflare.</string>
+    <string name="live_sync_old_server_no_purge">Ce serveur ne peut pas supprimer les données du groupe. Mettez-le à jour, ou supprimez ses données vous-même (le dossier data sous Docker, ou le Durable Object sur Cloudflare), puis sélectionnez Oublier l’ancien serveur.</string>
     <string name="live_sync_old_server_unreachable">Impossible de joindre l’ancien serveur.</string>
     <string name="live_sync_old_server_purge">Purger l’ancien serveur</string>
     <string name="live_sync_old_server_purge_title">Purger l’ancien serveur ?</string>
     <string name="live_sync_old_server_purge_message">Les données du groupe sont supprimées de %1$s. Le nouveau serveur et les appareils les gardent toutes.</string>
     <string name="live_sync_old_server_forget">Oublier l’ancien serveur</string>
     <string name="live_sync_old_server_forget_title">Oublier l’ancien serveur ?</string>
-    <string name="live_sync_old_server_forget_message">L’application cesse d’afficher %1$s. Rien n’y est supprimé : s’il revient, supprimez ses données vous-même.</string>
+    <string name="live_sync_old_server_forget_message">L’application cesse d’afficher %1$s. Rien n’y est supprimé : s’il garde encore les données du groupe, supprimez-les vous-même.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Lire l’épisode suivant automatiquement</string>
     <string name="settings_autoplay_next_episode_desc">Vers la fin d’un épisode, le suivant est proposé et démarre quand il se termine.</string>

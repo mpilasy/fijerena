@@ -29,9 +29,9 @@ import org.robolectric.annotation.Config
 /**
  * TV Live Sync, the move rows (the sync server move plan) between the devices and Leave, laid out
  * as SyncSettingsScreen lays them out (in a scrolling column): Down from the last device's Remove
- * goes to Purge old server, then to Move to another server (disabled, but still a focus stop so
- * its reason shows), then to Leave; Up goes back the same way to the Remove at the far right of
- * its row.
+ * goes to Purge old server (or Forget old server), then to Move to another server (disabled, but
+ * still a focus stop so its reason shows), then to Leave; Up goes back the same way to the Remove
+ * at the far right of its row.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "en")
@@ -42,13 +42,22 @@ class LiveSyncMoveFocusTest {
     private val walk = FocusWalk(rule)
 
     @Test
-    fun `old server and move rows sit between the devices and Leave`() {
+    fun `old server and move rows sit between the devices and Leave`() =
+        walkOldServerRow(OldServerState.NotMoved(listOf("Living Room TV")), "Purge old server")
+
+    @Test
+    fun `an old server without purge offers Forget in the same place`() = walkOldServerRow(OldServerState.NoPurge, "Forget old server")
+
+    private fun walkOldServerRow(
+        state: OldServerState,
+        button: String,
+    ) {
         val moveUi =
             MoveUi(
                 block = MoveBlock.OldServerLeft,
                 blockLoaded = true,
                 oldServer = "https://old.example.com",
-                oldServerState = OldServerState.NotMoved(listOf("Living Room TV")),
+                oldServerState = state,
             )
         rule.setContent {
             FirstVideoPlayerTheme {
@@ -83,11 +92,11 @@ class LiveSyncMoveFocusTest {
 
         walk.awaitFocused("Remove")
         walk.run(
-            down("Purge old server"),
+            down(button),
             down("Move to another server"),
             down("Leave the sync group"),
             up("Move to another server"),
-            up("Purge old server"),
+            up(button),
             up("Remove"),
         )
     }
