@@ -101,6 +101,10 @@ class SportsParsersTest {
         assertEquals("1" to "1", on.homeScore to on.awayScore)
         assertEquals(null, EspnParser.schedule(answer("post", "FT"), "soccer", null).single().clock)
         assertEquals("45'+2'", EspnParser.schedule(answer("in", ""), "soccer", null).single().clock)
+        // No time left in a period: ESPN's scoreboard words, not the team schedule's "0.0 - 2nd".
+        assertEquals("End of 2nd", EspnParser.schedule(answer("in", "0.0 - 2nd"), "soccer", null).single().clock)
+        assertEquals("End of 4th", EspnParser.schedule(answer("in", "0:00 - 4th"), "soccer", null).single().clock)
+        assertEquals("5:32 - 3rd", EspnParser.schedule(answer("in", "5:32 - 3rd"), "soccer", null).single().clock)
     }
 
     @Test

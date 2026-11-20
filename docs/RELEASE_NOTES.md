@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Live scores for followed teams:** a game that is on now shows its score on the Sports page, a team's page and in search, also for a basketball, American football or hockey team you follow. Before, it showed only the time left. At the end of a period the time says "End of 2nd", not "0.0 - 2nd". TV and phone.
+
 ## Version: 0.9.20261120012516
 
 - **The clock stays clear on more TV pages:** on the Sports section, a team's or a league's page, Reminders and a person's appearances in a show, the screen title stays at the top and the page scrolls under it, so the clock no longer sits on the rows at the right. TV only.

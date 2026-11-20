@@ -18,28 +18,89 @@ class SportsDataTest {
     // The played games of every competition are down.
     private var resultsDown = false
 
+    // The NBA scoreboard is down.
+    private var scoreboardDown = false
+
     // The saved answer for each URL; an unknown URL fails as a source that is down.
     private val transport =
         SportsTransport { url ->
             synchronized(calls) { calls += url }
             when {
-                "common/v3/search" in url && "query=ajax" in url -> sportsFixture("espn_search_team_ajax.json")
-                "common/v3/search" in url -> sportsFixture("espn_search_team.json")
-                "search/v2" in url && "query=euro&" in url -> sportsFixture("espn_search_league_euro.json")
-                "search/v2" in url && "European" in url -> sportsFixture("espn_search_league_european_championship.json")
-                "search/v2" in url -> sportsFixture("espn_search_league.json")
-                "leagues/dropdown?sport=soccer" in url -> sportsFixture("espn_leagues_soccer.json")
-                "soccer/all/teams/359/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_all.json")
-                "soccer/all/teams/359/schedule" in url -> sportsFixture("espn_schedule_soccer_all.json")
-                resultsDown && "fixture=false" in url -> throw IOException("down: $url")
-                "soccer/all/teams/5533/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_madagascar.json")
-                "soccer/all/teams/5533/schedule" in url && "fixture=true" in url -> sportsFixture("espn_schedule_soccer_madagascar.json")
-                "soccer/caf.nations_qual/teams/5533/schedule" in url -> sportsFixture("espn_schedule_caf_nations_qual_madagascar.json")
-                "soccer/all/teams/481/schedule" in url && "fixture=false" in url -> sportsFixture("espn_results_soccer_germany.json")
-                "soccer/uefa.nations/teams/481/schedule" in url -> sportsFixture("espn_schedule_uefa_nations_germany.json")
-                "hockey/nhl/teams/1/schedule" in url -> sportsFixture("espn_schedule_nhl.json")
-                "club-schedule-season/BOS" in url -> sportsFixture("nhl_club_schedule.json")
-                else -> throw IOException("down: $url")
+                "common/v3/search" in url && "query=ajax" in url -> {
+                    sportsFixture("espn_search_team_ajax.json")
+                }
+
+                "common/v3/search" in url -> {
+                    sportsFixture("espn_search_team.json")
+                }
+
+                "search/v2" in url && "query=euro&" in url -> {
+                    sportsFixture("espn_search_league_euro.json")
+                }
+
+                "search/v2" in url && "European" in url -> {
+                    sportsFixture("espn_search_league_european_championship.json")
+                }
+
+                "search/v2" in url -> {
+                    sportsFixture("espn_search_league.json")
+                }
+
+                "leagues/dropdown?sport=soccer" in url -> {
+                    sportsFixture("espn_leagues_soccer.json")
+                }
+
+                "soccer/all/teams/359/schedule" in url && "fixture=false" in url -> {
+                    sportsFixture("espn_results_soccer_all.json")
+                }
+
+                "soccer/all/teams/359/schedule" in url -> {
+                    sportsFixture("espn_schedule_soccer_all.json")
+                }
+
+                resultsDown && "fixture=false" in url -> {
+                    throw IOException("down: $url")
+                }
+
+                "soccer/all/teams/5533/schedule" in url && "fixture=false" in url -> {
+                    sportsFixture("espn_results_soccer_madagascar.json")
+                }
+
+                "soccer/all/teams/5533/schedule" in url && "fixture=true" in url -> {
+                    sportsFixture("espn_schedule_soccer_madagascar.json")
+                }
+
+                "soccer/caf.nations_qual/teams/5533/schedule" in url -> {
+                    sportsFixture("espn_schedule_caf_nations_qual_madagascar.json")
+                }
+
+                "soccer/all/teams/481/schedule" in url && "fixture=false" in url -> {
+                    sportsFixture("espn_results_soccer_germany.json")
+                }
+
+                "soccer/uefa.nations/teams/481/schedule" in url -> {
+                    sportsFixture("espn_schedule_uefa_nations_germany.json")
+                }
+
+                "hockey/nhl/teams/1/schedule" in url -> {
+                    sportsFixture("espn_schedule_nhl.json")
+                }
+
+                "basketball/nba/teams/16/schedule" in url -> {
+                    sportsFixture("espn_schedule_nba_live.json")
+                }
+
+                !scoreboardDown && "basketball/nba/scoreboard" in url && "dates=20261119" in url -> {
+                    sportsFixture("espn_scoreboard_nba_live.json")
+                }
+
+                "club-schedule-season/BOS" in url -> {
+                    sportsFixture("nhl_club_schedule.json")
+                }
+
+                else -> {
+                    throw IOException("down: $url")
+                }
             }
         }
 
@@ -65,6 +126,30 @@ class SportsDataTest {
             assertEquals(10, games.size)
             assertEquals("401879246", games.first().id)
             assertTrue(games.flatMap { it.broadcasters }.all { it.country == "US" })
+        }
+
+    private val minnesota =
+        SportsTeam(SportsSource.ESPN, "basketball/nba/16", "Minnesota Timberwolves", sport = "basketball", league = "basketball/nba")
+
+    @Test
+    fun `a game on takes its score and clock from the league's scoreboard, as the team schedule has none`() =
+        runBlocking<Unit> {
+            val live = data("2026-11-20T02:00:00Z").teamGames(minnesota).first()
+            assertEquals(GameState.LIVE, live.state)
+            assertEquals("Minnesota Timberwolves", live.home.name)
+            assertEquals("30" to "40", live.homeScore to live.awayScore)
+            assertEquals("End of 2nd", live.clock)
+            assertTrue(calls.any { "basketball/nba/scoreboard" in it && "dates=20261119" in it })
+        }
+
+    @Test
+    fun `a game on keeps no score when the scoreboard can't be read`() =
+        runBlocking<Unit> {
+            scoreboardDown = true
+            val live = data("2026-11-20T02:00:00Z").teamGames(minnesota).first()
+            assertEquals(GameState.LIVE, live.state)
+            assertEquals(null to null, live.homeScore to live.awayScore)
+            assertEquals("End of 2nd", live.clock)
         }
 
     @Test

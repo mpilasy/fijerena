@@ -187,9 +187,28 @@ object EspnParser {
             homeScore = home?.score.scoreText(),
             awayScore = away?.score.scoreText(),
             // While it is on: "66'", "HT"; ESPN's short detail, else its clock.
-            clock = if (state == GameState.LIVE) gameStatus?.type?.shortDetail.clean() ?: gameStatus?.displayClock.clean() else null,
+            clock =
+                if (state ==
+                    GameState.LIVE
+                ) {
+                    liveClock(gameStatus?.type?.shortDetail.clean() ?: gameStatus?.displayClock.clean())
+                } else {
+                    null
+                },
         )
     }
+
+    /**
+     * [clock] as the rows show it. At the end of a period a team schedule says "0.0 - 2nd" (no time
+     * left in the 2nd): that becomes "End of 2nd", as ESPN's scoreboard says it.
+     */
+    internal fun liveClock(clock: String?): String? =
+        clock?.let {
+            END_OF_PERIOD.matchEntire(it)?.let { m -> "End of ${m.groupValues[1]}" }
+                ?: it
+        }
+
+    private val END_OF_PERIOD = Regex("""(?:0\.0|0:00) - (.+)""")
 
     /** A side's score: a scoreboard sends a string, a schedule an object with `displayValue`. */
     private fun JsonElement?.scoreText(): String? =

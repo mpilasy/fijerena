@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 /** What a sports search found: teams, then leagues. */
@@ -90,7 +91,7 @@ class SportsData(
     ): List<SportsGame> {
         if (!enabled()) return emptyList()
         val games = if (team.source == SportsSource.ESPN) espnTeamSchedule(team) else emptyList()
-        return withBroadcasters(coming(games).take(limit)).also(onGames)
+        return withBroadcasters(withLiveScores(coming(games).take(limit))).also(onGames)
     }
 
     /**
@@ -150,6 +151,48 @@ class SportsData(
             api.espnTeamSchedule(sport, league, parts.last())
         }
     }
+
+    /**
+     * A team schedule sends no score while a game is on (ESPN, 2026-11): each such game takes its
+     * score and clock from its league's scoreboard of its US day. A read that fails leaves the game
+     * as it is.
+     */
+    private suspend fun withLiveScores(games: List<SportsGame>): List<SportsGame> {
+        val missing =
+            games.filter {
+                it.source == SportsSource.ESPN && it.state == GameState.LIVE && (it.homeScore == null || it.awayScore == null)
+            }
+        if (missing.isEmpty()) return games
+        val boards =
+            coroutineScope {
+                missing
+                    .mapNotNull { game -> EspnParser.splitLeague(game.competition.id)?.let { it to usDay(game.startEpochSec) } }
+                    .distinct()
+                    .map { (league, day) ->
+                        async {
+                            val (sport, slug) = league
+                            attempt(mutableListOf(), "ESPN $sport/$slug $day") {
+                                scheduleFromCache("scoreboard_espn_$sport/${slug}_$day", { EspnParser.scoreboard(it, sport, slug) }) {
+                                    api.espnScoreboard(sport, slug, day)
+                                }
+                            }
+                        }
+                    }.awaitAll()
+            }.flatten().associateBy { it.id }
+        return games.map { game ->
+            val board = boards[game.id]?.takeIf { game in missing && it.state == GameState.LIVE }
+            val home = board?.homeScore
+            val away = board?.awayScore
+            when {
+                board == null || home == null || away == null -> game
+                board.home.id == game.home.id -> game.copy(homeScore = home, awayScore = away, clock = board.clock ?: game.clock)
+                else -> game.copy(homeScore = away, awayScore = home, clock = board.clock ?: game.clock)
+            }
+        }
+    }
+
+    /** ESPN's scoreboards are by US day: the day in New York when [epochSec] is. */
+    private fun usDay(epochSec: Long): LocalDate = Instant.ofEpochSecond(epochSec).atZone(US_EASTERN).toLocalDate()
 
     /**
      * A soccer team's played games of every competition (each game names its own), and of each
@@ -313,6 +356,7 @@ class SportsData(
         private const val SEARCH_SOURCES = 2
         private const val DAY_SEC = 24 * 60 * 60L
         private const val LIVE_SEC = 3 * 60 * 60L
+        private val US_EASTERN: ZoneId = ZoneId.of("America/New_York")
 
         /**
          * Short league queries and the full name searched with them: ESPN finds the European
