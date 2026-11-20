@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.settings
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -67,6 +68,8 @@ internal fun DeviceLogsContent(state: DeviceLogsViewModel.State) {
         TvScreenHeader(title = stringResource(R.string.device_logs_title), subtitle = state.name)
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
+            // Room for the focus scale of the first and last item.
+            contentPadding = PaddingValues(vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         ) {
             item {

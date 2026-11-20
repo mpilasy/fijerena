@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -148,6 +149,8 @@ internal fun DeviceInfoContent(
         }
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
+            // Room for the focus scale of the first and last item.
+            contentPadding = PaddingValues(vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         ) {
             item {

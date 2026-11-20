@@ -196,7 +196,13 @@ fun SyncSettingsScreen(onDeviceLogs: (deviceId: String, deviceName: String) -> U
             }
         }
         Column(
-            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            // The space at both ends leaves room for the focus scale of the first and last button.
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         ) {
             CinemaText(stringResource(R.string.live_sync_desc), role = TextRole.Body, tone = TextTone.Secondary)
