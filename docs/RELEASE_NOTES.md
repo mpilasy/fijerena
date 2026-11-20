@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Quieter devices list:** Live Sync's devices list no longer shows each device's crash and error counts. A device's Logs action still opens its Device Logs page, with the counts at the top. TV and phone.
+
 ## Version: 0.9.20261120020924
 
 - **Live scores for followed teams:** a game that is on now shows its score on the Sports page, a team's page and in search, also for a basketball, American football or hockey team you follow. Before, it showed only the time left. At the end of a period the time says "End of 2nd", not "0.0 - 2nd". TV and phone.

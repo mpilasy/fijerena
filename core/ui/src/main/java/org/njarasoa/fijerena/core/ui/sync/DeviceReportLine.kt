@@ -43,8 +43,8 @@ private const val SAFE_MODE_SHOWN_MS = 14 * 24 * 60 * 60 * 1000L
 fun DeviceReport.recentSafeModeAt(): Long? = safeModeAt.takeIf { it > 0 && sentAt - it <= SAFE_MODE_SHOWN_MS }
 
 /**
- * The line under a device's build line, for a Nerd, the same on TV and phone: "2 crashes, 1 ANR in
- * 7 days", "No problems in 7 days", or "Logs not reported yet".
+ * The counts line of the Device Logs page, the same on TV and phone: "2 crashes, 1 ANR in 7 days",
+ * "No problems in 7 days", or "Logs not reported yet". Not on the Live Sync devices list (2026-11-19).
  */
 @Composable
 fun DeviceReportLine(report: DeviceReport?) {

@@ -62,7 +62,6 @@ import org.njarasoa.fijerena.core.ui.components.liveSyncRelative
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
 import org.njarasoa.fijerena.core.ui.sync.DeviceBuildLine
-import org.njarasoa.fijerena.core.ui.sync.DeviceReportLine
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.isOlderBuild
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
@@ -636,7 +635,6 @@ internal fun DevicesPanel(
                             }
                             DeviceBuildLine(builds[device.id], isOlderBuild(builds[device.id], listedBuilds))
                             // This device's own logs are in Settings → About → Logs.
-                            if (reports != null && !device.current) DeviceReportLine(reports[device.id])
                             nowPlaying[device.id]?.let {
                                 CinemaText(
                                     nowPlayingLine(it),
