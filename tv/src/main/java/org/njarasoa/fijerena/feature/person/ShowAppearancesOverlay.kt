@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.person
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +64,8 @@ fun ShowAppearancesOverlay(
     LaunchedEffect(Unit) {
         if (returnFocus.key?.startsWith(RETURN_LINE_PREFIX) != true) firstRow.requestFocusWithRetry()
     }
-    LazyColumn(
+    // The header stays above the list: what scrolls up goes under the header, not under the clock.
+    Column(
         modifier =
             modifier
                 .fillMaxSize()
@@ -76,38 +78,44 @@ fun ShowAppearancesOverlay(
                         false
                     }
                 }.focusProperties { onExit = { cancelFocusChange() } }
-                .focusGroup(),
-        contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .focusGroup()
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {
-        item(key = "header") { TvScreenHeader(title = title, subtitle = subtitle) }
-        itemsIndexed(lines, key = { _, line -> lineKey(line) }) { index, line ->
-            val key = RETURN_LINE_PREFIX + lineKey(line)
-            TvCard(
-                onClick = {
-                    returnFocus.leaveFrom(key)
-                    onSelect(line)
-                },
-                look = TvCardLooks.listRow(),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .navReturnFocusTarget(returnFocus, key)
-                        .then(if (index == 0) Modifier.focusRequester(firstRow) else Modifier),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(Spacing.md),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
+        TvScreenHeader(title = title, subtitle = subtitle)
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            // Room for the focus scale of the first and last item.
+            contentPadding = PaddingValues(vertical = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            itemsIndexed(lines, key = { _, line -> lineKey(line) }) { index, line ->
+                val key = RETURN_LINE_PREFIX + lineKey(line)
+                TvCard(
+                    onClick = {
+                        returnFocus.leaveFrom(key)
+                        onSelect(line)
+                    },
+                    look = TvCardLooks.listRow(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .navReturnFocusTarget(returnFocus, key)
+                            .then(if (index == 0) Modifier.focusRequester(firstRow) else Modifier),
                 ) {
-                    CinemaText(
-                        text = appearanceLabel(resources, line),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (!line.inSource) {
-                        CinemaText(text = stringResource(R.string.person_missing_mark), tone = TextTone.Secondary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CinemaText(
+                            text = appearanceLabel(resources, line),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (!line.inSource) {
+                            CinemaText(text = stringResource(R.string.person_missing_mark), tone = TextTone.Secondary)
+                        }
                     }
                 }
             }

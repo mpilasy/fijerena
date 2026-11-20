@@ -280,106 +280,112 @@ internal fun TvRemindersContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
-        LazyColumn(
-            state = listState,
+        // The header stays above the list: what scrolls up goes under the header, not under the clock.
+        Column(
             // Back on the root, before the focused control: see NAVIGATION_GUIDE → TV Back on Detail Screens.
             modifier =
-                Modifier.fillMaxSize().onPreviewKeyEvent { event ->
-                    if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                        actions.back()
-                        true
-                    } else {
-                        false
-                    }
-                },
-            contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                Modifier
+                    .fillMaxSize()
+                    .onPreviewKeyEvent { event ->
+                        if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                            actions.back()
+                            true
+                        } else {
+                            false
+                        }
+                    }.padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
         ) {
             // Down from the header's actions: the first row, not what lies under the actions' end.
             val downToRows = Modifier.focusProperties { if (firstRowKey != null) down = requesterOf(firstRowKey) }
-            item(key = "header") {
-                TvScreenHeader(
-                    title = stringResource(R.string.reminders_title),
-                    subtitle = stringResource(R.string.reminders_device_only),
-                    modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = HEADER },
-                ) {
+            TvScreenHeader(
+                title = stringResource(R.string.reminders_title),
+                subtitle = stringResource(R.string.reminders_device_only),
+                modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = HEADER },
+            ) {
+                TvIconAction(
+                    onClick = { pickingLead = true },
+                    icon = CinemaIcons.Schedule,
+                    label = reminderLeadLabel(resources, leadMinutes),
+                    modifier = Modifier.focusRequester(leadFocus).leftToRail().then(downToRows),
+                )
+                if (loaded?.isEmpty == false) {
                     TvIconAction(
-                        onClick = { pickingLead = true },
-                        icon = CinemaIcons.Schedule,
-                        label = reminderLeadLabel(resources, leadMinutes),
-                        modifier = Modifier.focusRequester(leadFocus).leftToRail().then(downToRows),
+                        onClick = { confirmingClear = true },
+                        icon = CinemaIcons.DeleteForever,
+                        label = stringResource(R.string.reminders_clear_all),
+                        danger = true,
+                        modifier = downToRows.focusProperties { right = FocusRequester.Cancel },
                     )
-                    if (loaded?.isEmpty == false) {
-                        TvIconAction(
-                            onClick = { confirmingClear = true },
-                            icon = CinemaIcons.DeleteForever,
-                            label = stringResource(R.string.reminders_clear_all),
-                            danger = true,
-                            modifier = downToRows.focusProperties { right = FocusRequester.Cancel },
-                        )
-                    }
                 }
             }
-            when {
-                loaded == null -> {
-                    item(key = "loading") {
-                        Box(modifier = Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
-                            CinemaSpinner()
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                // Room for the focus scale of the first and last item.
+                contentPadding = PaddingValues(vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                when {
+                    loaded == null -> {
+                        item(key = "loading") {
+                            Box(modifier = Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
+                                CinemaSpinner()
+                            }
                         }
                     }
-                }
 
-                loaded.isEmpty -> {
-                    item(key = "empty") {
-                        TvEmptyState(message = stringResource(R.string.reminders_empty), icon = CinemaIcons.Bell, takeFocus = false)
-                    }
-                }
-
-                else -> {
-                    // Up from the first row: Reminder Time, never Clear All above the row's end.
-                    fun rowFocus(key: String) =
-                        Modifier
-                            .navReturnFocusTarget(returnFocus, key)
-                            .focusProperties { if (key.substringBefore(ACTION_SEPARATOR) == firstRowKey) up = leadFocus }
-
-                    if (loaded.upcoming.isNotEmpty()) {
-                        item(key = "upcoming_heading") { SectionHeader(title = stringResource(R.string.reminders_upcoming)) }
-                        itemsIndexed(loaded.upcoming, key = { _, item -> rowKey(item) }) { _, item ->
-                            val key = rowKey(item)
-                            ReminderRow(
-                                item = item,
-                                leadMinutes = leadMinutes,
-                                nowSec = nowSec,
-                                onOpen = { from -> open(item, from) },
-                                onRemove = {
-                                    leaveRow(key)
-                                    actions.remove(item)
-                                },
-                                rowFocus = ::rowFocus,
-                                rowKey = key,
-                                modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = key },
-                            )
+                    loaded.isEmpty -> {
+                        item(key = "empty") {
+                            TvEmptyState(message = stringResource(R.string.reminders_empty), icon = CinemaIcons.Bell, takeFocus = false)
                         }
                     }
-                    if (loaded.teams.isNotEmpty()) {
-                        item(key = "teams_heading") {
-                            SectionHeader(
-                                title = stringResource(R.string.reminders_every_game_of),
-                                modifier = Modifier.padding(top = Spacing.md),
-                            )
+
+                    else -> {
+                        // Up from the first row: Reminder Time, never Clear All above the row's end.
+                        fun rowFocus(key: String) =
+                            Modifier
+                                .navReturnFocusTarget(returnFocus, key)
+                                .focusProperties { if (key.substringBefore(ACTION_SEPARATOR) == firstRowKey) up = leadFocus }
+
+                        if (loaded.upcoming.isNotEmpty()) {
+                            item(key = "upcoming_heading") { SectionHeader(title = stringResource(R.string.reminders_upcoming)) }
+                            itemsIndexed(loaded.upcoming, key = { _, item -> rowKey(item) }) { _, item ->
+                                val key = rowKey(item)
+                                ReminderRow(
+                                    item = item,
+                                    leadMinutes = leadMinutes,
+                                    nowSec = nowSec,
+                                    onOpen = { from -> open(item, from) },
+                                    onRemove = {
+                                        leaveRow(key)
+                                        actions.remove(item)
+                                    },
+                                    rowFocus = ::rowFocus,
+                                    rowKey = key,
+                                    modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = key },
+                                )
+                            }
                         }
-                        itemsIndexed(loaded.teams, key = { _, rule -> rowKey(rule) }) { _, rule ->
-                            val key = rowKey(rule)
-                            TeamRuleRow(
-                                rule = rule,
-                                onStop = {
-                                    leaveRow(key)
-                                    actions.stop(rule)
-                                },
-                                rowFocus = ::rowFocus,
-                                rowKey = key,
-                                modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = key },
-                            )
+                        if (loaded.teams.isNotEmpty()) {
+                            item(key = "teams_heading") {
+                                SectionHeader(
+                                    title = stringResource(R.string.reminders_every_game_of),
+                                    modifier = Modifier.padding(top = Spacing.md),
+                                )
+                            }
+                            itemsIndexed(loaded.teams, key = { _, rule -> rowKey(rule) }) { _, rule ->
+                                val key = rowKey(rule)
+                                TeamRuleRow(
+                                    rule = rule,
+                                    onStop = {
+                                        leaveRow(key)
+                                        actions.stop(rule)
+                                    },
+                                    rowFocus = ::rowFocus,
+                                    rowKey = key,
+                                    modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedKey = key },
+                                )
+                            }
                         }
                     }
                 }

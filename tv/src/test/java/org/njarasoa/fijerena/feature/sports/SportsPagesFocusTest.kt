@@ -6,10 +6,13 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performScrollToNode
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
@@ -154,7 +157,6 @@ class SportsPagesFocusTest {
             WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
         }
         walk.awaitFocused("C / Arsenal v Chelsea")
-        rule.onAllNodesWithText("Last 30 Days").onFirst().assertExists()
         walk.run(
             up("C / Arsenal 2 – 1 Chelsea / Premier League"),
             up("L / Liverpool 0 – 3 Arsenal / Premier League"),
@@ -162,6 +164,9 @@ class SportsPagesFocusTest {
             down("C / Arsenal v Chelsea"),
             down("L / Liverpool v Arsenal"),
         )
+        // The results' heading is above the results, a scroll up from where the page opens.
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Last 30 Days"))
+        rule.onAllNodesWithText("Last 30 Days").onFirst().assertExists()
     }
 
     @Test

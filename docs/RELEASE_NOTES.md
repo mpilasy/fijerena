@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **The clock stays clear on more TV pages:** on the Sports section, a team's or a league's page, Reminders and a person's appearances in a show, the screen title stays at the top and the page scrolls under it, so the clock no longer sits on the rows at the right. TV only.
+
 ## Version: 0.9.20261120003010
 
 - **TV focus you can always see:** a disabled button that has focus now shows a ring in the focus colour, with its dim fill and label, so the remote never seems lost. On Live Sync, Device Logs, Diagnostics and Device Info, the screen title stays at the top and the page scrolls under it, so the clock no longer sits on the buttons at the right. TV only.

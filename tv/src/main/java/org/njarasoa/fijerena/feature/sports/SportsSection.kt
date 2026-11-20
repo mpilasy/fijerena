@@ -173,8 +173,8 @@ fun SportsSectionScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
-        LazyColumn(
-            state = listState,
+        // The header stays above the list: what scrolls up goes under the header, not under the clock.
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -187,146 +187,154 @@ fun SportsSectionScreen(
                                 (if (list.isEmpty()) findTeamsFocus else firstItemFocus).requestFocus()
                             }
                         }
-                    }.focusGroup(),
-            contentPadding = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    }.focusGroup()
+                    .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
         ) {
-            item(key = "header") {
-                TvScreenHeader(title = stringResource(R.string.sports_title)) {
-                    val followsSome = !items.isNullOrEmpty()
-                    if (followsSome) {
-                        TvIconAction(
-                            onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
-                            icon = CinemaIcons.Search,
-                            label = stringResource(R.string.sports_find_teams),
-                            // Down: the first logo, not a game's bell under the header's end.
-                            modifier =
-                                Modifier
-                                    .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
-                                    .focusProperties { down = firstItemFocus },
-                        )
-                    }
-                    // The Reminders page, also with nothing followed (a programme's reminder).
+            TvScreenHeader(title = stringResource(R.string.sports_title)) {
+                val followsSome = !items.isNullOrEmpty()
+                if (followsSome) {
                     TvIconAction(
-                        onClick = { leave(RETURN_REMINDERS, onReminders) },
-                        icon = CinemaIcons.Bell,
-                        label = stringResource(R.string.reminders_title),
-                        // Down: the first logo (Find Teams with nothing followed); Right: nothing.
+                        onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
+                        icon = CinemaIcons.Search,
+                        label = stringResource(R.string.sports_find_teams),
+                        // Down: the first logo, not a game's bell under the header's end.
                         modifier =
                             Modifier
-                                .navReturnFocusTarget(returnFocus, RETURN_REMINDERS)
-                                .focusProperties {
-                                    down = if (followsSome) firstItemFocus else findTeamsFocus
-                                    right = FocusRequester.Cancel
-                                },
+                                .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
+                                .focusProperties { down = firstItemFocus },
                     )
                 }
+                // The Reminders page, also with nothing followed (a programme's reminder).
+                TvIconAction(
+                    onClick = { leave(RETURN_REMINDERS, onReminders) },
+                    icon = CinemaIcons.Bell,
+                    label = stringResource(R.string.reminders_title),
+                    // Down: the first logo (Find Teams with nothing followed); Right: nothing.
+                    modifier =
+                        Modifier
+                            .navReturnFocusTarget(returnFocus, RETURN_REMINDERS)
+                            .focusProperties {
+                                down = if (followsSome) firstItemFocus else findTeamsFocus
+                                right = FocusRequester.Cancel
+                            },
+                )
             }
-            val list = items
-            when {
-                list == null -> {
-                    item(key = "reading") { Loading() }
-                }
-
-                list.isEmpty() -> {
-                    item(key = "nothing_followed") {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                        ) {
-                            CinemaText(
-                                text = stringResource(R.string.sports_nothing_followed),
-                                role = TextRole.Title,
-                                textAlign = TextAlign.Center,
-                            )
-                            CinemaPrimaryButton(
-                                onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
-                                text = stringResource(R.string.sports_find_teams),
-                                modifier =
-                                    Modifier
-                                        .focusRequester(findTeamsFocus)
-                                        .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
-                                        .leftToRail(),
-                            )
-                        }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                // Room for the focus scale of the first and last item.
+                contentPadding = PaddingValues(vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                val list = items
+                when {
+                    list == null -> {
+                        item(key = "reading") { Loading() }
                     }
-                }
 
-                else -> {
-                    item(key = "followed_heading") { TvSportsHeading(stringResource(R.string.sports_following_heading)) }
-                    item(key = "followed") {
-                        // Up from the games comes back to the logo last focused, the first one at first.
-                        LazyRow(
-                            modifier = Modifier.focusRestorer(firstItemFocus),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                            contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
-                        ) {
-                            itemsIndexed(list, key = { _, item -> item.key }) { index, item ->
-                                FollowedCard(
-                                    item = item,
-                                    onClick = {
-                                        leave(item.key) {
-                                            when (val route = item.route) {
-                                                is Screen.SportsTeam -> onTeamSelected(route)
-                                                is Screen.SportsLeague -> onLeagueSelected(route)
-                                                else -> Unit
-                                            }
-                                        }
-                                    },
+                    list.isEmpty() -> {
+                        item(key = "nothing_followed") {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                            ) {
+                                CinemaText(
+                                    text = stringResource(R.string.sports_nothing_followed),
+                                    role = TextRole.Title,
+                                    textAlign = TextAlign.Center,
+                                )
+                                CinemaPrimaryButton(
+                                    onClick = { leave(RETURN_FIND_TEAMS, onFindTeams) },
+                                    text = stringResource(R.string.sports_find_teams),
                                     modifier =
-                                        (if (index == 0) Modifier.focusRequester(firstItemFocus).leftToRail() else Modifier)
-                                            .navReturnFocusTarget(returnFocus, item.key)
-                                            .focusProperties { if (index == list.lastIndex) right = FocusRequester.Cancel },
+                                        Modifier
+                                            .focusRequester(findTeamsFocus)
+                                            .navReturnFocusTarget(returnFocus, RETURN_FIND_TEAMS)
+                                            .leftToRail(),
                                 )
                             }
                         }
                     }
-                    item(key = "games_heading") {
-                        TvSportsHeading(stringResource(R.string.sports_next_games_heading), modifier = Modifier.padding(top = Spacing.md))
-                    }
-                    when (val state = games) {
-                        GamesState.Loading -> {
-                            item(key = "loading") { Loading() }
-                        }
 
-                        is GamesState.Failed -> {
-                            item(key = "failed") {
-                                TvErrorState(
-                                    title = stringResource(R.string.sports_load_error),
-                                    message = state.raw?.let { "[dev] $it" }.orEmpty(),
-                                    onRetry = viewModel::retry,
-                                )
-                            }
-                        }
-
-                        is GamesState.Loaded -> {
-                            if (state.games.isEmpty()) {
-                                item(key = "no_games") {
-                                    TvEmptyState(
-                                        message = stringResource(R.string.sports_no_games),
-                                        icon = CinemaIcons.DateRange,
-                                        takeFocus = false,
+                    else -> {
+                        item(key = "followed_heading") { TvSportsHeading(stringResource(R.string.sports_following_heading)) }
+                        item(key = "followed") {
+                            // Up from the games comes back to the logo last focused, the first one at first.
+                            LazyRow(
+                                modifier = Modifier.focusRestorer(firstItemFocus),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                                contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
+                            ) {
+                                itemsIndexed(list, key = { _, item -> item.key }) { index, item ->
+                                    FollowedCard(
+                                        item = item,
+                                        onClick = {
+                                            leave(item.key) {
+                                                when (val route = item.route) {
+                                                    is Screen.SportsTeam -> onTeamSelected(route)
+                                                    is Screen.SportsLeague -> onLeagueSelected(route)
+                                                    else -> Unit
+                                                }
+                                            }
+                                        },
+                                        modifier =
+                                            (if (index == 0) Modifier.focusRequester(firstItemFocus).leftToRail() else Modifier)
+                                                .navReturnFocusTarget(returnFocus, item.key)
+                                                .focusProperties { if (index == list.lastIndex) right = FocusRequester.Cancel },
                                     )
                                 }
                             }
-                            for (day in days) {
-                                stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
-                                    TvDayHeading(
-                                        text = DateText.dayLabel(resources, day.date),
-                                        pinned = pinnedDay == "day:${day.date}",
+                        }
+                        item(key = "games_heading") {
+                            TvSportsHeading(
+                                stringResource(R.string.sports_next_games_heading),
+                                modifier = Modifier.padding(top = Spacing.md),
+                            )
+                        }
+                        when (val state = games) {
+                            GamesState.Loading -> {
+                                item(key = "loading") { Loading() }
+                            }
+
+                            is GamesState.Failed -> {
+                                item(key = "failed") {
+                                    TvErrorState(
+                                        title = stringResource(R.string.sports_load_error),
+                                        message = state.raw?.let { "[dev] $it" }.orEmpty(),
+                                        onRetry = viewModel::retry,
                                     )
                                 }
-                                for (game in day.games) {
-                                    val key = "game:${game.key}"
-                                    item(key = key) {
-                                        TvGameRow(
-                                            game = game,
-                                            channels = state.channelsOf(game),
-                                            onClick = { openGame = game.key },
-                                            modifier = Modifier.navReturnFocusTarget(returnFocus, key),
-                                            trailing = { TvGameBell(game, bells, nowSec) },
+                            }
+
+                            is GamesState.Loaded -> {
+                                if (state.games.isEmpty()) {
+                                    item(key = "no_games") {
+                                        TvEmptyState(
+                                            message = stringResource(R.string.sports_no_games),
+                                            icon = CinemaIcons.DateRange,
+                                            takeFocus = false,
                                         )
+                                    }
+                                }
+                                for (day in days) {
+                                    stickyHeader(key = "day:${day.date}", contentType = DAY_HEADING) {
+                                        TvDayHeading(
+                                            text = DateText.dayLabel(resources, day.date),
+                                            pinned = pinnedDay == "day:${day.date}",
+                                        )
+                                    }
+                                    for (game in day.games) {
+                                        val key = "game:${game.key}"
+                                        item(key = key) {
+                                            TvGameRow(
+                                                game = game,
+                                                channels = state.channelsOf(game),
+                                                onClick = { openGame = game.key },
+                                                modifier = Modifier.navReturnFocusTarget(returnFocus, key),
+                                                trailing = { TvGameBell(game, bells, nowSec) },
+                                            )
+                                        }
                                     }
                                 }
                             }
