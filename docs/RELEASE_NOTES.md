@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261120003010
 
 - **TV focus you can always see:** a disabled button that has focus now shows a ring in the focus colour, with its dim fill and label, so the remote never seems lost. On Live Sync, Device Logs, Diagnostics and Device Info, the screen title stays at the top and the page scrolls under it, so the clock no longer sits on the buttons at the right. TV only.
 - **Text fields keep what you typed:** on TV, a text field gives its text when focus leaves it, not only on Enter. Before, a button such as Check server stayed disabled after you typed an address and moved down. On the phone, a dialog with a text field moves above the keyboard, so its buttons stay visible and a tap on them no longer goes to the keyboard. In Move to Another Server, the keyboard's Go key does Check server. TV and phone.
