@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.os.Handler
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -80,7 +81,7 @@ class StreamingPlaybackServiceNightAudioTest {
     }
 
     @Test
-    fun `a bitstream re-prepares at its position, releasing the decoder first`() {
+    fun `a live bitstream re-prepares at the live point, releasing the decoder first`() {
         val before = sources.size
         service.setNightAudio(true)
 
@@ -88,7 +89,7 @@ class StreamingPlaybackServiceNightAudioTest {
         assertTrue(service.isRecycling())
         verifyOrder {
             player.stop()
-            player.setMediaSource(sources.last(), false)
+            player.setMediaSource(sources.last(), C.TIME_UNSET)
             player.prepare()
         }
     }

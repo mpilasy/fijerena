@@ -426,7 +426,8 @@
     <string name="provider_clear_progress_desc">Fafao ny toerana voatahiry rehetra (ho foana ny Tohizo ny fijerena)</string>
     <string name="provider_clear_progress_button">Fafao daholo ny fandrosoana</string>
     <string name="provider_stream_format_label">Endriky ny fantsakana</string>
-    <string name="provider_stream_format_desc">Endrika ampiasaina amin\'ny URL-n\'ny fantsakana mivantana (m3u8 = HLS, ts = MPEG-TS)</string>
+    <string name="provider_stream_format_desc">Endriky ny fantsakana mivantana. Ho azy: m3u8 (HLS) amin\'ny angona finday raha ekena ny mpizara, ts (MPEG-TS) any amin\'ny toeran-kafa rehetra</string>
+    <string name="provider_stream_format_auto">Ho azy</string>
     <string name="provider_playlist_type_label">Karazana lisitra</string>
     <string name="provider_playlist_type_desc">Endriky ny lisitra (m3u_plus = miaraka amin\'ny fandaharana, simple = tsotra)</string>
     <string name="provider_category_filters_desc">Afeno ny sokajy araka ny fiandohany (o.h. \'Adult\', \'XXX\')</string>

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.network
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,5 +46,19 @@ class StallWatchdogTest {
         watchdog.isStalled(isBuffering = true, nowMs = 0L)
         watchdog.reset()
         assertFalse(watchdog.isStalled(isBuffering = true, nowMs = 60_000L))
+    }
+
+    @Test
+    fun `quiet time counts only after data has arrived`() {
+        // A channel still starting: no data yet, so no reconnect.
+        watchdog.isStalled(isBuffering = true, nowMs = 0L)
+        assertEquals(0L, watchdog.quietMs(nowMs = 30_000L))
+        // Data, then a stall: quiet since the last data.
+        watchdog.onData(nowMs = 31_000L)
+        watchdog.isStalled(isBuffering = true, nowMs = 45_000L)
+        assertEquals(14_000L, watchdog.quietMs(nowMs = 45_000L))
+        // Playing again.
+        watchdog.isStalled(isBuffering = false, nowMs = 46_000L)
+        assertEquals(0L, watchdog.quietMs(nowMs = 46_000L))
     }
 }

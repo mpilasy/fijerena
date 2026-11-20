@@ -426,7 +426,8 @@
     <string name="provider_clear_progress_desc">Supprimer toutes les positions enregistrées</string>
     <string name="provider_clear_progress_button">Effacer la progression</string>
     <string name="provider_stream_format_label">Format de flux</string>
-    <string name="provider_stream_format_desc">Format utilisé pour les flux en direct (m3u8 = HLS, ts = MPEG-TS)</string>
+    <string name="provider_stream_format_desc">Format des flux en direct. Auto : m3u8 (HLS) sur les données mobiles si le serveur l\'accepte, ts (MPEG-TS) partout ailleurs</string>
+    <string name="provider_stream_format_auto">Auto</string>
     <string name="provider_playlist_type_label">Type de playlist</string>
     <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = avec les infos du guide, simple = basique)</string>
     <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. « Adulte », « XXX »)</string>

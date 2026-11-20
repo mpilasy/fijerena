@@ -21,6 +21,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.decodeToSequence
 import okhttp3.ConnectionPool
+import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.diagnostics.recordFailedCalls
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
@@ -32,6 +33,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.core.player.model.toEpgResponse
 import org.njarasoa.fijerena.core.player.model.withName
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +43,8 @@ import java.util.concurrent.TimeUnit
  *
  * @param baseUrl The Xtream API base URL (for example "http://example.com:8080")
  *
- * @param streamOutputFormat The output format of live stream URLs: "m3u8" (HLS) or "ts" (MPEG-TS)
+ * @param streamOutputFormat The output format of live stream URLs: "m3u8" (HLS), "ts" (MPEG-TS) or
+ *   [LiveStreamFormat.AUTO]
  *
  * @param metadataTimeoutMs Overall deadline of a metadata call; the catalogue downloads have none
  */
@@ -106,6 +109,10 @@ class XtreamApiService(
             }
         }
 
+    // The formats the last login answer allows, for [LiveStreamFormat.AUTO]; null before a login.
+    @Volatile
+    private var allowedOutputFormats: List<String?>? = null
+
     suspend fun authenticate(): XtreamAuthResponse {
         val response =
             client.get("player_api.php") {
@@ -114,7 +121,9 @@ class XtreamApiService(
             }
         // .body() (Ktor ContentNegotiation) cannot resolve a serializer for bare (non-List)
         // response types in this build; getSeriesInfo / getVodInfo use the same workaround.
-        return json.decodeFromString(response.bodyAsText())
+        val auth: XtreamAuthResponse = json.decodeFromString(response.bodyAsText())
+        allowedOutputFormats = auth.userInfo.allowedOutputFormats
+        return auth
     }
 
     suspend fun getCategories(): List<XtreamCategory> =
@@ -314,11 +323,21 @@ class XtreamApiService(
      * Format: http://url:port/live/username/password/streamId.[format]
      *
      * [streamOutputFormat] sets the format ("m3u8" for HLS or "ts" for MPEG-TS, from the Xtream
-     * server's `output` parameter).
+     * server's `output` parameter). [LiveStreamFormat.AUTO] picks one for the network in use now.
      */
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/live/${encode(username)}/${encode(password)}/$streamId.$streamOutputFormat"
+        val format =
+            if (streamOutputFormat == LiveStreamFormat.AUTO) {
+                LiveStreamFormat.choose(
+                    onMobileData = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR,
+                    allowedFormats = allowedOutputFormats,
+                    panel = LiveStreamFormat.panelOf(normalizedUrl),
+                )
+            } else {
+                streamOutputFormat
+            }
+        return "$normalizedUrl/live/${encode(username)}/${encode(password)}/$streamId.$format"
     }
 
     /**

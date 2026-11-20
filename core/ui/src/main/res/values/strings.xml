@@ -427,7 +427,8 @@
     <string name="provider_clear_progress_desc">Remove all saved positions (Continue Watching will be empty)</string>
     <string name="provider_clear_progress_button">Clear all progress</string>
     <string name="provider_stream_format_label">Stream Output Format</string>
-    <string name="provider_stream_format_desc">Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)</string>
+    <string name="provider_stream_format_desc">Format of live channel streams. Auto: m3u8 (HLS) on mobile data when the server allows it, ts (MPEG-TS) everywhere else</string>
+    <string name="provider_stream_format_auto">Auto</string>
     <string name="provider_playlist_type_label">Playlist Type</string>
     <string name="provider_playlist_type_desc">Playlist format (m3u_plus = with guide details, simple = basic)</string>
     <string name="provider_category_filters_desc">Hide categories by prefix (e.g., \'Adult\', \'XXX\')</string>

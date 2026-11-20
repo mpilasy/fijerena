@@ -41,8 +41,17 @@ class StallWatchdog(
         return nowMs - maxOf(bufferingSinceMs, lastDataMs) >= limitMs
     }
 
+    /**
+     * How long the buffering that [isStalled] last saw has gone with no data, ms. 0 when not
+     * buffering, and before any data since [reset]: a server that takes long to start a channel is
+     * not a stall. Call it after [isStalled] on the same tick. A live stream reconnects after
+     * [QUIET_RECONNECT_MS] of this (the mobile data playback plan → Phase 3).
+     */
+    fun quietMs(nowMs: Long): Long = if (bufferingSinceMs == NONE || lastDataMs == NONE) 0L else nowMs - maxOf(bufferingSinceMs, lastDataMs)
+
     companion object {
         const val LIMIT_MS = 60_000L
+        const val QUIET_RECONNECT_MS = 10_000L
         private const val NONE = Long.MIN_VALUE
     }
 }

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.os.Handler
+import androidx.media3.common.C
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
@@ -129,7 +130,7 @@ class StreamingPlaybackServiceRecoveryTest {
     }
 
     @Test
-    fun `a seamless recycle cancels a hard retry already scheduled, and keeps the frame`() {
+    fun `a seamless recycle cancels a hard retry already scheduled, and keeps the frame at the live point`() {
         service.playStream(live)
         service.handleStreamEndedOrError("Network failed")
         val scheduled = posted.single().first
@@ -138,7 +139,8 @@ class StreamingPlaybackServiceRecoveryTest {
 
         assertTrue(scheduled in removed)
         assertTrue(service.isRecycling())
-        verify { player.setMediaSource(sources.last(), false) }
+        // No reset keeps the frame; live goes to the default position (the mobile data playback plan → Phase 3).
+        verify { player.setMediaSource(sources.last(), C.TIME_UNSET) }
     }
 
     @Test

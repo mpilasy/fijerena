@@ -37,8 +37,11 @@ class StreamHealthMonitor(
             )
     }
 
+    // No buffer-depth rule: a live MPEG-TS stream arrives at real-time speed, so a few seconds of
+    // buffer is normal, and "under 8 s for 20 s" reconnected healthy streams again and again on
+    // mobile data. A stall is found by movement instead (stallReason). See the mobile data
+    // playback plan → Phase 3.
     data class Config(
-        val minBufferMs: Long = 8000L,
         val sustainedDegradationWindowMs: Long = 20000L,
         // 15 dropped frames/s let a 25 fps stream lose half its frames and still report "Healthy".
         // 5/s only trips after sustainedDegradationWindowMs, so a brief hiccup does not recycle.
@@ -69,23 +72,24 @@ class StreamHealthMonitor(
 
     /**
      * Takes one tick of metrics from the active media engine and decides whether the connection
-     * needs a reset.
+     * needs a reset. [stallReason]: why the stream is not moving (the position stopped, or no data
+     * while buffering), null while it moves.
      */
     fun updateMetrics(
-        bufferedDurationMs: Long,
         droppedFramesPerSecond: Float,
-        hasReadTimeout: Boolean,
+        stallReason: String?,
     ) {
         val now = System.currentTimeMillis()
-        val isBufferLow = bufferedDurationMs < config.minBufferMs
         val isFrameDropHigh = droppedFramesPerSecond > config.maxFrameDropRate
-        val isHealthy = !isBufferLow && !isFrameDropHigh && !hasReadTimeout
+        val isHealthy = !isFrameDropHigh && stallReason == null
 
         if (isRecycleTriggered) {
             // Blocked, so a reset does not trigger more than once.
-        } else if (hasReadTimeout) {
-            Log.w(TAG, "Read timeout detected. Immediate recycle required.")
-            triggerRecycle("the position stopped moving")
+        } else if (stallReason != null) {
+            // Not healthy: the backoff must not clear while stalls repeat.
+            firstHealthyTimestamp = 0L
+            Log.w(TAG, "Stall detected ($stallReason). Immediate recycle required.")
+            triggerRecycle(stallReason)
         } else if (isHealthy) {
             // Reset the degradation timer when the stream recovers by itself.
             firstFailureTimestamp = 0L
@@ -115,12 +119,7 @@ class StreamHealthMonitor(
             val degradationDuration = now - firstFailureTimestamp
             if (degradationDuration >= config.sustainedDegradationWindowMs) {
                 Log.w(TAG, "Sustained degradation detected (${degradationDuration}ms). Triggering recycle.")
-                val reason =
-                    listOfNotNull(
-                        "buffer under ${config.minBufferMs} ms".takeIf { isBufferLow },
-                        "over ${config.maxFrameDropRate} dropped frames/s".takeIf { isFrameDropHigh },
-                    ).joinToString(" and ")
-                triggerRecycle("$reason for ${degradationDuration / 1000} s")
+                triggerRecycle("over ${config.maxFrameDropRate} dropped frames/s for ${degradationDuration / 1000} s")
             }
         }
         updateStateFlow()

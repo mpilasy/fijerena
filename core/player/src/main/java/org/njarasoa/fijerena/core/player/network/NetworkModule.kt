@@ -73,11 +73,17 @@ object NetworkModule {
      * Per-network-type OkHttp clients for streaming, derived from [okHttpClient] via
      * [OkHttpClient.newBuilder] (shared pool, dispatcher, DNS and redirects). OkHttpDataSource has
      * no per-call timeout setters, so timeouts are set per client: one client per network type.
+     *
+     * retryOnConnectionFailure stays on (OkHttp's default): a pooled socket that the carrier or the
+     * panel closed while idle otherwise fails the next request at once, which on mobile data can
+     * stop a channel from starting. OkHttp retries only a request it can safely send again, on a
+     * fresh connection or the next address; Media3's error policy still owns every other retry.
+     * See the mobile data playback plan → Phase 3.
      */
     private val wifiStreamingClient: OkHttpClient by lazy {
         okHttpClient
             .newBuilder()
-            .retryOnConnectionFailure(false)
+            .retryOnConnectionFailure(true)
             .connectTimeout(NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             .readTimeout(NetworkBufferProfile.WIFI_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             .build()
@@ -86,7 +92,7 @@ object NetworkModule {
     private val cellularStreamingClient: OkHttpClient by lazy {
         okHttpClient
             .newBuilder()
-            .retryOnConnectionFailure(false)
+            .retryOnConnectionFailure(true)
             .connectTimeout(NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             .readTimeout(NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             .build()

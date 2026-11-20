@@ -61,7 +61,10 @@ object NetworkBufferProfile {
     // ── HTTP timeouts ───────────────────────────────────────────────
     const val WIFI_CONNECT_TIMEOUT_MS = 15_000
     const val WIFI_READ_TIMEOUT_MS = 30_000
-    const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
+
+    // As Wi-Fi: 45 s kept the spinner up on a dead first try, before a retry (the mobile data
+    // playback plan → Phase 3). Other Xtream players use 5-15 s.
+    const val CELLULAR_CONNECT_TIMEOUT_MS = 15_000
     const val CELLULAR_READ_TIMEOUT_MS = 30_000
 
     // ── Target buffer byte caps ────────────────────────────────────

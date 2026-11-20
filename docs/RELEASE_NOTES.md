@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased
+
+- **Live TV on mobile data:** Edit Source → Advanced → Stream Output Format has a new choice, **Auto**, and every Xtream source now uses it. On mobile data a channel plays as HLS (m3u8), which copes better with a weak connection, when the server allows it; on Wi-Fi it stays MPEG-TS (ts). When a server refuses HLS, the channel plays as ts again by itself. A live HLS channel that falls behind on a slow connection now plays on from the live point, without an error. Films and episodes don't change. TV and phone.
+- **Live TV recovers by itself:** when a live channel's connection drops or the server ends it, the app starts it again at once from the live point, with the last picture kept on screen: a short pause, no error. A channel reconnects only when it really stops (no picture, or no data for 10 s), not because its buffer is small, which reconnected good streams again and again on mobile data. On mobile data a stream gives up on a dead connection after 15 s, not 45 s, and a request on a connection the network quietly closed goes out again on a new one. TV and phone.
+
 ## Version: 0.9.20261120023124
 
 - **Quieter devices list:** Live Sync's devices list no longer shows each device's crash and error counts. A device's Logs action still opens its Device Logs page, with the counts at the top. TV and phone.

@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceLocale
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -121,6 +122,8 @@ class FijerenaApplication :
         }
         // Initialize network module for robust DNS resolution
         NetworkModule.init(this)
+        // The network type, before the first live channel address: Auto picks its format by it.
+        NetworkMonitor.init(this)
         // A Nerd's custom User-Agent (This Device), before the first call: background work and
         // the first screen may call at once.
         AppSettings(this).applyUserAgent()

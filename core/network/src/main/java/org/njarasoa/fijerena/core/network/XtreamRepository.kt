@@ -52,7 +52,7 @@ class XtreamRepository(
             context,
             accountManager,
             { statsManager.clearCache() },
-            providerSettings.streamOutputFormat,
+            providerSettings.streamFormatChoice,
             providerId,
         )
 

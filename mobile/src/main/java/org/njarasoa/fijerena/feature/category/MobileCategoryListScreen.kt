@@ -124,6 +124,7 @@ import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -555,7 +556,7 @@ fun MobileCategoryListScreen(
                 dockSuccess != null &&
                     dockPlayback != null &&
                     dockSuccess.streamId == target.id &&
-                    dockPlayback.currentMetadata.value.streamUrl == dockSuccess.streamUrl &&
+                    XtreamStreamUrl.sameStream(dockPlayback.currentMetadata.value.streamUrl, dockSuccess.streamUrl) &&
                     dockPlayback.playbackState.value !is PlaybackState.Idle &&
                     dockPlayback.playbackState.value !is PlaybackState.Error
             if (!enginePlaysIt) {
@@ -615,11 +616,11 @@ fun MobileCategoryListScreen(
     if (dockPlayback != null) {
         LaunchedEffect(dockSuccess?.streamId) {
             val s = dockSuccess
-            // As in TV's LiveTvSplitLayout: skip if the engine already plays this exact URL, so a
-            // repeated resolve cannot restart the stream.
+            // As in TV's LiveTvSplitLayout: skip if the engine already plays this stream (another
+            // login or live format of it counts), so a repeated resolve cannot restart it.
             val alreadyPlayingThis =
                 s != null &&
-                    dockPlayback.currentMetadata.value.streamUrl == s.streamUrl &&
+                    XtreamStreamUrl.sameStream(dockPlayback.currentMetadata.value.streamUrl, s.streamUrl) &&
                     dockPlayback.playbackState.value !is PlaybackState.Idle &&
                     dockPlayback.playbackState.value !is PlaybackState.Error
             if (s != null && !alreadyPlayingThis) {
@@ -683,7 +684,7 @@ fun MobileCategoryListScreen(
                                 loaded is StreamLoaderViewModel.StreamState.Success &&
                                     loaded.streamId == target.id &&
                                     playing is PlaybackState.Playing &&
-                                    metadata.streamUrl == loaded.streamUrl
+                                    XtreamStreamUrl.sameStream(metadata.streamUrl, loaded.streamUrl)
                             }.first { it }
                         }
                     if (reachedPlaying == null) {

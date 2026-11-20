@@ -41,4 +41,11 @@ class XtreamStreamUrlTest {
         assertNull(XtreamStreamUrl.username("https://jellyfin.test/Videos/abc/stream?static=true"))
         assertNull(XtreamStreamUrl.withLogin("https://jellyfin.test/Videos/abc/stream", "two", "pw"))
     }
+
+    @Test
+    fun `a live channel as HLS and as MPEG-TS is the same stream`() {
+        assertTrue(XtreamStreamUrl.sameStream("http://h/live/u/p/12.m3u8", "http://h/live/u/p/12.ts"))
+        assertTrue(XtreamStreamUrl.sameStream("http://h/live/main/pw/12.m3u8", "http://h/live/two/pw2/12.ts"))
+        assertFalse(XtreamStreamUrl.sameStream("http://h/live/u/p/12.m3u8", "http://h/live/u/p/13.ts"))
+    }
 }

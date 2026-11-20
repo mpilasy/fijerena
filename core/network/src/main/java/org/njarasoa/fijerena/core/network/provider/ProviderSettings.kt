@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.njarasoa.fijerena.core.player.api.LiveStreamFormat
 
 /** The settings of one provider, stored as JSON in ProviderEntity.providerSettings. */
 @Serializable
@@ -26,8 +27,14 @@ data class ProviderSettings(
         CategoryFilters = CategoryFilters(),
     /** Retired: nothing reads it (guide sources replaced it). Kept so stored settings keep decoding. */
     val epgUrl: String = "",
-    /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
+    /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS). Not used while [autoStreamFormat] is on. */
     val streamOutputFormat: String = "m3u8",
+    /**
+     * Auto picks the live format per network ([LiveStreamFormat]). A flag of its own, not a third
+     * [streamOutputFormat] value: an older version reads that field (synced settings) and would
+     * build an address ending in ".auto". On for every source, also those saved before it.
+     */
+    val autoStreamFormat: Boolean = true,
     /** Not read anywhere. Kept so stored settings keep decoding. */
     val playlistType: String = "m3u_plus",
     /**
@@ -54,6 +61,13 @@ data class ProviderSettings(
 
     /** The effective "Provides a guide": the viewer's or detection's value, else on. */
     val providesGuideOn: Boolean get() = providesGuide != false
+
+    /** The Stream Output Format picker's value: [LiveStreamFormat.AUTO], "m3u8" or "ts". */
+    val streamFormatChoice: String get() = if (autoStreamFormat) LiveStreamFormat.AUTO else streamOutputFormat
+
+    /** These settings with the picker's [choice] ([streamFormatChoice]'s values). */
+    fun withStreamFormatChoice(choice: String): ProviderSettings =
+        if (choice == LiveStreamFormat.AUTO) copy(autoStreamFormat = true) else copy(autoStreamFormat = false, streamOutputFormat = choice)
 
     companion object {
         val DEFAULT = ProviderSettings()

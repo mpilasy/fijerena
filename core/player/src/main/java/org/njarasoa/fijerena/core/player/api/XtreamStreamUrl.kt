@@ -30,11 +30,19 @@ object XtreamStreamUrl {
             url.replaceRange(match.range, match.groupValues[1] + encode(username) + "/" + encode(password) + "/")
         }
 
-    /** Whether [a] and [b] are the same stream, perhaps on different logins of one panel. */
+    /**
+     * Whether [a] and [b] are the same stream, perhaps on different logins of one panel, or a live
+     * channel as HLS and as MPEG-TS (the player falls back from one to the other, [LiveStreamFormat]).
+     */
     fun sameStream(
         a: String,
         b: String,
-    ): Boolean = a == b || withLogin(a, "", "")?.let { it == withLogin(b, "", "") } == true
+    ): Boolean {
+        if (a == b) return true
+        val x = LiveStreamFormat.tsFallbackFor(a) ?: a
+        val y = LiveStreamFormat.tsFallbackFor(b) ?: b
+        return x == y || withLogin(x, "", "")?.let { it == withLogin(y, "", "") } == true
+    }
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 }

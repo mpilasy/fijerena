@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.player.source
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.ParserException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -29,6 +30,13 @@ class AdaptiveLoadErrorPolicy(
         val httpStatus = (loadErrorInfo.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         if (AccountBusy.isAccountBusy(httpStatus)) return C.TIME_UNSET
 
+        // A playlist the server refuses (4xx) or that doesn't parse: no retry changes that, and a
+        // live HLS stream then falls back to MPEG-TS at once, before the screen gives up on it
+        // (the mobile data playback plan → Phase 1). A segment 404 on live HLS can be one not
+        // written yet, so segments keep their retries.
+        if (loadErrorInfo.exception is ParserException) return C.TIME_UNSET
+        if (loadErrorInfo.mediaLoadData.dataType == C.DATA_TYPE_MANIFEST && isRefusal(httpStatus)) return C.TIME_UNSET
+
         val errorCount = loadErrorInfo.errorCount
         val maxRetries = getMinimumLoadableRetryCount(loadErrorInfo.mediaLoadData.dataType)
 
@@ -41,6 +49,9 @@ class AdaptiveLoadErrorPolicy(
         onRetry?.invoke()
         return delay.coerceAtMost(NetworkBufferProfile.RETRY_MAX_DELAY_MS)
     }
+
+    private fun isRefusal(httpStatus: Int?): Boolean =
+        httpStatus != null && httpStatus in 400..499 && httpStatus != 408 && httpStatus != 429
 
     override fun getFallbackSelectionFor(
         fallbackOptions: LoadErrorHandlingPolicy.FallbackOptions,

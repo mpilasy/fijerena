@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -634,7 +635,7 @@ fun MobilePlayerContent(
                 // Promoting a playing docked preview re-runs this effect with nothing changed: do
                 // not call playStream() again, or the stream restarts.
                 val alreadyPlayingThis =
-                    viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
+                    XtreamStreamUrl.sameStream(viewModel.currentMetadata.value.streamUrl, state.streamUrl) &&
                         viewModel.playbackState.value !is PlaybackState.Idle &&
                         viewModel.playbackState.value !is PlaybackState.Error
 

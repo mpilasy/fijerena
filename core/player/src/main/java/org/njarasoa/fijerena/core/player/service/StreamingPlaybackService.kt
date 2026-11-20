@@ -45,6 +45,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.R
+import org.njarasoa.fijerena.core.player.api.LiveStreamFormat
 import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.audio.NightAudioProcessor
 import org.njarasoa.fijerena.core.player.audio.NightAudioRenderersFactory
@@ -358,8 +359,16 @@ class StreamingPlaybackService : MediaSessionService() {
             NetworkModule.streamCalls.cancelAll()
         }
 
-        // resetPosition=false keeps the current frame on screen while the new source prepares.
-        player.setMediaSource(mediaSource, false)
+        // No reset (stop, clear) keeps the current frame on screen while the new source prepares.
+        // Live starts at the default position (the live point): the old position on a fresh live
+        // MPEG-TS stream, which can't seek, made the player open it, then load it again from the
+        // start while the first connection was still closing: two connections at once for about
+        // 0.5 s, which a 1-connection account can refuse (the mobile data playback plan → Phase 3).
+        if (metadata.isLive) {
+            player.setMediaSource(mediaSource, C.TIME_UNSET)
+        } else {
+            player.setMediaSource(mediaSource, false)
+        }
         player.prepare()
         player.playWhenReady = playWhenReady
     }
@@ -373,7 +382,16 @@ class StreamingPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         NetworkMonitor.init(this)
-        mediaSourceFactory = StreamingMediaSourceFactory(this)
+        mediaSourceFactory =
+            StreamingMediaSourceFactory(this) { reason ->
+                // The health check's reconnect: a fresh start at the live point, counted with its
+                // other reconnects, so a server that keeps dropping ends in an error.
+                mainHandler.post {
+                    if (_currentMetadata.value.isLive) {
+                        healthMonitor?.updateMetrics(droppedFramesPerSecond = _measuredDroppedFps.value, stallReason = reason)
+                    }
+                }
+            }
 
         healthMonitor =
             org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
@@ -553,10 +571,16 @@ class StreamingPlaybackService : MediaSessionService() {
                                 player.isPlaying &&
                                 lastHealthCheckPosition == position
                         lastHealthCheckPosition = position
+                        // Buffering with no data: reconnect long before the watchdog gives up.
+                        val quietMs = stallWatchdog.quietMs(now)
                         healthMonitor?.updateMetrics(
-                            bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                             droppedFramesPerSecond = _measuredDroppedFps.value,
-                            hasReadTimeout = isStalled,
+                            stallReason =
+                                when {
+                                    isStalled -> "the position stopped moving"
+                                    isBuffering && quietMs >= StallWatchdog.QUIET_RECONNECT_MS -> "no data for ${quietMs / 1000} s"
+                                    else -> null
+                                },
                         )
                     }
                 }
@@ -677,6 +701,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 streamStartTimeMs = { _streamStartTimeMs.value },
                 onFirstFrame = ::onFirstFrameRendered,
                 onError = ::recordStreamError,
+                onBehindLiveWindow = ::rejoinLiveEdge,
+                onLiveHlsRefused = ::fallBackToTs,
             )
         player.addListener(playerListener!!)
 
@@ -877,7 +903,13 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         // A new playback: a remote Stop sent for the previous one must never stop this one.
         playSessionId.value = UUID.randomUUID().toString()
-        if (metadata.streamUrl != _currentMetadata.value.streamUrl) resetTrackChoices(player, metadata.preferredAudioLanguages)
+        if (!XtreamStreamUrl.sameStream(
+                metadata.streamUrl,
+                _currentMetadata.value.streamUrl,
+            )
+        ) {
+            resetTrackChoices(player, metadata.preferredAudioLanguages)
+        }
         _currentMetadata.value = metadata
         contentFrameRateTracker.newStream(metadata.isLive)
         _measuredFps.value = 0f
@@ -1336,6 +1368,35 @@ class StreamingPlaybackService : MediaSessionService() {
             )
         }
         if (state is PlaybackState.Playing) recoveryCause = null
+    }
+
+    /** A live HLS stream fell behind the server's window: on from the live edge (Media3's recovery). */
+    private fun rejoinLiveEdge() {
+        val player = getPlayer() ?: return
+        Log.w(TAG, "Behind the live window: playing on from the live edge.")
+        recoveryCause = "Behind the live window: rejoined the live edge"
+        _playbackState.value = PlaybackState.Buffering
+        player.seekToDefaultPosition()
+        player.prepare()
+    }
+
+    /**
+     * The live HLS stream in use, refused before its first frame, as MPEG-TS; its panel gets
+     * MPEG-TS from Auto until the app restarts ([LiveStreamFormat]). False when it is not a live
+     * Xtream HLS stream. Swaps the URL as the login switch in [handleAccountBusy] does.
+     */
+    private fun fallBackToTs(): Boolean {
+        val current = _currentMetadata.value
+        if (!current.isLive) return false
+        val tsUrl = LiveStreamFormat.tsFallbackFor(current.streamUrl) ?: return false
+        LiveStreamFormat.panelOf(current.streamUrl)?.let(LiveStreamFormat::markHlsFailed)
+        Log.w(TAG, "Live HLS refused: trying the same channel as MPEG-TS.")
+        recordStream("Stream format fallback on ${streamHost()}", "HLS refused before the first picture; trying MPEG-TS")
+        val switched = current.copy(streamUrl = tsUrl)
+        _currentMetadata.value = switched
+        _playbackState.value = PlaybackState.Buffering
+        reprepare(switched, 0L)
+        return true
     }
 
     /** A Diagnostics entry for a player error, with its causes; the wait that follows names it. */
@@ -1871,6 +1932,10 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onFirstFrame: () -> Unit = {},
         /** Every player error, before it is handled: for Diagnostics. */
         private val onError: (PlaybackException) -> Unit = {},
+        /** A live HLS stream fell behind the server's window: play on from the live edge. */
+        private val onBehindLiveWindow: () -> Unit = {},
+        /** A live HLS stream the server can't serve: true when a fallback to MPEG-TS started. */
+        private val onLiveHlsRefused: () -> Boolean = { false },
     ) : Player.Listener {
         private var isInErrorState = false
         private var errorHeldUntilReady = false
@@ -1966,6 +2031,12 @@ class StreamingPlaybackService : MediaSessionService() {
 
         override fun onPlayerError(error: PlaybackException) {
             onError(error)
+            // A connection slower than the stream: the player falls out of the HLS live window.
+            // Media3's recovery is to play on from the live edge; no error, no retry count.
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                onBehindLiveWindow()
+                return
+            }
             isInErrorState = true
             errorHeldUntilReady = false
             val httpStatus =
@@ -1974,9 +2045,15 @@ class StreamingPlaybackService : MediaSessionService() {
                 onAccountBusy(httpStatus)
                 return
             }
+            // A live HLS stream the panel can't serve (no HLS, or broken HLS): the same channel as
+            // MPEG-TS. See the mobile data playback plan → Phase 1.
+            if (!renderedFirstFrame && isNotServed(error.errorCode, httpStatus) && onLiveHlsRefused()) {
+                resetErrorState()
+                return
+            }
             // Catch-up the panel can't serve (outside the archive, a channel without one): no retry
             // will change that. See the catchup plan → "Facts measured".
-            if (isCatchup() && !renderedFirstFrame && isMissingArchive(error.errorCode, httpStatus)) {
+            if (isCatchup() && !renderedFirstFrame && isNotServed(error.errorCode, httpStatus)) {
                 Log.w(TAG, "Catch-up unavailable (${error.errorCodeName}, HTTP $httpStatus) — not retrying.")
                 onFinalError(context.getString(R.string.player_error_catchup_unavailable), error)
                 return
@@ -1991,7 +2068,7 @@ class StreamingPlaybackService : MediaSessionService() {
             onStreamEndedOrError(errorMessage, httpStatus)
         }
 
-        private fun isMissingArchive(
+        private fun isNotServed(
             errorCode: Int,
             httpStatus: Int?,
         ): Boolean =
@@ -2289,9 +2366,8 @@ class StreamingPlaybackService : MediaSessionService() {
             val isLive = service?._currentMetadata?.value?.isLive == true
             if (service != null && player != null && isLive && !service.isWithinSeekGrace()) {
                 service.healthMonitor?.updateMetrics(
-                    bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                     droppedFramesPerSecond = service._measuredDroppedFps.value,
-                    hasReadTimeout = false, // ExoPlayer reports timeouts via exceptions
+                    stallReason = null, // the clock-driven health loop finds stalls
                 )
             }
         }

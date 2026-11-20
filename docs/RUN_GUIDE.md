@@ -382,7 +382,9 @@ the fact without logcat having been attached:
   <host>` or `HTTP <code> from <host>`, with the address asked and the error, logins masked — the
   last 500 (`ConnectionLog`, `files/crashlog/connections.log`). The same file keeps what the
   player's streams did: `Stream error from <host>` (the error code and its causes), `Stream
-  reconnect on <host>` (the health check's reason) and `Stream waited <n> s on <host>` (a wait of
+  reconnect on <host>` (the health check's reason, also "connection dropped" or "the server ended
+  the stream" for a live MPEG-TS connection), `Stream format fallback
+  on <host>` (live HLS refused, played as MPEG-TS) and `Stream waited <n> s on <host>` (a wait of
   1 s or more during playback, or while it recovered: why, the load errors and data received
   during it, and what followed). Failed syncs and index work appear too
   (`CrashLog.record` / `CrashLog.note`): `catalogue sync failed: <source>`, `guide source failed:

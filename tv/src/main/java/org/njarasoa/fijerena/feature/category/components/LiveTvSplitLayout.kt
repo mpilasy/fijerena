@@ -505,7 +505,7 @@ internal fun LiveTvSplitLayout(
         // already plays.
         val alreadyPlayingThis =
             s != null &&
-                playback.currentMetadata.value.streamUrl == s.streamUrl &&
+                XtreamStreamUrl.sameStream(playback.currentMetadata.value.streamUrl, s.streamUrl) &&
                 playback.playbackState.value !is PlaybackState.Idle &&
                 playback.playbackState.value !is PlaybackState.Error
         if (s != null && !alreadyPlayingThis) {

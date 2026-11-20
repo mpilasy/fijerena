@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
+import org.njarasoa.fijerena.core.player.api.LiveStreamFormat
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaIcon
@@ -64,7 +65,12 @@ internal fun ProviderSectionTitle(
 
 private enum class ProviderPicker { STREAM_FORMAT, PLAYLIST_TYPE }
 
-private val STREAM_FORMATS = listOf("m3u8", "ts")
+private val STREAM_FORMATS = listOf(LiveStreamFormat.AUTO, LiveStreamFormat.HLS, LiveStreamFormat.TS)
+
+@Composable
+private fun streamFormatLabel(choice: String): String =
+    if (choice == LiveStreamFormat.AUTO) stringResource(R.string.provider_stream_format_auto) else choice
+
 private val PLAYLIST_TYPES = listOf("m3u_plus", "simple")
 
 /** A setting whose value is picked from a list: title and description, the value, a chevron; opens the picker. */
@@ -150,7 +156,6 @@ fun ColumnScope.SourceAdvancedSection(
     editId: Long,
     selectedType: ProviderType,
     providerSettings: ProviderSettings,
-    streamOutputFormat: String,
     playlistType: String,
     coroutineScope: CoroutineScope,
     providerRepo: ProviderRepository,
@@ -170,12 +175,13 @@ fun ColumnScope.SourceAdvancedSection(
         ProviderPicker.STREAM_FORMAT -> {
             SettingsPickerDialog(
                 title = stringResource(R.string.provider_stream_format_label),
-                options = STREAM_FORMATS.map { it to it },
-                selected = streamOutputFormat,
-                onSelect = { format ->
+                options = STREAM_FORMATS.map { streamFormatLabel(it) to it },
+                selected = providerSettings.streamFormatChoice,
+                onSelect = { choice ->
                     openPicker = null
-                    onStreamOutputFormatChange(format)
-                    save(providerSettings.copy(streamOutputFormat = format))
+                    val newSettings = providerSettings.withStreamFormatChoice(choice)
+                    onStreamOutputFormatChange(newSettings.streamOutputFormat)
+                    save(newSettings)
                 },
                 onDismiss = { openPicker = null },
             )
@@ -208,7 +214,7 @@ fun ColumnScope.SourceAdvancedSection(
             ProviderChoiceRow(
                 title = stringResource(R.string.provider_stream_format_label),
                 description = stringResource(R.string.provider_stream_format_desc),
-                value = streamOutputFormat,
+                value = streamFormatLabel(providerSettings.streamFormatChoice),
                 onClick = { openPicker = ProviderPicker.STREAM_FORMAT },
             )
             ProviderChoiceRow(

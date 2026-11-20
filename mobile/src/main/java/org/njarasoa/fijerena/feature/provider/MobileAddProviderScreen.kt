@@ -504,7 +504,6 @@ fun MobileAddProviderScreen(
                 editId = editId,
                 selectedType = selectedType,
                 providerSettings = providerSettings,
-                streamOutputFormat = streamOutputFormat,
                 playlistType = playlistType,
                 coroutineScope = coroutineScope,
                 providerRepo = providerRepo,

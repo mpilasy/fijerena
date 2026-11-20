@@ -18,6 +18,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
+import org.njarasoa.fijerena.core.player.api.LiveStreamFormat
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -90,7 +91,12 @@ enum class EditSourcePicker(
     PLAYLIST_TYPE("playlist"),
 }
 
-private val STREAM_FORMATS = listOf("m3u8", "ts")
+private val STREAM_FORMATS = listOf(LiveStreamFormat.AUTO, LiveStreamFormat.HLS, LiveStreamFormat.TS)
+
+@Composable
+private fun streamFormatLabel(choice: String): String =
+    if (choice == LiveStreamFormat.AUTO) stringResource(R.string.provider_stream_format_auto) else choice
+
 private val PLAYLIST_TYPES = listOf("m3u_plus", "simple")
 
 /**
@@ -158,7 +164,7 @@ fun SourceAdvancedSection(
         EditSourcePicker.STREAM_FORMAT,
         stringResource(R.string.provider_stream_format_label),
         stringResource(R.string.provider_stream_format_desc),
-        providerSettings.streamOutputFormat,
+        streamFormatLabel(providerSettings.streamFormatChoice),
     )
     choiceRow(
         EditSourcePicker.PLAYLIST_TYPE,
@@ -194,9 +200,9 @@ fun EditSourcePickerPane(
         EditSourcePicker.STREAM_FORMAT -> {
             SettingsPickerPane(
                 title = stringResource(R.string.provider_stream_format_label),
-                options = STREAM_FORMATS.map { PickerOption(it, it) },
-                selectedValue = providerSettings.streamOutputFormat,
-                onPick = { format -> onUpdateSettings(providerSettings.copy(streamOutputFormat = format)) },
+                options = STREAM_FORMATS.map { PickerOption(streamFormatLabel(it), it) },
+                selectedValue = providerSettings.streamFormatChoice,
+                onPick = { choice -> onUpdateSettings(providerSettings.withStreamFormatChoice(choice)) },
                 onBack = onBack,
                 modifier = modifier,
             )
