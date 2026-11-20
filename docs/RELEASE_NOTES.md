@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261120023124
 
 - **Quieter devices list:** Live Sync's devices list no longer shows each device's crash and error counts. A device's Logs action still opens its Device Logs page, with the counts at the top. TV and phone.
 
