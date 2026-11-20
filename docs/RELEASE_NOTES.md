@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261120213446
 
 - **Live TV on mobile data stays on HLS after a refusal:** when a server refused one live channel as HLS, the app used TS for every channel of that source until the app restarted, even when TS did not play either. On mobile data TS often does not play at all. Now the source changes to TS only when the refused channel then plays as TS. TV and phone.
 
