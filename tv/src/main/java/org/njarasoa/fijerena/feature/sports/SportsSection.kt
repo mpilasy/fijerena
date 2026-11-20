@@ -29,7 +29,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -128,6 +128,8 @@ fun SportsSectionScreen(
     val pinnedDay = rememberPinnedDayKey(listState)
     val returnFocus = rememberNavReturnFocus()
     val firstItemFocus = remember { FocusRequester() }
+    // The logo last focused, for Up from the games.
+    var lastLogo by remember { mutableStateOf<String?>(null) }
     val findTeamsFocus = remember { FocusRequester() }
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     var closedGame by remember { mutableStateOf<String?>(null) }
@@ -260,9 +262,20 @@ fun SportsSectionScreen(
                     else -> {
                         item(key = "followed_heading") { TvSportsHeading(stringResource(R.string.sports_following_heading)) }
                         item(key = "followed") {
-                            // Up from the games comes back to the logo last focused, the first one at first.
+                            // Up from the games comes back to the logo last focused, the first one at first. Not
+                            // focusRestorer: it also takes a focus request on a logo (Back to it), and after Back
+                            // it knows no logo, so it sent focus to the first one.
                             LazyRow(
-                                modifier = Modifier.focusRestorer(firstItemFocus),
+                                modifier =
+                                    Modifier
+                                        .focusProperties {
+                                            onEnter = {
+                                                if (requestedFocusDirection != FocusDirection.Enter) {
+                                                    val last = lastLogo?.let { returnFocus.requesterOf(it) }
+                                                    if (last?.requestFocus() != true) firstItemFocus.requestFocus()
+                                                }
+                                            }
+                                        }.focusGroup(),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                                 contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
                             ) {
@@ -281,6 +294,7 @@ fun SportsSectionScreen(
                                         modifier =
                                             (if (index == 0) Modifier.focusRequester(firstItemFocus).leftToRail() else Modifier)
                                                 .navReturnFocusTarget(returnFocus, item.key)
+                                                .onFocusChanged { if (it.hasFocus) lastLogo = item.key }
                                                 .focusProperties { if (index == list.lastIndex) right = FocusRequester.Cancel },
                                     )
                                 }

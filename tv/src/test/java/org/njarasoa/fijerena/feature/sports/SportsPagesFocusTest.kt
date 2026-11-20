@@ -170,6 +170,34 @@ class SportsPagesFocusTest {
     }
 
     @Test
+    fun `team page - Down from Follow reaches the next game after Up through many results`() {
+        // Enough results that the next game leaves the list while they are in view.
+        val results =
+            (1..4).map { i ->
+                SportsGame(
+                    SportsSource.ESPN,
+                    "result$i",
+                    1_700_000_000L - i * 100_000L,
+                    ARSENAL,
+                    CHELSEA,
+                    LEAGUE,
+                    GameState.FINISHED,
+                    homeScore = "$i",
+                    awayScore = "0",
+                )
+            }
+        val vm = SportsTeamViewModel(FakeData(results = results), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
+        }
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        repeat(results.size + 2) { walk.press(Key.DirectionUp) }
+        walk.awaitFocused("Follow")
+        walk.press(Key.DirectionDown)
+        walk.awaitFocused("C / Arsenal v Chelsea")
+    }
+
+    @Test
     fun `team page - a game in progress shows its score and clock`() {
         val live =
             SportsGame(

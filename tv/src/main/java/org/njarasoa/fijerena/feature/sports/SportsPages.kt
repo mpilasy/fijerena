@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
@@ -241,6 +243,7 @@ private fun TvSportsPage(
     // Again at each read: the page reads its games again while it is open.
     val nowSec = remember(loaded?.games) { System.currentTimeMillis() / 1000 }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val pinnedDay = rememberPinnedDayKey(listState)
     val endedDay = rememberEndedDayKey(listState)
     val returnFocus = rememberNavReturnFocus()
@@ -262,6 +265,8 @@ private fun TvSportsPage(
         val target = if (loaded.games.isNotEmpty()) firstGameFocus else currentSecond
         if (target != null) {
             entered = true
+            // The rows above the games ([before]: a team's results) can push the first game out of the list.
+            if (target === firstGameFocus) listState.scrollToItem(beforeCount)
             target.requestFocusWithRetry()
         }
     }
@@ -306,9 +311,22 @@ private fun TvSportsPage(
                         }.padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
             ) {
                 // Down from the header's actions: the first game (else the first of the extra rows), not
-                // the bell under them.
-                val headerDown = if (loaded?.games?.isNotEmpty() == true) firstGameFocus else secondFocus
-                val downToRows = Modifier.focusProperties { headerDown?.let { down = it } }
+                // the bell under them. The list scrolls to the games first: Up from the first game scrolls
+                // the rows above it ([before]) into view, and the first game can then be out of the list.
+                val hasGames = loaded?.games?.isNotEmpty() == true
+                val headerDown = if (hasGames) firstGameFocus else secondFocus
+                val downToRows =
+                    Modifier.onPreviewKeyEvent { event ->
+                        val target = headerDown
+                        if (target == null || event.key != Key.DirectionDown) return@onPreviewKeyEvent false
+                        if (event.type == KeyEventType.KeyDown) {
+                            scope.launch {
+                                if (hasGames) listState.scrollToItem(gamesIndex)
+                                target.requestFocusWithRetry()
+                            }
+                        }
+                        true
+                    }
                 TvScreenHeader(
                     title = title,
                     subtitle = subtitle.takeIf { it.isNotEmpty() },

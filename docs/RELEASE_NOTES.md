@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **The clock stays clear on more TV pages:** on the Sports section, a team's or a league's page, Reminders and a person's appearances in a show, the screen title stays at the top and the page scrolls under it, so the clock no longer sits on the rows at the right. TV only.
+- **Sports focus:** Back from a team's page puts focus on that team's logo again, not on the first logo. A team page with many results opens on its next game, and Down from Follow goes back to that game after the results. TV only.
 
 ## Version: 0.9.20261120003010
 
