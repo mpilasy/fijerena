@@ -6,8 +6,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The live stream format of an Xtream source set to Auto: HLS on mobile data when the server lists
  * it in `allowed_output_formats`, MPEG-TS everywhere else. A rewrite to HLS without that check
- * (February 2026) gave 404s on servers without HLS. A panel whose HLS failed to start gets TS
- * until the app restarts. See the mobile data playback plan → Phase 1.
+ * (February 2026) gave 404s on servers without HLS. A panel whose HLS was refused, where the same
+ * channel then played as TS, gets TS until the app restarts. See the mobile data playback plan →
+ * Phase 1.
  */
 object LiveStreamFormat {
     /** Never stored: [ProviderSettings][org.njarasoa.fijerena.core.network.provider.ProviderSettings] keeps Auto as its own flag. */

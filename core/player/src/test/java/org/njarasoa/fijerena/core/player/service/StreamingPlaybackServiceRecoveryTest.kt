@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.api.LiveStreamFormat
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
@@ -64,6 +65,9 @@ class StreamingPlaybackServiceRecoveryTest {
         }
     }
 
+    @org.junit.After
+    fun clearFormats() = LiveStreamFormat.clearForTest()
+
     @Before
     fun setup() {
         every { handler.postDelayed(any(), any()) } answers {
@@ -82,6 +86,32 @@ class StreamingPlaybackServiceRecoveryTest {
         service.mediaSession = session
         service.mediaSourceFactory = sourceFactory
         service.mainHandler = handler
+    }
+
+    @Test
+    fun `a refused HLS stream that plays as TS gives its panel TS`() {
+        val hls = live.copy(streamUrl = "http://hls.test/live/u/p/1.m3u8")
+        service.playStream(hls)
+
+        assertTrue(service.fallBackToTs())
+        assertEquals("http://hls.test/live/u/p/1.ts", service.currentMetadata.value.streamUrl)
+        assertEquals(LiveStreamFormat.HLS, LiveStreamFormat.choose(true, listOf("m3u8"), "hls.test"))
+
+        service.onFirstFrameRendered()
+        assertEquals(LiveStreamFormat.TS, LiveStreamFormat.choose(true, listOf("m3u8"), "hls.test"))
+    }
+
+    @Test
+    fun `a refused HLS stream that does not play as TS either leaves its panel on HLS`() {
+        val hls = live.copy(streamUrl = "http://hls.test/live/u/p/1.m3u8")
+        service.playStream(hls)
+        assertTrue(service.fallBackToTs())
+
+        // TS gets nothing either (a blocked address, a busy account): the viewer moves on.
+        service.playStream(live.copy(streamUrl = "http://hls.test/live/u/p/2.m3u8"))
+        service.onFirstFrameRendered()
+
+        assertEquals(LiveStreamFormat.HLS, LiveStreamFormat.choose(true, listOf("m3u8"), "hls.test"))
     }
 
     @Test

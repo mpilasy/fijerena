@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Live TV on mobile data stays on HLS after a refusal:** when a server refused one live channel as HLS, the app used TS for every channel of that source until the app restarted, even when TS did not play either. On mobile data TS often does not play at all. Now the source changes to TS only when the refused channel then plays as TS. TV and phone.
+
 ## Version: 0.9.20261120170431
 
 - **Up Next plays on again, but not all night:** when an episode ends and nobody answered the Up Next card, the next episode plays again. After 4 episodes in a row with no key press on the remote or touch on the screen, the player stops and goes back to the episode list. Any press or touch in the player starts the count again. TV and phone.

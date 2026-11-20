@@ -881,6 +881,7 @@ class StreamingPlaybackService : MediaSessionService() {
         cancelPendingRetry()
         playerListener?.resetErrorState()
         playerListener?.resetStartupTiming()
+        tsFallbackPanel = null
         retryCount = 0
         autoRetryAttempted = false
         accountBusyWait.reset()
@@ -1381,15 +1382,16 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     /**
-     * The live HLS stream in use, refused before its first frame, as MPEG-TS; its panel gets
-     * MPEG-TS from Auto until the app restarts ([LiveStreamFormat]). False when it is not a live
-     * Xtream HLS stream. Swaps the URL as the login switch in [handleAccountBusy] does.
+     * The live HLS stream in use, refused before its first frame, as MPEG-TS. When the TS stream
+     * plays, its panel gets MPEG-TS from Auto until the app restarts ([LiveStreamFormat],
+     * [tsFallbackPanel]). False when it is not a live Xtream HLS stream. Swaps the URL as the login
+     * switch in [handleAccountBusy] does.
      */
-    private fun fallBackToTs(): Boolean {
+    internal fun fallBackToTs(): Boolean {
         val current = _currentMetadata.value
         if (!current.isLive) return false
         val tsUrl = LiveStreamFormat.tsFallbackFor(current.streamUrl) ?: return false
-        LiveStreamFormat.panelOf(current.streamUrl)?.let(LiveStreamFormat::markHlsFailed)
+        tsFallbackPanel = LiveStreamFormat.panelOf(current.streamUrl)
         Log.w(TAG, "Live HLS refused: trying the same channel as MPEG-TS.")
         recordStream("Stream format fallback on ${streamHost()}", "HLS refused before the first picture; trying MPEG-TS")
         val switched = current.copy(streamUrl = tsUrl)
@@ -1437,9 +1439,18 @@ class StreamingPlaybackService : MediaSessionService() {
         _slowConnection.value = null
     }
 
+    /**
+     * The panel of a live HLS stream that fell back to MPEG-TS ([fallBackToTs]), until the TS stream
+     * draws its first frame. Only then does the panel get TS from Auto: a refusal that TS does not
+     * fix either (a busy account, a blocked address) says nothing about HLS.
+     */
+    private var tsFallbackPanel: String? = null
+
     /** The stream on screen drew a frame: from now on a wait or reconnect keeps its last frame. */
     internal fun onFirstFrameRendered() {
         _newStreamStarting.value = false
+        tsFallbackPanel?.let(LiveStreamFormat::markHlsFailed)
+        tsFallbackPanel = null
     }
 
     fun pause() {

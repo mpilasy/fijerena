@@ -53,8 +53,11 @@ Kodi pvr.iptvsimple, M3UAndroid):
   address ending in `.auto`. Every source saved before the flag decodes as Auto (the user's
   choice, 2026-11-19). No database change.
 - A live HLS stream that the panel refuses before the first picture (HTTP 4xx other than the
-  account-busy codes, or a playlist that does not parse) plays again as ts. Auto then gives that
-  panel ts until the app restarts.
+  account-busy codes, or a playlist that does not parse) plays again as ts. When the ts stream
+  then plays, Auto gives that panel ts until the app restarts. A refusal that ts does not fix
+  either (a blocked address, such as a VPN's, or a busy account) leaves the panel on HLS
+  (2026-11-20: one 403 behind a VPN had put a source on ts, which then never played on mobile
+  data).
 - A live HLS stream that falls behind the live window plays on from the live edge (Media3's
   `seekToDefaultPosition()` and `prepare()`), with no error and no retry count.
 - `XtreamStreamUrl.sameStream` treats a channel's `.m3u8` and `.ts` addresses as the same stream,
