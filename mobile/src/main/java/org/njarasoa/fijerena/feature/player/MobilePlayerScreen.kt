@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -37,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -79,12 +82,14 @@ import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
+import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.components.waitKindOf
 import org.njarasoa.fijerena.core.ui.history.LocalNerd
@@ -508,17 +513,20 @@ fun MobilePlayerContent(
         val shownPosition = seekTarget ?: livePosition
 
         // The "Up next" card shows over the playing episode near its end (see showUpNext); its
-        // countdown is the playback time left, so it stops with the video. Only Watch now plays the
-        // next episode.
+        // countdown is the playback time left, so it stops with the video. With no answer, the next
+        // episode plays when this one ends, at most UP_NEXT_MAX_UNANSWERED times in a row (see
+        // upNextOnEnd).
         // Per playing stream: the one whose card was cancelled or used (hidden for that episode),
         // and the one the next episode starts from, until the new one plays (the player reads the
-        // old episode, or Ended, until then).
+        // old episode, or Ended, until then). And the episodes that started on their own since the
+        // last touch.
         val shownSuccess = displayState as? StreamLoaderViewModel.StreamState.Success
         val autoplayNext = remember { appSettings.autoplayNextEpisode }
         var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
         var upNextStartingFrom by remember { mutableStateOf<String?>(null) }
+        var upNextUnanswered by remember { mutableIntStateOf(0) }
         val upNextDismissed = upNextDismissedFor != null && upNextDismissedFor == shownSuccess?.streamId
-        // Hidden in picture-in-picture (nothing there to tap).
+        // Hidden in picture-in-picture (nothing there to tap); the episode still rolls on at its end.
         val upNext =
             shownSuccess?.nextEpisode?.takeIf {
                 !isInPipMode &&
@@ -551,11 +559,26 @@ fun MobilePlayerContent(
         }
 
         // Natural end of a film or episode (never live: Ended is only emitted for VOD). Leave the
-        // player rather than sit on a frozen frame with no controls (Ended draws nothing below). The
-        // next episode plays only from the "Up next" card's Watch now, never on its own.
+        // player rather than sit on a frozen frame with no controls (Ended draws nothing below),
+        // unless the next episode plays on its own (upNextOnEnd): then it plays at once, once the
+        // app is at least STARTED (which PiP is).
         LaunchedEffect(currentPs) {
             if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
-                onBack()
+                val next =
+                    upNextOnEnd(
+                        autoplayNext,
+                        shownSuccess?.supportsAutoplayNext == true,
+                        shownSuccess?.nextEpisode,
+                        upNextDismissed,
+                        upNextUnanswered,
+                    )
+                if (next != null) {
+                    lifecycleOwner.lifecycle.awaitStarted()
+                    upNextUnanswered++
+                    playUpNext(next)
+                } else {
+                    onBack()
+                }
             }
         }
 
@@ -740,7 +763,15 @@ fun MobilePlayerContent(
                         Modifier
                             .fillMaxSize()
                             .panel(PanelFill.Media)
-                            .then(
+                            // Any touch, on the video or on a control: someone is watching, so the
+                            // next episodes may start on their own again. The Initial pass sees it
+                            // before the controls take it.
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                    upNextUnanswered = 0
+                                }
+                            }.then(
                                 if (isInPipMode) {
                                     Modifier
                                 } else {

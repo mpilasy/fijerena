@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Up Next plays on again, but not all night:** when an episode ends and nobody answered the Up Next card, the next episode plays again. After 4 episodes in a row with no key press on the remote or touch on the screen, the player stops and goes back to the episode list. Any press or touch in the player starts the count again. TV and phone.
+
 ## Version: 0.9.20261120050157
 
 - **Live TV on mobile data:** Edit Source → Advanced → Stream Output Format has a new choice, **Auto**, and every Xtream source now uses it. On mobile data a channel plays as HLS (m3u8), which copes better with a weak connection, when the server allows it; on Wi-Fi it stays MPEG-TS (ts). When a server refuses HLS, the channel plays as ts again by itself. A live HLS channel that falls behind on a slow connection now plays on from the live point, without an error. Films and episodes don't change. TV and phone.

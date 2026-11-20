@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -62,11 +63,13 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.PanelFill
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.panel
 import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
 import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
+import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -159,8 +162,10 @@ fun PlayerScreen(
         val sceneFrame = rememberSceneFrame()
 
         // The "Up next" card (see UpNextState) shows over the playing episode near its end; its countdown
-        // is the playback time left, so it stops with the video. Only Watch now plays the next episode.
+        // is the playback time left, so it stops with the video. With no answer, the next episode plays
+        // when this one ends, at most UP_NEXT_MAX_UNANSWERED times in a row (see upNextOnEnd).
         val autoplayNext = remember { AppSettings(context.applicationContext).autoplayNextEpisode }
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
         val upNextDismissed = upNextState.dismissedFor != null && upNextState.dismissedFor == currentStreamId
         val upNext =
             nextEpisode?.takeIf {
@@ -287,6 +292,8 @@ fun PlayerScreen(
                             "PlayerScreen",
                             "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}",
                         )
+                        // Any key: someone is watching, so the next episodes may start on their own again.
+                        if (keyEvent.type == KeyEventType.KeyDown) upNextState.unansweredInARow = 0
                         // Any key while the OSD is up restarts its auto-hide (LT4).
                         if (state.showControls && keyEvent.type == KeyEventType.KeyDown) state.controlsKeyTick++
                         when {
@@ -392,15 +399,30 @@ fun PlayerScreen(
                 }
 
                 // Natural end of a film/episode (never live TV: Ended is only emitted for !metadata.isLive): leave
-                // the player instead of waiting for Back. The next episode plays only from the "Up next" card's
-                // Watch now, never on its own. EndedContent shows until this fires. While a next episode starts,
-                // the player still reads Ended (and this screen mounts again): nothing to do until it plays.
+                // the player instead of waiting for Back, unless the next episode plays on its own (upNextOnEnd):
+                // then it plays at once, once the screen is in the foreground. EndedContent shows until this fires.
+                // While a next episode starts, the player still reads Ended (and this screen mounts again): nothing
+                // to do until it plays.
                 LaunchedEffect(currentPs, currentStreamId) {
                     val startingFrom = upNextState.startingFrom
                     if (startingFrom != null) {
                         if (currentPs !is PlaybackState.Ended && currentStreamId != startingFrom) upNextState.startingFrom = null
                     } else if (currentPs is PlaybackState.Ended && continueOnEnd?.invoke() != true) {
-                        onBack()
+                        val next =
+                            upNextOnEnd(
+                                autoplayNext,
+                                autoplayNextSupported,
+                                nextEpisode,
+                                upNextDismissed,
+                                upNextState.unansweredInARow,
+                            )?.takeIf { onPlayNextEpisode != null }
+                        if (next != null) {
+                            lifecycle.awaitStarted()
+                            upNextState.unansweredInARow++
+                            playUpNext(next)
+                        } else {
+                            onBack()
+                        }
                     }
                 }
 
@@ -661,6 +683,7 @@ private val UP_NEXT_CARD_KEYS =
  * ([dismissedFor] — it stays hidden for that episode), and the one a next episode is starting
  * from ([startingFrom]) until the new one plays. The player keeps reading the old episode, or
  * Ended, until then, which must neither show the card again nor run the end-of-episode logic.
+ * [unansweredInARow] counts the episodes that started on their own since the last key press.
  * Held by the route (TvPlayerScreen) because PlayerScreen is re-mounted while the next episode
  * loads.
  */
@@ -668,4 +691,5 @@ private val UP_NEXT_CARD_KEYS =
 class UpNextState {
     var dismissedFor by mutableStateOf<String?>(null)
     var startingFrom by mutableStateOf<String?>(null)
+    var unansweredInARow by mutableIntStateOf(0)
 }

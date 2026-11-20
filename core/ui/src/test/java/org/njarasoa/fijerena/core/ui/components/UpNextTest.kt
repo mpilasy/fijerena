@@ -72,6 +72,79 @@ class UpNextTest {
     }
 
     @Test
+    fun `end of episode - plays the next one only with the setting on, an Xtream provider and no cancel`() {
+        assertEquals(
+            next,
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = true,
+                nextEpisode = next,
+                dismissed = false,
+                unansweredInARow = 0,
+            ),
+        )
+        assertNull(
+            upNextOnEnd(
+                autoplayEnabled = false,
+                providerSupportsAutoplay = true,
+                nextEpisode = next,
+                dismissed = false,
+                unansweredInARow = 0,
+            ),
+        )
+        assertNull(
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = false,
+                nextEpisode = next,
+                dismissed = false,
+                unansweredInARow = 0,
+            ),
+        )
+        assertNull(
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = true,
+                nextEpisode = null,
+                dismissed = false,
+                unansweredInARow = 0,
+            ),
+        )
+        assertNull(
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = true,
+                nextEpisode = next,
+                dismissed = true,
+                unansweredInARow = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun `end of episode - stops after 4 episodes in a row with no answer`() {
+        assertEquals(
+            next,
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = true,
+                nextEpisode = next,
+                dismissed = false,
+                unansweredInARow = 3,
+            ),
+        )
+        assertNull(
+            upNextOnEnd(
+                autoplayEnabled = true,
+                providerSupportsAutoplay = true,
+                nextEpisode = next,
+                dismissed = false,
+                unansweredInARow = 4,
+            ),
+        )
+    }
+
+    @Test
     fun `countdown is the playback time left, rounded up`() {
         assertEquals(90, upNextSecondsLeft(longEpisode - 90_000L, longEpisode))
         assertEquals(1, upNextSecondsLeft(longEpisode - 1L, longEpisode))
