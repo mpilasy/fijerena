@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261120170431
 
 - **Up Next plays on again, but not all night:** when an episode ends and nobody answered the Up Next card, the next episode plays again. After 4 episodes in a row with no key press on the remote or touch on the screen, the player stops and goes back to the episode list. Any press or touch in the player starts the count again. TV and phone.
 
