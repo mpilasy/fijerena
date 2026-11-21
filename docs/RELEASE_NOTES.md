@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261121054144
 
 - **A live channel no longer starts after you leave it:** when you left a live channel before its picture came, the channel could start to play with no screen on it. Changing channel could also start the old channel again for a moment. Now a stopped or replaced channel stays closed. TV and phone.
 - **Episode summaries are back:** a show you follow lost its episode summaries after the check for new episodes, and the episode list showed none until an episode played. The check now keeps the summaries, and a show that lost them gets them from TMDB again when you open it. TV and phone.
