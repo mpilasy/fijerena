@@ -976,17 +976,11 @@ class XtreamContentManager(
         val followed = seriesId in followedShowIds(newEpisodeDao, providerId, now)
         database.runInTransaction(
             Runnable {
+                val stored = episodeDao.getEpisodes(providerId, seriesId)
                 if (followed) {
-                    NewEpisodeCompare.record(
-                        newEpisodeDao,
-                        providerId,
-                        seriesId,
-                        episodeDao.getEpisodes(providerId, seriesId),
-                        episodes,
-                        now,
-                    )
+                    NewEpisodeCompare.record(newEpisodeDao, providerId, seriesId, stored, episodes, now)
                 }
-                episodeDao.insertAll(episodes)
+                episodeDao.insertAll(withStoredPlots(episodes, stored))
             },
         )
     }
@@ -1397,3 +1391,20 @@ class XtreamContentManager(
 // Built once: formatFtsQuery runs on each search query.
 private val WHITESPACE = Regex("\\s+")
 private val FTS_SYNTAX_CHARS = Regex("[*\"'()\\^]")
+
+/**
+ * [fresh], a show's episode list as Xtream sent it again, with the plots [stored] had (from TMDB)
+ * where Xtream sent none. The list replaces the stored rows: without this, a fetch that does not
+ * ask TMDB (the new episode check) removed the episode summaries, and the series screen, which
+ * trusts a fresh list for 30 days, showed none.
+ */
+internal fun withStoredPlots(
+    fresh: List<XtreamEpisodeEntity>,
+    stored: List<XtreamEpisodeEntity>,
+): List<XtreamEpisodeEntity> {
+    val storedById = stored.filter { !it.plot.isNullOrBlank() }.associateBy { it.id }
+    return fresh.map { ep ->
+        val old = storedById[ep.id]
+        if (ep.plot.isNullOrBlank() && old != null) ep.copy(plot = old.plot, plotFetchedAt = old.plotFetchedAt) else ep
+    }
+}

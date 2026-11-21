@@ -289,7 +289,7 @@ class XtreamMediaProvider(
             seriesDetailCache.get(rawSeriesId)?.takeUnless { tmdbTextStale(it.metadata.facts, it.metadata.tmdbId) }?.let {
                 return kotlin.Result.success(it)
             }
-            val cached = repository.getCachedSeriesDetail(id)?.let { withFreshTmdbText(id, it) }
+            val cached = repository.getCachedSeriesDetail(id)?.let { withFreshTmdbText(id, it) }?.let { withTmdbEpisodePlots(it) }
             if (cached != null) {
                 seriesDetailCache.put(rawSeriesId, cached)
                 return kotlin.Result.success(cached)
@@ -478,6 +478,21 @@ class XtreamMediaProvider(
     private fun extractCertification(byCountry: List<Pair<String, String?>>): String? =
         byCountry.firstOrNull { it.first == "US" }?.second?.takeIf { it.isNotBlank() }
             ?: byCountry.firstNotNullOfOrNull { it.second?.takeIf { c -> c.isNotBlank() } }
+
+    /**
+     * [cached], a show rebuilt from disk, with TMDB's summaries for the episodes that have none,
+     * stored for the next visit. A fresh stored list is shown without asking the source, so
+     * without this an episode whose summary was lost (a refetch that did not ask TMDB) or never
+     * filled showed none until the list expired, 30 days later. Only the seasons with a gap are
+     * asked, once per app start ([tmdbSeasonCache]).
+     */
+    private suspend fun withTmdbEpisodePlots(cached: SeriesDetail): SeriesDetail {
+        val tmdbSeriesId = resolveSeriesTmdbId(null, cached.metadata.tmdbId)
+        if (!tmdb.hasApiKey() || tmdbSeriesId == null || !cached.hasEpisodeWithoutPlot()) return cached
+        val enriched = enrichWithTmdbOverviews(cached, tmdbSeriesId)
+        if (enriched !== cached) repository.persistEpisodeOverviews(enriched.episodes)
+        return enriched
+    }
 
     /**
      * Fills each episode's metadata.plot from TMDB (one call per season): Xtream providers rarely

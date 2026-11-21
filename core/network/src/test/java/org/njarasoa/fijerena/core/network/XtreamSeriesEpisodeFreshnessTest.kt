@@ -2,16 +2,20 @@ package org.njarasoa.fijerena.core.network
 
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.TmdbEpisode
+import org.njarasoa.fijerena.core.network.tmdb.TmdbSeasonResponse
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 
@@ -55,6 +59,29 @@ class XtreamSeriesEpisodeFreshnessTest {
             val result = provider.getSeriesDetail(SeriesId("30874"))
 
             assertTrue(result.isSuccess)
+            coVerify(exactly = 0) { repository.getSeriesInfo(any()) }
+        }
+
+    @Test
+    fun aStoredListFillsTheEpisodeSummariesItLostFromTmdb() =
+        runTest {
+            // The new episode check stored the list again without the summaries TMDB gave.
+            coEvery { repository.getCachedSeriesEntity(30874) } returns row(System.currentTimeMillis() - day)
+            coEvery { repository.getCachedSeriesDetail(30874) } returns stored.copy(metadata = MediaMetadata(tmdbId = "549"))
+            every { tmdb.hasApiKey() } returns true
+            coEvery { tmdb.getSeason(549, 1) } returns
+                TmdbSeasonResponse(episodes = listOf(TmdbEpisode(episodeNumber = 1, seasonNumber = 1, overview = "A doctor is suspected.")))
+
+            val detail = provider.getSeriesDetail(SeriesId("30874")).getOrThrow()
+
+            assertEquals(
+                "A doctor is suspected.",
+                detail.episodes
+                    .getValue("1")
+                    .single()
+                    .metadata.plot,
+            )
+            coVerify { repository.persistEpisodeOverviews(any()) }
             coVerify(exactly = 0) { repository.getSeriesInfo(any()) }
         }
 
