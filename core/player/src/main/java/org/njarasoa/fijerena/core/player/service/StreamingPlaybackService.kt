@@ -383,11 +383,11 @@ class StreamingPlaybackService : MediaSessionService() {
         super.onCreate()
         NetworkMonitor.init(this)
         mediaSourceFactory =
-            StreamingMediaSourceFactory(this) { reason ->
+            StreamingMediaSourceFactory(this) { item, reason ->
                 // The health check's reconnect: a fresh start at the live point, counted with its
                 // other reconnects, so a server that keeps dropping ends in an error.
                 mainHandler.post {
-                    if (_currentMetadata.value.isLive) {
+                    if (_currentMetadata.value.isLive && isStillPlaying(item)) {
                         healthMonitor?.updateMetrics(droppedFramesPerSecond = _measuredDroppedFps.value, stallReason = reason)
                     }
                 }
@@ -1379,6 +1379,16 @@ class StreamingPlaybackService : MediaSessionService() {
         _playbackState.value = PlaybackState.Buffering
         player.seekToDefaultPosition()
         player.prepare()
+    }
+
+    /**
+     * Whether the player still plays [item], the stream of a live connection that dropped. A stop
+     * (the viewer left the screen) or a new channel cuts the old connection, which reads as a drop:
+     * its reconnect must not start the old stream again with no screen on it.
+     */
+    internal fun isStillPlaying(item: androidx.media3.common.MediaItem): Boolean {
+        val player = getPlayer() ?: return false
+        return player.playbackState != Player.STATE_IDLE && player.currentMediaItem == item
     }
 
     /**

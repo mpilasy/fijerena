@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.player.service
 
 import android.os.Handler
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
@@ -86,6 +88,33 @@ class StreamingPlaybackServiceRecoveryTest {
         service.mediaSession = session
         service.mediaSourceFactory = sourceFactory
         service.mainHandler = handler
+    }
+
+    @Test
+    fun `a live drop reconnects only the stream that still plays`() {
+        // By id: the unit tests' android.jar parses no Uri, so every address would compare equal.
+        val playing = MediaItem.Builder().setMediaId("1").build()
+        val replaced = MediaItem.Builder().setMediaId("2").build()
+        every { player.currentMediaItem } returns playing
+        every { player.playbackState } returns Player.STATE_BUFFERING
+
+        assertTrue(service.isStillPlaying(playing))
+        // A new channel cut the old connection: not a drop of what plays now.
+        assertFalse(service.isStillPlaying(replaced))
+    }
+
+    @Test
+    fun `a live drop after a stop does not start the stream again`() {
+        val item = MediaItem.Builder().setMediaId("1").build()
+        // stop() leaves the player idle with no item: the viewer left before the picture came.
+        every { player.currentMediaItem } returns null
+        every { player.playbackState } returns Player.STATE_IDLE
+
+        assertFalse(service.isStillPlaying(item))
+
+        // Idle with the item still set (a stop before the items are cleared) is not playing either.
+        every { player.currentMediaItem } returns item
+        assertFalse(service.isStillPlaying(item))
     }
 
     @Test

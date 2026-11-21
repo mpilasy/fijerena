@@ -88,6 +88,10 @@ Connect the phone by USB, Wi-Fi off, mobile data on. Read only:
     The emulator check showed the flaw: a server that restarts the channel's encoder (the fake
     server's ffmpeg per connection; Xtream panels with on-demand channels can do the same) sends
     timestamps from zero again, and the player waited for them until the screen gave up.
+  - Fixed 2026-11-20: a stop (the viewer left the screen) or a new channel cuts the old
+    connection, which read as a drop, and its reconnect started the stopped channel again with no
+    screen on it. A drop now reconnects only while the player still plays that stream
+    (`StreamingPlaybackService.isStillPlaying`).
 - **Done 2026-11-19:** the health check's reconnect (`performSeamlessRecycle`) starts a live
   stream at the default position (the live point), not at the old position. On a fresh live TS
   stream, which can't seek, the old position made the player open it and then load it again from

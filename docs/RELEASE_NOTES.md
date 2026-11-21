@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **A live channel no longer starts after you leave it:** when you left a live channel before its picture came, the channel could start to play with no screen on it. Changing channel could also start the old channel again for a moment. Now a stopped or replaced channel stays closed. TV and phone.
+
 ## Version: 0.9.20261120213446
 
 - **Live TV on mobile data stays on HLS after a refusal:** when a server refused one live channel as HLS, the app used TS for every channel of that source until the app restarted, even when TS did not play either. On mobile data TS often does not play at all. Now the source changes to TS only when the refused channel then plays as TS. TV and phone.

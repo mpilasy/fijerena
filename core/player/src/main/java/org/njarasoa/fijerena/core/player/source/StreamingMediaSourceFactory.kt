@@ -23,8 +23,11 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 @OptIn(UnstableApi::class)
 class StreamingMediaSourceFactory(
     private val context: Context,
-    /** A live MPEG-TS connection dropped or ended: start the channel afresh ([LiveDropDataSource]); loader thread. */
-    private val onLiveDrop: (reason: String) -> Unit = {},
+    /**
+     * A live MPEG-TS connection of [MediaItem] dropped or ended: start the channel afresh
+     * ([LiveDropDataSource]); loader thread.
+     */
+    private val onLiveDrop: (item: MediaItem, reason: String) -> Unit = { _, _ -> },
 ) {
     private val mediaSourceFactory = DefaultMediaSourceFactory(context)
 
@@ -62,7 +65,7 @@ class StreamingMediaSourceFactory(
         // short pieces that Media3's error policy retries; a film resumes at its byte position.
         val upstreamFactory: DataSource.Factory =
             if (isLive && !isHls(streamUrl)) {
-                DataSource.Factory { LiveDropDataSource(httpDataSourceFactory.createDataSource(), onLiveDrop) }
+                DataSource.Factory { LiveDropDataSource(httpDataSourceFactory.createDataSource(), onDrop = { onLiveDrop(mediaItem, it) }) }
             } else {
                 httpDataSourceFactory
             }
