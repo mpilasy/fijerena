@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.components
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
@@ -108,6 +109,12 @@ fun EmbeddedPlayerSurface(
             }
             val player = StreamingPlaybackService.getInstance()?.getPlayer()
             if (view.player != player) {
+                // Logged in release builds too (see the service's "First frame" line).
+                Log.i(
+                    "EmbeddedPlayerSurface",
+                    "Bind ${if (useTextureView) "TextureView" else "SurfaceView"} " +
+                        "from player ${StreamingPlaybackService.playerId(view.player)} to ${StreamingPlaybackService.playerId(player)}",
+                )
                 view.player = player
             }
             // The service's own value too: the state above lags it, and closing the shutter after
@@ -127,6 +134,7 @@ fun EmbeddedPlayerSurface(
         // video output. Without detaching here, every leave-and-return leaks the old PlayerView and its
         // Surface (a SurfaceFlinger resource, not only Java heap) for the life of the process.
         onRelease = { view ->
+            Log.i("EmbeddedPlayerSurface", "Unbind from player ${StreamingPlaybackService.playerId(view.player)}")
             view.player = null
             sceneFrame?.videoView = null
         },

@@ -789,6 +789,25 @@ class StreamingPlaybackService : MediaSessionService() {
                 ) {
                     _audioOutputEncoding.value = audioTrackConfig.encoding
                 }
+
+                // The video output, in release builds too: a Live TV preview on a Shield once got
+                // sound but no picture until the app restarted (2026-11-21). The player's id is
+                // Media3's own "ExoPlayerImpl Init <id>" and EmbeddedPlayerSurface's bind line.
+                override fun onSurfaceSizeChanged(
+                    eventTime: AnalyticsListener.EventTime,
+                    width: Int,
+                    height: Int,
+                ) {
+                    Log.i(TAG, "Video surface of player ${playerId(player)}: ${width}x$height")
+                }
+
+                override fun onRenderedFirstFrame(
+                    eventTime: AnalyticsListener.EventTime,
+                    output: Any,
+                    renderTimeMs: Long,
+                ) {
+                    Log.i(TAG, "First frame of player ${playerId(player)} on $output")
+                }
             },
         )
         // Debug builds log each track's codecs, format support and chosen decoder (logcat tag
@@ -2544,5 +2563,8 @@ class StreamingPlaybackService : MediaSessionService() {
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
 
         fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> = service.currentMetadata
+
+        /** A player's id in logs: the one Media3 writes in its "ExoPlayerImpl Init/Release" lines. */
+        fun playerId(player: Any?): String = player?.let { Integer.toHexString(System.identityHashCode(it)) } ?: "none"
     }
 }
