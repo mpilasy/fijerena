@@ -1,5 +1,9 @@
 # Release Notes
 
+## Version: 0.9.20261122013906
+
+- **Logs for a black Live TV preview:** once, a Live TV preview on a TV box played the sound but showed no picture until the app restarted; full screen still showed the picture. The device logs now record which video view the player draws on and when its first picture comes, so the next time this happens the cause can be found. Nothing changes on screen. TV and phone.
+
 ## Version: 0.9.20261121054144
 
 - **A live channel no longer starts after you leave it:** when you left a live channel before its picture came, the channel could start to play with no screen on it. Changing channel could also start the old channel again for a moment. Now a stopped or replaced channel stays closed. TV and phone.
