@@ -10,21 +10,18 @@ import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgSyncWorker
-import org.njarasoa.fijerena.core.player.device.DeviceDetector
-import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
- * Periodic background sync of Xtream providers: schedules XtreamSyncWorker, and on a TV also
- * refreshes in-process.
+ * Periodic background sync of Xtream providers: schedules XtreamSyncWorker. Manual syncs run
+ * in-process ([startManualSync]).
  */
 class ProviderSyncManager private constructor(
     private val context: Context,
 ) {
     private val scope = AppScopes.create("ProviderSyncManager", Dispatchers.Main)
-    private var autoRefreshJob: Job? = null
 
     /** Manual syncs currently running, keyed by provider id. Guarded by [inFlightLock]. */
     private val inFlightLock = Any()
@@ -42,7 +39,6 @@ class ProviderSyncManager private constructor(
     companion object {
         private const val TAG = "ProviderSyncManager"
         private const val WORK_NAME = "provider_content_sync"
-        private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 15 * 60 * 1000L
 
         /** Content syncs run on this cadence, anchored on `AppSettings.contentRefreshTime`. */
         private const val REFRESH_INTERVAL_HOURS = 4
@@ -83,70 +79,18 @@ class ProviderSyncManager private constructor(
         scheduleAutoRefresh()
     }
 
-    private fun isFixedDevice(): Boolean {
-        val type = DeviceDetector.detect().deviceType
-        return type != DeviceType.GENERIC_MOBILE
-    }
-
     private fun scheduleAutoRefresh() {
-        autoRefreshJob?.cancel()
         val appSettings = AppSettings(context)
 
-        // Enqueued once per call, not on every loop pass: a re-enqueue with UPDATE rewrote
-        // initialDelay every 15 minutes, which moved the first run one tick earlier each pass.
-        // Settings changes come in through updateSchedule().
+        // Enqueued once per call: a re-enqueue with UPDATE rewrites initialDelay, which moves the
+        // first run. Settings changes come in through updateSchedule(). Only the worker syncs on a
+        // schedule: it runs as a foreground service, so Doze and App Standby don't block its
+        // network. An in-process sync on a TV at each slot (removed 2026-11-22) ran without one
+        // and failed with "Unable to resolve host" whenever the device slept.
         if (appSettings.contentAutoRefreshEnabled) {
             updateWorkManagerSchedule(appSettings)
         } else {
             cancelWorkManager()
-        }
-
-        // TV and other fixed devices also refresh in-process while the app runs.
-        if (!isFixedDevice()) return
-        autoRefreshJob =
-            scope.launch {
-                while (true) {
-                    val delayMs =
-                        if (appSettings.contentAutoRefreshEnabled) {
-                            calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
-                        } else {
-                            Long.MAX_VALUE
-                        }
-                    if (delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
-                        delay(delayMs)
-                        performFullSync()
-                    }
-                    delay(AUTO_REFRESH_CHECK_INTERVAL_MS) // Avoid immediate re-trigger
-                }
-            }
-    }
-
-    private suspend fun performFullSync() {
-        Log.i(TAG, "Starting periodic content sync for all providers")
-        val providerRepo = ProviderRepository(context)
-        val providers = providerRepo.getAllProvidersList()
-
-        providers.filter { it.type == "XTREAM" }.forEach { provider ->
-            // The first encrypted-prefs open touches the Keystore (disk I/O) — keep it off Main.
-            val password = withContext(Dispatchers.IO) { providerRepo.getPassword(provider.id) }
-            if (password != null) {
-                val startTime = System.currentTimeMillis()
-                val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
-                if (outcome is ProviderSyncRunner.Outcome.Success) {
-                    Log.d(TAG, "Sync completed for provider: ${provider.name}")
-                }
-                val endTime = System.currentTimeMillis()
-                val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
-                providerRepo.updateSyncStats(
-                    provider.id,
-                    endTime,
-                    endTime - startTime,
-                    outcome.errorOrNull()?.encode(),
-                    inserted = delta?.inserted,
-                    updated = delta?.updated,
-                    deleted = delta?.deleted,
-                )
-            }
         }
     }
 

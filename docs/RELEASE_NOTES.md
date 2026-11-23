@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **The catalogue refreshes again while the TV sleeps:** on a TV box, the refresh of a source's channels, films and shows failed every 4 hours with "Unable to resolve host" while the TV was off or asleep. The TV app had a second refresh timer that ran without the permission to use the network while the device sleeps. That timer is removed: the scheduled refresh, which has this permission, now does all the work. TV.
+
 ## Version: 0.9.20261122013906
 
 - **Logs for a black Live TV preview:** once, a Live TV preview on a TV box played the sound but showed no picture until the app restarted; full screen still showed the picture. The device logs now record which video view the player draws on and when its first picture comes, so the next time this happens the cause can be found. Nothing changes on screen. TV and phone.

@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 
 /**
  * A cancelled sync must surface as a CancellationException, never as an [ProviderSyncRunner.Outcome].
- * Every caller (ProviderSyncManager, XtreamSyncWorker) persists `outcome.errorOrNull()` through
+ * Every caller (XtreamSyncWorker, a manual sync) persists `outcome.errorOrNull()` through
  * `updateSyncStats`; with no Outcome there is nothing to persist, so a worker stop or timeout
  * cannot leave a permanent lastSyncError on the provider (round-2 plan, finding on cancellation).
  */

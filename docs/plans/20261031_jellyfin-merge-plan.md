@@ -36,7 +36,7 @@ a Jellyfin source has only its own **Browse <source>** entry, and is read live f
 - **Merge gates:** each merge point is an `"XTREAM"` filter: `MergedLists` (:176, :207-211,
   :237-256), `CategoryViewModel.mergedCategories` (:711), `ProfileSections` (:53-89),
   `SearchViewModel` (:69), `WantedTitles` (:91), `TmdbTitleSearch` (:53), `RelatedInSources` (:17),
-  `ProfileFavorites` (:42), `ExpiringSources` (:28), `ProviderSyncManager.performFullSync` (:128),
+  `ProfileFavorites` (:42), `ExpiringSources` (:28), `XtreamSyncWorker.doWork`,
   `ProviderSyncRunner.syncProvider` (:126).
 - **Catalogue storage is Xtream-shaped:** `xtream_streams` (key `streamId: Int, providerId, type`),
   `xtream_series` (`seriesId: Int`), `xtream_episodes` (`seriesId: Int`, a required
