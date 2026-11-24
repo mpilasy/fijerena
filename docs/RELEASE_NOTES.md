@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261124054039
 
 - **No sync error when the TV wakes the box:** when the TV woke a TV box with the app open, the sync between devices could fail once with "Unable to resolve host", because the device still blocked the app's network for about a second. The sync now waits until the network is open (10 seconds at most), so this error no longer shows in the device logs. TV and phone.
 
