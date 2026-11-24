@@ -78,6 +78,7 @@ class SyncManagerMoveTest {
                 nowPlaying = kotlinx.coroutines.flow.MutableStateFlow(null),
                 pendingPush = { SyncManager.PendingPush.NONE },
                 mover = mover,
+                awaitNetwork = {},
             )
     }
 

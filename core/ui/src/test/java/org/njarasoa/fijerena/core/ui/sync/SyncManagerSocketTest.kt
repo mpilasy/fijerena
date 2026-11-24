@@ -6,6 +6,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -45,6 +46,9 @@ class SyncManagerSocketTest {
     private lateinit var listener: WebSocketListener
     private lateinit var manager: SyncManager
 
+    /** Set, the network stays blocked (just after a wake) until it completes. */
+    private var networkOpens: CompletableDeferred<Unit>? = null
+
     @Before
     fun setup() {
         every { store.link } returns SyncAccountStore.Link("https://sync.test", "acc", "dev", "token", ByteArray(32))
@@ -56,7 +60,7 @@ class SyncManagerSocketTest {
             listener = thirdArg()
             mockk<WebSocket>(relaxed = true).also { sockets += it to scheduler.currentTime }
         }
-        manager = SyncManager(mockk<Application>(relaxed = true), scope, store, engine, api)
+        manager = SyncManager(mockk<Application>(relaxed = true), scope, store, engine, api, awaitNetwork = { networkOpens?.await() })
     }
 
     @After
@@ -70,6 +74,20 @@ class SyncManagerSocketTest {
     }
 
     private fun failLatest() = listener.onFailure(sockets.last().first, IOException("502 from the proxy"), null)
+
+    @Test
+    fun `after a wake the socket and the pass wait until Android opens the network`() {
+        networkOpens = CompletableDeferred()
+        manager.onForeground()
+        scheduler.runCurrent()
+        assertEquals(0, sockets.size)
+        coVerify(exactly = 0) { engine.syncNow(any()) }
+
+        networkOpens!!.complete(Unit)
+        scheduler.runCurrent()
+        assertEquals(1, sockets.size)
+        coVerify(exactly = 1) { engine.syncNow(any()) }
+    }
 
     @Test
     fun `a socket that keeps failing reconnects with a doubling delay, and passes only once a minute`() {

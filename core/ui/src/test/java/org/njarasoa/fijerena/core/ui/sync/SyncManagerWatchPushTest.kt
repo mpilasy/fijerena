@@ -54,6 +54,7 @@ class SyncManagerWatchPushTest {
                 mockk<SyncApi>(relaxed = true),
                 nowPlaying = nowPlaying,
                 pendingPush = { pending },
+                awaitNetwork = {},
             )
         manager.watchPlayback()
         manager.onForeground()

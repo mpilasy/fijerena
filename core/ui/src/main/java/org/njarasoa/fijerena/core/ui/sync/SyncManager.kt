@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
+import org.njarasoa.fijerena.core.player.network.NetworkAccess
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.util.concurrent.atomic.AtomicBoolean
@@ -76,6 +77,7 @@ class SyncManager internal constructor(
     private val nowPlaying: StateFlow<NowPlayingSnapshot?> = playerNowPlaying(),
     private val pendingPush: suspend () -> PendingPush = { pendingPushIn(app) },
     private val mover: SyncServerMove = SyncServerMove(app, api, store),
+    private val awaitNetwork: suspend () -> Unit = { NetworkAccess.awaitOpen(app) },
 ) {
     /** What a push would send: nothing, only watch progress, or anything else (perhaps with progress). */
     internal enum class PendingPush { NONE, WATCH_ONLY, OTHER }
@@ -575,8 +577,16 @@ class SyncManager internal constructor(
             // Each return to the foreground: a crash killed the process, so it goes out now. No
             // background send (the device diagnostics sync plan).
             scope.launch { reportLogs() }
-            openSocket()
-            requestSync(0)
+            // Just after the device wakes, Android still blocks the app's network for about a
+            // second: the socket and the pass wait for it to open (10 s at most), or they fail
+            // with "Unable to resolve host" and record an error.
+            scope.launch {
+                awaitNetwork()
+                if (foreground) {
+                    openSocket()
+                    requestSync(0)
+                }
+            }
         }
     }
 
