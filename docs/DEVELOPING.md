@@ -139,6 +139,23 @@ fijerena/
 - **[docs/RELEASE_NOTES.md](RELEASE_NOTES.md)** - Changelog
 - **[server/README.md](../server/README.md)** - Live sync server: develop, deploy, self-host, API
 
+## Known Issues
+
+Issues that are known and left alone on purpose. Each says how to see it and why it stays.
+
+- **Media3 leaks display listeners (left alone 2026-11-23).** In a process that has played video
+  for a long time, each display change (the TV turns on or off) writes a burst of
+  `MessageQueue` warnings: "Handler (android.hardware.display.DisplayManagerGlobal$DisplayListenerDelegate)
+  … sending message to a Handler on a dead thread", one for each leaked listener (12 on mdarcy,
+  2026-11-23). They are not the app's own listeners: `DisplayModeMatcher` and `TvStatsOverlay`
+  register theirs on the main thread, which never ends. They come from Media3's
+  `VideoFrameReleaseHelper`: each `onStarted()` builds a new vsync sampler and registers it as a
+  display listener on the playback thread (in 1.9.0 the `vsyncSampleBuilt` flag is never set),
+  and a sampler that is replaced before `onStopped()` stays registered after its player and
+  thread are released. Not proven. The cost is a few objects for each leaked player and the
+  warnings; nothing shows on screen, and an app restart clears it. Look again if the count
+  grows fast or memory suffers, or after a Media3 update.
+
 ## Contributing
 
 1. Read [CONTRIBUTING.md](../CONTRIBUTING.md) for the coding rules (design tokens, TV focus, strings in English,
