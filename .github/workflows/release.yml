@@ -77,12 +77,12 @@ jobs:
           cp mobile/build/outputs/apk/release/mobile-release.apk "dist/fijerena-phone-$VERSION.apk"
           (cd dist && sha256sum *.apk > SHA256SUMS)
 
-      # The notes are docs/RELEASE_NOTES.md's first section (the one for this release).
+      # The notes are RELEASE_NOTES.md's first section (the one for this release).
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          awk '/^## /{n++} n==1 && !/^## /' docs/RELEASE_NOTES.md > notes.md
+          awk '/^## /{n++} n==1 && !/^## /' RELEASE_NOTES.md > notes.md
           printf '\nInstall `fijerena-tv-%s.apk` on a TV and `fijerena-phone-%s.apk` on a phone.\n' "$VERSION" "$VERSION" >> notes.md
           gh release create "$GITHUB_REF_NAME" dist/* --title "Fijerena $VERSION" --notes-file notes.md
 

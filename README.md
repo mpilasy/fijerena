@@ -126,7 +126,7 @@ you add and for making sure that your use of them is legal where you are. The fu
 ## Help and More
 
 - **[User Guide](docs/USER_GUIDE.md):** how to use the apps.
-- **[Release notes](docs/RELEASE_NOTES.md):** what changed in each version.
+- **[Release notes](RELEASE_NOTES.md):** what changed in each version.
 - **[Feature reference](docs/FEATURES.md):** every feature in full detail.
 - **[Sync server](server/README.md):** how to host your own live sync server.
 - **Found a problem or have an idea?** [Open an issue](https://github.com/mpilasy/fijerena/issues).

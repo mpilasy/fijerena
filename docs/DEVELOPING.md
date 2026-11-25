@@ -136,7 +136,7 @@ fijerena/
 - **[docs/epg_guide.md](epg_guide.md)** - EPG pipeline implementation guide
 - **[docs/EPG_INDEX_STORAGE.md](EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
 - **[docs/RUN_GUIDE.md](RUN_GUIDE.md)** - Build, install, deploy, backup/restore, debugging, focus walks
-- **[docs/RELEASE_NOTES.md](RELEASE_NOTES.md)** - Changelog
+- **[RELEASE_NOTES.md](../RELEASE_NOTES.md)** - Changelog
 - **[server/README.md](../server/README.md)** - Live sync server: develop, deploy, self-host, API
 
 ## Known Issues

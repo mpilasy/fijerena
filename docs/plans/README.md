@@ -2,7 +2,7 @@
 
 Multi-phase work is planned in writing before it is built. A plan lives in `docs/plans/` while it
 is active, partly done or deliberately deferred. When it is finished or dropped it moves to
-`docs/plans/archive/`, which is not published. `docs/RELEASE_NOTES.md` stays the record of what shipped.
+`docs/plans/archive/`, which is not published. `RELEASE_NOTES.md` stays the record of what shipped.
 
 - **Commit hashes** in plans written before 2026-10-23 refer to the project's earlier history,
   which is kept privately; they don't resolve in the public repository.
