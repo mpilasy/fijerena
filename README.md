@@ -130,11 +130,13 @@ you add and for making sure that your use of them is legal where you are. The fu
 - **[Feature reference](docs/FEATURES.md):** every feature in full detail.
 - **[Sync server](server/README.md):** how to host your own live sync server.
 - **Found a problem or have an idea?** [Open an issue](https://github.com/mpilasy/fijerena/issues).
+- **Found a security problem?** Do not open an issue. Report it in private as [SECURITY.md](SECURITY.md) says.
 
 ## For Developers
 
 To build the apps, run the checks or contribute, see **[docs/DEVELOPING.md](docs/DEVELOPING.md)**,
-[CONTRIBUTING.md](CONTRIBUTING.md) and the [documentation index](docs/README.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [documentation index](docs/README.md). Everyone who takes
+part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

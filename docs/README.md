@@ -2,7 +2,9 @@
 
 The documents in this folder describe how the apps work today. The project's front page is the
 [README](../README.md). The rules for changes are in [CONTRIBUTING.md](../CONTRIBUTING.md), and
-what changed in each version is in [RELEASE_NOTES.md](../RELEASE_NOTES.md).
+what changed in each version is in [RELEASE_NOTES.md](../RELEASE_NOTES.md). To report a security
+problem, see [SECURITY.md](../SECURITY.md). Everyone who takes part follows the
+[Code of Conduct](../CODE_OF_CONDUCT.md).
 
 ## For Users
 

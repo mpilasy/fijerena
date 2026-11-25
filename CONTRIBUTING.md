@@ -2,6 +2,8 @@
 
 The project's rules, architecture constraints and conventions. Read this before changing the code,
 together with the in-depth documents in `docs/` listed below.
+Everyone who takes part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report a security
+problem in private, as [SECURITY.md](SECURITY.md) says, not in an issue.
 
 ---
 
