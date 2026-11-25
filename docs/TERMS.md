@@ -53,11 +53,11 @@ access to, or your use of the app.
 ## Your Rights Under the GPL
 
 These terms do not limit the rights that the GNU General Public License gives you to use, study,
-share and change the app. See [LICENSE](LICENSE).
+share and change the app. See [LICENSE](../LICENSE).
 
 ## Changes
 
 These terms can change. The version in the app that you use is the one that applies. If a
 translation is different from the English text, the English text applies.
 
-See also [PRIVACY.md](PRIVACY.md): what the app stores and sends.
+See also [PRIVACY.md](../PRIVACY.md): what the app stores and sends.

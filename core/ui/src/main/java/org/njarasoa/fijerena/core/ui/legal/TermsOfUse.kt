@@ -4,7 +4,7 @@ import org.njarasoa.fijerena.core.ui.R
 
 /**
  * Settings → About → Terms of use, the same on TV and phone: each section's title and text, in
- * order. TERMS.md at the repository root holds the same text; change both together.
+ * order. docs/TERMS.md holds the same text; change both together.
  */
 object TermsOfUse {
     val sections: List<Pair<Int, Int>> =

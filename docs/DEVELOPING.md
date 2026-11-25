@@ -155,6 +155,6 @@ Issues that are known and left alone on purpose. Each says how to see it and why
 6. Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
    format (`fix(epg): …`), with a body that says why, not only what. CONTRIBUTING.md → "Commit
    messages" gives the types and scopes.
-7. Sign off each commit (`git commit -s`) to certify the [Developer Certificate of Origin](../DCO).
+7. Sign off each commit (`git commit -s`) to certify the [Developer Certificate of Origin](DCO).
 
 By contributing you agree that your contribution is licensed under the project's licence: [GPL-3.0-or-later](../LICENSE) for the apps, [AGPL-3.0-or-later](../server/LICENSE) for the sync server in `server/`.
