@@ -1,6 +1,6 @@
 # Navigation Guide
 
-Type-safe navigation with Navigation Compose and kotlinx.serialization routes. The routes live in `:core:navigation`; each app has its own nav host: `tv/.../navigation/TvNavHost.kt` and `mobile/.../navigation/MobileNavHost.kt`. Module layout: [design.md](design.md#module-architecture).
+Type-safe navigation with Navigation Compose and kotlinx.serialization routes. The routes live in `:core:navigation`; each app has its own nav host: `tv/.../navigation/TvNavHost.kt` and `mobile/.../navigation/MobileNavHost.kt`. Module layout: [DESIGN.md](DESIGN.md#module-architecture).
 
 ## Screen Definitions
 
@@ -293,7 +293,7 @@ Both hosts look up the sources on start (`initializeStartup()`: provider count, 
 
 ## TV Focus
 
-Each TV screen puts focus somewhere visible when it or a panel appears and returns it to where the user was. TV-safe padding: 56dp horizontal, 32dp vertical ([design.md](design.md#safe-margins-tv-overscan)).
+Each TV screen puts focus somewhere visible when it or a panel appears and returns it to where the user was. TV-safe padding: 56dp horizontal, 32dp vertical ([DESIGN.md](DESIGN.md#safe-margins-tv-overscan)).
 
 - **Focus is never lost for good:** when the focused control leaves the screen (removed by a state change, or a list scrolls it away) Compose clears focus and the window has none, so the D-pad did nothing until Back. `MainActivity.dispatchKeyEvent` sees a D-pad press with no focused view and gives focus back to the screen instead, entering in the key's direction (Up: the lowest control on screen), and `DeadKeyDetector.focusRestored` notes "Focus lost, given back" with the screen in Diagnostics. The episodes header's compact line stays while its Play has focus (focusing it scrolled the list back to the hero, which hid the line and the focused button: one season, Up from the first episode).
 

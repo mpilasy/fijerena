@@ -2,7 +2,7 @@
 
 Fijerena is a native Android media player for several content providers (Xtream IPTV, Jellyfin, SMB, local files, remote M3U). Two app targets — **mobile** (phones, tablets) and **tv** (NVIDIA Shield, Chromecast with Google TV, Sony Bravia) — share a common core. The TV app's `applicationId` is `org.njarasoa.fijerena`, the phone app's `org.njarasoa.fijerena.mobile`.
 
-What the user sees: [FEATURES.md](FEATURES.md). Routes, back stack and the TV focus contract: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md). Databases: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md). Guide pipeline: [epg_guide.md](epg_guide.md).
+What the user sees: [FEATURES.md](FEATURES.md). Routes, back stack and the TV focus contract: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md). Databases: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md). Guide pipeline: [EPG_GUIDE.md](EPG_GUIDE.md).
 
 Source paths below are relative to each module's `src/main/java/org/njarasoa/fijerena/` (core modules: `.../core/<module>/`).
 
@@ -196,7 +196,7 @@ Before each playback the app negotiates the stream with `POST /Items/{id}/Playba
 - **Jellyfin:** the server's search endpoint.
 - **Local / Remote M3U:** `BaseM3uMediaProvider.search`, a title match over the loaded playlist.
 - **SMB:** no provider search; `SearchViewModel` scans items already loaded.
-- **Guide:** two-tier FTS4 MATCH on `epg_index.db` (raw query, then a sanitised AND-style retry), with a title-only `LIKE` scan while the index is stale. See [epg_guide.md](epg_guide.md).
+- **Guide:** two-tier FTS4 MATCH on `epg_index.db` (raw query, then a sanitised AND-style retry), with a title-only `LIKE` scan while the index is stale. See [EPG_GUIDE.md](EPG_GUIDE.md).
 
 ---
 
@@ -219,7 +219,7 @@ epg_index.db
   EpgSourceDao (providers.db) → EpgManagementViewModel → Guide sources
 ```
 
-Downloads run concurrently (`Semaphore`, 3 on mobile, 2 on TV) as producers; 2 workers batch-insert into `epg_index.db`. `RefreshQueue` runs up to 3 tasks at once and de-duplicates by task id against queued and running tasks. Clear All Data destroys and recreates the Room instance rather than `DELETE FROM`; `EpgManagementViewModel` re-subscribes its `sources` Flow through a `_dbGeneration` counter. The TV Guide falls back to the source's own EPG (`getEpgBulk`) when the index has nothing for the channels. Full pipeline, state machine and search strategy: [epg_guide.md](epg_guide.md); tables: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+Downloads run concurrently (`Semaphore`, 3 on mobile, 2 on TV) as producers; 2 workers batch-insert into `epg_index.db`. `RefreshQueue` runs up to 3 tasks at once and de-duplicates by task id against queued and running tasks. Clear All Data destroys and recreates the Room instance rather than `DELETE FROM`; `EpgManagementViewModel` re-subscribes its `sources` Flow through a `_dbGeneration` counter. The TV Guide falls back to the source's own EPG (`getEpgBulk`) when the index has nothing for the channels. Full pipeline, state machine and search strategy: [EPG_GUIDE.md](EPG_GUIDE.md); tables: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
 ---
 

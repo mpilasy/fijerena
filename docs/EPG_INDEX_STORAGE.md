@@ -2,7 +2,7 @@
 
 How `epg_index.db` is configured, how it reclaims space, and the 2026-08-20/21 investigation
 (phone-a, phone-b and the TV emulator) that led there. Tables and columns: `docs/DATABASE_SCHEMA.md` §2.
-How ingestion, the staging swap and the FTS rebuild use it: `docs/epg_guide.md`.
+How ingestion, the staging swap and the FTS rebuild use it: `docs/EPG_GUIDE.md`.
 
 ---
 

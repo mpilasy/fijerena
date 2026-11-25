@@ -133,8 +133,8 @@ you add and for making sure that your use of them is legal where you are. The fu
 
 ## For Developers
 
-To build the apps, run the checks or contribute, see **[docs/DEVELOPING.md](docs/DEVELOPING.md)**
-and [CONTRIBUTING.md](CONTRIBUTING.md).
+To build the apps, run the checks or contribute, see **[docs/DEVELOPING.md](docs/DEVELOPING.md)**,
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [documentation index](docs/README.md).
 
 ## License
 

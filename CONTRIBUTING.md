@@ -243,7 +243,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ## EPG & Indexing System
 
 - **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (Semaphore-gated: 3 on mobile, 2 on TV), and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. User-initiated refreshes and the on-connect `refreshOutdatedSources` are submitted through `RefreshQueue`; `EpgSyncWorker` (the periodic auto-refresh) calls `processAllSources` → `processAllSourcesInternal` directly so the work stays under the worker's wake lock on Shield/Doze.
-- **Stale Threshold:** per guide source, its full `epg_source.refresh_interval_hours`, 24 h when off (`EpgRefreshSchedule.staleAfterMs`; null = not set uses the retired device-wide interval); an automatic run takes a source up to an hour before that (`isDue`, WorkManager jitter). `EpgSyncWorker` runs at the shortest interval among enabled sources and refreshes the due guide sources of every source Search the guide reads (`GuideScope`: the profile's sources with channels — Xtream, M3U), in one inline run that has each guide source one time; an off source (-1) only while never ingested, and counts as stale after 24h for Refresh stale. See `docs/epg_guide.md` → Refresh scheduling.
+- **Stale Threshold:** per guide source, its full `epg_source.refresh_interval_hours`, 24 h when off (`EpgRefreshSchedule.staleAfterMs`; null = not set uses the retired device-wide interval); an automatic run takes a source up to an hour before that (`isDue`, WorkManager jitter). `EpgSyncWorker` runs at the shortest interval among enabled sources and refreshes the due guide sources of every source Search the guide reads (`GuideScope`: the profile's sources with channels — Xtream, M3U), in one inline run that has each guide source one time; an off source (-1) only while never ingested, and counts as stale after 24h for Refresh stale. See `docs/EPG_GUIDE.md` → Refresh scheduling.
 - **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 18) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy, both via SQLite **FTS4 MATCH** in `XmltvSearchService`: a raw query preserving FTS operators (OR/NEAR/NOT, prefix wildcard), then a sanitized "safe" AND-style retry if the raw query returns nothing. If the index isn't built yet (`EpgIndexState.NotIndexed`), search returns null. If the FTS index is stale (`isFtsStale()` — a low-storage direct-path refresh, or an interrupted rebuild), search falls back to a title-only `LIKE` scan of `epg_programme.title_lowercase` (`EpgSearchPath.LIKE_FALLBACK`, same window/500 cap/10 s timeout; the screens note results may be incomplete); only if that times out or fails does it throw `EpgIndexBusyException`. `EpgBrowserViewModel` shows `UiState.IndexBusy` (why, not "no results") and reruns a busy or `LIKE_FALLBACK` query when `EpgIndexer.state` reaches `Indexed` — so `rebuildFtsAndUpdateState()` clears the stale flag *before* publishing `Indexed`. The staging path never goes stale: `EpgIndexer.swapAndRebuildFts()` does the staging→primary swap and the FTS `'rebuild'` in one transaction, so WAL readers never see new rows with the old FTS — keep them together. No XML-scan fallback exists.
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
@@ -304,27 +304,7 @@ SMB and Local are offered in Add Source only in debug builds (`addSourceTypes`, 
 
 ## Development Workflow
 
-### Commands
-
-```bash
-./gradlew assembleDebug                 # Build both apps
-./gradlew testDebugUnitTest             # Unit tests (what CI runs)
-./gradlew ktlintCheck                   # Code style (ktlintFormat fixes it)
-./gradlew lintDebug                     # Android Lint (per-module lint-baseline.xml; only new issues fail)
-scripts/check-cancellation.sh           # CI gates, run them before committing
-scripts/check-viewmodel-launch.sh
-scripts/check-init-order.py
-scripts/check-focus-retry.sh
-scripts/check-design-system.sh
-scripts/check-fixture-privacy.sh
-scripts/check-commit-messages.sh        # commits not yet on origin/main
-scripts/deploy-tv-emulator.sh           # Build + install on the TV emulator
-scripts/deploy-mobile-emulator.sh       # Build + install on the phone emulator
-scripts/deploy-tv-ip.sh <ip> [<ip>...]  # Build + install on network TVs (playback check, backup)
-scripts/deploy-mobile-usb.sh [--debug] [serial]   # Build + install localRelease on a USB phone (backup while debuggable)
-```
-
-CI runs on every push to `main` (and by hand); other branches run nothing until merged. `checks.yml`: the destructive-fallback grep and the six `scripts/check-*` gates. `android-build.yml` (skipped for docs-only, server-only and focus-walk changes): ktlint, unit tests, Android Lint, the Room schema check, `assembleDebug`, then compiles the instrumented tests; APKs are uploaded only from `main` or a manual run. `server.yml` (only when `server/` changes): the sync server's tests. `release.yml` runs on a `v*` tag matching `fijerena.versionName` in `gradle.properties`: `assembleRelease` signed with the release key from secrets (no unit tests: tag only code that Android Build passed), and a GitHub Release with both APKs and `SHA256SUMS` (`docs/RUN_GUIDE.md` → Releasing). `instrumented-tests.yml` runs nightly, by hand, and on a push to `main` that changes its own workflow file: `connectedDebugAndroidTest` for `core:network` and `mobile` on a phone emulator, and the TV walk: the debug TV app on a TV emulator with the fake Xtream source and a seeded test household, then the walks in `scripts/focus-walks/ci-walks.txt`. Compose UI tests are Robolectric unit tests (`src/test`), never `androidTest`: they run in CI and touch no device. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
+Commands, the CI gates and what each workflow runs are in [docs/DEVELOPING.md](docs/DEVELOPING.md) → "Checks". Run the `scripts/check-*` gates before you commit. Build, deploy and debugging details are in [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md).
 
 ### Deployment Rules
 
@@ -338,18 +318,7 @@ CI runs on every push to `main` (and by hand); other branches run nothing until 
 
 ## In-Depth Documentation
 
-For deep-dives, see the `docs/` directory:
-
-| Document | Contents |
-|----------|----------|
-| [docs/design.md](docs/design.md) | Full system design: module graph, domain model, player system, EPG architecture, theme system, screen inventory |
-| [docs/FEATURES.md](docs/FEATURES.md) | Comprehensive feature reference with API details |
-| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences. **Update it in the same commit as any migration** - see below |
-| [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline: ingestion, indexer, workers, TV Guide grid, Search the guide, settings, file inventory |
-| [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation, screen definitions, flow diagrams, TV focus handling |
-| [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
-| [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Build, install, deploy, backup/restore, debugging and focus walks for TV and mobile |
-| [RELEASE_NOTES.md](RELEASE_NOTES.md) | Version history and changelog |
+[docs/README.md](docs/README.md) lists the documents in `docs/` and what each one holds.
 
 ### Schema Changes
 

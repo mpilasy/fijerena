@@ -180,7 +180,7 @@ older build deletes its copy. Not while `applying` is set: the device that made 
 them.
 
 `last_content_sha256`, `etag` and `last_modified_header` drive refresh change detection — see
-`docs/epg_guide.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
+`docs/EPG_GUIDE.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
 other ingest bookkeeping (the failure time and count too) whenever the guide index is destroyed.
 
 ### Tables: `sync_version` (v15; `sync_outbox` in v14), `sync_clock` (added v14)
@@ -225,7 +225,7 @@ ignored.
 Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast schedule searching. This database is considered transient and may be cleared during schema updates: `fallbackToDestructiveMigration(true)` rebuilds it empty for any version jump without a migration, and it re-syncs from the configured XMLTV sources on the next run (unlike `xtream_v2.db`, it holds no durable user data). The one registered migration, 17 → 18, drops four `epg_programme` indexes that no query used and keeps the guide. v17 added `source_id` indices to both staging tables. Each rebuild of the search index first deletes the programmes that ended more than 8 days ago (`EpgIndexer.KEEP_ENDED_SECONDS`), then merges the FTS index into one segment (`optimize`).
 
 Opened through Requery's SQLite, in WAL mode. Its PRAGMAs, page size and space reclaim are in
-`docs/EPG_INDEX_STORAGE.md`; how the staging tables and the swap are used is in `docs/epg_guide.md` →
+`docs/EPG_INDEX_STORAGE.md`; how the staging tables and the swap are used is in `docs/EPG_GUIDE.md` →
 "The EPG Index". Times are Unix epoch **seconds**.
 
 ### Table: `epg_channel`
