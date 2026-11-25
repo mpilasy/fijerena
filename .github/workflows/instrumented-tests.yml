@@ -69,10 +69,17 @@ jobs:
       # nights ("Error on ZipFile unknown archive"), and the job then failed without a test run.
       # With the image in place, the emulator runner's install finds it and downloads nothing.
       - name: Restore the emulator system image
+        id: image-cache
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images/android-34/${{ matrix.target }}/${{ matrix.arch }}
           key: system-image-34-${{ matrix.target }}-${{ matrix.arch }}-v1
+
+      # No image in the cache: install it here, where a bad download is tried again. The emulator
+      # runner downloads it only once.
+      - name: Install the system image
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        run: scripts/ci-install-system-image.sh 34 ${{ matrix.target }} ${{ matrix.arch }}
 
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -150,12 +157,18 @@ jobs:
           done
           exit 1
 
-      # As in the job above: the system image is kept between runs, so no download can fail.
+      # As in the job above: the system image is kept between runs, and a cache miss installs it
+      # with retries.
       - name: Restore the emulator system image
+        id: image-cache
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images/android-34/android-tv/x86
           key: system-image-34-android-tv-x86-v1
+
+      - name: Install the system image
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        run: scripts/ci-install-system-image.sh 34 android-tv x86
 
       - name: Run the TV walk
         uses: reactivecircus/android-emulator-runner@v2
