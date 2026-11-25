@@ -2,8 +2,8 @@
 
 The project's rules, architecture constraints and conventions. Read this before changing the code,
 together with the in-depth documents in `docs/` listed below.
-Everyone who takes part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report a security
-problem in private, as [SECURITY.md](SECURITY.md) says, not in an issue.
+Everyone who takes part follows the [Code of Conduct](.github/CODE_OF_CONDUCT.md). Report a security
+problem in private, as [SECURITY.md](.github/SECURITY.md) says, not in an issue.
 
 ---
 
@@ -342,7 +342,7 @@ A migration means any of: a new `MIGRATION_n_n+1`, a version bump, a new entity,
 
 Multi-phase work is planned in writing before it is built, in `docs/plans/YYYYMMDD_<kebab-case-topic>-plan.md`. Everything else in `docs/` is standing reference material that describes how the app works today; a plan describes work that is proposed, in progress, or deliberately deferred.
 
-Each plan states its own status at the top and keeps it current while the work runs (a Progress table for multi-lane work). [`docs/plans/README.md`](docs/plans/README.md) indexes the open plans. A finished or abandoned plan leaves the public repository for the maintainer's private archive; its record in the public repository is the history and `RELEASE_NOTES.md`. So code comments and docs name a plan in words, never by its path (`// Phase 6 of the watch state durable storage plan`), and anything a finished plan still records as live (a known problem left out of scope, a deferred follow-up) moves into the standing docs before the plan is archived.
+Each plan states its own status at the top and keeps it current while the work runs (a Progress table for multi-lane work). [`docs/plans/README.md`](docs/plans/README.md) indexes the open plans. A finished or abandoned plan leaves the public repository for the maintainer's private archive; its record in the public repository is the history and `docs/RELEASE_NOTES.md`. So code comments and docs name a plan in words, never by its path (`// Phase 6 of the watch state durable storage plan`), and anything a finished plan still records as live (a known problem left out of scope, a deferred follow-up) moves into the standing docs before the plan is archived.
 
 ---
 

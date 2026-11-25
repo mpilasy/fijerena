@@ -191,7 +191,7 @@ Off reuses `player_subtitles_off`. The mg value for `settings_track_language_str
 - **Docs:**
   - docs/FEATURES.md → Player → Track selection (Phase 3).
   - Settings → Your Profile, and Profiles → A profile's page (Phase 4).
-  - RELEASE_NOTES.md (Phase 4: before the rows, the player change of Phase 3 has nothing a user can set, so one note covers both).
+  - docs/RELEASE_NOTES.md (Phase 4: before the rows, the player change of Phase 3 has nothing a user can set, so one note covers both).
   - No Phase 5, so no docs/DESIGN.md change.
 
 ## Progress

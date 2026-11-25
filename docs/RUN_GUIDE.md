@@ -307,7 +307,7 @@ Downloadable APKs are published on the repository's GitHub Releases page by
 `fijerena.versionName` / `fijerena.versionCode` in `gradle.properties`; the workflow refuses a tag
 that doesn't match `versionName`. It builds `assembleRelease` signed with the
 release key (release plan D7: one key for both apps), and publishes `fijerena-tv-<version>.apk`,
-`fijerena-phone-<version>.apk` and `SHA256SUMS`, with `RELEASE_NOTES.md`'s first section as
+`fijerena-phone-<version>.apk` and `SHA256SUMS`, with `docs/RELEASE_NOTES.md`'s first section as
 the notes. Release builds are not minified yet (release plan R2).
 
 **One-time setup: the release key.** Every release must be signed with the same key, or it won't
@@ -343,7 +343,7 @@ still builds, unsigned (`*-release-unsigned.apk`).
    version, then the release's time in UTC as `YYYYMMDDHHMMSS`
    (`echo 0.9.$(date -u +%Y%m%d%H%M%S)`), for example `0.9.20261111170052`. The time only grows,
    so each release sorts after the last; raise the minor version for a larger change.
-2. Retitle `RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
+2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
 3. Commit with the message `chore(release): <version>`, push `main`, then tag and push the tag:
    `git tag v<version> && git push origin v<version>`. Tag only code that Android Build has passed
    on: the Release workflow does not run the unit tests again.

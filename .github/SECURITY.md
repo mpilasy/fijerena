@@ -40,4 +40,4 @@ Please give the maintainer time to release a fix before you tell others about th
 - Fijerena provides no content. The security of the sources that you add (Xtream Codes panels,
   M3U lists, Jellyfin servers) is the responsibility of their operators.
 - Live sync data is encrypted end to end. A way to read or change sync data without the household
-  key is a vulnerability. See [PRIVACY.md](PRIVACY.md) for what the apps send and where.
+  key is a vulnerability. See [PRIVACY.md](../PRIVACY.md) for what the apps send and where.
