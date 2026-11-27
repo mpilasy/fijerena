@@ -208,6 +208,7 @@ import org.njarasoa.fijerena.ui.components.TvIcon
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.cards.HomeRowsPlaceholder
 import org.njarasoa.fijerena.ui.components.clearOfTvClock
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -312,6 +313,8 @@ fun ContentTypeSelectionScreen(
     // The Upcoming Games row (the sports teams plan → Home row): the followed teams' and leagues'
     // games in the next 48 hours, after the favourite channels. Never on a child's Home (SP-D8).
     var upcomingGames by remember { mutableStateOf<List<UpcomingGame>>(emptyList()) }
+    // True once the row is known: its saved games, or its first read.
+    var upcomingLoaded by remember { mutableStateOf(false) }
     val showSports by remember { appSettings.observeShowSports() }.collectAsStateWithLifecycle(initialValue = appSettings.showSports)
     // The game whose sheet is open over Home; saved, so Back from a channel finds it open.
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
@@ -431,12 +434,20 @@ fun ContentTypeSelectionScreen(
         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
         liveRowLoaded = true
     }
-    // After the other rows, so the sports calls never hold those up; again when the Admin switch
-    // changes. Kept in memory (UpcomingGames): a return to Home costs nothing.
+    // First the row saved on the device (no call), so it is there when the rows show. Then the
+    // read, after the other rows, so the sports calls never hold those up; again when the Admin
+    // switch changes. Kept in memory (UpcomingGames): a return to Home costs nothing.
     LaunchedEffect(mergedLists, showSports) {
         if (mergedLists == null) return@LaunchedEffect
+        if (!upcomingLoaded) {
+            savedUpcomingGames(context.applicationContext, child)?.let {
+                upcomingGames = it
+                upcomingLoaded = true
+            }
+        }
         snapshotFlow { liveRowLoaded }.first { it }
         upcomingGames = loadUpcomingGames(context.applicationContext, child)
+        upcomingLoaded = true
     }
     // The chart rows after the other rows, so their TMDB calls never hold those up. Read again when the
     // Admin switch changes, a Trending row's switch flips, or Admin → Refresh Charts runs. All six at
@@ -591,16 +602,33 @@ fun ContentTypeSelectionScreen(
     // Read by the entry focus below after it has waited for the rows: the value from its launch
     // was from before they loaded (null: no focus at all after a profile switch).
     val currentFirstRowFocusState by rememberUpdatedState(firstRowFocusState)
+    // False while placeholder rows show in place of the rows, on the first show of this Home only:
+    // the rows then come in together, not one by one, each pushing the ones below it down. Saved, so
+    // a return to Home shows the rows as they load, with the focus on the card left.
+    var rowsShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (rowsShown) return@LaunchedEffect
+        withTimeoutOrNull(HOME_ROWS_WAIT_MS) {
+            snapshotFlow {
+                // The chart rows end the TV Shows and Films groups, below the first screen when a row
+                // is above them: then they come in later and move nothing in view.
+                val rowAboveCharts =
+                    continueWatchingItems.isNotEmpty() ||
+                        liveRowEntries.isNotEmpty() ||
+                        upcomingGames.isNotEmpty() ||
+                        favoriteChannelEntries.isNotEmpty()
+                sections?.merged?.isEmpty() == true ||
+                    (continueWatchingLoaded && liveRowLoaded && upcomingLoaded && (chartsLoaded || rowAboveCharts))
+            }.first { it }
+        }
+        rowsShown = true
+    }
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
-        // Wait for the shelf and the Live row, which take entry focus when they have something
-        // (TV home overhaul plan, Phase 3).
-        withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
-            snapshotFlow { sections?.merged?.isEmpty() == true || (continueWatchingLoaded && liveRowLoaded) }.first { it }
-        }
-        // The chart rows load after the others; a short wait more for them (a first TMDB read can be slow).
-        withTimeoutOrNull(CHART_ENTRY_WAIT_MS) { snapshotFlow { chartsLoaded }.first { it } }
+        // Wait for the rows, which take entry focus when they have something (TV home overhaul plan,
+        // Phase 3): they show together, after the placeholder rows.
+        snapshotFlow { rowsShown }.first { it }
         // No merged sections: the panel's first button (Browse <source>, or Add Source); the rail
         // when the panel has no button (no source and not an Admin).
         if (sections?.merged?.isEmpty() == true) {
@@ -1508,6 +1536,8 @@ fun ContentTypeSelectionScreen(
                         scale = scale,
                         modifier = Modifier.weight(1f),
                     )
+                } else if (!rowsShown) {
+                    HomeRowsPlaceholder(rowTop = Spacing.xl.scaled(scale), modifier = Modifier.weight(1f))
                 } else if (firstRowFocus == null && loadedSections?.xtreamIds.orEmpty().any { it in firstSyncs }) {
                     // The source's first catalogue sync: nothing to show yet, and blank would read as
                     // an empty library. Not focusable; the sections stay on the navigation rail.
@@ -1903,6 +1933,13 @@ fun ContentTypeSelectionScreen(
     }
 }
 
+/** The Upcoming Games row saved on the device ([UpcomingGames.saved]); empty where the row is absent. */
+private suspend fun savedUpcomingGames(
+    context: android.content.Context,
+    child: Boolean,
+): List<UpcomingGame>? =
+    if (child || !UpcomingGames.enabled(context)) emptyList() else withContext(Dispatchers.IO) { UpcomingGames.saved(context) }
+
 /** The Upcoming Games row's games: none on a child's Home, nor while Admin's Sports switch is off. */
 private suspend fun loadUpcomingGames(
     context: android.content.Context,
@@ -2015,11 +2052,11 @@ private const val RETURN_SHELF_WAIT_MS = 2_000L
 // The chart rows come after every other row is loaded: longer to wait for on a big catalogue.
 private const val RETURN_CHART_WAIT_MS = 10_000L
 
-/** How long a fresh open waits for the rows before focusing anyway. */
-private const val ENTRY_FOCUS_WAIT_MS = 2_000L
-
-// How much longer the entry focus waits for the chart rows, above the lower groups' rows.
-private const val CHART_ENTRY_WAIT_MS = 3_000L
+/**
+ * How long the first show of Home waits for its rows, with placeholder rows in their place, before
+ * it shows the rows that are there. A row that comes later goes in late.
+ */
+private const val HOME_ROWS_WAIT_MS = 3_000L
 
 /** How much longer focus waits for a row that comes late (a source switch) before going to the rail. */
 private const val LATE_ROWS_WAIT_MS = 6_000L
