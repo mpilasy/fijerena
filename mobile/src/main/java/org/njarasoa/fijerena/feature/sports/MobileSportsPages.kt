@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
@@ -108,6 +109,7 @@ fun MobileSportsTeamScreen(
         onRetry = viewModel::retry,
         refreshing = refreshing,
         onRefresh = viewModel::refresh,
+        onMatchAgain = viewModel::matchAgain,
         onPlay = onPlay,
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders).
@@ -161,6 +163,7 @@ fun MobileSportsLeagueScreen(
         onRetry = viewModel::retry,
         refreshing = refreshing,
         onRefresh = viewModel::refresh,
+        onMatchAgain = viewModel::matchAgain,
         onPlay = onPlay,
         onBack = onBack,
         extra = {
@@ -202,6 +205,7 @@ private fun MobileSportsPage(
     onRetry: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
+    onMatchAgain: (SportsGame) -> Unit,
     onPlay: (Screen.CategoryList) -> Unit,
     onBack: () -> Unit,
     teamBell: SportsTeam? = null,
@@ -323,6 +327,10 @@ private fun MobileSportsPage(
                 extra()
             }
         }
+    }
+    // A game's sheet that opens looks for the game's channels again; its row shows them too.
+    LaunchedEffect(openGame) {
+        openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }?.let(onMatchAgain)
     }
     val sheetGame = openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }
     if (sheetGame != null) {

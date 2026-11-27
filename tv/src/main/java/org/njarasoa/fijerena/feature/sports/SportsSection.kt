@@ -102,7 +102,8 @@ private data class FollowedItem(
  * Focus: the first logo on opening, and whenever focus comes in from outside (Right from the rail
  * before the follows were read); Down to the games, Up from the games to the logo last focused (the
  * first one at first), Up from the logos to the header's Find Teams, Right from it to the Reminders
- * bell ([onReminders]), which Right leaves alone; Left from the first logo, a game row or Find Teams
+ * bell ([onReminders]), then Refresh (the games and their channels read again), which Right leaves
+ * alone; Left from the first logo, a game row or Find Teams
  * opens the rail. Back from a page, a channel, Search or Reminders returns to the control that
  * opened it; Back on the section goes to the rail (the nav host).
  */
@@ -173,6 +174,10 @@ fun SportsSectionScreen(
         closedGame?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = firstItemFocus) }
         closedGame = null
     }
+    // A game's sheet that opens looks for the game's channels again; its row shows them too.
+    LaunchedEffect(openGame) {
+        openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }?.let(viewModel::matchAgain)
+    }
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
         // The header stays above the list: what scrolls up goes under the header, not under the clock.
@@ -211,15 +216,26 @@ fun SportsSectionScreen(
                     onClick = { leave(RETURN_REMINDERS, onReminders) },
                     icon = CinemaIcons.Bell,
                     label = stringResource(R.string.reminders_title),
-                    // Down: the first logo (Find Teams with nothing followed); Right: nothing.
+                    // Down: the first logo (Find Teams with nothing followed).
                     modifier =
                         Modifier
                             .navReturnFocusTarget(returnFocus, RETURN_REMINDERS)
-                            .focusProperties {
-                                down = if (followsSome) firstItemFocus else findTeamsFocus
+                            .focusProperties { down = if (followsSome) firstItemFocus else findTeamsFocus },
+                )
+                // Reads the games again and looks for their channels again, as a pull on the phone.
+                if (followsSome) {
+                    TvIconAction(
+                        onClick = viewModel::refresh,
+                        icon = CinemaIcons.Refresh,
+                        label = stringResource(R.string.common_refresh),
+                        // Down: the first logo; Right: nothing.
+                        modifier =
+                            Modifier.focusProperties {
+                                down = firstItemFocus
                                 right = FocusRequester.Cancel
                             },
-                )
+                    )
+                }
             }
             LazyColumn(
                 state = listState,

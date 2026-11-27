@@ -186,12 +186,20 @@ class SportsSectionFocusTest {
     }
 
     @Test
-    fun `Right from Find teams goes to Reminders and no further, not to a game's bell`() {
+    fun `Right from Find teams goes to Reminders, then Refresh and no further, not to a game's bell`() {
         var reminders = 0
         setSection(FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE)), onReminders = { reminders++ })
 
         walk.awaitFocused("A / Arsenal")
-        walk.run(up("Find teams"), right("Reminders"), right("Reminders"), down("A / Arsenal"), up("Find teams"), right("Reminders"))
+        walk.run(
+            up("Find teams"),
+            right("Reminders"),
+            right("Refresh"),
+            right("Refresh"),
+            down("A / Arsenal"),
+            up("Find teams"),
+            right("Reminders"),
+        )
         walk.press(Key.DirectionCenter)
         assertEquals(1, reminders)
     }

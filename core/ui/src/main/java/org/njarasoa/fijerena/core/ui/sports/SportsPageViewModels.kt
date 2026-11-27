@@ -188,6 +188,45 @@ private suspend fun matchChannels(
     }
 }
 
+/**
+ * Matches [game] again and puts its channels in [state]: a game's sheet that opens looks again (the
+ * row's match can have come before the guide index was ready, or have taken too long). A match that
+ * fails or takes longer than [timeoutMs] keeps the channels found before.
+ */
+internal suspend fun matchGameAgain(
+    state: MutableStateFlow<GamesState>,
+    game: SportsGame,
+    matcher: suspend () -> GameMatcher,
+    timeoutMs: Long = CHANNELS_TIMEOUT_MS,
+) {
+    val channels = matchOrNull(game, matcher, timeoutMs) ?: return
+    state.update { current ->
+        val loaded = current as? GamesState.Loaded
+        if (loaded == null ||
+            loaded.games.none { it.key == game.key }
+        ) {
+            current
+        } else {
+            loaded.copy(channels = loaded.channels + (game.key to channels))
+        }
+    }
+}
+
+/** [game]'s channels; null when the matcher or the match fails, or they take longer than [timeoutMs]. */
+internal suspend fun matchOrNull(
+    game: SportsGame,
+    matcher: suspend () -> GameMatcher,
+    timeoutMs: Long = CHANNELS_TIMEOUT_MS,
+): List<GameChannel>? =
+    try {
+        withTimeoutOrNull(timeoutMs) { matcher().match(game) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        android.util.Log.w(GAMES_TAG, "Match again failed: ${e.javaClass.simpleName}")
+        null
+    }
+
 private const val GAMES_TAG = "SportsGamesViewModel"
 
 /** The games matched at the same time. */
@@ -327,6 +366,11 @@ abstract class SportsGamesViewModel(
     }
 
     private suspend fun readGames(): List<SportsGame> = loadGames().also { readAtMs = clock() }
+
+    /** Matches [game] again (its sheet opens); see [matchGameAgain]. */
+    fun matchAgain(game: SportsGame) {
+        viewModelScope.launchGuarded("${javaClass.simpleName}.matchAgain", Dispatchers.IO) { matchGameAgain(_games, game, data::matcher) }
+    }
 
     protected fun launchFollow(block: suspend () -> Unit) {
         viewModelScope.launchGuarded("${javaClass.simpleName}.follow", Dispatchers.IO) { block() }

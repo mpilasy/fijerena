@@ -250,6 +250,33 @@ class SportsPageViewModelTest {
     }
 
     @Test
+    fun `a game's sheet matches it again, a game not found before finds its channel, the others stay`() {
+        val data = FakeData(matchFailure = IllegalStateException("guide not ready"))
+        val vm = teamPage(data)
+        vm.awaitMatched()
+
+        data.matchFailure = null
+        vm.matchAgain(GAMES[0])
+
+        val loaded = vm.games.await { (it as? GamesState.Loaded)?.channelsOf(GAMES[0])?.isNotEmpty() == true } as GamesState.Loaded
+        assertEquals(CHANNEL, loaded.channelsOf(GAMES[0])?.first()?.stream)
+        assertEquals(emptyList<GameChannel>(), loaded.channelsOf(GAMES[1]))
+    }
+
+    @Test
+    fun `a match again that fails or never ends keeps the channels found before`() {
+        val channel = GameChannel(CHANNEL, null, null, GameChannelHow.BROADCASTER_CHANNEL)
+        val state = MutableStateFlow<GamesState>(GamesState.Loaded(GAMES, mapOf(GAMES[0].key to listOf(channel))))
+
+        runBlocking {
+            matchGameAgain(state, GAMES[0], { throw IllegalStateException("db") })
+            matchGameAgain(state, GAMES[0], { GameMatcher { awaitCancellation() } }, timeoutMs = 200L)
+        }
+
+        assertEquals(listOf(channel), (state.value as GamesState.Loaded).channelsOf(GAMES[0]))
+    }
+
+    @Test
     fun `a game whose match never ends finds no channel, and the other games still find theirs`() {
         val state = MutableStateFlow<GamesState>(GamesState.Loading)
         val channel = GameChannel(CHANNEL, null, null, GameChannelHow.BROADCASTER_CHANNEL)

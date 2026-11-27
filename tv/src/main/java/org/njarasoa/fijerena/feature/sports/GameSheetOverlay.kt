@@ -119,8 +119,10 @@ fun GameSheetOverlay(
     val firstRow = remember { FocusRequester() }
     var asking by remember { mutableStateOf<GameChannel?>(null) }
     var menuFor by remember { mutableStateOf<GameChannel?>(null) }
-    // The first row on opening, and once the channels replace "Looking for channels…".
-    LaunchedEffect(channels != null) {
+    // The first row on opening, once the channels replace "Looking for channels…", and when a match
+    // again changes them (the row that had focus can be gone).
+    val shownKeys = remember(channels) { channels?.map(::channelKey) }
+    LaunchedEffect(shownKeys) {
         if (returnFocus.key?.startsWith(RETURN_SHEET_PREFIX) != true) firstRow.requestFocusWithRetry()
     }
     val day = DateText.day(game.startEpochSec)

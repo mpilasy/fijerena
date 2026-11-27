@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased
+
+- **A game looks for its channels again when you open it:** opening a game's sheet (from Home's Upcoming Games, the Sports section, a team or league page, or Teams search) now looks for the game's channels again, and the game's row shows what it finds. So a game that said "Not found on your channels" because the first look came too early can find its channels without a restart. TV and phone.
+- **Refresh in Sports on TV:** the Sports section (after the Reminders bell) and every team and league page (after Follow) have a Refresh icon. It reads the games again and looks for their channels again, as pulling down the list does on the phone. TV.
+
 ## Version: 0.9.20261127165050
 
 - **More games find their channels:** a game could say "Not found on your channels" when your source had the game's network under a name the app did not read well. For example, an ESPNU game did not find "TV: ESPNU ᴿᴬᵂ", "US: ESPN U HD" or "AT&T: ESPNU ᴿᴬᵂ". The app now reads small raised letters (such as ᴿᴬᵂ) as normal letters, ignores spaces inside a network name, and knows the "AT&T:" channel prefix. TV and phone.

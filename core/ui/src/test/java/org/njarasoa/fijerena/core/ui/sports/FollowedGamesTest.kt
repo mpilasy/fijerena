@@ -46,6 +46,7 @@ class FollowedGamesTest {
         val follows = MutableStateFlow(follows)
         val failing = mutableSetOf<String>()
         var reads = 0
+        var found = listOf(GameChannel(CHANNEL, null, null, GameChannelHow.GUIDE))
 
         override val nerd = true
 
@@ -73,7 +74,7 @@ class FollowedGamesTest {
 
         override suspend fun unfollow(league: SportsLeague) = Unit
 
-        override suspend fun matcher(): GameMatcher = GameMatcher { listOf(GameChannel(CHANNEL, null, null, GameChannelHow.GUIDE)) }
+        override suspend fun matcher(): GameMatcher = GameMatcher { found }
     }
 
     private val created = mutableListOf<androidx.lifecycle.ViewModel>()
@@ -214,6 +215,26 @@ class FollowedGamesTest {
 
         data.follows.value = FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE))
         assertEquals(listOf("1", "2"), runBlocking { loader.load() }.map { it.game.id })
+    }
+
+    @Test
+    fun `a Home card's sheet matches the game again, and the kept row shows its channels with no new read`() {
+        val data =
+            FakeData(
+                teamGames = mapOf(ARSENAL.id to listOf(game("1", hours = 3))),
+                follows = FollowedSports.Followed(teams = listOf(ARSENAL)),
+            )
+        val loader = UpcomingGamesLoader(data, enabled = { true }, profileId = { "p1" }, now = { NOW_SEC * 1000 })
+        val found = data.found
+        data.found = emptyList()
+        val card = runBlocking { loader.load() }.single()
+        assertEquals(emptyList<GameChannel>(), card.channels)
+
+        data.found = found
+        assertEquals(found, runBlocking { loader.matchAgain(card.game) })
+
+        assertEquals(found, runBlocking { loader.load() }.single().channels)
+        assertEquals(1, data.reads)
     }
 
     @Test

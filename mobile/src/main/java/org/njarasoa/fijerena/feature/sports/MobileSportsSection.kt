@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -214,6 +215,10 @@ fun MobileSportsSectionScreen(
                 }
             }
         }
+    }
+    // A game's sheet that opens looks for the game's channels again; its row shows them too.
+    LaunchedEffect(openGame) {
+        openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }?.let(viewModel::matchAgain)
     }
     val sheetGame = openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }
     if (sheetGame != null) {

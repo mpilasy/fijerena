@@ -218,6 +218,11 @@ class TeamsSearchViewModel(
         )
     }
 
+    /** Matches the best team's [game] again (its sheet opens); see [matchGameAgain]. */
+    fun matchBestGameAgain(game: SportsGame) {
+        viewModelScope.launchGuarded("TeamsSearchViewModel.matchAgain", Dispatchers.IO) { matchGameAgain(_bestGames, game, data::matcher) }
+    }
+
     private fun bestGamesFailed(e: Throwable) {
         _bestGames.value = GamesState.Failed(rawOf(e))
     }

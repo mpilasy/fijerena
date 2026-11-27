@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.sports.GameChannel
+import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.SportsLeague
 import org.njarasoa.fijerena.core.network.sports.SportsTeam
 import org.njarasoa.fijerena.core.ui.R
@@ -98,7 +99,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * channel there opens its preview ([onPlay], as a guide result).
  *
  * Focus: the first game once the games come (Follow while they load or when there is none); Up from
- * the first game reaches Follow; Left from a row or Follow opens the rail. Back closes the sheet,
+ * the first game reaches Follow; Right from Follow (and its bell) reaches Refresh, which Right leaves
+ * alone; Left from a row or Follow opens the rail. Back closes the sheet,
  * then leaves; Back from a channel returns to its row in the sheet.
  */
 @Composable
@@ -127,6 +129,8 @@ fun SportsTeamScreen(
         games = games,
         team = shown,
         onRetry = viewModel::retry,
+        onRefresh = viewModel::refresh,
+        onMatchAgain = viewModel::matchAgain,
         onPlay = onPlay,
         onBack = onBack,
         // Every game of the team, once the profile follows it (the sports teams plan → Reminders); its slot always.
@@ -176,6 +180,8 @@ fun SportsLeagueScreen(
         games = games,
         team = null,
         onRetry = viewModel::retry,
+        onRefresh = viewModel::refresh,
+        onMatchAgain = viewModel::matchAgain,
         onPlay = onPlay,
         onBack = onBack,
         secondFocus = firstTeamFocus.takeIf { !teams.isNullOrEmpty() },
@@ -217,7 +223,9 @@ fun SportsLeagueScreen(
  * game sheet over the page while one is open (its game's key saved, so Back from a channel finds
  * it open). [secondFocus]: the entry focus when there is no game. [teamBell]: the team whose every
  * game the header's bell reminds of once followed, in a slot after Follow that keeps its width
- * so Follow never moves ([TvFollowActions]); none on a league page.
+ * so Follow never moves ([TvFollowActions]); none on a league page. [onRefresh]: the header's
+ * Refresh, the games and their channels read again (a pull on the phone). [onMatchAgain]: a game
+ * whose sheet opens, matched again so the sheet and its row show the channels found now.
  */
 @Composable
 private fun TvSportsPage(
@@ -229,6 +237,8 @@ private fun TvSportsPage(
     games: GamesState,
     team: SportsTeam?,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
+    onMatchAgain: (SportsGame) -> Unit,
     onPlay: (Screen.CategoryList) -> Unit,
     onBack: () -> Unit,
     secondFocus: FocusRequester? = null,
@@ -280,6 +290,9 @@ private fun TvSportsPage(
     LaunchedEffect(closedGame) {
         closedGame?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = followFocus) }
         closedGame = null
+    }
+    LaunchedEffect(openGame) {
+        openGame?.let { key -> loaded?.games?.firstOrNull { it.key == key } }?.let(onMatchAgain)
     }
 
     Box(modifier = Modifier.fillMaxSize().panel(PanelFill.Ground)) {
@@ -352,6 +365,12 @@ private fun TvSportsPage(
                                 .leftToRail()
                                 .then(downToRows),
                         bellModifier = downToRows,
+                    )
+                    TvIconAction(
+                        onClick = onRefresh,
+                        icon = CinemaIcons.Refresh,
+                        label = stringResource(R.string.common_refresh),
+                        modifier = downToRows.focusProperties { right = FocusRequester.Cancel },
                     )
                 }
                 LazyColumn(

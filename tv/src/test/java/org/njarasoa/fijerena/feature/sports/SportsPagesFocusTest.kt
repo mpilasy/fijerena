@@ -220,6 +220,16 @@ class SportsPagesFocusTest {
     }
 
     @Test
+    fun `team page - Right from Follow reaches Refresh and no further, Down goes to the first game`() {
+        val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
+        rule.setContent {
+            WithBells { SportsTeamScreen(team = ARSENAL, onPlay = {}, onBack = {}, viewModel = vm) }
+        }
+        walk.awaitFocused("C / Arsenal v Chelsea")
+        walk.run(up("Follow"), right("Refresh"), right("Refresh"), down("C / Arsenal v Chelsea"))
+    }
+
+    @Test
     fun `team page - no results, no heading`() {
         val vm = SportsTeamViewModel(FakeData(), ARSENAL).also { created += it }
         rule.setContent {

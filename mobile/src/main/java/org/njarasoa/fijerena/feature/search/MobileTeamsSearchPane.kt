@@ -236,6 +236,10 @@ internal fun MobileTeamsSearchPane(
             }
         }
     }
+    // A game's sheet that opens looks for the game's channels again; its row shows them too.
+    LaunchedEffect(openGame) {
+        openGame?.let { key -> (bestGames as? GamesState.Loaded)?.games?.firstOrNull { it.key == key } }?.let(viewModel::matchBestGameAgain)
+    }
     val sheetGames = (bestGames as? GamesState.Loaded)?.takeIf { (state as? TeamsSearchViewModel.State.Loaded)?.best != null }
     val sheetGame = openGame?.let { key -> sheetGames?.games?.firstOrNull { it.key == key } }
     if (sheetGame != null) {

@@ -113,6 +113,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
@@ -1909,13 +1910,21 @@ fun ContentTypeSelectionScreen(
         }
         // A game card's sheet over Home (the sports teams plan, Game sheet): a channel opens as a guide
         // result; Back closes it onto the card. The sheet keeps the channels it opened with: a later read
-        // of the row does not reorder them.
+        // of the row does not reorder them. Opening it looks for the game's channels again; the card
+        // takes them too.
         val liveSheetGame = openGame?.let { key -> upcomingGames.firstOrNull { it.game.key == key } }
         val sheetGame = remember(openGame, liveSheetGame != null) { liveSheetGame }
+        var sheetChannels by remember(openGame) { mutableStateOf<List<GameChannel>?>(null) }
+        LaunchedEffect(openGame, sheetGame != null) {
+            val game = sheetGame?.game ?: return@LaunchedEffect
+            val found = UpcomingGames.matchAgain(context.applicationContext, game) ?: return@LaunchedEffect
+            sheetChannels = found
+            upcomingGames = upcomingGames.map { if (it.game.key == game.key) it.copy(channels = found) else it }
+        }
         if (sheetGame != null) {
             GameSheetOverlay(
                 game = sheetGame.game,
-                channels = sheetGame.channels,
+                channels = sheetChannels ?: sheetGame.channels,
                 returnFocus = returnFocus,
                 onPlay = { channel -> onGameChannelSelected(channel.liveRoute()) },
                 bells = upcomingBells,

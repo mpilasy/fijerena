@@ -198,6 +198,21 @@ class UpcomingGamesLoader(
         return games?.let { stillComing(it, nowSec) }
     }
 
+    /**
+     * [game] matched again (its sheet opens); its card in the kept row takes the channels. Null when
+     * the match fails or takes too long ([matchOrNull]): the card keeps its channels.
+     */
+    suspend fun matchAgain(game: SportsGame): List<GameChannel>? {
+        val channels = matchOrNull(game, data::matcher) ?: return null
+        lock.withLock {
+            kept =
+                kept?.let { k ->
+                    Kept(k.profileId, k.keys, k.atMs, k.games.map { if (it.game.key == game.key) it.copy(channels = channels) else it })
+                }
+        }
+        return channels
+    }
+
     /** Forgets the row, so the next [load] reads it again. */
     suspend fun clear() = lock.withLock { kept = null }
 
@@ -287,6 +302,12 @@ object UpcomingGames {
         }
 
     suspend fun load(context: Context): List<UpcomingGame> = loader(context).load()
+
+    /** See [UpcomingGamesLoader.matchAgain]. */
+    suspend fun matchAgain(
+        context: Context,
+        game: SportsGame,
+    ): List<GameChannel>? = loader(context).matchAgain(game)
 
     /** See [UpcomingGamesLoader.saved]. */
     suspend fun saved(context: Context): List<UpcomingGame>? = loader(context).saved()

@@ -54,6 +54,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
@@ -668,12 +669,20 @@ fun MobileHomeScreen(
         }
     }
     // The sheet keeps the channels it opened with: a later read of the row (a return to Home) does not reorder them.
+    // Opening it looks for the game's channels again; the card takes them too.
     val liveSheetGame = openGame?.let { key -> upcoming.firstOrNull { it.game.key == key } }
     val sheetGame = remember(openGame, liveSheetGame != null) { liveSheetGame }
+    var sheetChannels by remember(openGame) { mutableStateOf<List<GameChannel>?>(null) }
+    LaunchedEffect(openGame, sheetGame != null) {
+        val game = sheetGame?.game ?: return@LaunchedEffect
+        val found = UpcomingGames.matchAgain(context.applicationContext, game) ?: return@LaunchedEffect
+        sheetChannels = found
+        upcoming = upcoming.map { if (it.game.key == game.key) it.copy(channels = found) else it }
+    }
     if (sheetGame != null) {
         MobileGameSheet(
             game = sheetGame.game,
-            channels = sheetGame.channels,
+            channels = sheetChannels ?: sheetGame.channels,
             onPlay = { channel -> onGameChannel(channel.liveRoute()) },
             bells = bells,
             onDismiss = { openGame = null },
