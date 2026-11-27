@@ -15,9 +15,12 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
 import org.njarasoa.fijerena.core.network.sports.GameChannelHow
@@ -232,6 +235,43 @@ class FollowedGamesTest {
         assertEquals(emptyList<UpcomingGame>(), runBlocking { loader.load() })
         data.failing.clear()
         assertEquals(listOf("1"), runBlocking { loader.load() }.map { it.game.id })
+    }
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    @Test
+    fun `Home's saved row comes back on the next start, with no read, without ended games or other follows`() {
+        var nowMs = NOW_SEC * 1000
+        val data =
+            FakeData(
+                teamGames = mapOf(ARSENAL.id to listOf(game("1", hours = 1), game("2", hours = 10))),
+                leagueGames = mapOf(LEAGUE.id to listOf(game("3", hours = 20))),
+                follows = FollowedSports.Followed(teams = listOf(ARSENAL)),
+            )
+        val store = SavedUpcomingGames(folder.root)
+
+        fun loader() = UpcomingGamesLoader(data, enabled = { true }, profileId = { "p1" }, now = { nowMs }, saved = store)
+
+        // Nothing saved yet: no row known.
+        assertNull(runBlocking { loader().saved() })
+        runBlocking { loader().load() }
+        assertEquals(1, data.reads)
+
+        // A new start (a new loader): the saved row, channels included, with no read.
+        nowMs += 6 * 3_600_000L
+        val saved = runBlocking { loader().saved() }
+        assertEquals(listOf("2"), saved?.map { it.game.id })
+        assertEquals(CHANNEL, saved?.single()?.bestChannel?.stream)
+        assertEquals(1, data.reads)
+
+        // Other follows: the saved row is not theirs.
+        data.follows.value = FollowedSports.Followed(teams = listOf(ARSENAL), leagues = listOf(LEAGUE))
+        assertNull(runBlocking { loader().saved() })
+
+        // Nothing followed: the row is absent, known at once.
+        data.follows.value = FollowedSports.Followed()
+        assertEquals(emptyList<UpcomingGame>(), runBlocking { loader().saved() })
     }
 
     private fun <T> StateFlow<T>.await(predicate: (T) -> Boolean): T = runBlocking { withTimeout(TIMEOUT_MS) { first(predicate) } }

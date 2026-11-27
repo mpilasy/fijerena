@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.sports
 
+import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
@@ -8,6 +9,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
  * open (excluded, or in a live category its source hides): it still takes part in matching a guide
  * channel, so that the guide does not match a wrong channel in its place, but it is never returned.
  */
+@Serializable
 data class LiveChannel(
     val providerId: Long,
     val streamId: Int,
@@ -40,6 +42,7 @@ data class LiveChannel(
  * A guide programme. [providerId] is the source whose guide source has it (0 when unknown);
  * [channelId] is the guide channel id and [channelName] its display name.
  */
+@Serializable
 data class GuideProgramme(
     val providerId: Long,
     val channelId: String,
@@ -84,6 +87,7 @@ enum class GameChannelHow {
 }
 
 /** One way to watch a game: a channel of the profile, its guide programme of the game when known. */
+@Serializable
 data class GameChannel(
     val stream: LiveChannel,
     val programme: GuideProgramme?,

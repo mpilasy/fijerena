@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.network.sports
 
+import kotlinx.serialization.Serializable
+
 /**
  * Where a team, a league or a game comes from. [id] is the stored and synced value
  * (`followed_sport.source`); never rename it. See the sports teams plan → Data sources.
@@ -35,6 +37,7 @@ enum class FollowKind(
  * [altNames] are the other names the source gives (location, nickname, abbreviation), used to find
  * the team in guide titles, in channel names and in other sources.
  */
+@Serializable
 data class SportsTeam(
     val source: SportsSource,
     val id: String,
@@ -52,6 +55,7 @@ data class SportsTeam(
 }
 
 /** A league or competition as one source names it; [id] is the source's league key. */
+@Serializable
 data class SportsLeague(
     val source: SportsSource,
     val id: String,
@@ -65,6 +69,7 @@ data class SportsLeague(
  * alpha-2 code in upper case ("US", "CA"), null when the source does not say. Used only to find the
  * profile's channels with that name ([GameChannelMatcher]); never shown as a list.
  */
+@Serializable
 data class Broadcaster(
     val name: String,
     val country: String?,
@@ -82,6 +87,7 @@ enum class BroadcasterOrigin { ESPN, NHL, MLB }
  * the source shows it, null when it gives none. [clock]: while the game is on ([GameState.LIVE]),
  * where it is as the source shows it ("66'", "HT"); null otherwise.
  */
+@Serializable
 data class SportsGame(
     val source: SportsSource,
     val id: String,

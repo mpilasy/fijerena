@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sports.FollowedSports
 import org.njarasoa.fijerena.core.network.sports.GameChannel
@@ -22,6 +23,7 @@ import org.njarasoa.fijerena.core.network.sports.GameState
 import org.njarasoa.fijerena.core.network.sports.SportsGame
 import org.njarasoa.fijerena.core.network.sports.TeamNames
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.io.File
 
 // The games of what the profile follows (the sports teams plan → Screens: the Sports section and
 // Home's Upcoming Games). Only the followed teams and leagues are read (SP-D10).
@@ -141,6 +143,7 @@ class SportsSectionViewModel(
 }
 
 /** A game on Home's Upcoming Games row and the profile's channels for it, best first. */
+@Serializable
 data class UpcomingGame(
     val game: SportsGame,
     val channels: List<GameChannel>,
@@ -155,12 +158,14 @@ data class UpcomingGame(
  * profile and followed set, and read again at most every [REFRESH_MS] (Home asks on each return),
  * so going back to Home costs nothing. Nothing when [enabled] is false (the Admin switch is off, or
  * a child profile) or nothing is followed. A failed read is not kept: the next visit tries again.
+ * Each row read is also written to [saved], which [saved] gives back on the next start.
  */
 class UpcomingGamesLoader(
     private val data: SportsPageData,
     private val enabled: () -> Boolean,
     private val profileId: () -> String,
     private val now: () -> Long = System::currentTimeMillis,
+    private val saved: SavedUpcomingGames? = null,
 ) {
     private class Kept(
         val profileId: String,
@@ -176,6 +181,21 @@ class UpcomingGamesLoader(
     suspend fun load(): List<UpcomingGame> {
         val followed = if (enabled()) data.followed().first() else FollowedSports.Followed()
         return if (followed.isEmpty) emptyList() else lock.withLock { keptOrRead(followed) }
+    }
+
+    /**
+     * The row at once, with no call and no channel match: the row kept in memory, else the row
+     * saved on the device for the profile and its follows, without the games that have ended.
+     * Empty when the row is absent; null when no row is known yet ([load] reads it).
+     */
+    suspend fun saved(): List<UpcomingGame>? {
+        val followed = if (enabled()) data.followed().first() else FollowedSports.Followed()
+        if (followed.isEmpty) return emptyList()
+        val id = profileId()
+        val keys = followed.keys()
+        val nowSec = now() / 1000
+        val games = lock.withLock { kept?.takeIf { it.profileId == id && it.keys == keys }?.games } ?: saved?.read(id, keys)
+        return games?.let { stillComing(it, nowSec) }
     }
 
     /** Forgets the row, so the next [load] reads it again. */
@@ -206,7 +226,10 @@ class UpcomingGamesLoader(
                 null
             }
         val row = games?.let { matched(it) }
-        if (row != null) kept = Kept(id, keys, nowMs, row)
+        if (row != null) {
+            kept = Kept(id, keys, nowMs, row)
+            saved?.write(id, keys, row)
+        }
         return row.orEmpty()
     }
 
@@ -254,9 +277,17 @@ object UpcomingGames {
             instance ?: run {
                 val app = context.applicationContext
                 val settings = AppSettings(app)
-                UpcomingGamesLoader(AppSportsPageData(app), enabled = { enabled(app) }, profileId = { settings.activeProfileId })
+                UpcomingGamesLoader(
+                    AppSportsPageData(app),
+                    enabled = { enabled(app) },
+                    profileId = { settings.activeProfileId },
+                    saved = SavedUpcomingGames(File(app.cacheDir, "upcoming_games")),
+                )
             }.also { instance = it }
         }
 
     suspend fun load(context: Context): List<UpcomingGame> = loader(context).load()
+
+    /** See [UpcomingGamesLoader.saved]. */
+    suspend fun saved(context: Context): List<UpcomingGame>? = loader(context).saved()
 }
