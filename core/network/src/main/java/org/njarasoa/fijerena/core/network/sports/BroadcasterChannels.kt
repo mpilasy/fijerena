@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.sports
 
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -21,7 +22,7 @@ internal object BroadcasterChannels {
         val joined: String = words.joinToString("")
     }
 
-    private val PREFIX = Regex("^[^\\p{L}\\p{N}]*([A-Za-z]{2,4})\\s*(?:[:|\\]\\)▎│┃]+|\\s[-–]|-)\\s*")
+    private val PREFIX = Regex("^[^\\p{L}\\p{N}]*([A-Za-z][A-Za-z&]{1,3})\\s*(?:[:|\\]\\)▎│┃]+|\\s[-–]|-)\\s*")
     private val BRACKET = Regex("[\\[(]([A-Za-z]{2,4})[\\])]")
     private val LETTER_DIGIT = Regex("(?<=\\p{L})(?=\\p{N})|(?<=\\p{N})(?=\\p{L})")
 
@@ -83,6 +84,9 @@ internal object BroadcasterChannels {
             "KSA" to "SA",
         )
 
+    // Tags that name a TV carrier, and the carrier's country: "AT&T: ESPNU".
+    private val CARRIER_TAGS = mapOf("AT&T" to "US")
+
     private val ISO = Locale.getISOCountries().toSet()
 
     /** Word sequences that one channel family writes several ways, and the one spelling used here. */
@@ -137,12 +141,13 @@ internal object BroadcasterChannels {
         val upper = tag.uppercase()
         if (upper in NO_COUNTRY) return null
         THREE_LETTER[upper]?.let { return it }
+        CARRIER_TAGS[upper]?.let { return it }
         return upper.takeIf { it.length == 2 && it in ISO }
     }
 
     private fun isTag(tag: String): Boolean {
         val upper = tag.uppercase()
-        return upper in NO_COUNTRY || upper in THREE_LETTER || (upper.length == 2 && upper in ISO)
+        return upper in NO_COUNTRY || upper in THREE_LETTER || upper in CARRIER_TAGS || (upper.length == 2 && upper in ISO)
     }
 
     fun parse(name: String): ParsedChannel {
@@ -164,11 +169,14 @@ internal object BroadcasterChannels {
 
     fun broadcasterTokens(name: String): List<String> = words(name)
 
-    /** [text] as words: folded, without quality words, letters and digits apart, in one spelling. */
+    /**
+     * [text] as words: folded, without quality words, letters and digits apart, in one spelling.
+     * Superscript letters are read as letters first: "ESPNU ᴿᴬᵂ" is "espnu raw", so "raw" goes.
+     */
     private fun words(text: String): List<String> {
         val split =
             SportsText
-                .fold(text)
+                .fold(Normalizer.normalize(text, Normalizer.Form.NFKC))
                 .split(' ')
                 .filter { it.isNotEmpty() && it !in QUALITY }
                 .flatMap { it.split(LETTER_DIGIT) }
@@ -217,7 +225,8 @@ internal object BroadcasterChannels {
 
     /**
      * Of [channels] (all [broadcaster]'s), the ones worth listing with no programme: a channel with the
-     * broadcaster's exact name or that name and a number ("ESPN 2"), and its sport channels; none
+     * broadcaster's exact name or that name and a number ("ESPN 2"), spaces aside ("ESPN U" is
+     * "ESPNU"), and its sport channels; none
      * when there are none of these. Listing all of them then put a streaming service's channels
      * ("HULU ORIGINALS 1" to 8, for a game on Hulu) on a game none of them showed.
      */
@@ -226,11 +235,12 @@ internal object BroadcasterChannels {
         channels: List<LiveChannel>,
         parsed: Map<LiveChannel, ParsedChannel>,
     ): List<LiveChannel> {
-        val tokens = broadcasterTokens(broadcaster.name)
+        val joined = broadcasterTokens(broadcaster.name).joinToString("")
         return channels.filter { channel ->
-            val words = parsed[channel]?.words ?: return@filter false
-            val numbered = words.size == tokens.size + 1 && words.startsWith(tokens, 0) && words.last().all(Char::isDigit)
-            words == tokens || numbered || words.any { it in SPORT_WORDS }
+            val parsedChannel = parsed[channel] ?: return@filter false
+            val words = parsedChannel.words
+            val numbered = words.size >= 2 && words.last().all(Char::isDigit) && words.dropLast(1).joinToString("") == joined
+            parsedChannel.joined == joined || numbered || words.any { it in SPORT_WORDS }
         }
     }
 }

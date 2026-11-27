@@ -577,6 +577,27 @@ class GameChannelMatcherTest {
         }
 
     @Test
+    fun `ESPNU channels with superscript RAW, a space in the name or an AT&T tag are listed without a guide`() =
+        runTest {
+            // bears names (2026-11-27); none of them has a guide id.
+            val espnu = broadcaster("ESPNU", "US")
+            val game =
+                game("2026-11-27T22:30:00Z", team("Kansas State Wildcats"), team("Michigan Wolverines"), "NCAA Men's Basketball", espnu)
+            val channels =
+                listOf(
+                    channel(1, "TV: ESPNU ᴿᴬᵂ"),
+                    channel(2, "US: ESPN U HD"),
+                    channel(3, "AT&T: ESPNU ᴿᴬᵂ"),
+                    channel(4, "US: ESPN USA HD"),
+                    channel(5, "NL: ESPN UHD"),
+                )
+            assertEquals(
+                listOf("TV: ESPNU ᴿᴬᵂ: BROADCASTER_CHANNEL", "US: ESPN U HD: BROADCASTER_CHANNEL", "AT&T: ESPNU ᴿᴬᵂ: BROADCASTER_CHANNEL"),
+                match(game, channels).summary(),
+            )
+        }
+
+    @Test
     fun `two city names count as the game only next to each other, not another sport's teams of those cities`() =
         runTest {
             val minnesota = team("Minnesota United FC", shortName = "Minnesota")
