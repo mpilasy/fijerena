@@ -35,8 +35,8 @@ import java.util.Collections
 
 /**
  * Search's Teams type (the sports teams plan → Screens): one search per new query, the best team
- * first with its games and their channels, then the other teams and the leagues, the followed ones
- * marked, a failure with Retry; and when the type shows.
+ * first, then the other teams and the leagues, the followed ones marked, a failure with Retry; and
+ * when the type shows.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TeamsSearchViewModelTest {
@@ -47,9 +47,6 @@ class TeamsSearchViewModelTest {
         val queries: MutableList<String> = Collections.synchronizedList(mutableListOf())
         val follows = MutableStateFlow(FollowedSports.Followed())
 
-        var gamesFailure: Exception? = null
-        val gameReads: MutableList<String> = Collections.synchronizedList(mutableListOf())
-
         override suspend fun search(query: String): SportsSearchResult {
             queries += query
             failure?.let { throw it }
@@ -57,17 +54,6 @@ class TeamsSearchViewModelTest {
         }
 
         override fun followed(): Flow<FollowedSports.Followed> = follows
-
-        override suspend fun teamGames(team: SportsTeam): List<SportsGame> {
-            gameReads += team.id
-            gamesFailure?.let { throw it }
-            return GAMES
-        }
-
-        override suspend fun matcher(): GameMatcher =
-            GameMatcher { game ->
-                if (game.id == "1") listOf(GameChannel(CHANNEL, null, null, GameChannelHow.CHANNEL_NAME)) else emptyList()
-            }
 
         override suspend fun follow(team: SportsTeam) {
             follows.value = follows.value.copy(teams = follows.value.teams + team)
@@ -112,49 +98,19 @@ class TeamsSearchViewModelTest {
     }
 
     @Test
-    fun `the best team's games come with their channels, and it takes its logo from them`() {
-        val data = FakeData()
-        val vm = search(data)
-        vm.search("arsenal")
-
-        val games = vm.bestGames.await { it is GamesState.Loaded && it.channels.size == it.games.size } as GamesState.Loaded
-
-        assertEquals(listOf(ARSENAL.id), data.gameReads)
-        assertEquals(GAMES.map { it.id }, games.games.map { it.id })
-        assertEquals(CHANNEL, games.channelsOf(GAMES[0])?.single()?.stream)
-        assertEquals(emptyList<GameChannel>(), games.channelsOf(GAMES[1]))
-        assertEquals(LOGO, vm.bestTeam.value?.logoUrl)
-    }
-
-    @Test
-    fun `the best team's games failing shows Retry, which reads them again`() {
-        val data = FakeData().apply { gamesFailure = IllegalStateException("HTTP 503") }
-        val vm = search(data)
-        vm.search("arsenal")
-        vm.bestGames.await { it is GamesState.Failed }
-
-        data.gamesFailure = null
-        vm.retryBestGames()
-
-        vm.bestGames.await { it is GamesState.Loaded }
-        assertEquals(listOf(ARSENAL.id, ARSENAL.id), data.gameReads)
-    }
-
-    @Test
-    fun `Follow on the best team follows it whole, and again stops following it`() {
+    fun `Follow on the best team follows it, and again stops following it`() {
         val data = FakeData()
         val vm = search(data)
         val watcher = vm.viewModelScope.launch { vm.followed.collect {} }
         vm.search("arsenal")
-        vm.bestGames.await { it is GamesState.Loaded }
+        vm.await<TeamsSearchViewModel.State.Loaded>()
 
         vm.toggleBestFollow()
         vm.followed.await { ARSENAL.followKey in it }
         assertEquals(
-            LOGO,
+            ARSENAL,
             data.follows.value.teams
-                .single()
-                .logoUrl,
+                .single(),
         )
 
         vm.toggleBestFollow()
@@ -218,17 +174,9 @@ class TeamsSearchViewModelTest {
 
     private companion object {
         const val TIMEOUT_MS = 5_000L
-        const val LOGO = "https://a.espncdn.com/i/teamlogos/soccer/500/359.png"
         val ARSENAL = SportsTeam(SportsSource.ESPN, "soccer/359", "Arsenal", sport = "soccer", league = "soccer/eng.1")
         val ARSENAL_WOMEN = SportsTeam(SportsSource.ESPN, "soccer/19973", "Arsenal", sport = "soccer", league = "soccer/eng.w.1")
         val ARSENAL_SARANDI = SportsTeam(SportsSource.ESPN, "soccer/2635", "Arsenal Sarandi", sport = "soccer", league = "soccer/arg.3")
-        val CHELSEA = SportsTeam(SportsSource.ESPN, "soccer/363", "Chelsea", sport = "soccer")
         val PREMIER_LEAGUE = SportsLeague(SportsSource.ESPN, "soccer/eng.1", "Premier League", "soccer")
-        val CHANNEL = LiveChannel(1, 7, "UK| PPV 3: Arsenal v Chelsea", null, "ppv")
-        val GAMES =
-            listOf(
-                SportsGame(SportsSource.ESPN, "1", 4_000_000_000, ARSENAL.copy(logoUrl = LOGO), CHELSEA, PREMIER_LEAGUE),
-                SportsGame(SportsSource.ESPN, "2", 4_000_090_000, CHELSEA, ARSENAL.copy(logoUrl = LOGO), PREMIER_LEAGUE),
-            )
     }
 }

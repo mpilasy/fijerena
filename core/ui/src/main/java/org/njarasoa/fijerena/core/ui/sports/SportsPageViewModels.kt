@@ -121,7 +121,7 @@ sealed interface GamesState {
  * once per process, and its index) has its own, longer limit, [channelsTimeoutMs]: on a slow device
  * the first read takes more than one game's limit. A failed read sets [GamesState.Failed] ([rawOf]: its raw
  * text for a Nerd); a matcher that cannot be made finds nothing. [onGames] gets the games before
- * their channels. Shared by the team and league pages and the Teams search's best team.
+ * their channels. Shared by the team and league pages and the Sports section.
  *
  * [quiet]: a read again of a page that shows its games. A failure keeps the games shown, and each
  * game keeps the channels found before until its new match ends.

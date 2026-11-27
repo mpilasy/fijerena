@@ -98,8 +98,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * Back calls [onClose], and the page gives focus back to the game. An in-tree overlay: focus stays
  * in it.
  *
- * [contentPadding]: the safe margins on a page of its own; none inside a screen that has them
- * (Search). [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the
+ * [actions]: the header's icon actions (the reminder bell, [TvGameBell]); Up from the
  * first row reaches them. Focus: the first row on opening, and again when the channels come; Back
  * from a channel returns to its row ([returnFocus]).
  */
@@ -112,7 +111,6 @@ fun GameSheetOverlay(
     bells: GameBells,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val resources = LocalResources.current
@@ -149,7 +147,7 @@ fun GameSheetOverlay(
                     }
                 }.focusProperties { onExit = { cancelFocusChange() } }
                 .focusGroup()
-                .padding(contentPadding),
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(vertical = Spacing.md)) {
             TvScreenHeader(

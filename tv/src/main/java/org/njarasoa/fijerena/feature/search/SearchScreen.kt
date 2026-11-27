@@ -233,8 +233,6 @@ fun SearchScreen(
     // A team or league found by the Teams type: its page (the sports teams plan).
     onTeamSelected: (Screen.SportsTeam) -> Unit = {},
     onLeagueSelected: (Screen.SportsLeague) -> Unit = {},
-    // A channel picked in the sheet of the best team's game: its preview, as a guide result.
-    onPlayChannel: (Screen.CategoryList) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -473,7 +471,6 @@ fun SearchScreen(
                         returnFocus = returnFocus,
                         onTeamSelected = onTeamSelected,
                         onLeagueSelected = onLeagueSelected,
-                        onPlay = onPlayChannel,
                     )
                 } else if (activeTab == SearchTab.GUIDE) {
                     GuideTab(

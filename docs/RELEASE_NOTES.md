@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Teams search shows no games:** the search no longer lists the games of the first team found under it. The team comes first, with Follow and its bell; open it to see its games. TV and phone.
+
 ## Version: 0.9.20261127170727
 
 - **A game looks for its channels again when you open it:** opening a game's sheet (from Home's Upcoming Games, the Sports section, a team or league page, or Teams search) now looks for the game's channels again, and the game's row shows what it finds. So a game that said "Not found on your channels" because the first look came too early can find its channels without a restart. TV and phone.

@@ -84,12 +84,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * [returnFocus], so Back from the page it opened lands on it again.
  *
  * The best team: a row whose OK opens its page ([onTeamSelected]), Follow and its bell to the
- * right ([TvBestTeamRow]); its header shows at once, its games (up to 10, by day, each with its
- * best channel and bell, as on its page) when they come. A game opens its sheet
- * ([GameSheetOverlay]) over the pane; a channel there opens its preview ([onPlay]).
+ * right ([TvBestTeamRow]). Its games are on its page, not here.
  *
  * Focus: Down from the field goes to the first result (the best team, else the first team or
- * league), then down through the best team's games, the other teams and the leagues; Up goes back
+ * league), then down through the other teams and the leagues; Up goes back
  * the same way to the field. A league opens its page ([onLeagueSelected]). Its view model is made
  * the first time the type shows, so another type's search never asks the sports sources.
  * [holdFocus]: a type switch keeps focus on the type selector.
@@ -103,20 +101,14 @@ internal fun TeamsSearchPane(
     returnFocus: NavReturnFocus,
     onTeamSelected: (Screen.SportsTeam) -> Unit,
     onLeagueSelected: (Screen.SportsLeague) -> Unit,
-    onPlay: (Screen.CategoryList) -> Unit,
     viewModel: TeamsSearchViewModel = teamsSearchViewModel(),
 ) {
     val resources = LocalResources.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val followed by viewModel.followed.collectAsStateWithLifecycle()
-    val bestTeam by viewModel.bestTeam.collectAsStateWithLifecycle()
-    val bestGames by viewModel.bestGames.collectAsStateWithLifecycle()
     val bells = rememberGameBells()
     val fieldFocus = remember { FocusRequester() }
     val firstResultFocus = remember { FocusRequester() }
-    // The best team's game whose sheet is open (its key saved, so Back from a channel finds it open).
-    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
-    var closedGame by remember { mutableStateOf<String?>(null) }
     // Set by the keyboard's Search: the next results take focus.
     var jumpToResults by remember { mutableStateOf(false) }
     // As the People type: straight into the keyboard for a first search, else the field.
@@ -136,10 +128,6 @@ internal fun TeamsSearchPane(
             jumpToResults = false
             if (!loaded.isEmpty) firstResultFocus.requestFocusWithRetry()
         }
-    }
-    LaunchedEffect(closedGame) {
-        closedGame?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = firstResultFocus) }
-        closedGame = null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -191,21 +179,19 @@ internal fun TeamsSearchPane(
                         )
                     } else {
                         val listState = rememberLazyListState()
-                        val pinnedDay = rememberPinnedDayKey(listState)
                         NavReturnFocusEffect(returnFocus, listState = listState)
                         LazyColumn(
                             state = listState,
                             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            shown.best?.let { best ->
-                                val team = bestTeam?.takeIf { it.id == best.id } ?: best
-                                val bestKey = "best:${best.followKey}"
+                            shown.best?.let { team ->
+                                val bestKey = "best:${team.followKey}"
                                 item(key = bestKey, contentType = "best") {
                                     TvBestTeamRow(
                                         team = team,
                                         details = teamDetails(resources, team),
-                                        followed = best.followKey in followed,
+                                        followed = team.followKey in followed,
                                         bells = bells,
                                         onOpen = {
                                             returnFocus.leaveFrom(bestKey, listState)
@@ -218,39 +204,12 @@ internal fun TeamsSearchPane(
                                                 .navReturnFocusTarget(returnFocus, bestKey),
                                     )
                                 }
-                                bestGameRows(bestGames, team, bells, returnFocus, pinnedDay, viewModel::retryBestGames) { openGame = it }
                             }
                             teamAndLeagueRows(shown, followed, returnFocus, listState, firstResultFocus, onTeamSelected, onLeagueSelected)
                         }
                     }
                 }
             }
-        }
-        // A game's sheet that opens looks for the game's channels again; its row shows them too.
-        LaunchedEffect(openGame) {
-            openGame
-                ?.let { key ->
-                    (bestGames as? GamesState.Loaded)?.games?.firstOrNull { it.key == key }
-                }?.let(viewModel::matchBestGameAgain)
-        }
-        val sheetGames = (bestGames as? GamesState.Loaded)?.takeIf { loaded?.best != null }
-        val sheetGame = openGame?.let { key -> sheetGames?.games?.firstOrNull { it.key == key } }
-        if (sheetGame != null) {
-            val nowSec = remember { System.currentTimeMillis() / 1000 }
-            GameSheetOverlay(
-                game = sheetGame,
-                channels = sheetGames?.channelsOf(sheetGame),
-                returnFocus = returnFocus,
-                onPlay = { channel -> onPlay(channel.liveRoute()) },
-                bells = bells,
-                onClose = {
-                    closedGame = "game:${sheetGame.key}"
-                    openGame = null
-                },
-                // The search screen has its safe margins already.
-                contentPadding = PaddingValues(),
-                actions = { TvGameBell(sheetGame, bells, nowSec) },
-            )
         }
     }
 }
@@ -260,75 +219,6 @@ internal fun TeamsSearchPane(
 private fun teamsSearchViewModel(): TeamsSearchViewModel {
     val context = LocalContext.current
     return viewModel(factory = remember { TeamsSearchViewModel.Factory(context.applicationContext) })
-}
-
-/**
- * The best team's games under its row: a spinner while they load, the error with Retry, "No games
- * coming", or the games by day (the same rows as its page: both teams, the best channel, a bell).
- * A game opens its sheet ([onOpenGame] with its key).
- */
-private fun LazyListScope.bestGameRows(
-    games: GamesState,
-    team: SportsTeam,
-    bells: GameBells,
-    returnFocus: NavReturnFocus,
-    pinnedDay: Any?,
-    onRetry: () -> Unit,
-    onOpenGame: (String) -> Unit,
-) {
-    when (games) {
-        GamesState.Loading -> {
-            item(key = "best_loading", contentType = "loading") {
-                Box(modifier = Modifier.fillMaxWidth().padding(Spacing.md), contentAlignment = Alignment.Center) {
-                    CinemaSpinner()
-                }
-            }
-        }
-
-        is GamesState.Failed -> {
-            item(key = "best_failed", contentType = "failed") {
-                TvErrorState(
-                    title = stringResource(R.string.sports_load_error),
-                    message = games.raw?.let { "[dev] $it" }.orEmpty(),
-                    onRetry = onRetry,
-                )
-            }
-        }
-
-        is GamesState.Loaded -> {
-            if (games.games.isEmpty()) {
-                item(key = "best_no_games", contentType = "note") {
-                    TvEmptyState(
-                        message = stringResource(R.string.sports_no_games),
-                        icon = CinemaIcons.DateRange,
-                        takeFocus = false,
-                    )
-                }
-            }
-            for (day in gamesByDay(games.games)) {
-                stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
-                    TvDayHeading(
-                        text = DateText.dayLabel(LocalResources.current, day.date),
-                        pinned = pinnedDay == "best_day:${day.date}",
-                    )
-                }
-                for (game in day.games) {
-                    val key = "game:${game.key}"
-                    item(key = key, contentType = "game") {
-                        val nowSec = remember { System.currentTimeMillis() / 1000 }
-                        TvGameRow(
-                            game = game,
-                            channels = games.channelsOf(game),
-                            team = team,
-                            onClick = { onOpenGame(game.key) },
-                            modifier = Modifier.navReturnFocusTarget(returnFocus, key),
-                            trailing = { TvGameBell(game, bells, nowSec) },
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 /** The other teams, then the leagues, each group under its heading; each row opens its page. */

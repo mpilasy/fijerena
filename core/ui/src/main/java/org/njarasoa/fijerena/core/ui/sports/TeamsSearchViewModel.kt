@@ -45,12 +45,11 @@ fun followKeys(followed: FollowedSports.Followed): Set<String> =
 /**
  * Search's Teams type (the sports teams plan → Screens): one sports search per query
  * ([SportsData.search]: ESPN's teams and leagues). The user usually looks for one team, so the
- * best team ([BestTeam]) comes first with its next games (up to 10) and each game's best channel,
- * as on its page; the other teams, then the leagues, follow as rows that open their pages, each
- * marked when the profile follows it. A child profile never gets the Teams type, nor does any
+ * best team ([BestTeam]) comes first, with Follow and its bell; the other teams, then the leagues,
+ * follow as rows that open their pages, each marked when the profile follows it. No team's games
+ * are read here: its page shows them. A child profile never gets the Teams type, nor does any
  * profile while Admin's Sports switch is off (`showsTeamsTab`). The screen waits for the user to
- * stop typing before it calls [search], as the People type does; the best team's games are read
- * after its search, so they too wait for typing to stop.
+ * stop typing before it calls [search], as the People type does.
  */
 class TeamsSearchViewModel(
     private val data: Data,
@@ -65,12 +64,6 @@ class TeamsSearchViewModel(
 
         /** What the profile in use follows; emits again on every change. */
         fun followed(): Flow<FollowedSports.Followed>
-
-        /** [team]'s coming games, as on its page. */
-        suspend fun teamGames(team: SportsTeam): List<SportsGame>
-
-        /** A matcher on the profile's live channels and guide, as on a team page. */
-        suspend fun matcher(): GameMatcher
 
         suspend fun follow(team: SportsTeam)
 
@@ -91,7 +84,7 @@ class TeamsSearchViewModel(
             val raw: String?,
         ) : State
 
-        /** [best]: the team shown first, with its games ([bestGames]); [teams]: the other teams. */
+        /** [best]: the team shown first, with Follow and its bell; [teams]: the other teams. */
         data class Loaded(
             val query: String,
             val best: SportsTeam?,
@@ -104,20 +97,6 @@ class TeamsSearchViewModel(
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
-
-    private val _bestTeam = MutableStateFlow<SportsTeam?>(null)
-
-    /**
-     * The best team, completed from its games once they come ([teamFromGames]: the name its games
-     * give, its other names), so Follow and its bell store it whole as its page does. Null when
-     * the results have no team.
-     */
-    val bestTeam: StateFlow<SportsTeam?> = _bestTeam.asStateFlow()
-
-    private val _bestGames = MutableStateFlow<GamesState>(GamesState.Loading)
-
-    /** The best team's next games and their channels. */
-    val bestGames: StateFlow<GamesState> = _bestGames.asStateFlow()
 
     /** The [followKey]s of what the profile follows, for the rows' marks. */
     val followed: StateFlow<Set<String>> =
@@ -153,22 +132,9 @@ class TeamsSearchViewModel(
         (_state.value as? State.Failed)?.let { run(it.query) }
     }
 
-    /** Reads the best team's games again after a failure. Main only. */
-    fun retryBestGames() {
-        val team = (_state.value as? State.Loaded)?.best
-        if (team != null) {
-            job?.cancel()
-            _bestGames.value = GamesState.Loading
-            job =
-                viewModelScope.launchGuarded("TeamsSearchViewModel.bestGames", Dispatchers.IO, onError = ::bestGamesFailed) {
-                    readBestGames(team)
-                }
-        }
-    }
-
     /** Follows the best team, or stops following it. */
     fun toggleBestFollow() {
-        val team = _bestTeam.value
+        val team = (_state.value as? State.Loaded)?.best
         if (team != null) {
             val on = team.followKey in followed.value
             viewModelScope.launchGuarded("TeamsSearchViewModel.follow", Dispatchers.IO) {
@@ -199,32 +165,9 @@ class TeamsSearchViewModel(
                     }
                 if (found != null) {
                     val best = BestTeam.of(term, found.teams)
-                    // The best team and its games' Loading before the results, so its header shows at once.
-                    _bestTeam.value = best
-                    _bestGames.value = GamesState.Loading
                     _state.value = State.Loaded(term, best, found.teams.filter { it != best }, found.leagues)
-                    if (best != null) readBestGames(best)
                 }
             }
-    }
-
-    private suspend fun readBestGames(team: SportsTeam) {
-        readGamesAndChannels(
-            state = _bestGames,
-            loadGames = { data.teamGames(team) },
-            matcher = data::matcher,
-            rawOf = ::rawOf,
-            onGames = { games -> _bestTeam.value = teamFromGames(team, games) },
-        )
-    }
-
-    /** Matches the best team's [game] again (its sheet opens); see [matchGameAgain]. */
-    fun matchBestGameAgain(game: SportsGame) {
-        viewModelScope.launchGuarded("TeamsSearchViewModel.matchAgain", Dispatchers.IO) { matchGameAgain(_bestGames, game, data::matcher) }
-    }
-
-    private fun bestGamesFailed(e: Throwable) {
-        _bestGames.value = GamesState.Failed(rawOf(e))
     }
 
     private fun rawOf(e: Throwable): String? = if (data.nerd) Redact.text(e.message ?: e.javaClass.simpleName) else null
@@ -253,10 +196,6 @@ class TeamsSearchViewModel(
         override suspend fun search(query: String): SportsSearchResult = SportsData.getInstance(context).search(query)
 
         override fun followed(): Flow<FollowedSports.Followed> = pages.followed()
-
-        override suspend fun teamGames(team: SportsTeam): List<SportsGame> = pages.teamGames(team)
-
-        override suspend fun matcher(): GameMatcher = pages.matcher()
 
         override suspend fun follow(team: SportsTeam) = pages.follow(team)
 

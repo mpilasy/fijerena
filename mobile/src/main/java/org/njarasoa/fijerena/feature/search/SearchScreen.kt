@@ -200,8 +200,6 @@ fun MobileSearchScreen(
     // A team or league found by the Teams type: its page (the sports teams plan).
     onTeamSelected: (Screen.SportsTeam) -> Unit = {},
     onLeagueSelected: (Screen.SportsLeague) -> Unit = {},
-    // A channel picked in the sheet of the best team's game: its mini-player, as a guide result.
-    onPlayChannel: (Screen.CategoryList) -> Unit = {},
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -425,7 +423,6 @@ fun MobileSearchScreen(
                     onQueryChange = { searchQuery = it },
                     onTeamSelected = onTeamSelected,
                     onLeagueSelected = onLeagueSelected,
-                    onPlay = onPlayChannel,
                 )
                 return@Column
             }

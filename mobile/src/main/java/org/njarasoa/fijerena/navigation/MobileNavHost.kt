@@ -550,7 +550,6 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             onPersonSelected = { id, name -> navController.navigateOnce(Screen.Person(id, name)) },
             onTeamSelected = { navController.navigateOnce(it) },
             onLeagueSelected = { navController.navigateOnce(it) },
-            onPlayChannel = { navController.navigateOnce(it) },
             onResultOpening = { query, source ->
                 openingQuery = query
                 openingSource = source

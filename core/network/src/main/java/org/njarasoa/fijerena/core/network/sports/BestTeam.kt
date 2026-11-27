@@ -1,8 +1,8 @@
 package org.njarasoa.fijerena.core.network.sports
 
 /**
- * The team a Teams search most likely means (the user usually looks for one team): its games show
- * at once at the top of the results. ESPN's order is usually right, so [of] only moves a team up
+ * The team a Teams search most likely means (the user usually looks for one team): it shows first
+ * in the results, with Follow and its bell. ESPN's order is usually right, so [of] only moves a team up
  * for two reasons, in this order:
  *
  * 1. A name of the team (its name, short name or other names) is the query, or starts with it,

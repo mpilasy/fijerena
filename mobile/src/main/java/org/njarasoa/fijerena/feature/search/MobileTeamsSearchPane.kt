@@ -77,14 +77,12 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Search's Teams type (the sports teams plan → Screens): the field the other types share, then the
- * best team (the one the user most likely means, `BestTeam`) with its next games, then the other
- * teams and the leagues found, each group under its heading, a star on what the profile follows.
+ * best team (the one the user most likely means, `BestTeam`), then the other teams and the
+ * leagues found, each group under its heading, a star on what the profile follows.
  * The search runs once typing stops and at once on the keyboard's Search.
  *
  * The best team: a card that opens its page ([onTeamSelected]), with its bell and Follow at its end
- * ([MobileBestTeamCard]); it shows at once, its games (up to 10, by day, each with its best channel
- * and bell, as on its page) when they come. A game opens its sheet ([MobileGameSheet]); a channel
- * there opens its mini-player ([onPlay]). Another team opens its page, a league its page
+ * ([MobileBestTeamCard]); its games are on its page, not here. Another team opens its page, a league its page
  * ([onLeagueSelected]). Its view model is made the first time the type shows, so another type's
  * search never asks the sports sources.
  */
@@ -94,22 +92,16 @@ internal fun MobileTeamsSearchPane(
     onQueryChange: (String) -> Unit,
     onTeamSelected: (Screen.SportsTeam) -> Unit,
     onLeagueSelected: (Screen.SportsLeague) -> Unit,
-    onPlay: (Screen.CategoryList) -> Unit,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: TeamsSearchViewModel = viewModel(factory = remember { TeamsSearchViewModel.Factory(context.applicationContext) })
     val state by viewModel.state.collectAsStateWithLifecycle()
     val followed by viewModel.followed.collectAsStateWithLifecycle()
-    val bestTeam by viewModel.bestTeam.collectAsStateWithLifecycle()
-    val bestGames by viewModel.bestGames.collectAsStateWithLifecycle()
     val bells = rememberGameBells()
-    // The best team's game whose sheet is open (its key saved, so Back from a channel finds it open).
-    var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     // Here, not in the list: the list leaves while results load, and Back from a result must find
     // the place the user left (saved with the screen).
     val listState = rememberLazyListState()
-    val pinnedDay = rememberPinnedDayKey(listState)
     // The type shown with text it has not searched: at once. Then once typing stops.
     LaunchedEffect(Unit) { viewModel.search(query) }
     LaunchedEffect(query) {
@@ -178,20 +170,18 @@ internal fun MobileTeamsSearchPane(
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                         contentPadding = PaddingValues(bottom = Spacing.md + LocalDockInset.current),
                     ) {
-                        shown.best?.let { best ->
-                            val team = bestTeam?.takeIf { it.id == best.id } ?: best
-                            item(key = "best:${best.followKey}", contentType = "best") {
+                        shown.best?.let { team ->
+                            item(key = "best:${team.followKey}", contentType = "best") {
                                 MobileBestTeamCard(
                                     team = team,
                                     details = teamDetails(resources, team),
-                                    followed = best.followKey in followed,
+                                    followed = team.followKey in followed,
                                     bells = bells,
                                     onOpen = { onTeamSelected(team.route()) },
                                     onToggleFollow = viewModel::toggleBestFollow,
                                     cardColors = cardColors,
                                 )
                             }
-                            bestGameCards(bestGames, team, bells, cardColors, pinnedDay, viewModel::retryBestGames) { openGame = it }
                         }
                         if (shown.teams.isNotEmpty()) {
                             item(key = "teams_header", contentType = "header") {
@@ -232,88 +222,6 @@ internal fun MobileTeamsSearchPane(
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-    // A game's sheet that opens looks for the game's channels again; its row shows them too.
-    LaunchedEffect(openGame) {
-        openGame?.let { key -> (bestGames as? GamesState.Loaded)?.games?.firstOrNull { it.key == key } }?.let(viewModel::matchBestGameAgain)
-    }
-    val sheetGames = (bestGames as? GamesState.Loaded)?.takeIf { (state as? TeamsSearchViewModel.State.Loaded)?.best != null }
-    val sheetGame = openGame?.let { key -> sheetGames?.games?.firstOrNull { it.key == key } }
-    if (sheetGame != null) {
-        val nowSec = remember { System.currentTimeMillis() / 1000 }
-        MobileGameSheet(
-            game = sheetGame,
-            channels = sheetGames?.channelsOf(sheetGame),
-            onPlay = { channel -> onPlay(channel.liveRoute()) },
-            bells = bells,
-            onDismiss = { openGame = null },
-            actions = { MobileGameBell(sheetGame, bells, nowSec) },
-        )
-    }
-}
-
-/**
- * The best team's games under its card: a spinner while they load, the error with Retry, "No games
- * coming", or the games by day (the same cards as its page: both teams, the best channel, a bell).
- * A game opens its sheet ([onOpenGame] with its key).
- */
-private fun LazyListScope.bestGameCards(
-    games: GamesState,
-    team: SportsTeam,
-    bells: GameBells,
-    cardColors: CardColors,
-    pinnedDay: Any?,
-    onRetry: () -> Unit,
-    onOpenGame: (String) -> Unit,
-) {
-    when (games) {
-        GamesState.Loading -> {
-            item(key = "best_loading", contentType = "loading") {
-                Box(modifier = Modifier.fillMaxWidth().padding(Spacing.md), contentAlignment = Alignment.Center) {
-                    CinemaSpinner()
-                }
-            }
-        }
-
-        is GamesState.Failed -> {
-            item(key = "best_failed", contentType = "failed") {
-                MobileErrorState(
-                    title = stringResource(R.string.sports_load_error),
-                    message = games.raw?.let { "[dev] $it" }.orEmpty(),
-                    onRetry = onRetry,
-                )
-            }
-        }
-
-        is GamesState.Loaded -> {
-            if (games.games.isEmpty()) {
-                item(key = "best_no_games", contentType = "note") {
-                    MobileEmptyState(
-                        message = stringResource(R.string.sports_no_games),
-                        icon = CinemaIcons.DateRange,
-                    )
-                }
-            }
-            for (day in gamesByDay(games.games)) {
-                stickyHeader(key = "best_day:${day.date}", contentType = DAY_HEADING) {
-                    MobileDayHeading(
-                        DateText.dayLabel(LocalResources.current, day.date),
-                        pinned = pinnedDay == "best_day:${day.date}",
-                    )
-                }
-                items(day.games, key = { "game:${it.key}" }, contentType = { "game" }) { game ->
-                    val nowSec = remember { System.currentTimeMillis() / 1000 }
-                    MobileGameCard(
-                        game = game,
-                        channels = games.channelsOf(game),
-                        team = team,
-                        cardColors = cardColors,
-                        onClick = { onOpenGame(game.key) },
-                        trailing = { MobileGameBell(game, bells, nowSec) },
-                    )
                 }
             }
         }
