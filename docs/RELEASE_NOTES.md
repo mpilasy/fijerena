@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261127182233
 
 - **Teams search shows no games:** the search no longer lists the games of the first team found under it. The team comes first, with Follow and its bell; open it to see its games. TV and phone.
 
