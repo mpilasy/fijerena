@@ -1,5 +1,11 @@
 # Release Notes
 
+## Unreleased
+
+- **Search is higher on the TV side menu:** Search is now second, under your profile and above Home. Focus usually comes into the menu on Home, so Search is one press up. The Browse entries now come after the sections, above the gap before Settings. TV.
+- **Home rows no longer jump on start:** when Home first opens, grey card shapes show where the rows come, for 3 seconds at most. Then all the rows come in together, so a row that loads late (such as Continue Watching or Upcoming Games) no longer pushes the rows below it down. When you go back to Home, the rows show at once. TV and phone.
+- **Upcoming Games shows sooner:** the app now keeps the last Upcoming Games row on the device. When the app starts, the row shows at once, without the games that have ended, and then updates. TV and phone.
+
 ## Version: 0.9.20261124054039
 
 - **No sync error when the TV wakes the box:** when the TV woke a TV box with the app open, the sync between devices could fail once with "Unable to resolve host", because the device still blocked the app's network for about a second. The sync now waits until the network is open (10 seconds at most), so this error no longer shows in the device logs. TV and phone.
