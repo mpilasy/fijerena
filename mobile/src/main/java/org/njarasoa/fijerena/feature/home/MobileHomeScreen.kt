@@ -35,6 +35,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
@@ -72,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MenuAction
 import org.njarasoa.fijerena.core.ui.components.SectionPanel
+import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -146,8 +148,8 @@ private data class HomeRows(
 /**
  * The phone's Home tab: TV Home's rows for the profile's merged sources, phone-sized: Continue
  * watching, Channels, the Wanted list, each section's TMDB chart rows, then the favourites. Each
- * row hides when empty and is read again on every return. The chart rows load on their own, so they
- * never hold Home up. [supportedTypes]: the profile's merged sections; a row of a section they do
+ * row hides when empty and is read again on every return. The chart rows load on their own. On the
+ * first show, placeholder rows wait for all rows, at most [HOME_ROWS_WAIT_MS]. [supportedTypes]: the profile's merged sections; a row of a section they do
  * not have stays empty. [onChannel] gets the list it zaps through (Recent or Favourites).
  */
 @Composable
@@ -259,8 +261,12 @@ fun MobileHomeScreen(
             }
         }
     }
+    // No source to read: Home has no rows, so it does not wait for them.
+    var noSources by remember { mutableStateOf(false) }
     LaunchedEffect(reloads, supportedTypes) {
-        val lists = withContext(Dispatchers.IO) { MergedLists.forSections(context.applicationContext) } ?: return@LaunchedEffect
+        val lists = withContext(Dispatchers.IO) { MergedLists.forSections(context.applicationContext) }
+        noSources = lists == null
+        if (lists == null) return@LaunchedEffect
         merged = lists
         val settings = AppSettings(context.applicationContext)
         rows = loadRows(lists, supportedTypes, child = settings.isChildProfile(settings.activeProfileId))
@@ -268,18 +274,22 @@ fun MobileHomeScreen(
     // The TMDB chart rows (the TMDB charts plan, Phase 4): read apart from the other rows, as they
     // can ask TMDB, and again when the Admin switch or the Trending rows' switch (follow-up F3:
     // titles no source has) changes. A child gets the kids' charts.
-    val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
-        .collectAsStateWithLifecycle(initialValue = false)
-    val chartsShowMissing by remember {
-        AppSettings(context.applicationContext).let { it.observeChartsShowMissing(it.activeProfileId) }
-    }.collectAsStateWithLifecycle(initialValue = false)
+    // The switches start from their stored values: a false start would count the charts and the
+    // games as read before they are.
+    val homeSettings = remember { AppSettings(context.applicationContext) }
+    val showCharts by remember { homeSettings.observeShowTmdbCharts() }
+        .collectAsStateWithLifecycle(initialValue = homeSettings.showTmdbCharts)
+    val chartsShowMissing by remember { homeSettings.observeChartsShowMissing(homeSettings.activeProfileId) }
+        .collectAsStateWithLifecycle(initialValue = homeSettings.chartsShowMissing(homeSettings.activeProfileId))
     var charts by remember { mutableStateOf<List<ChartRows.Row>>(emptyList()) }
+    var chartsLoaded by remember { mutableStateOf(false) }
     // Admin → Refresh Charts: read again.
     val chartRefreshes by ChartRows.refreshes.collectAsStateWithLifecycle()
     LaunchedEffect(merged, supportedTypes, showCharts, chartsShowMissing, chartRefreshes) {
         val lists = merged ?: return@LaunchedEffect
         if (!showCharts) {
             charts = emptyList()
+            chartsLoaded = true
             return@LaunchedEffect
         }
         charts =
@@ -288,21 +298,33 @@ fun MobileHomeScreen(
                     .filter { it in supportedTypes }
                     .flatMap { ChartRows.load(context.applicationContext, lists, it) }
             }
+        chartsLoaded = true
     }
     // The Upcoming Games row (the sports teams plan → Home row): read apart from the other rows,
     // as it may ask the sports sources; kept in memory and read again at most every 15 minutes
     // (UpcomingGames). Absent for a child or while Admin's Sports switch is off.
-    val showSports by remember { AppSettings(context.applicationContext).observeShowSports() }
-        .collectAsStateWithLifecycle(initialValue = false)
+    val showSports by remember { homeSettings.observeShowSports() }
+        .collectAsStateWithLifecycle(initialValue = homeSettings.showSports)
     var upcoming by remember { mutableStateOf<List<UpcomingGame>>(emptyList()) }
+    var upcomingLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(reloads, showSports) {
-        upcoming =
-            if (showSports && UpcomingGames.enabled(context.applicationContext)) {
-                withContext(Dispatchers.IO) { UpcomingGames.load(context.applicationContext) }
-            } else {
-                emptyList()
+        if (!showSports || !UpcomingGames.enabled(context.applicationContext)) {
+            upcoming = emptyList()
+            upcomingLoaded = true
+            return@LaunchedEffect
+        }
+        // The saved row first, at once, so Home does not wait for the sports sources.
+        if (upcoming.isEmpty()) {
+            withContext(Dispatchers.IO) { UpcomingGames.saved(context.applicationContext) }?.let {
+                upcoming = it
+                upcomingLoaded = true
             }
+        }
+        upcoming = withContext(Dispatchers.IO) { UpcomingGames.load(context.applicationContext) }
+        upcomingLoaded = true
     }
+    // The rows come in together on the first show: placeholder rows until all are read.
+    val rowsShown = rememberHomeRowsShown(noSources || (rows != null && chartsLoaded && upcomingLoaded))
     // The game whose sheet is open; saved, so Back from its channel finds it open again.
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val bells = rememberGameBells()
@@ -564,6 +586,10 @@ fun MobileHomeScreen(
             containerColor = CinemaTheme.colors.clear,
             topBar = { sourceTopBar(onSearch) },
         ) { padding ->
+            if (!rowsShown) {
+                HomePlaceholderRows(padding)
+                return@Scaffold
+            }
             val loaded = rows ?: return@Scaffold
             if (loaded.isEmpty && wantedCards.isEmpty() && newEpisodeCards.isEmpty() && charts.isEmpty() && upcoming.isEmpty()) {
                 MobileEmptyState(
@@ -923,6 +949,61 @@ private fun HomeRowsColumn(
     }
 }
 
+/**
+ * Whether Home shows its rows: false on the first show of this Home entry until [ready], or until
+ * [HOME_ROWS_WAIT_MS] goes by, so one slow row does not keep Home empty. Saved, so a return to Home
+ * (Back from a title or the player) shows the rows at once.
+ */
+@Composable
+internal fun rememberHomeRowsShown(ready: Boolean): Boolean {
+    var shown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(ready) { if (ready) shown = true }
+    LaunchedEffect(Unit) {
+        if (!shown) {
+            delay(HOME_ROWS_WAIT_MS)
+            shown = true
+        }
+    }
+    return shown
+}
+
+/** Home's rows before they are read: a title bar and a row of card shapes each. Not focusable. */
+@Composable
+internal fun HomePlaceholderRows(padding: PaddingValues) {
+    val width = MobileDimensions.homeCardWidth
+    val shape = CinemaTheme.shapes.card
+    Column(
+        modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+    ) {
+        repeat(PLACEHOLDER_ROWS) {
+            Column {
+                Box(
+                    Modifier
+                        .padding(horizontal = Spacing.md)
+                        .width(width)
+                        .height(Spacing.md)
+                        .clip(shape),
+                ) {
+                    ShimmerPlaceholder(Modifier.fillMaxSize())
+                }
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                    contentPadding = PaddingValues(horizontal = Spacing.md),
+                    userScrollEnabled = false,
+                ) {
+                    items(PLACEHOLDER_CARDS) {
+                        Box(Modifier.width(width).aspectRatio(CARD_ASPECT).clip(shape)) {
+                            ShimmerPlaceholder(Modifier.fillMaxSize())
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** A section's group of rows on Home: its tint behind them, the rows' own gap between them. */
 @Composable
 private fun HomeSection(
@@ -1239,4 +1320,9 @@ private suspend fun loadRows(
     }
 
 private const val CARD_ASPECT = 16f / 9f
+
+/** The longest time Home waits for its rows on the first show; a row read later comes in late. */
+internal const val HOME_ROWS_WAIT_MS = 3_000L
+private const val PLACEHOLDER_ROWS = 3
+private const val PLACEHOLDER_CARDS = 6
 private val EPISODE_NUMBER = Regex("""S\d{1,3}\s?E\d{1,4}""", RegexOption.IGNORE_CASE)
