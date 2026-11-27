@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- **Focused game rows no longer touch their bell:** on TV, a focused game row (Sports section, team and league pages), a team's result row and the best team in Teams search grew until their edge touched the bell or Follow icon beside them. These rows now grow a little less on focus, as wide Settings rows do, and sit a little further from the icons. TV.
+
 ## Version: 0.9.20261127182233
 
 - **Teams search shows no games:** the search no longer lists the games of the first team found under it. The team comes first, with Follow and its bell; open it to see its games. TV and phone.

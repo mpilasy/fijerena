@@ -78,11 +78,16 @@ object TvListRowDefaults {
         return CardDefaults.border(border = Border.None, focusedBorder = focused, pressedBorder = focused)
     }
 
+    /**
+     * [wide]: a row as wide as its list with icon actions beside it (a game row, the best team in
+     * Search) lifts by [TvFocusTokens.focusedScaleRow], as a Settings row: the content lift grew
+     * its edge onto the icons beside it.
+     */
     @Composable
-    fun scale(): CardScale =
+    fun scale(wide: Boolean = false): CardScale =
         CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
+            focusedScale = if (wide) TvFocusTokens.focusedScaleRow else TvFocusTokens.focusedScaleContent,
             pressedScale = TvFocusTokens.pressedScaleSubtle,
         )
 

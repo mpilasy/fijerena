@@ -42,13 +42,17 @@ data class TvCardLook(
 
 /** The TV card looks, from [CinemaTheme] and [TvFocusTokens]. */
 object TvCardLooks {
-    /** A content list row ([TvListRowDefaults]: light lift, white outline, text stays white). */
+    /**
+     * A content list row ([TvListRowDefaults]: light lift, white outline, text stays white).
+     * [wide]: a full-width row with icon actions beside it, whose lift is capped (see
+     * [TvListRowDefaults.scale]).
+     */
     @Composable
-    fun listRow(): TvCardLook =
+    fun listRow(wide: Boolean = false): TvCardLook =
         TvCardLook(
             colors = TvListRowDefaults.colors(),
             border = TvListRowDefaults.border(),
-            scale = TvListRowDefaults.scale(),
+            scale = TvListRowDefaults.scale(wide),
             glow = TvListRowDefaults.glow(),
             shape = TvListRowDefaults.shape(),
         )

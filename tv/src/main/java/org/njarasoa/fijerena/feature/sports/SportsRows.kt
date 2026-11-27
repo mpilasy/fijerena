@@ -140,12 +140,12 @@ fun TvBestTeamRow(
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TvCard(
             onClick = onOpen,
-            look = TvCardLooks.listRow(),
+            look = TvCardLooks.listRow(wide = true),
             modifier =
                 modifier
                     .leftToRail()
@@ -271,12 +271,12 @@ fun TvGameRow(
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TvCard(
             onClick = onClick,
-            look = TvCardLooks.listRow(),
+            look = TvCardLooks.listRow(wide = true),
             modifier =
                 modifier
                     .leftToRail()
@@ -307,12 +307,12 @@ fun TvResultRow(
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TvCard(
             onClick = {},
-            look = TvCardLooks.listRow(),
+            look = TvCardLooks.listRow(wide = true),
             modifier =
                 modifier
                     .leftToRail()

@@ -300,6 +300,7 @@ A 15-style scale (48 sp down to 14 sp): display and headline styles in Manrope, 
 ### Focus System (TV)
 
 - Scale, outline and shadow come from `LocalUiStyle.current.grid` through `TvFocusTokens`: focus scale 1.0 (Sharp, outline only) to 1.09 (Rounded); outline 3 dp when the style uses one, never below `minFocusBorderWidth` (2 dp).
+- A content row lifts by half the style's focus scale (`focusedScaleContent`). A row as wide as its list lifts by `focusedScaleRow` (at most 2%): Settings rows, and the sports rows with icon actions beside them (`TvCardLooks.listRow(wide = true)`: game, result and best-team rows, 16 dp from the icons), so a focused row never grows onto its panel's edge or the icons beside it.
 - Modifiers: `tv/ui/components/modifiers/FocusModifiers.kt`. Focus behaviour (panes, return focus, retries) is the contract in [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#tv-focus).
 
 ### Safe Margins (TV Overscan)
