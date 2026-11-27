@@ -59,11 +59,12 @@ internal enum class TvSection(
 internal const val SPORTS_SECTION = "SPORTS"
 
 /**
- * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
- * Xtream sources' content types, merged; none while unknown or with no Xtream source), Sports while
- * Admin's Sports switch is on ([sports], SP-D9), Search, Settings. The Browse entries go between
- * those and Search (`TvNavRail`). A [child] profile has only the avatar, Home and Search: it never
- * browses (the kids' Home plan, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
+ * The rail's items, top to bottom: the avatar, Search, Home, the sections [sections] names (the
+ * profile's Xtream sources' content types, merged; none while unknown or with no Xtream source),
+ * Sports while Admin's Sports switch is on ([sports], SP-D9), Settings. Search is near the top, one
+ * press from Home, where focus usually enters the rail. The Browse entries go between Sports and
+ * Settings (`TvNavRail`). A [child] profile has only the avatar, Search and Home: it never browses
+ * (the kids' Home plan, K-D1, K-D7), and has no Settings and no Sports (SP-D8).
  */
 internal fun railItems(
     sections: Set<String>?,
@@ -71,12 +72,12 @@ internal fun railItems(
     sports: Boolean = false,
 ): List<RailItem> =
     if (child) {
-        listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH)
+        listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME)
     } else {
-        listOf(RailItem.PROFILE, RailItem.HOME) +
+        listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME) +
             TvSection.entries.filter { sections != null && it.contentType in sections }.map { it.item } +
             listOfNotNull(RailItem.SPORTS.takeIf { sports }) +
-            listOf(RailItem.SEARCH, RailItem.SETTINGS)
+            listOf(RailItem.SETTINGS)
     }
 
 /** What is on top of the back stack, as far as the rail's lit item cares. */

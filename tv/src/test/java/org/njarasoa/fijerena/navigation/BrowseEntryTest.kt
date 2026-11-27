@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.navigation
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,6 +58,24 @@ class BrowseEntryTest {
     }
 
     @Test
+    fun `the rail draws Search above Home and the Browse entries between the sections and Settings`() {
+        composeTestRule.setContent {
+            TvNavRail(
+                state = TvNavRailState(),
+                items = railItems(setOf(ContentType.LIVE_TV)),
+                profileFallbackName = "A",
+                onSelect = {},
+                browse = listOf(jellyfin),
+            )
+        }
+
+        fun top(description: String) = composeTestRule.onNodeWithContentDescription(description).getUnclippedBoundsInRoot().top
+        assertTrue(top("Search") < top("Home"))
+        assertTrue(top("Live TV") < top("Browse Jelly"))
+        assertTrue(top("Browse Jelly") < top("Settings"))
+    }
+
+    @Test
     fun `the sections dialog opens on the first section, OK picks it`() {
         val picked = mutableListOf<String>()
         composeTestRule.setContent {
@@ -78,7 +98,7 @@ class BrowseEntryTest {
     @Test
     fun `Browse entries are not rail items`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.LIVE_TV, RailItem.SEARCH, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.LIVE_TV, RailItem.SETTINGS),
             railItems(setOf(ContentType.LIVE_TV)),
         )
     }

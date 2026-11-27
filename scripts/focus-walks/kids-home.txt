@@ -1,14 +1,15 @@
 # Kids' Home (the kids' Home plan), TV emulator, profile Kid (a child profile),
 # favourite films Narnia and Toy Story (Narnia hidden by the kids' filter since 2026-10-20: its
 # category is not a kids' one), no film in progress. Home opens on the first card; Left
-# from the first card goes to the rail, which has only the avatar, Home and Search (no Settings for
-# a child since 2026-10-28; Down on Search stays put). Line edited by hand, not re-run.
+# from the first card goes to the rail, which has only the avatar, Search and Home (no Settings for
+# a child since 2026-10-28; Down on Home stays put; Search above Home since 2026-11-27). Lines
+# edited by hand, not re-run.
 @start Toy Story (1995) / GR
 LEFT	Home
-DOWN	Search
-DOWN	Search
-UP	Home
+DOWN	Home
+UP	Search
 UP	Switch profile (Kid) / K / Kid
+DOWN	Search
 DOWN	Home
 RIGHT	Toy Story (1995) / GR
 MENU	Toy Story (1995) / GR

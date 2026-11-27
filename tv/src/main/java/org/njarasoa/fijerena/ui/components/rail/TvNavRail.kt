@@ -121,7 +121,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * @param onSelect called with the item picked; the nav host navigates.
  * @param browse a "Browse <source>" entry for each of the profile's sources outside the merged
  *   sections (Jellyfin, M3U; docs/plans/20261012_multi-source-search-history-plan.md → O1), drawn
- *   below the sections, before Search; [onBrowse] is called with the one picked.
+ *   below the sections, before Settings; [onBrowse] is called with the one picked.
  */
 @Composable
 fun TvNavRail(
@@ -277,9 +277,8 @@ private fun RailOverlay(
                     ),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            items.forEach { item ->
-                // The Browse entries come after the sections, before Search.
-                if (item == RailItem.SEARCH) {
+            val browseEntries =
+                @Composable {
                     browse.forEach { source ->
                         key(source.providerId) {
                             val isCurrent = source.providerId == state.currentBrowse
@@ -293,6 +292,9 @@ private fun RailOverlay(
                         }
                     }
                 }
+            items.forEach { item ->
+                // The Browse entries come after the sections, before the gap above Settings.
+                if (item == RailItem.SETTINGS) browseEntries()
                 key(item) {
                     if (item == RailItem.SETTINGS) Spacer(modifier = Modifier.weight(1f))
                     RailEntry(
@@ -305,6 +307,8 @@ private fun RailOverlay(
                     )
                 }
             }
+            // A rail with no Settings (a child's) has the Browse entries at its end.
+            if (RailItem.SETTINGS !in items) browseEntries()
         }
         // Over the rail's edge shade, which would dim its left bar; the items sit right of the bar.
         if (frame != null) {

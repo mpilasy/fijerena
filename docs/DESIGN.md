@@ -350,7 +350,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Screen | File | Description |
 |--------|------|-------------|
 | Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/TvContinueWatchingShelf.kt`) | Header (clock, the sources' sync line, Search the guide), Continue Watching, Channels, favourites and favourite-category rows; no section tiles (the rail) |
-| Navigation rail | `ui/components/rail/TvNavRail.kt`, `TvNavRailState.kt`; `navigation/TvSections.kt` | Profile, Home, sections, Search, Settings down the left edge, over every screen but the player and the Live TV preview |
+| Navigation rail | `ui/components/rail/TvNavRail.kt`, `TvNavRailState.kt`; `navigation/TvSections.kt` | Profile, Search, Home, sections, Settings down the left edge, over every screen but the player and the Live TV preview |
 | Category screen | `feature/category/TvCategoryGridScreen.kt` | Categories and items in two panes; Live TV preview layer |
 | Movie details | `feature/movie/MovieDetailsScreen.kt` | Hero, Play / Resume, tabs, related titles |
 | Episodes | `feature/episode/EpisodeSelectionScreen.kt` | Season tabs, episode list, episode detail panel |
