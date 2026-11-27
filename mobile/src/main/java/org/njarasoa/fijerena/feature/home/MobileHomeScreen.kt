@@ -323,8 +323,13 @@ fun MobileHomeScreen(
         upcoming = withContext(Dispatchers.IO) { UpcomingGames.load(context.applicationContext) }
         upcomingLoaded = true
     }
-    // The rows come in together on the first show: placeholder rows until all are read.
-    val rowsShown = rememberHomeRowsShown(noSources || (rows != null && chartsLoaded && upcomingLoaded))
+    // The rows come in together on the first show: placeholder rows until all are read. The chart
+    // rows end the TV Shows and Films groups, below the first screen when a row is above them: then
+    // they come in later and move nothing in view.
+    val rowAboveCharts =
+        rows?.let { it.continueWatching.isNotEmpty() || it.channels.isNotEmpty() || it.favoriteChannels.isNotEmpty() } == true ||
+            upcoming.isNotEmpty()
+    val rowsShown = rememberHomeRowsShown(noSources || (rows != null && upcomingLoaded && (chartsLoaded || rowAboveCharts)))
     // The game whose sheet is open; saved, so Back from its channel finds it open again.
     var openGame by rememberSaveable { mutableStateOf<String?>(null) }
     val bells = rememberGameBells()
