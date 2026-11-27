@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261127170727
 
 - **A game looks for its channels again when you open it:** opening a game's sheet (from Home's Upcoming Games, the Sports section, a team or league page, or Teams search) now looks for the game's channels again, and the game's row shows what it finds. So a game that said "Not found on your channels" because the first look came too early can find its channels without a restart. TV and phone.
 - **Refresh in Sports on TV:** the Sports section (after the Reminders bell) and every team and league page (after Follow) have a Refresh icon. It reads the games again and looks for their channels again, as pulling down the list does on the phone. TV.
