@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261127165050
 
 - **More games find their channels:** a game could say "Not found on your channels" when your source had the game's network under a name the app did not read well. For example, an ESPNU game did not find "TV: ESPNU ᴿᴬᵂ", "US: ESPN U HD" or "AT&T: ESPNU ᴿᴬᵂ". The app now reads small raised letters (such as ᴿᴬᵂ) as normal letters, ignores spaces inside a network name, and knows the "AT&T:" channel prefix. TV and phone.
 
