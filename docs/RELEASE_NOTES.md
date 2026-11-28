@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261128164407
 
 - **The right picture size on more TV boxes:** the app now asks the device's hardware decoders if they play 4K, and does not guess from the brand. A box the app does not know, such as the onn 4K Plus, now gets 4K and its best codec on streams that have several qualities. A Chromecast HD no longer gets a 4K quality that it cannot decode. TV.
 
