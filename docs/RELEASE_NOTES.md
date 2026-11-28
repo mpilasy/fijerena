@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261128021104
 
 - **Search is below Home on the TV side menu:** the order is now your profile, Home, Search, then the sections. Search is still one press from Home. TV.
 
