@@ -41,10 +41,10 @@ class CapabilitiesOfTest {
     }
 
     @Test
-    fun `a Bravia never prefers AV1`() {
+    fun `a Bravia with a hardware AV1 decoder prefers AV1`() {
         val caps = capabilitiesOf(DeviceType.SONY_BRAVIA, listOf(avc1080, hevc4K, av14K))
 
-        assertEquals(listOf("video/hevc", "video/avc"), caps.preferredCodecs)
+        assertEquals(listOf("video/av01", "video/hevc", "video/avc"), caps.preferredCodecs)
     }
 
     @Test

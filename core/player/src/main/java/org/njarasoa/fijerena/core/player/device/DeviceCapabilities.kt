@@ -103,7 +103,7 @@ internal data class VideoDecoder(
  * The capabilities from the device type and its hardware video decoders. 4K is what a decoder
  * reports, never the device type: the Chromecast HD has HEVC and AV1 decoders up to 1080p only,
  * and a box the app does not know (the onn 4K Plus) decodes 4K. A phone stays at 1080p. AV1 and
- * HEVC come before H.264 when a hardware decoder has them; not on a Bravia (HEVC, then H.264).
+ * HEVC come before H.264 on a TV when a hardware decoder has them.
  */
 internal fun capabilitiesOf(
     deviceType: DeviceType,
@@ -113,10 +113,10 @@ internal fun capabilitiesOf(
     val supportsAv1 = decoders.any { it.mimeType == "video/av01" }
     val supports4K = deviceType != DeviceType.GENERIC_MOBILE && decoders.any { it.decodes4K }
     val preferredCodecs =
-        when (deviceType) {
-            DeviceType.GENERIC_MOBILE -> listOf("video/avc")
-            DeviceType.SONY_BRAVIA -> listOfNotNull("video/hevc".takeIf { supportsHevc }, "video/avc")
-            else -> listOfNotNull("video/av01".takeIf { supportsAv1 }, "video/hevc".takeIf { supportsHevc }, "video/avc")
+        if (deviceType == DeviceType.GENERIC_MOBILE) {
+            listOf("video/avc")
+        } else {
+            listOfNotNull("video/av01".takeIf { supportsAv1 }, "video/hevc".takeIf { supportsHevc }, "video/avc")
         }
     return DeviceCapabilities(
         deviceType = deviceType,
