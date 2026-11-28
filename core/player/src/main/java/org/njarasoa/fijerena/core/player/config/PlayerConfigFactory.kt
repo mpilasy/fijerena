@@ -18,7 +18,7 @@ object PlayerConfigFactory {
     const val DEFAULT_AUDIO_LANGUAGE = "en"
 
     fun createTrackSelector(context: Context): DefaultTrackSelector {
-        val capabilities = DeviceDetector.detect()
+        val capabilities = DeviceDetector.detect(context)
 
         val parameters =
             DefaultTrackSelector.Parameters
@@ -29,12 +29,10 @@ object PlayerConfigFactory {
                     setMaxVideoSize(maxWidth, maxHeight)
 
                     val maxBitrate =
-                        when (capabilities.deviceType) {
-                            DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                            DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                            DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                            DeviceType.GENERIC_TV -> 10_000_000
-                            DeviceType.GENERIC_MOBILE -> 5_000_000
+                        when {
+                            capabilities.deviceType == DeviceType.GENERIC_MOBILE -> 5_000_000
+                            capabilities.supports4K -> 20_000_000
+                            else -> 10_000_000
                         }
                     setMaxVideoBitrate(maxBitrate)
 

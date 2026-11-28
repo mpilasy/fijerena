@@ -150,7 +150,10 @@ private fun deviceSection(context: Context): DeviceInfoSection {
                 isTv?.let { UiText.StringResource(if (it) R.string.device_info_form_tv else R.string.device_info_form_mobile) }
                     ?: missingValue(),
             ),
-            infoRow(R.string.device_info_device_type, readOrNull { deviceTypeText(DeviceDetector.detect().deviceType) } ?: missingValue()),
+            infoRow(
+                R.string.device_info_device_type,
+                readOrNull { deviceTypeText(DeviceDetector.detect(context).deviceType) } ?: missingValue(),
+            ),
         ),
     )
 }

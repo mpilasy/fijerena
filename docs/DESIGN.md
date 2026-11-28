@@ -133,7 +133,7 @@ network/
 source/
   StreamingMediaSourceFactory  HLS / DASH / progressive detection, timeouts, auth headers
   AdaptiveLoadErrorPolicy      retries: Wi-Fi 5, cellular 8, exponential backoff 0.5–5 s
-device/DeviceCapabilities.kt   DeviceDetector: device type, HEVC/AV1/4K support, preferred codecs
+device/DeviceCapabilities.kt   DeviceDetector: device type, hardware HEVC/AV1/4K decoders, preferred codecs
 viewmodel/PlaybackViewModel    UI-facing playback control and track queries
 model/                         PlaybackState, PlayerMetadata, track info, EpgModels, PositionSave, NowPlayingSnapshot
 api/XtreamApiService           Xtream API client (Ktor)

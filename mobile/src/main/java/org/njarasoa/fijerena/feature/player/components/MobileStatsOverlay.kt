@@ -528,9 +528,11 @@ fun MobileStatsOverlay(
                 StatRow(stringResource(R.string.player_stats_api), "${android.os.Build.VERSION.SDK_INT}")
 
                 val caps =
-                    remember {
-                        org.njarasoa.fijerena.core.player.device.DeviceDetector
-                            .detect()
+                    androidx.compose.ui.platform.LocalContext.current.let { context ->
+                        remember {
+                            org.njarasoa.fijerena.core.player.device.DeviceDetector
+                                .detect(context)
+                        }
                     }
                 CinemaText(
                     text =

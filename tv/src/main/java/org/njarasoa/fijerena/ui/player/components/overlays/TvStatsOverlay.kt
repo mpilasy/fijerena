@@ -641,9 +641,11 @@ fun TvStatsOverlay(
                             emphasis = true,
                         )
                         val caps =
-                            remember {
-                                org.njarasoa.fijerena.core.player.device.DeviceDetector
-                                    .detect()
+                            androidx.compose.ui.platform.LocalContext.current.let { context ->
+                                remember {
+                                    org.njarasoa.fijerena.core.player.device.DeviceDetector
+                                        .detect(context)
+                                }
                             }
                         CinemaText(
                             text =

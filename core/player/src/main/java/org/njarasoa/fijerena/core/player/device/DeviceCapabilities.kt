@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.core.player.device
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.media.MediaCodecList
 import android.os.Build
+import android.util.Log
 
 enum class DeviceType {
     NVIDIA_SHIELD,
@@ -24,67 +27,15 @@ object DeviceDetector {
     @Volatile
     private var cachedCapabilities: DeviceCapabilities? = null
 
-    fun detect(): DeviceCapabilities =
+    fun detect(context: Context): DeviceCapabilities =
         cachedCapabilities ?: synchronized(this) {
-            cachedCapabilities ?: performDetection().also { cachedCapabilities = it }
+            cachedCapabilities ?: performDetection(context).also { cachedCapabilities = it }
         }
 
-    private fun performDetection(): DeviceCapabilities {
-        val deviceType = detectDeviceType()
-        val supportsHevc = supportsCodec("video/hevc")
-        val supportsAv1 = supportsCodec("video/av01")
-        val supports4K = supportsHevc || supportsAv1
+    private fun performDetection(context: Context): DeviceCapabilities =
+        capabilitiesOf(detectDeviceType(context), hardwareVideoDecoders()).also { Log.i("DeviceDetector", "Device capabilities: $it") }
 
-        val maxResolution =
-            when (deviceType) {
-                DeviceType.NVIDIA_SHIELD -> if (supports4K) 3840 to 2160 else 1920 to 1080
-                DeviceType.SONY_BRAVIA -> if (supports4K) 3840 to 2160 else 1920 to 1080
-                DeviceType.CHROMECAST_TV -> if (supports4K) 3840 to 2160 else 1920 to 1080
-                DeviceType.GENERIC_TV -> 1920 to 1080
-                DeviceType.GENERIC_MOBILE -> 1920 to 1080
-            }
-
-        val preferredCodecs =
-            when (deviceType) {
-                DeviceType.NVIDIA_SHIELD -> {
-                    listOfNotNull(
-                        if (supportsAv1) "video/av01" else null,
-                        if (supportsHevc) "video/hevc" else null,
-                        "video/avc",
-                    )
-                }
-
-                DeviceType.SONY_BRAVIA -> {
-                    listOfNotNull(
-                        if (supportsHevc) "video/hevc" else null,
-                        "video/avc",
-                    )
-                }
-
-                DeviceType.CHROMECAST_TV -> {
-                    listOfNotNull(
-                        if (supportsAv1) "video/av01" else null,
-                        if (supportsHevc) "video/hevc" else null,
-                        "video/avc",
-                    )
-                }
-
-                else -> {
-                    listOf("video/avc")
-                }
-            }
-
-        return DeviceCapabilities(
-            deviceType = deviceType,
-            supportsHevc = supportsHevc,
-            supportsAv1 = supportsAv1,
-            supports4K = supports4K,
-            maxResolution = maxResolution,
-            preferredCodecs = preferredCodecs,
-        )
-    }
-
-    private fun detectDeviceType(): DeviceType {
+    private fun detectDeviceType(context: Context): DeviceType {
         val manufacturer = Build.MANUFACTURER.uppercase()
         val model = Build.MODEL.uppercase()
         val device = Build.DEVICE.uppercase()
@@ -93,17 +44,19 @@ object DeviceDetector {
         // "boreal").
         return when {
             manufacturer.contains("NVIDIA") || model.contains("SHIELD") -> DeviceType.NVIDIA_SHIELD
-            model.contains("BRAVIA") || (manufacturer.contains("SONY") && isAndroidTv()) -> DeviceType.SONY_BRAVIA
+            model.contains("BRAVIA") || (manufacturer.contains("SONY") && isAndroidTv(context)) -> DeviceType.SONY_BRAVIA
             manufacturer.contains("GOOGLE") && (model.contains("CHROMECAST") || device.contains("CHROMECAST")) -> DeviceType.CHROMECAST_TV
-            isAndroidTv() -> DeviceType.GENERIC_TV
+            isAndroidTv(context) -> DeviceType.GENERIC_TV
             else -> DeviceType.GENERIC_MOBILE
         }
     }
 
-    private fun isAndroidTv(): Boolean {
-        // ro.build.characteristics "tv" is reliable on all Android TV devices.
-        // Class.forName("TvInputManager") is NOT: the class exists on all devices since API 21, so
-        // phones read as TV.
+    private fun isAndroidTv(context: Context): Boolean {
+        // The leanback feature is what every Android TV device declares (the TV app's launcher
+        // needs it); ro.build.characteristics "tv" is kept as a fallback, though not every build
+        // sets it (the TV emulator says "emulator"). Class.forName("TvInputManager") is NOT a
+        // test: the class exists on all devices since API 21, so phones read as TV.
+        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) return true
         return try {
             @Suppress("PrivateApi")
             val clazz = Class.forName("android.os.SystemProperties")
@@ -115,13 +68,62 @@ object DeviceDetector {
         }
     }
 
-    private fun supportsCodec(mimeType: String): Boolean =
+    /**
+     * The device's hardware video decoders and whether each decodes 3840×2160. Software decoders
+     * (Android has HEVC and AV1 ones on every device) do not count: they can't play live 4K.
+     */
+    private fun hardwareVideoDecoders(): List<VideoDecoder> =
         try {
-            val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-            codecList.codecInfos.any { info ->
-                !info.isEncoder && info.supportedTypes.contains(mimeType)
-            }
+            MediaCodecList(MediaCodecList.REGULAR_CODECS)
+                .codecInfos
+                .filter { !it.isEncoder && it.isHardwareAccelerated }
+                .flatMap { info ->
+                    info.supportedTypes
+                        .filter { it.startsWith("video/") }
+                        .map { type ->
+                            val video = info.getCapabilitiesForType(type).videoCapabilities
+                            VideoDecoder(type, video?.isSizeSupported(UHD_WIDTH, UHD_HEIGHT) == true)
+                        }
+                }
         } catch (e: Exception) {
-            false
+            emptyList()
         }
+}
+
+private const val UHD_WIDTH = 3840
+private const val UHD_HEIGHT = 2160
+
+/** A hardware video decoder: its MIME type, and whether it decodes 3840×2160. */
+internal data class VideoDecoder(
+    val mimeType: String,
+    val decodes4K: Boolean,
+)
+
+/**
+ * The capabilities from the device type and its hardware video decoders. 4K is what a decoder
+ * reports, never the device type: the Chromecast HD has HEVC and AV1 decoders up to 1080p only,
+ * and a box the app does not know (the onn 4K Plus) decodes 4K. A phone stays at 1080p. AV1 and
+ * HEVC come before H.264 when a hardware decoder has them; not on a Bravia (HEVC, then H.264).
+ */
+internal fun capabilitiesOf(
+    deviceType: DeviceType,
+    decoders: List<VideoDecoder>,
+): DeviceCapabilities {
+    val supportsHevc = decoders.any { it.mimeType == "video/hevc" }
+    val supportsAv1 = decoders.any { it.mimeType == "video/av01" }
+    val supports4K = deviceType != DeviceType.GENERIC_MOBILE && decoders.any { it.decodes4K }
+    val preferredCodecs =
+        when (deviceType) {
+            DeviceType.GENERIC_MOBILE -> listOf("video/avc")
+            DeviceType.SONY_BRAVIA -> listOfNotNull("video/hevc".takeIf { supportsHevc }, "video/avc")
+            else -> listOfNotNull("video/av01".takeIf { supportsAv1 }, "video/hevc".takeIf { supportsHevc }, "video/avc")
+        }
+    return DeviceCapabilities(
+        deviceType = deviceType,
+        supportsHevc = supportsHevc,
+        supportsAv1 = supportsAv1,
+        supports4K = supports4K,
+        maxResolution = if (supports4K) UHD_WIDTH to UHD_HEIGHT else 1920 to 1080,
+        preferredCodecs = preferredCodecs,
+    )
 }

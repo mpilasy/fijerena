@@ -416,7 +416,7 @@ class EpgFileManager private constructor(
     }
 
     private fun isFixedDevice(): Boolean {
-        val type = DeviceDetector.detect().deviceType
+        val type = DeviceDetector.detect(context).deviceType
         return type != DeviceType.GENERIC_MOBILE
     }
 
