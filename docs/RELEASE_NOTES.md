@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## Version: 0.9.20261128174135
 
 - **AV1 first on Sony Bravia TVs:** a Bravia with an AV1 decoder now plays the AV1 version of a stream that comes in AV1 and HEVC, as other TVs do. AV1 gives the same picture with less data. TV.
 
