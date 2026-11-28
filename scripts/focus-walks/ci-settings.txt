@@ -34,8 +34,9 @@ LEFT	Admin
 CENTER
 WAIT 5
 LEFT	Home
-# Admin's rail: the avatar, Search, Home, the fake source's three sections, Sports (Admin's Sports
-# switch is on by default), Settings (Search moved above Home 2026-11-27, edited by hand).
+# Admin's rail: the avatar, Home, Search, the fake source's three sections, Sports (Admin's Sports
+# switch is on by default), Settings (Search moved below Home 2026-11-27, edited by hand).
+DOWN	Search
 DOWN	Live TV
 DOWN	Films
 DOWN	TV Shows

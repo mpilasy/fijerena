@@ -58,7 +58,7 @@ class BrowseEntryTest {
     }
 
     @Test
-    fun `the rail draws Search above Home and the Browse entries between the sections and Settings`() {
+    fun `the rail draws Search below Home and the Browse entries between the sections and Settings`() {
         composeTestRule.setContent {
             TvNavRail(
                 state = TvNavRailState(),
@@ -70,7 +70,7 @@ class BrowseEntryTest {
         }
 
         fun top(description: String) = composeTestRule.onNodeWithContentDescription(description).getUnclippedBoundsInRoot().top
-        assertTrue(top("Search") < top("Home"))
+        assertTrue(top("Home") < top("Search"))
         assertTrue(top("Live TV") < top("Browse Jelly"))
         assertTrue(top("Browse Jelly") < top("Settings"))
     }
@@ -98,7 +98,7 @@ class BrowseEntryTest {
     @Test
     fun `Browse entries are not rail items`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.LIVE_TV, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.LIVE_TV, RailItem.SETTINGS),
             railItems(setOf(ContentType.LIVE_TV)),
         )
     }

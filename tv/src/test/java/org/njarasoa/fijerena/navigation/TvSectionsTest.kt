@@ -11,7 +11,7 @@ class TvSectionsTest {
     @Test
     fun `rail offers the sections the source has, in order, between Home and Settings`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.LIVE_TV, RailItem.TV_SHOWS, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.LIVE_TV, RailItem.TV_SHOWS, RailItem.SETTINGS),
             railItems(setOf(ContentType.TV_SHOWS, ContentType.LIVE_TV)),
         )
     }
@@ -19,24 +19,24 @@ class TvSectionsTest {
     @Test
     fun `a single section is still offered`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.MOVIES, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.MOVIES, RailItem.SETTINGS),
             railItems(setOf(ContentType.MOVIES)),
         )
     }
 
     @Test
     fun `no sections while they are unknown`() {
-        assertEquals(listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.SETTINGS), railItems(null))
+        assertEquals(listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.SETTINGS), railItems(null))
     }
 
     @Test
     fun `Sports comes after the sections while Admin's Sports switch is on`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.LIVE_TV, RailItem.MOVIES, RailItem.SPORTS, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.LIVE_TV, RailItem.MOVIES, RailItem.SPORTS, RailItem.SETTINGS),
             railItems(setOf(ContentType.LIVE_TV, ContentType.MOVIES), sports = true),
         )
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME, RailItem.LIVE_TV, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.LIVE_TV, RailItem.SETTINGS),
             railItems(setOf(ContentType.LIVE_TV), sports = false),
         )
     }
@@ -44,7 +44,7 @@ class TvSectionsTest {
     @Test
     fun `a child profile has no Sports, even with the switch on`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH),
             railItems(setOf(ContentType.LIVE_TV), child = true, sports = true),
         )
     }
@@ -60,7 +60,7 @@ class TvSectionsTest {
     @Test
     fun `a child profile has no sections and no Settings but has Search`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.SEARCH, RailItem.HOME),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH),
             railItems(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS), child = true),
         )
     }
